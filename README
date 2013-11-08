@@ -1,0 +1,38 @@
+Welcome to the source code repository for BaremetalOS.
+
+The purpose of this file is to provide a general overview of the project
+and its organization. Please keep it up to date as you make changes!
+
+The current directory structure is as follows:
+
+bib: A place for storing related work (including PDFs, citations, and
+discussions).
+
+doc: Design documents, discussion threads, and experimental results go
+here.
+
+nos: The BMOS "libevent" library OS lives here. Currently it is built
+on top of DPDK but eventually it will use a custom driver stack and be
+built on top of Dune. DPDK is a good temporary solution, but doesn't
+integrate well with our control plane and is inflexible in terms of
+zero-copy, queue size adjustments, and possibly IOMMU configuration.
+
+lcp: Contains the Linux control-plane. This is a system for configuring
+Linux to get out of the way so that whole cores can be allocated to app
+Oses. It also will eventually provision resources like IO queues, memory
+and cores. Probably it will include a library, a command-line tool, and a
+deamon.
+
+tools: Put benchmarks, load generators, workloads, and profiling tools
+here.
+
+A couple more documentation files are in the top-level directory.
+They include the following:
+
+LICENSE: Software license information and restrictions.
+STYLE: Coding style conventions for the project.
+
+Please read both of these before making changes to the code.
+
+Happy Hacking!
+

@@ -1,0 +1,12 @@
+The code in this repository is proprietary and confidential.
+
+Please take the following precautions:
+
+1.) Never share or post the code publicly.
+2.) Never include or use GPL code or any other code with a restrictive license.
+3.) Clearly mark the origin of imported code that wasn't authored internally.
+
+One important exception is that it may be required to make certain drivers and
+modules GPL. For example, it's fine to make a custom Linux kernel module GPL.
+Just make sure to clearly deliniate such cases.
+

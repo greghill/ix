@@ -1,0 +1,19 @@
+There are many possible styles, but, for the sake of readability, we need
+to have a consistent policy. To that end, BMOS uses the Linux Kernel coding
+style conventions.
+
+Check them out here...
+https://www.kernel.org/doc/Documentation/CodingStyle
+
+Also, here's a good general unofficial set of guidelines and suggestion...
+http://www.lysator.liu.se/c/pikestyle.htm
+
+Kernel-level code (including app-OS kernels) should only be coded in C and
+assembly. User-level code can be coded in C or C++, preferably with
+bindings for both. Tools, scripts, and Higher-level management code can
+be implemented in whichever language is best for the job.
+
+If you're working with an existing code base that already has an established
+coding style, then always use the style that exists instead of forcing
+the code to conform to BMOS coding conventions.
+
