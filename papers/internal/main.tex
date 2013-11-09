@@ -1,0 +1,29 @@
+\documentclass{../common/sig-alternate-10pt}
+
+
+
+\usepackage[T1]{fontenc}
+\usepackage{times,color,cite}
+\usepackage{url,comment}
+
+%\usepackage[first,bottomafter]{draftcopy}
+
+\newcommand{\graphicsonecolumn}[1]{\centerline{\includegraphics{#1}}}
+\newcommand{\mypar}[1]{\vspace{3pt}\noindent {\bf #1: }}
+
+\long\def\eat#1{}
+%\newcommand{\katnote}[1]{[\textcolor{blue}{\textit{Kat: #1}}]}
+%\newcommand{\edb}[1]{[\textcolor{green}{\textit{EdB: #1}}]}
+
+
+% ----- PICKING THE RIGHT TITLE -----
+\title{BMOS Project -- Internal notes} 
+\author{}
+
+\begin{document}
+\maketitle
+\input{related}
+
+\bibliographystyle{abbrv}
+\bibliography{../common/dblp, ../common/misc}
+\end{document}
