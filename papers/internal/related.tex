@@ -1,7 +1,58 @@
 
-\section{Related and Relevant work}
+\section{Related Systems}
 
-\paragraph*{Exokernel}.   Exokernels\cite{DBLP:conf/sosp/EnglerKO95} safely expose hardware to library operating systems. 
 
+\paragraph*{Exokernel}   Exokernels~\cite{DBLP:conf/sosp/EnglerKO95} safely expose hardware to library operating systems. 
+
+
+\paragraph*{Megapipe} 
+Megapipe~\cite{han2012megapipe} proposes a high-performance socket
+alternative for TCP/IP based applications for scalable network
+applications.  Our API is inspired by it. This is similar to
+Netmap~\cite{rizzo2012netmap}, which also ping shared buffers, but is
+focused on libpcap applications.
+
+\paragraph*{Akkaris}.  Akkaris~\cite{peter2013arrakis} is the closest to us.
+
+
+\section{Techniques and Concepts}
+
+\paragraph*{Scheduler activations} 
+If apps are able to yield cores, and if apps are able to
+asynchronously take advantage of new cores, scheduler
+activations~\cite{DBLP:journals/tocs/AndersonBLL92} seem like a
+perfect mechanism to make those cores available to other processes. 
+The idea never really made it into POSIX, but we can use here because the API is different. 
+
+\paragraph*{Ballooning}.   
+Ballooing was introduced for memory
+management~\cite{DBLP:conf/osdi/Waldspurger02}.  The balloon keeps
+track of the amount of relinquished resources.  CPU ballooning could
+be used to (i) start a max core pool, and (ii) dynamically resize it
+according to the SLA and the global load.
+
+\paragraph*{Super pages}  
+Direct segment mapping~\cite{DBLP:conf/isca/BasuGCHS13} proposes to
+replace the traditional TLB with a dedicated direct segment.
+
+\paragraph*{Tail latency}  
+Dean and Barroso~\cite{DBLP:journals/cacm/DeanB13} describe the
+problems associated with tail latency in web-scale services.
+
+\paragraph*{Commutativity and scalability} 
+The scalable commutativy rule~\cite{DBLP:conf/sosp/ClementsKZMK13}
+states that only commutative APIs can be implemented in a truly
+scalable manner; our API and our implementation should support that.
+RadixVM~\cite{DBLP:conf/eurosys/ClementsKZ13} provides scalable
+address spaces for multithreaded applications; we address this as well.
+
+
+
+\section{Workloads}
+
+\paragraph*{Memcached} 
+Scaling memcached at Facebook~\cite{nishtala2013scaling} required
+unnatural tricks such as relying on UDP and on in-network connection
+proxies to compensate for the lack of scoket scalability of Linux.
 
 
