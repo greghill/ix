@@ -1,9 +1,13 @@
 
 \section{Related Systems}
 
-
 \paragraph*{Exokernel}   Exokernels~\cite{DBLP:conf/sosp/EnglerKO95} safely expose hardware to library operating systems. 
 
+
+\paragraph*{Akkaris}.  
+Akkaris~\cite{peter2013arrakis} is the closest system.  It is
+apparently built on the barrelfish multikernel~\cite{DBLP:conf/sosp/BaumannBDHIPRSS09} and uses VT-x
+like Dune~\cite{belay2012dune}.
 
 \paragraph*{Megapipe} 
 Megapipe~\cite{han2012megapipe} proposes a high-performance socket
@@ -12,10 +16,29 @@ applications.  Our API is inspired by it. This is similar to
 Netmap~\cite{rizzo2012netmap}, which also ping shared buffers, but is
 focused on libpcap applications.
 
-\paragraph*{Akkaris}.  Akkaris~\cite{peter2013arrakis} is the closest to us.
+\paragraph*{Kernel-bypass approaches}  Solarflare Openonload~\cite{openonload}, ...
 
+\paragraph*{Containers}  Linux containers, BSD jail, ...
+
+
+\paragraph*{Application-specific kernels}  
+Exokernels had a bunch of them.
+SplashOS~\cite{DBLP:journals/tocs/BugnionDGR97} proposed this in the
+context of hypervisors (Disco).  Libra~\cite{DBLP:conf/vee/AmmonsABSGKKRHW07} was a JVM that ran
+directly on top of Xen.  It Relied on a separate Linux VM to provide
+networking and storage (like Azul).  The
+Unikernel~\cite{DBLP:conf/asplos/MadhavapeddyMRSSGSHC13} (ASPLOS 13)
+lays out the case for BaremetalOS because it lays out the case for
+single app operating systems.  The Unikernel ported the Ocaml runtime
+to run on top of Xen hypervisor (like libra).  Actually makes a case
+for reduced latency jitter, at least in terms of thread scheduling -
+I/O performance basically sucks though because still not taking
+advantage of HW (uses Xen PV-NIC).
 
 \section{Techniques and Concepts}
+
+\paragraph*{The C10M problem} As stated by Robert Graham(?)~\cite{theC10Mproblem}.
+
 
 \paragraph*{Scheduler activations} 
 If apps are able to yield cores, and if apps are able to
@@ -24,20 +47,26 @@ activations~\cite{DBLP:journals/tocs/AndersonBLL92} seem like a
 perfect mechanism to make those cores available to other processes. 
 The idea never really made it into POSIX, but we can use here because the API is different. 
 
-\paragraph*{Ballooning}.   
+\paragraph*{Ballooning}
 Ballooing was introduced for memory
 management~\cite{DBLP:conf/osdi/Waldspurger02}.  The balloon keeps
 track of the amount of relinquished resources.  CPU ballooning could
 be used to (i) start a max core pool, and (ii) dynamically resize it
 according to the SLA and the global load.
 
-\paragraph*{Super pages}  
+\paragraph*{Virtual memory performance}  
 Direct segment mapping~\cite{DBLP:conf/isca/BasuGCHS13} proposes to
 replace the traditional TLB with a dedicated direct segment.
+Drepper~\cite{DBLP:journals/queue/Drepper08} measured additional cost
+of running workloads in virtualized domains due to two-dimensional
+page walking.
 
-\paragraph*{Tail latency}  
+\paragraph*{Latency distribution}  
 Dean and Barroso~\cite{DBLP:journals/cacm/DeanB13} describe the
 problems associated with tail latency in web-scale services.
+Dynamo~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07} talked about the
+importance to evaluate key-value stores based on their 99.9\% latency.
+
 
 \paragraph*{Commutativity and scalability} 
 The scalable commutativy rule~\cite{DBLP:conf/sosp/ClementsKZMK13}
@@ -46,7 +75,7 @@ scalable manner; our API and our implementation should support that.
 RadixVM~\cite{DBLP:conf/eurosys/ClementsKZ13} provides scalable
 address spaces for multithreaded applications; we address this as well.
 
-
+\paragraph*{Latency measurements}  
 
 \section{Workloads}
 
@@ -54,5 +83,10 @@ address spaces for multithreaded applications; we address this as well.
 Scaling memcached at Facebook~\cite{nishtala2013scaling} required
 unnatural tricks such as relying on UDP and on in-network connection
 proxies to compensate for the lack of scoket scalability of Linux.
+
+
+\paragraph*{ngnx}
+
+
 
 
