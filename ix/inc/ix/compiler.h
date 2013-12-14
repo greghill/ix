@@ -1,0 +1,27 @@
+/*
+ * compiler.h - useful compiler hints, intrinsics, and attributes
+ */
+
+#pragma once
+
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#define unreachable() __builtin_unreachable()
+
+#define prefetch0(x) __builtin_prefetch((x), 0, 3)
+#define prefetch1(x) __builtin_prefetch((x), 0, 2)
+#define prefetch2(x) __builtin_prefetch((x), 0, 1)
+#define prefetchnta(x) __builtin_prefetch((x), 0, 0)
+#define prefetch() prefetch0()
+
+#define __packed __attribute__((packed))
+#define __unused __attribute__((unused))
+
+#define GCC_VERSION (__GNUC__ * 10000        \
+		     + __GNUC_MINOR__ * 100  \
+		     + __GNUC_PATCHLEVEL__)
+
+#if GCC_VERSION >= 40800
+#define COMPILER_BUILTIN_BSWAP_AVAILABLE 1
+#endif
+
