@@ -9,7 +9,7 @@
 
 static inline uint16_t __bswap16(uint16_t val)
 {
-#ifdef COMPILER_BUILTIN_BSWAP_AVAILABLE
+#ifdef HAS_BUILTIN_BSWAP
 	return __builtin_bswap16(val);
 #else
 	return (((val & 0x00ffU) << 8) |
@@ -19,7 +19,7 @@ static inline uint16_t __bswap16(uint16_t val)
 
 static inline uint32_t __bswap32(uint32_t val)
 {
-#ifdef COMPILER_BUILTIN_BSWAP_AVAILABLE
+#ifdef HAS_BUILTIN_BSWAP
 	return __builtin_bswap32(val);
 #else
 	return (((val & 0x000000ffUL) << 24) |
@@ -31,7 +31,7 @@ static inline uint32_t __bswap32(uint32_t val)
 
 static inline uint64_t __bswap64(uint64_t val)
 {
-#ifdef COMPILER_BUILTIN_BSWAP_AVAILABLE
+#ifdef HAS_BUILTIN_BSWAP
 	return __builtin_bswap64(val);
 #else
 	return (((val & 0x00000000000000ffULL) << 56) |

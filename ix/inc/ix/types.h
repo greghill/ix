@@ -37,3 +37,7 @@ typedef long		off_t;
 typedef unsigned long	size_t;
 typedef long		ssize_t;
 
+typedef struct {
+	volatile int locked;
+} spinlock_t;
+

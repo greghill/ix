@@ -13,9 +13,11 @@
 
 #define __BYTE_ORDER	__LITTLE_ENDIAN
 
+
 /*
  * Word Size
  */
+
 #define __32BIT_WORDS	32
 #define __64BIT_WORDS	64
 
