@@ -3,7 +3,7 @@
  *
  * NOTE: We focus our efforts on hash functions for small input values,
  * as the intention is to use these for network protocol addresses
- * (e.g. IP source, IP destionation, source port, destionation port,
+ * (e.g. IP source, IP destionation, source port, destination port,
  * etc.)
  */
 
