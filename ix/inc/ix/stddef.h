@@ -46,11 +46,20 @@
  * Given a pointer to a member of a structure, this macro does pointer
  * subtraction to return the pointer to the enclosing type.
  */
-#define container_of(member_ptr, containing_type, member)              \
-	((containing_type *)                                           \
-	 ((char *)(member_ptr)                                         \
-	  - offsetof(containing_type, member))                         \
+#define container_of(member_ptr, containing_type, member)               \
+	((containing_type *)                                            \
+	 ((char *)(member_ptr)                                          \
+	  - offsetof(containing_type, member))                          \
 	  + check_types_match(*(member_ptr), ((containing_type *)0)->member))
+
+/**
+ * container_of_var - get pointer to enclosing structure using a variable
+ * @member_ptr: pointer to the structure member
+ * @container_var: a pointer of same type as this member's container
+ * @member: the name of this member within the structure.
+ */
+#define container_of_var(member_ptr, container_var, member)             \
+	container_of(member_ptr, typeof(*container_var), member)
 
 #define _array_size_chk(arr)                                            \
 	BUILD_ASSERT_OR_ZERO(!__builtin_types_compatible_p(typeof(arr), \

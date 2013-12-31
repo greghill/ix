@@ -1,4 +1,15 @@
-/* Licensed under BSD-MIT - see LICENSE file for details */
+/*
+ * list.h - The CCAN linked list library
+ *
+ * see http://ccodearchive.net/info/list.html
+ * Licensed under BSD-MIT
+ *
+ * Two other types of lists were also added to better support hash tables
+ * - "slist" is a singly linked list
+ * - "hlist" is a doubly linked list with a single head pointer to save space.
+ * It can only be traversed in the forward direction. Unlike "slist", it
+ * supports constant time removals.
+ */
 
 #pragma once
 
@@ -588,18 +599,14 @@ static inline struct list_node *list_node_from_off_(void *ptr, size_t off)
 
 /* Get the offset of the member, but make sure it's a list_node. */
 #define list_off_(type, member)					\
-	(container_off(type, member) +				\
+	(offsetof(type, member) +				\
 	 check_type(((type *)0)->member, struct list_node))
 
 #define list_off_var_(var, member)			\
-	(container_off_var(var, member) +		\
+	(offsetof(typeof(*var), member) +		\
 	 check_type(var->member, struct list_node))
 
-#if HAVE_TYPEOF
 #define list_typeof(var) typeof(var)
-#else
-#define list_typeof(var) void *
-#endif
 
 /* Returns member, or NULL if at end of list. */
 static inline void *list_entry_or_null(const struct list_head *h,
@@ -610,3 +617,95 @@ static inline void *list_entry_or_null(const struct list_head *h,
 		return NULL;
 	return (char *)n - off;
 }
+
+struct slist_node {
+	struct slist_node *next;
+};
+
+struct slist_head {
+	struct slist_node head;
+};
+
+static inline void slist_init_head(struct slist_head *h)
+{
+	h->head.next = NULL;
+}
+
+static inline void slist_add_head(struct slist_head *h, struct slist_node *n)
+{
+	n->next = h->head.next;
+	h->head.next = n;
+}
+
+static inline void slist_del_head(struct slist_head *h)
+{
+	h->head.next = h->head.next->next;
+}
+
+static inline void slist_del(struct slist_node *prev, struct slist_node *n)
+{
+	prev->next = n->next;
+}
+
+static inline bool slist_empty(struct slist_head *h)
+{
+	return h->head.next == NULL;
+}
+
+#define slist_entry(n, type, member) container_of(n, type, member)
+
+#define slist_for_each(head, pos) \
+	for ((pos) = (head)->head.next; (pos); (pos) = (pos)->next)
+
+#define slist_for_each_prev(head, pos, ppos)     \
+	for ((ppos) = &(head)->head;             \
+	     ((pos) = ((ppos)->next)) != NULL;   \
+	     (ppos) = (ppos)->next)
+
+struct hlist_node {
+	/* WARNING: @next has to line up with @head in struct hlist_head */
+	struct hlist_node *next, *prev;
+};
+
+struct hlist_head {
+	struct hlist_node *head;
+};
+
+static inline void hlist_init_head(struct hlist_head *h)
+{
+	h->head = NULL;
+}
+
+static inline void hlist_add_head(struct hlist_head *h, struct hlist_node *n)
+{
+	n->next = h->head;
+	n->prev = (struct hlist_node *) h;
+	h->head = n;
+}
+
+static inline void hlist_del_head(struct hlist_head *h)
+{
+	h->head = h->head->next;
+	h->head->prev = (struct hlist_node *) h;
+}
+
+static inline void hlist_del(struct hlist_node *n)
+{
+	n->prev->next = n->next;
+	n->next->prev = n->prev;
+}
+
+static inline bool hlist_empty(struct hlist_head *h)
+{
+	return h->head == NULL;
+}
+
+#define hlist_entry(n, type, member) container_of(n, type, member)
+
+#define hlist_for_each(head, pos) \
+	for ((pos) = (head)->head; (pos); (pos) = (pos)->next)
+
+#define hlist_for_each_safe(head, pos, tmp) 				\
+	for ((pos) = (head)->head; (pos) && ((tmp) = (tmp)->next, 1);	\
+	     (pos) = (tmp))
+
