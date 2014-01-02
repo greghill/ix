@@ -14,6 +14,8 @@
 #define prefetchnta(x) __builtin_prefetch((x), 0, 0)
 #define prefetch() prefetch0()
 
+#define clz64(x) __builtin_clzll(x)
+
 #define __packed __attribute__((packed))
 #define __unused __attribute__((unused))
 

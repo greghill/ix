@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <stddef.h>
 #include <ix/compiler.h>
 #include <ix/types.h>
 

@@ -654,11 +654,11 @@ static inline bool slist_empty(struct slist_head *h)
 
 #define slist_entry(n, type, member) container_of(n, type, member)
 
-#define slist_for_each(head, pos) \
-	for ((pos) = (head)->head.next; (pos); (pos) = (pos)->next)
+#define slist_for_each(h, pos) \
+	for ((pos) = (h)->head.next; (pos); (pos) = (pos)->next)
 
-#define slist_for_each_prev(head, pos, ppos)     \
-	for ((ppos) = &(head)->head;             \
+#define slist_for_each_prev(h, pos, ppos)     \
+	for ((ppos) = &(h)->head;             \
 	     ((pos) = ((ppos)->next)) != NULL;   \
 	     (ppos) = (ppos)->next)
 
@@ -702,10 +702,10 @@ static inline bool hlist_empty(struct hlist_head *h)
 
 #define hlist_entry(n, type, member) container_of(n, type, member)
 
-#define hlist_for_each(head, pos) \
-	for ((pos) = (head)->head; (pos); (pos) = (pos)->next)
+#define hlist_for_each(h, pos) \
+	for ((pos) = (h)->head; (pos); (pos) = (pos)->next)
 
-#define hlist_for_each_safe(head, pos, tmp) 				\
-	for ((pos) = (head)->head; (pos) && ((tmp) = (tmp)->next, 1);	\
+#define hlist_for_each_safe(h, pos, tmp) 				\
+	for ((pos) = (h)->head; (pos) && ((tmp) = (tmp)->next, 1);	\
 	     (pos) = (tmp))
 
