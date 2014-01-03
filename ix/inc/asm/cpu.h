@@ -26,3 +26,10 @@
 #define cpu_relax() \
 	asm volatile("pause")
 
+static inline unsigned long rdtscll(void)
+{
+	unsigned int a, d;
+	asm volatile("rdtsc" : "=a" (a), "=d" (d));
+	return ((unsigned long) a) | (((unsigned long) d) << 32);
+}
+

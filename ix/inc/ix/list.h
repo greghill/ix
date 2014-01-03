@@ -706,6 +706,6 @@ static inline bool hlist_empty(struct hlist_head *h)
 	for ((pos) = (h)->head; (pos); (pos) = (pos)->next)
 
 #define hlist_for_each_safe(h, pos, tmp) 				\
-	for ((pos) = (h)->head; (pos) && ((tmp) = (tmp)->next, 1);	\
+	for ((pos) = (h)->head; (pos) && ((tmp) = (pos)->next, 1);	\
 	     (pos) = (tmp))
 

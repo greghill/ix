@@ -6,68 +6,69 @@
 
 #include <ix/list.h>
 
-struct timer_list {
+struct timer {
 	struct hlist_node link;
-	void (*handler)(struct timer_list *l);
+	void (*handler)(struct timer *t);
+	uint64_t expires;
 };
 
 /**
  * timer_init - initializes a timer
- * @l: the timer
+ * @t: the timer
  */
 static inline void
-timer_init(struct timer_list *l, void (*handler)(struct timer_list *l))
+timer_init(struct timer *t, void (*handler)(struct timer *t))
 {
-	l->link.prev = NULL;
-	l->handler = handler;
+	t->link.prev = NULL;
+	t->handler = handler;
 }
 
 /**
  * timer_pending - determines if a timer is pending
- * @l: the timer
+ * @t: the timer
  *
  * Returns true if the timer is pending, otherwise false.
  */
-static inline bool timer_pending(struct timer_list *l)
+static inline bool timer_pending(struct timer *t)
 {
-	return l->link.prev != NULL;
+	return t->link.prev != NULL;
 }
 
-extern int __timer_start(struct timer_list *l, uint64_t usecs);
+extern int timer_add(struct timer *t, uint64_t usecs);
 
-static inline void __timer_stop(struct timer_list *l)
+static inline void __timer_del(struct timer *t)
 {
-	hlist_del(&l->link);
-	l->link.prev = NULL;
+	hlist_del(&t->link);
+	t->link.prev = NULL;
 }
 
 /**
- * timer_start - arms a timer
- * @l: the timer
- * @usecs: the number of microseconds from the present to fire the timer
+ * timer_mod - modifies a timer
+ * @t: the timer
+ * @usecs: the number of microseconds from present to fire the timer
  *
- * Note that this can be called more than once, but only the most recent
- * timeout will be applied.
+ * If the timer is already armed, then its trigger time is modified.
+ * Otherwise this function behaves like timer_add().
  *
  * Returns 0 if successful, otherwise failure.
  */
-static inline int timer_start(struct timer_list *l, uint64_t usecs)
+static inline int timer_mod(struct timer *t, uint64_t usecs)
 {
-	if (timer_pending(l))
-		__timer_stop(l);
-	return __timer_start(l, usecs);
+	if (timer_pending(t))
+		__timer_del(t);
+	return timer_add(t, usecs);
 }
 
 /**
- * timer_stop - disarms a timer
- * @l: the timer
+ * timer_del - disarms a timer
+ * @t: the timer
  *
- * If the timer is already disarmed, then nothing is done.
+ * If the timer is already disarmed, then nothing happens.
  */
-static inline void timer_stop(struct timer_list *l)
+static inline void timer_del(struct timer *t)
 {
-	if (timer_pending(l))
-		__timer_stop(l);
+	if (timer_pending(t))
+		__timer_del(t);
 }
 
 extern void timer_update(void);

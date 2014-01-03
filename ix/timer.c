@@ -1,18 +1,12 @@
 /*
  * timer.c - timer event infrastructure
  *
- * Assumption #1: most timers will be canceled before they fire.
- * Assumption #2: precision matters less the longer the delay.
- * Assumption #3: division instructions are very expensive.
- *
  * The design is inspired by "Hashed and Hierarchical Timing Wheels: Data
  * Structures for the Efficient Implementation of a Timer Facility" by
  * George Varghese and Tony Lauck. SOSP 87.
  *
  * Specificially, we use Scheme 7 described in the paper, where
- * hierarchical sets of buckets are used. We use the variant where
- * timers are unsorted in each bucket in order to trade some accuracy for
- * greater efficiency.
+ * hierarchical sets of buckets are used.
  */
 
 #include <ix/timer.h>
@@ -29,6 +23,11 @@
 #define MIN_DELAY_MASK		(MIN_DELAY_US - 1)
 #define MAX_DELAY_US		(MIN_DELAY_US * (1 << (WHEEL_COUNT * WHEEL_SHIFT)))
 
+#define WHEEL_IDX_TO_SHIFT(idx) \
+	((idx) * WHEEL_SHIFT + MIN_DELAY_SHIFT)
+#define WHEEL_OFFSET(val, idx) \
+	(((val) >> WHEEL_IDX_TO_SHIFT(idx)) & WHEEL_MASK)
+
 /*
  * NOTE: these paramemters may need to be tweaked.
  *
@@ -42,27 +41,43 @@
  */
 
 static struct hlist_head wheels[WHEEL_COUNT][WHEEL_SIZE];
-static uint64_t last_us, now_us;
+static uint64_t now_us, timer_pos;
 
-static inline struct hlist_head *__timer_get_bucket(uint64_t usecs)
+static inline struct hlist_head *
+__timer_get_bucket(uint64_t left, uint64_t expires)
 {
-	uint64_t expires = now_us + usecs;
-	int index = ((64 - clz64(usecs | MIN_DELAY_MASK) - MIN_DELAY_SHIFT)
+	int index = ((64 - clz64(left | MIN_DELAY_MASK) - MIN_DELAY_SHIFT)
 			>> WHEEL_SHIFT_LOG2);
-	int shift = (index << WHEEL_SHIFT_LOG2);
-	int offset = ((((expires - 1) >> shift) + 1) & WHEEL_MASK);
+	int offset = WHEEL_OFFSET(expires, index);
 
 	return &wheels[index][offset];
 }
 
-int __timer_start(struct timer_list *l, uint64_t usecs)
+static void timer_insert(struct timer *t,
+			 uint64_t left, uint64_t expires)
 {
 	struct hlist_head *bucket;
+	bucket = __timer_get_bucket(left, expires);
+	hlist_add_head(bucket, &t->link);
+}
+
+/**
+ * timer_add - adds a timer
+ * @l: the timer
+ * @usecs: the time interval from present to fire the timer
+ *
+ * Returns 0 if successful, otherwise failure.
+ */
+int timer_add(struct timer *t, uint64_t usecs)
+{
+	uint64_t expires;
 	if (unlikely(usecs >= MAX_DELAY_US))
 		return -EINVAL;
 
-	bucket = __timer_get_bucket(usecs);
-	hlist_add_head(bucket, &l->link);
+	expires = now_us + usecs;
+	t->expires = expires;
+	timer_insert(t, usecs, expires);
+
 	return 0;
 }
 
@@ -83,39 +98,31 @@ int __timer_start(struct timer_list *l, uint64_t usecs)
  */
 void timer_update(void)
 {
-	/* 
-	 * NOTE: there are purportedly some pretty large performance
-	 * benefits to performing 32-bit division instead of 64-bit
-	 * division. Sadly, our low precision wheel causes us to
-	 * require more than 32-bits of the TSC.
-	 * 
-	 * FIXME: this should be made portable.
-	 */
-	uint32_t tsc_high, tsc_low;
-	uint64_t tsc;
-
-	last_us = now_us;
-	asm volatile("rdtsc" : "=a" (tsc_low), "=d" (tsc_high));
-	tsc = ((uint64_t) tsc_low) | (((uint64_t) tsc_high) << 32);
-	now_us = tsc / CPU_CLOCKS_PER_US;
+	now_us = rdtscll() / CPU_CLOCKS_PER_US;
 }
 
-static void timer_run_one_wheel(int idx, uint64_t start, uint64_t stop)
+static void timer_run_bucket(struct hlist_head *h)
 {
-	uint64_t i;
-	struct hlist_head *h;
 	struct hlist_node *n;
-	struct timer_list *l;
+	struct timer *t;
 
-	for (i = start + 1; i <= stop; i++) {
-		h = &wheels[idx][i & WHEEL_MASK];
-		hlist_for_each(h, n) {
-			l = hlist_entry(n, struct timer_list, link);
-			l->handler(l);
-			n->prev = NULL;
-		}
+	hlist_for_each(h, n) {
+		t = hlist_entry(n, struct timer, link);
+		t->handler(t);
+		n->prev = NULL;
+	}
+	h->head = NULL;
+}
 
-		h->head = NULL;
+static void timer_reinsert_bucket(struct hlist_head *h)
+{
+	struct hlist_node *pos, *tmp;
+	struct timer *t;
+
+	hlist_for_each_safe(h, pos, tmp) {
+		t = hlist_entry(pos, struct timer, link);
+		__timer_del(t);
+		timer_insert(t, t->expires - now_us, t->expires);
 	}
 }
 
@@ -126,25 +133,21 @@ static void timer_run_one_wheel(int idx, uint64_t start, uint64_t stop)
  */
 void timer_run(void)
 {
-	uint64_t last = last_us;
-	uint64_t now = now_us;
+	for (; timer_pos <= now_us; timer_pos += MIN_DELAY_US) {
+		int high_off = WHEEL_OFFSET(timer_pos, 0);
 
-	/* high precision wheel */
-	now >>= WHEEL_SHIFT + MIN_DELAY_SHIFT;
-	last >>= WHEEL_SHIFT + MIN_DELAY_SHIFT;
-	timer_run_one_wheel(0, last, now);
+		/* collapse longer-term buckets into shorter-term buckets */
+		if (!high_off) {
+			int med_off = WHEEL_OFFSET(timer_pos, 1);
+			timer_reinsert_bucket(&wheels[1][med_off]);
 
-	/* medium precision wheel */
-	now >>= WHEEL_SHIFT;
-	last >>= WHEEL_SHIFT;
-	if (now == last)
-		return;
-	timer_run_one_wheel(1, last, now);
+			if (!med_off) {
+				int low_off = WHEEL_OFFSET(timer_pos, 2);
+				timer_reinsert_bucket(&wheels[2][low_off]);
+			}
+		}
 
-	/* low precision wheel */
-	now >>= WHEEL_SHIFT;
-	last >>= WHEEL_SHIFT;
-	if (now == last)
-		return;
-	timer_run_one_wheel(2, last, now);
+		timer_run_bucket(&wheels[0][high_off]);
+	}
 }
+
