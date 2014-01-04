@@ -20,7 +20,7 @@ LD	= gcc
 LDFLAGS	=
 LDLIBS	= -L$(DPDK_LIB_PATH) -lrt -ldl -lpthread -lm $(addprefix -l, $(DPDK_LIBS))
 
-SRCS=timer.c dpdk.c ipv4.c
+SRCS=timer.c mempool.c dpdk.c ipv4.c
 OBJS=$(subst .c,.o,$(SRCS))
 
 all: nos

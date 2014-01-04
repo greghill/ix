@@ -74,7 +74,11 @@ int timer_add(struct timer *t, uint64_t usecs)
 	if (unlikely(usecs >= MAX_DELAY_US))
 		return -EINVAL;
 
-	expires = now_us + usecs;
+	/*
+	 * Make sure the expiration time is rounded
+	 * up past the current bucket.
+	 */
+	expires = now_us + usecs + MIN_DELAY_US - 1;
 	t->expires = expires;
 	timer_insert(t, usecs, expires);
 
