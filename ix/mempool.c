@@ -47,7 +47,7 @@ static void mempool_init_buf(struct mempool *m, int count, size_t len)
 		next_pos += len;
 	}
 
-	((struct mempool_hdr *)next_pos)->next = NULL;
+	((struct mempool_hdr *)pos)->next = NULL;
 }
 
 int mempool_create(struct mempool *m, int count, size_t len)

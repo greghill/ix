@@ -7,8 +7,9 @@
  * Two other types of lists were also added to better support hash tables
  * - "slist" is a singly linked list
  * - "hlist" is a doubly linked list with a single head pointer to save space.
- * It can only be traversed in the forward direction. Unlike "slist", it
- * supports constant time removals.
+ *
+ * hlist's can only be traversed in the forward direction. However, unlike
+ * slist's, they support constant time removals.
  */
 
 #pragma once
@@ -692,7 +693,8 @@ static inline void hlist_del_head(struct hlist_head *h)
 static inline void hlist_del(struct hlist_node *n)
 {
 	n->prev->next = n->next;
-	n->next->prev = n->prev;
+	if (n->next)
+		n->next->prev = n->prev;
 }
 
 static inline bool hlist_empty(struct hlist_head *h)

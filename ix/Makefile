@@ -20,12 +20,12 @@ LD	= gcc
 LDFLAGS	=
 LDLIBS	= -L$(DPDK_LIB_PATH) -lrt -ldl -lpthread -lm $(addprefix -l, $(DPDK_LIBS))
 
-SRCS=timer.c mempool.c dpdk.c ipv4.c
+SRCS= arp.c cfg.c log.c timer.c mempool.c dpdk.c ipv4.c
 OBJS=$(subst .c,.o,$(SRCS))
 
-all: nos
+all: ix
 
-nos: $(OBJS)
+ix: $(OBJS)
 	$(LD) $(LDFLAGS) -o ix $(OBJS) $(LDLIBS)
 
 depend: .depend

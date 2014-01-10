@@ -46,7 +46,7 @@ static uint64_t now_us, timer_pos;
 static inline struct hlist_head *
 __timer_get_bucket(uint64_t left, uint64_t expires)
 {
-	int index = ((64 - clz64(left | MIN_DELAY_MASK) - MIN_DELAY_SHIFT)
+	int index = ((63 - clz64(left | MIN_DELAY_US) - MIN_DELAY_SHIFT)
 			>> WHEEL_SHIFT_LOG2);
 	int offset = WHEEL_OFFSET(expires, index);
 
@@ -85,24 +85,19 @@ int timer_add(struct timer *t, uint64_t usecs)
 	return 0;
 }
 
-/* FIXME: we need the control plane to provide this information */
-#define CPU_CLOCKS_PER_US	3400
-
 /**
- * timer_update - prepares for timers to be added and for timer processing
- * 
- * This must be called recently, typically at the very beginning of a
- * processing pass. The following sequence is recommended:
- * 
- * --- Enter Kernel ---
- * 1.) timer_update()
- * 2.) add a bunch of timers
- * 3.) timer_run()
- * --- Exit Kernel ---
+ * timer_add_for_next_tick - adds a timer with the shortest possible delay
+ * @t: the timer
+ *
+ * The timer is added to the nearest bucket and will fire the next
+ * time timer_run() is called, assuming MIN_DELAY_US has elapsed.
  */
-void timer_update(void)
+void timer_add_for_next_tick(struct timer *t)
 {
-	now_us = rdtscll() / CPU_CLOCKS_PER_US;
+	uint64_t expires;
+	expires = now_us + MIN_DELAY_US;
+	t->expires = expires;
+	timer_insert(t, MIN_DELAY_US, expires);
 }
 
 static void timer_run_bucket(struct hlist_head *h)
@@ -112,8 +107,8 @@ static void timer_run_bucket(struct hlist_head *h)
 
 	hlist_for_each(h, n) {
 		t = hlist_entry(n, struct timer, link);
-		t->handler(t);
 		n->prev = NULL;
+		t->handler(t);
 	}
 	h->head = NULL;
 }
@@ -126,9 +121,14 @@ static void timer_reinsert_bucket(struct hlist_head *h)
 	hlist_for_each_safe(h, pos, tmp) {
 		t = hlist_entry(pos, struct timer, link);
 		__timer_del(t);
+		if (t->expires < now_us)
+			t->expires = now_us;
 		timer_insert(t, t->expires - now_us, t->expires);
 	}
 }
+
+/* FIXME: we need the control plane to provide this information */
+#define CPU_CLOCKS_PER_US	3400
 
 /**
  * timer_run - the main timer processing pass
@@ -137,6 +137,8 @@ static void timer_reinsert_bucket(struct hlist_head *h)
  */
 void timer_run(void)
 {
+	now_us = rdtscll() / CPU_CLOCKS_PER_US;
+
 	for (; timer_pos <= now_us; timer_pos += MIN_DELAY_US) {
 		int high_off = WHEEL_OFFSET(timer_pos, 0);
 
@@ -153,5 +155,17 @@ void timer_run(void)
 
 		timer_run_bucket(&wheels[0][high_off]);
 	}
+}
+
+/**
+ * timer_init - initializes the timer service
+ *
+ * Returns 0 if successful, otherwise fail.
+ */
+int timer_init(void)
+{
+	now_us = rdtscll() / CPU_CLOCKS_PER_US;
+	timer_pos = now_us;
+	return 0;
 }
 

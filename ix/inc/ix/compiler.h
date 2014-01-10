@@ -18,6 +18,7 @@
 
 #define __packed __attribute__((packed))
 #define __unused __attribute__((unused))
+#define __aligned(x) __attribute__((aligned (x)))
 
 #define GCC_VERSION (__GNUC__ * 10000        \
 		     + __GNUC_MINOR__ * 100  \

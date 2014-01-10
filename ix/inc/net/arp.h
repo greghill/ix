@@ -4,6 +4,9 @@
 
 #pragma once
 
+#include <net/ethernet.h>
+#include <net/ip.h>
+
 struct arp_hdr {
 	uint16_t htype;
 	uint16_t ptype;		/* the ETHERTYPE */
@@ -18,6 +21,13 @@ struct arp_hdr {
 	 *    target hw addr: hlen bytes
 	 *    target protocol addr: plen bytes
 	 */
+} __packed;
+
+struct arp_hdr_ethip {
+	struct eth_addr	sender_mac;
+	struct ip_addr	sender_ip;
+	struct eth_addr	target_mac;
+	struct ip_addr	target_ip;
 } __packed;
 
 #define ARP_HTYPE_ETHER		1	/* ethernet */

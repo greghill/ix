@@ -33,6 +33,7 @@
 
 #pragma once
 
+#include <ix/types.h>
 #include <ix/byteorder.h>
 
 /*
@@ -44,31 +45,35 @@
 
 struct ip_addr {
         uint32_t addr;
-};
+} __packed;
+
+#define MAKE_IP_ADDR(a, b, c, d)			\
+	(((uint32_t) a << 24) | ((uint32_t) b << 16) |	\
+	 ((uint32_t) c << 8) | (uint32_t) d)
 
 /*
  * Structure of an internet header, naked of options.
  */
 struct ip {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-	u_char	header_len:4,		/* header length */
+	uint8_t	header_len:4,		/* header length */
 		version:4;		/* version */
 #endif
 #if __BYTE_ORDER == __BIG_ENDIAN
-	u_char	version:4,		/* version */
+	uint8_t	version:4,		/* version */
 		header_len:4;		/* header length */
 #endif
-	u_char	tos;			/* type of service */
-	u_short	len;			/* total length */
-	u_short	id;			/* identification */
-	u_short	off;			/* fragment offset field */
+	uint8_t tos;			/* type of service */
+	uint16_t len;			/* total length */
+	uint16_t id;			/* identification */
+	uint16_t off;			/* fragment offset field */
 #define	IP_RF 0x8000			/* reserved fragment flag */
 #define	IP_DF 0x4000			/* dont fragment flag */
 #define	IP_MF 0x2000			/* more fragments flag */
 #define	IP_OFFMASK 0x1fff		/* mask for fragmenting bits */
-	u_char	ttl;			/* time to live */
-	u_char	proto;			/* protocol */
-	u_short	chksum;			/* checksum */
+	uint8_t ttl;			/* time to live */
+	uint8_t proto;			/* protocol */
+	uint16_t chksum;			/* checksum */
 	struct	ip_addr src_addr;	/* source address */
 	struct  ip_addr dst_addr;	/* dest address */
 } __packed __aligned(4);
@@ -167,15 +172,15 @@ struct ip {
  * Time stamp option structure.
  */
 struct	ip_timestamp {
-	u_char	code;			/* IPOPT_TS */
-	u_char	len;			/* size of structure (variable) */
-	u_char	ptr;			/* index of current entry */
+	uint8_t code;			/* IPOPT_TS */
+	uint8_t len;			/* size of structure (variable) */
+	uint8_t ptr;			/* index of current entry */
 #if __BYTE_ORDER == __LITTLE_ENDIAN
-	u_char	flags:4,		/* flags, see below */
+	uint8_t flags:4,		/* flags, see below */
 		overflow:4;		/* overflow counter */
 #endif
 #if __BYTE_ORDER == __BIG_ENDIAN
-	u_char  overflow:4,		/* overflow counter */
+	uint8_t overflow:4,		/* overflow counter */
 		flags:4;		/* flags, see below */
 #endif
 	union  {
@@ -218,9 +223,9 @@ struct	ip_timestamp {
 struct ippseudo {
 	struct	ip_addr	src;		/* source internet address */
 	struct	ip_addr	dst;		/* destination internet address */
-	u_char		pad;		/* pad, must be zero */
-	u_char		proto;		/* protocol */
-	u_short		len;		/* protocol length */
+	uint8_t		pad;		/* pad, must be zero */
+	uint8_t		proto;		/* protocol */
+	uint16_t	len;		/* protocol length */
 };
 
 /* Protocols common to RFC 1700, POSIX, and X/Open. */

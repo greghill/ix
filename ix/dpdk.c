@@ -34,6 +34,8 @@
 #include <rte_mbuf.h>
 
 #include "ipv4.h"
+#include "bench.h"
+#include "cfg.h"
 
 #define MBUF_SIZE (2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM)
 #define NB_MBUF   8192
@@ -92,9 +94,8 @@ static const struct rte_eth_txconf tx_conf = {
 	.tx_rs_thresh = 0, /* Use PMD default values */
 };
 
-static struct rte_mempool *dpdk_pool;
-static int dpdk_port;
-static struct ether_addr dpdk_macaddr;
+struct rte_mempool *dpdk_pool;
+int dpdk_port;
 
 #define MAX_PKT_BURST	32
 
@@ -102,24 +103,31 @@ static void dpdk_rx_pkts(void)
 {
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 	int nb_rx;
+	unsigned long tsc;
 
+	synch_tsc();
+	tsc = rdtscll();
 	nb_rx = rte_eth_rx_burst(dpdk_port, 0, pkts_burst,
 				 MAX_PKT_BURST);
 
-	if (nb_rx)
+	if (nb_rx) {
 		ipv4_rx_pkts(nb_rx, pkts_burst);
+		printf("%d packets took %ld cycles\n", nb_rx, rdtscllp() - tsc);
+	}
 }
 
 static int dpdk_probe_one(int port)
 {
 	int ret;
 	struct rte_eth_link link;
+	struct ether_addr macaddr;
 	
 	ret = rte_eth_dev_configure(port, 1, 1, &port_conf);
 	if (ret < 0)
 		return ret;
 
-	rte_eth_macaddr_get(port, &dpdk_macaddr);
+	rte_eth_macaddr_get(port, &macaddr);
+	memcpy((void *) &cfg_mac, macaddr.addr_bytes, ETHER_ADDR_LEN);
 	
 	ret = rte_eth_rx_queue_setup(port, 0, DPDK_NUM_RX_DESC,
 				     rte_eth_dev_socket_id(port), &rx_conf,
@@ -138,12 +146,12 @@ static int dpdk_probe_one(int port)
 
 	printf("Port %u, MAC address: %02X:%02X:%02X:%02X:%02X:%02X\n\n",
 		(unsigned) port,
-		dpdk_macaddr.addr_bytes[0],
-		dpdk_macaddr.addr_bytes[1],
-		dpdk_macaddr.addr_bytes[2],
-		dpdk_macaddr.addr_bytes[3],
-		dpdk_macaddr.addr_bytes[4],
-		dpdk_macaddr.addr_bytes[5]);
+		macaddr.addr_bytes[0],
+		macaddr.addr_bytes[1],
+		macaddr.addr_bytes[2],
+		macaddr.addr_bytes[3],
+		macaddr.addr_bytes[4],
+		macaddr.addr_bytes[5]);
 
 	rte_eth_link_get(port, &link);
 	if (!link.link_status)
@@ -222,6 +230,9 @@ found:
 	return 0;
 }
 
+extern int timer_init(void);
+extern int arp_init(void);
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -232,6 +243,8 @@ int main(int argc, char *argv[])
 	argc -= ret;
 	argv += ret;
 
+	timer_init();
+	arp_init();
 	dpdk_init();
 
 	return 0;

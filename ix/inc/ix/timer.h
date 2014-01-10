@@ -12,12 +12,15 @@ struct timer {
 	uint64_t expires;
 };
 
+#define ONE_SECOND	1000000
+#define ONE_MS		10000
+#define ONE_US		1
 /**
- * timer_init - initializes a timer
+ * timer_init_entry - initializes a timer
  * @t: the timer
  */
 static inline void
-timer_init(struct timer *t, void (*handler)(struct timer *t))
+timer_init_entry(struct timer *t, void (*handler)(struct timer *t))
 {
 	t->link.prev = NULL;
 	t->handler = handler;
@@ -35,6 +38,7 @@ static inline bool timer_pending(struct timer *t)
 }
 
 extern int timer_add(struct timer *t, uint64_t usecs);
+extern void timer_add_for_next_tick(struct timer *t);
 
 static inline void __timer_del(struct timer *t)
 {
@@ -71,5 +75,6 @@ static inline void timer_del(struct timer *t)
 		__timer_del(t);
 }
 
-extern void timer_update(void);
 extern void timer_run(void);
+extern int timer_init(void);
+
