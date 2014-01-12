@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <time.h>
+#include <string.h>
 
 #define MAX_LOG_LEN	1024
 
