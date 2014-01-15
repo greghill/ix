@@ -21,7 +21,8 @@
 #define MIN_DELAY_SHIFT		4
 #define MIN_DELAY_US		(1 << MIN_DELAY_SHIFT)
 #define MIN_DELAY_MASK		(MIN_DELAY_US - 1)
-#define MAX_DELAY_US		(MIN_DELAY_US * (1 << (WHEEL_COUNT * WHEEL_SHIFT)))
+#define MAX_DELAY_US \
+	(MIN_DELAY_US * (1 << (WHEEL_COUNT * WHEEL_SHIFT)))
 
 #define WHEEL_IDX_TO_SHIFT(idx) \
 	((idx) * WHEEL_SHIFT + MIN_DELAY_SHIFT)
@@ -29,7 +30,7 @@
 	(((val) >> WHEEL_IDX_TO_SHIFT(idx)) & WHEEL_MASK)
 
 /*
- * NOTE: these paramemters may need to be tweaked.
+ * NOTE: these parameters may need to be tweaked.
  *
  * Right now we have the following wheels:
  *
@@ -42,6 +43,11 @@
 
 static struct hlist_head wheels[WHEEL_COUNT][WHEEL_SIZE];
 static uint64_t now_us, timer_pos;
+
+static inline bool timer_expired(struct timer *t)
+{
+	return (t->expires <= now_us);
+}
 
 static inline struct hlist_head *
 __timer_get_bucket(uint64_t left, uint64_t expires)
@@ -121,8 +127,12 @@ static void timer_reinsert_bucket(struct hlist_head *h)
 	hlist_for_each_safe(h, pos, tmp) {
 		t = hlist_entry(pos, struct timer, link);
 		__timer_del(t);
-		if (t->expires < now_us)
-			t->expires = now_us;
+
+		if (timer_expired(t)) {
+			t->handler(t);
+			continue;
+		}
+
 		timer_insert(t, t->expires - now_us, t->expires);
 	}
 }

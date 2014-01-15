@@ -7,22 +7,50 @@
 #include <ix/stddef.h>
 #include <ix/byteorder.h>
 #include <ix/timer.h>
+
 #include <net/ethernet.h>
-#include <net/arp.h>
+#include <net/ip.h>
 
 #include "net.h"
 
-static void ipv4_dump_eth_pkt(struct eth_hdr *hdr)
+static void ipv4_ip_input(struct rte_mbuf *pkt, struct ip_hdr *hdr)
 {
-	struct eth_addr *dmac = &hdr->dhost;
-	struct eth_addr *smac = &hdr->shost;
-	printf("ipv4: dst MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
-	       dmac->addr[0], dmac->addr[1], dmac->addr[2],
-	       dmac->addr[3], dmac->addr[4], dmac->addr[5]);
-	printf("ipv4: src MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
-	       smac->addr[0], smac->addr[1], smac->addr[2],
-	       smac->addr[3], smac->addr[4], smac->addr[5]);
-	printf("ipv4: frame type: %x\n", ntoh16(hdr->type));
+	int hdrlen, pktlen;
+
+	/* check that the packet is long enough */
+	if (!enough_space(pkt, hdr))
+		goto out;
+	/* check for IP version 4 */
+	if (hdr->version != 4)
+		goto out;
+	/* the minimum legal IPv4 header length is 20 bytes (5 words) */
+	if (hdr->header_len < 5)
+		goto out;
+
+	/* drop all IP fragment packets (unsupported) */
+	if (ntoh16(hdr->off) & (IP_OFFMASK | IP_MF))
+		goto out;
+
+	hdrlen = hdr->header_len * sizeof(uint32_t);
+	pktlen = ntoh16(hdr->len);
+
+	/* FIXME: make sure pktlen isn't greater than the buffer size */
+	/* the ip total length must be large enough to hold the header */
+	if (pktlen < hdrlen)
+		goto out;
+
+	pktlen -= hdrlen;
+
+	switch(hdr->proto) {
+	case IPPROTO_ICMP:
+		icmp_input(pkt,
+			   next_hdr_off(hdr, struct icmp_hdr *, hdrlen),
+			   pktlen);
+		return;
+	}
+
+out:
+	rte_pktmbuf_free(pkt);
 }
 
 static void ipv4_rx_eth_pkt(struct rte_mbuf *pkt)
@@ -31,10 +59,10 @@ static void ipv4_rx_eth_pkt(struct rte_mbuf *pkt)
 
 	switch (ntoh16(ethhdr->type)) {
 	case ETHTYPE_IP:
-		rte_pktmbuf_free(pkt);
+		ipv4_ip_input(pkt, next_hdr(ethhdr, struct ip_hdr *));
 		break;
 	case ETHTYPE_ARP:
-		arp_process_pkt(pkt, next_hdr(ethhdr, struct arp_hdr *));
+		arp_input(pkt, next_hdr(ethhdr, struct arp_hdr *));
 		break;
 	default:
 		rte_pktmbuf_free(pkt);

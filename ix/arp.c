@@ -98,6 +98,33 @@ static int arp_update_mac(struct ip_addr *addr,
 	if (unlikely(!e))
 		return -ENOMEM;
 
+#ifdef DEBUG
+	if (!(e->flags & ARP_FLAG_VALID)) {
+		log_debug("arp: inserting table entry:\n");
+		log_debug("\tIP:\t%d.%d.%d.%d\n",
+			  ((addr->addr >> 24) & 0xff),
+			  ((addr->addr >> 16) & 0xff),
+			  ((addr->addr >> 8) & 0xff),
+			  (addr->addr & 0xff));
+		log_debug("\tMAC:\t%02X:%02X:%02X:%02X:%02X:%02X\n",
+			  mac->addr[0], mac->addr[1], mac->addr[2],
+			  mac->addr[3], mac->addr[4], mac->addr[5]);
+	} else if (memcmp(&mac->addr, &e->mac.addr, ETH_ADDR_LEN)) {
+		log_debug("arp: updating table entry:\n");
+		log_debug("\tIP:\t%d.%d.%d.%d\n",
+			  ((addr->addr >> 24) & 0xff),
+			  ((addr->addr >> 16) & 0xff),
+			  ((addr->addr >> 8) & 0xff),
+			  (addr->addr & 0xff));
+		log_debug("\t old MAC:\t%02X:%02X:%02X:%02X:%02X:%02X\n",
+			  e->mac.addr[0], e->mac.addr[1], e->mac.addr[2],
+			  e->mac.addr[3], e->mac.addr[4], e->mac.addr[5]);
+		log_debug("\t new MAC:\t%02X:%02X:%02X:%02X:%02X:%02X\n",
+			  mac->addr[0], mac->addr[1], mac->addr[2],
+			  mac->addr[3], mac->addr[4], mac->addr[5]);
+	}
+#endif /* DEBUG */
+
 	e->mac = *mac;
 	e->flags = ARP_FLAG_VALID;
 	e->retries = 0;
@@ -105,33 +132,6 @@ static int arp_update_mac(struct ip_addr *addr,
 
 	return 0;
 }
-
-#ifdef DEBUG
-static void arp_dump_pkt(uint16_t op, struct arp_hdr_ethip *ethip)
-{
-	struct eth_addr *smac = &ethip->sender_mac;
-	struct eth_addr *tmac = &ethip->target_mac;
-	uint32_t sip, tip;
-
-	sip = ntoh32(ethip->sender_ip.addr);
-	tip = ntoh32(ethip->target_ip.addr);
-
-	log_debug("arp: packet dump: op is %s\n",
-		  (op == ARP_OP_REQUEST) ? "request" : "response");
-	log_debug("arp:\tsender MAC:\t%02X:%02X:%02X:%02X:%02X:%02X\n",
-		  smac->addr[0], smac->addr[1], smac->addr[2],
-                  smac->addr[3], smac->addr[4], smac->addr[5]);
-	log_debug("arp:\tsender IP:\t%d.%d.%d.%d\n",
-		  ((sip >> 24) & 0xff), ((sip >> 16) & 0xff),
-		  ((sip >> 8) & 0xff), (sip & 0xff));
-	log_debug("arp:\ttarget MAC:\t%02X:%02X:%02X:%02X:%02X:%02X\n",
-		  tmac->addr[0], tmac->addr[1], tmac->addr[2],
-                  tmac->addr[3], tmac->addr[4], tmac->addr[5]);
-	log_debug("arp:\ttarget IP:\t%d.%d.%d.%d\n",
-		  ((tip >> 24) & 0xff), ((tip >> 16) & 0xff),
-		  ((tip >> 8) & 0xff), (tip & 0xff));
-}
-#endif /* DEBUG */
 
 static int arp_send_pkt(uint16_t op,
 			struct ip_addr *target_ip,
@@ -177,9 +177,6 @@ static int arp_send_pkt(uint16_t op,
 		return -EIO;
 	}
 
-	log_debug("arp: sending an ARP packet\n");
-	arp_dump_pkt(op, ethip);
-
 	return 0;
 }
 
@@ -209,18 +206,15 @@ static int arp_send_response_reuse(struct rte_mbuf *pkt,
 		return -EIO;
 	}
 
-	log_debug("arp: sending an ARP response (reuse)\n");
-	arp_dump_pkt(ARP_OP_REPLY, ethip);
-
 	return 0;
 }
 
 /**
- * arp_process_pkt - handles an ARP request from the network
+ * arp_input - handles an ARP request from the network
  * @pkt: the packet
  * @hdr: the ARP header (inside the packet)
  */
-void arp_process_pkt(struct rte_mbuf *pkt, struct arp_hdr *hdr)
+void arp_input(struct rte_mbuf *pkt, struct arp_hdr *hdr)
 {
 	int op;
 	struct arp_hdr_ethip *ethip;
@@ -246,9 +240,6 @@ void arp_process_pkt(struct rte_mbuf *pkt, struct arp_hdr *hdr)
 	sender_ip.addr = ntoh32(ethip->sender_ip.addr);
 	target_ip.addr = ntoh32(ethip->target_ip.addr);
 
-	log_debug("arp: recieved an ARP packet\n");
-	arp_dump_pkt(op, ethip);
-
 	/* refuse ARP packets with multicast source MAC's */
 	if (eth_addr_is_multicast(&ethip->sender_mac))
 		goto out;
@@ -257,6 +248,14 @@ void arp_process_pkt(struct rte_mbuf *pkt, struct arp_hdr *hdr)
 	arp_update_mac(&sender_ip, &ethip->sender_mac, am_target);
 
 	if (am_target && op == ARP_OP_REQUEST) {
+#ifdef DEBUG
+		log_debug("arp: responding to arp request "
+			  "from IP %d.%d.%d.%d\n",
+			  ((sender_ip.addr >> 24) & 0xff),
+			  ((sender_ip.addr >> 16) & 0xff),
+			  ((sender_ip.addr >> 8) & 0xff),
+			  (sender_ip.addr & 0xff));
+#endif
 		arp_send_response_reuse(pkt, hdr, ethip);
 		return;
 	}
@@ -299,6 +298,14 @@ static void arp_timer_handler(struct timer *t)
 
 	e->retries++;
 	if (e->retries >= ARP_MAX_ATTEMPTS) {
+#ifdef DEBUG
+		log_debug("arp: removing dead entry "
+			  "IP %d.%d.%d.%d\n",
+			  ((e->addr.addr >> 24) & 0xff),
+			  ((e->addr.addr >> 16) & 0xff),
+			  ((e->addr.addr >> 8) & 0xff),
+			  (e->addr.addr & 0xff));
+#endif
 		hlist_del(&e->link);
 		mempool_free(&arp_mempool, e);
 		return;

@@ -12,9 +12,6 @@
  * An internet checksum is a 16-bit one's complement sum. Details
  * are described in RFC 1071.
  *
- * NOTE: the answer probably should be inverted before using in a
- & header.
- *
  * Returns a 16-bit checksum value.
  */
 static inline uint16_t chksum_internet(const char *buf, int len)
@@ -66,6 +63,7 @@ static inline uint16_t chksum_internet(const char *buf, int len)
              "shrl $16, %k0\n"
              "addw %w1, %w0\n"
              "adcw $0, %w0\n"
+	     "not %0\n"
 
             : "=&r"(sum), "=r"(buf)
             : "r"(len), "1"(buf) : "%rdx", "cc", "memory");

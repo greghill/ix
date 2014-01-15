@@ -54,7 +54,7 @@ struct ip_addr {
 /*
  * Structure of an internet header, naked of options.
  */
-struct ip {
+struct ip_hdr {
 #if __BYTE_ORDER == __LITTLE_ENDIAN
 	uint8_t	header_len:4,		/* header length */
 		version:4;		/* version */
@@ -220,7 +220,7 @@ struct	ip_timestamp {
  * checksums. For the Internet checksum, struct ipovly can be used instead.
  * For stronger checksums, the real thing must be used.
  */
-struct ippseudo {
+struct ip_pseudo {
 	struct	ip_addr	src;		/* source internet address */
 	struct	ip_addr	dst;		/* destination internet address */
 	uint8_t		pad;		/* pad, must be zero */
