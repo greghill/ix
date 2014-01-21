@@ -11,6 +11,9 @@
 
 #include <ix/timer.h>
 #include <ix/errno.h>
+#include <ix/log.h>
+
+#include <time.h>
 
 #define WHEEL_SHIFT_LOG2	3
 #define WHEEL_SHIFT		(1 << WHEEL_SHIFT_LOG2)
@@ -43,6 +46,7 @@
 
 static struct hlist_head wheels[WHEEL_COUNT][WHEEL_SIZE];
 static uint64_t now_us, timer_pos;
+static int cpu_clocks_per_us;
 
 static inline bool timer_expired(struct timer *t)
 {
@@ -137,9 +141,6 @@ static void timer_reinsert_bucket(struct hlist_head *h)
 	}
 }
 
-/* FIXME: we need the control plane to provide this information */
-#define CPU_CLOCKS_PER_US	3400
-
 /**
  * timer_run - the main timer processing pass
  * 
@@ -147,7 +148,7 @@ static void timer_reinsert_bucket(struct hlist_head *h)
  */
 void timer_run(void)
 {
-	now_us = rdtscll() / CPU_CLOCKS_PER_US;
+	now_us = rdtscll() / cpu_clocks_per_us;
 
 	for (; timer_pos <= now_us; timer_pos += MIN_DELAY_US) {
 		int high_off = WHEEL_OFFSET(timer_pos, 0);
@@ -167,6 +168,33 @@ void timer_run(void)
 	}
 }
 
+/* derived from DPDK */
+static int
+timer_calibrate_tsc(void)
+{
+	struct timespec sleeptime = {.tv_nsec = 5E8 }; /* 1/2 second */
+	struct timespec t_start, t_end;
+
+	if (clock_gettime(CLOCK_MONOTONIC_RAW, &t_start) == 0) {
+		uint64_t ns, end, start = rdtscll();
+		double secs;
+
+		nanosleep(&sleeptime,NULL);
+		clock_gettime(CLOCK_MONOTONIC_RAW, &t_end);
+		end = rdtscll();
+		ns = ((t_end.tv_sec - t_start.tv_sec) * 1E9);
+		ns += (t_end.tv_nsec - t_start.tv_nsec);
+
+		secs = (double)ns / 1000;
+		cpu_clocks_per_us = (uint64_t)((end - start)/secs);
+		log_info("timer: detected %d ticks per US\n",
+			 cpu_clocks_per_us);
+                return 0;
+        }
+
+	return -1;
+}
+
 /**
  * timer_init - initializes the timer service
  *
@@ -174,7 +202,13 @@ void timer_run(void)
  */
 int timer_init(void)
 {
-	now_us = rdtscll() / CPU_CLOCKS_PER_US;
+	int ret;
+
+	ret = timer_calibrate_tsc();
+	if (ret)
+		return ret;
+
+	now_us = rdtscll() / cpu_clocks_per_us;
 	timer_pos = now_us;
 	return 0;
 }
