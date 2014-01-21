@@ -248,14 +248,13 @@ void arp_input(struct rte_mbuf *pkt, struct arp_hdr *hdr)
 	arp_update_mac(&sender_ip, &ethip->sender_mac, am_target);
 
 	if (am_target && op == ARP_OP_REQUEST) {
-#ifdef DEBUG
 		log_debug("arp: responding to arp request "
 			  "from IP %d.%d.%d.%d\n",
 			  ((sender_ip.addr >> 24) & 0xff),
 			  ((sender_ip.addr >> 16) & 0xff),
 			  ((sender_ip.addr >> 8) & 0xff),
 			  (sender_ip.addr & 0xff));
-#endif
+
 		arp_send_response_reuse(pkt, hdr, ethip);
 		return;
 	}
@@ -298,14 +297,13 @@ static void arp_timer_handler(struct timer *t)
 
 	e->retries++;
 	if (e->retries >= ARP_MAX_ATTEMPTS) {
-#ifdef DEBUG
 		log_debug("arp: removing dead entry "
 			  "IP %d.%d.%d.%d\n",
 			  ((e->addr.addr >> 24) & 0xff),
 			  ((e->addr.addr >> 16) & 0xff),
 			  ((e->addr.addr >> 8) & 0xff),
 			  (e->addr.addr & 0xff));
-#endif
+
 		hlist_del(&e->link);
 		mempool_free(&arp_mempool, e);
 		return;

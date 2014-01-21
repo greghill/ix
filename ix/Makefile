@@ -20,7 +20,15 @@ LD	= gcc
 LDFLAGS	=
 LDLIBS	= -L$(DPDK_LIB_PATH) -lrt -ldl -lpthread -lm $(addprefix -l, $(DPDK_LIBS))
 
-SRCS= arp.c cfg.c dpdk.c dump.c icmp.c ipv4.c log.c mempool.c timer.c
+SRCS =
+DIRS = core net ixgbe
+
+define register_dir
+SRCS += $(patsubst %, $(1)/%, $(2))
+endef
+
+include $(patsubst %, %/dir.mk, $(DIRS))
+
 OBJS=$(subst .c,.o,$(SRCS))
 
 all: ix

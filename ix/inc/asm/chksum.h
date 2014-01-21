@@ -27,7 +27,7 @@ static inline uint16_t chksum_internet(const char *buf, int len)
              "jz 2f\n"
              "1: adcq (%1), %0\n"
              "leaq 8(%1), %1\n"
-             "dec %%rdx\n"
+             "decl %%edx\n"
              "jne 1b\n"
              "adcq $0, %0\n"
 
