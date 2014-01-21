@@ -46,7 +46,20 @@
 
 static struct hlist_head wheels[WHEEL_COUNT][WHEEL_SIZE];
 static uint64_t now_us, timer_pos;
-static int cpu_clocks_per_us;
+static int cycles_per_us;
+
+/**
+ * __timer_delay_us - spins the CPU for the specified delay
+ * @us: the delay in microseconds
+ */
+void __timer_delay_us(uint64_t us)
+{
+	uint64_t cycles = us * cycles_per_us;
+	unsigned long start = rdtscll();
+
+	while (rdtscll() - start < cycles)
+		cpu_relax();	
+}
 
 static inline bool timer_expired(struct timer *t)
 {
@@ -148,7 +161,7 @@ static void timer_reinsert_bucket(struct hlist_head *h)
  */
 void timer_run(void)
 {
-	now_us = rdtscll() / cpu_clocks_per_us;
+	now_us = rdtscll() / cycles_per_us;
 
 	for (; timer_pos <= now_us; timer_pos += MIN_DELAY_US) {
 		int high_off = WHEEL_OFFSET(timer_pos, 0);
@@ -186,9 +199,9 @@ timer_calibrate_tsc(void)
 		ns += (t_end.tv_nsec - t_start.tv_nsec);
 
 		secs = (double)ns / 1000;
-		cpu_clocks_per_us = (uint64_t)((end - start)/secs);
+		cycles_per_us = (uint64_t)((end - start)/secs);
 		log_info("timer: detected %d ticks per US\n",
-			 cpu_clocks_per_us);
+			 cycles_per_us);
                 return 0;
         }
 
@@ -208,7 +221,7 @@ int timer_init(void)
 	if (ret)
 		return ret;
 
-	now_us = rdtscll() / cpu_clocks_per_us;
+	now_us = rdtscll() / cycles_per_us;
 	timer_pos = now_us;
 	return 0;
 }
