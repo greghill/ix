@@ -39,17 +39,18 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include <rte_common.h>
-#include <rte_debug.h>
-#include <rte_cycles.h>
-#include <rte_log.h>
-#include <rte_byteorder.h>
+
+#include <ix/stddef.h>
+#include <ix/byteorder.h>
+#include <ix/delay.h>
+#include <ix/atomic.h>
+#include <ix/log.h>
 
 #include "ixgbe_logs.h"
 
-#define ASSERT(x) if(!(x)) rte_panic("IXGBE: x")
+#define ASSERT(x) if(!(x)) panic("IXGBE: x")
 
-#define DELAY(x) rte_delay_us(x)
+#define DELAY(x) delay_us(x)
 #define usec_delay(x) DELAY(x)
 #define msec_delay(x) DELAY(1000*(x))
 
@@ -64,10 +65,6 @@
 #define FALSE               0
 #define TRUE                1
 
-#define false               0
-#define true                1
-#define min(a,b)	RTE_MIN(a,b) 
-
 #define EWARN(hw, S, args...)     DEBUGOUT1(S, ##args)
 
 /* Bunch of defines for shared code bogosity */
@@ -78,10 +75,10 @@
 #define UNREFERENCED_4PARAMETER(_p, _q, _r, _s) 
 
 #define STATIC static
-#define IXGBE_NTOHL(_i)	rte_be_to_cpu_32(_i)
-#define IXGBE_NTOHS(_i)	rte_be_to_cpu_16(_i)
-#define IXGBE_CPU_TO_LE32(_i)  rte_cpu_to_le_32(_i)
-#define IXGBE_LE32_TO_CPUS(_i) rte_le_to_cpu_32(_i)
+#define IXGBE_NTOHL(_i)	ntoh32(_i)
+#define IXGBE_NTOHS(_i)	ntoh16(_i)
+#define IXGBE_CPU_TO_LE32(_i)  cpu_to_le32(_i)
+#define IXGBE_LE32_TO_CPUS(_i) le32_to_cpu(_i)
 
 typedef uint8_t		u8;
 typedef int8_t		s8;
@@ -89,17 +86,10 @@ typedef uint16_t	u16;
 typedef uint32_t	u32;
 typedef int32_t		s32;
 typedef uint64_t	u64;
-typedef int		bool;
-
-#define mb()	rte_mb()
-#define wmb()	rte_wmb()
-#define rmb()	rte_rmb()
-
-#define prefetch(x) rte_prefetch0(x)
 
 #define IXGBE_PCI_REG(reg) (*((volatile uint32_t *)(reg)))
 
-static inline uint32_t ixgbe_read_addr(volatile void* addr)
+static inline uint32_t ixgbe_read_addr(volatile void *addr)
 {
 	return IXGBE_PCI_REG(addr);
 }
