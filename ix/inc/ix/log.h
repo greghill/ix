@@ -27,3 +27,6 @@ enum {
 #define log_debug(fmt, ...)
 #endif
 
+#define panic(fmt, ...) \
+do {logk(LOG_EMERG, fmt, ##__VA_ARGS__); exit(-1);} while (0)
+
