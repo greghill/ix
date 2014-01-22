@@ -33,20 +33,20 @@ OBJS=$(subst .c,.o,$(SRCS))
 
 all: ix
 
-ix: $(OBJS)
-	$(LD) $(LDFLAGS) -o ix $(OBJS) $(LDLIBS)
-
 depend: .depend
 
 .depend: $(SRCS)
-	rm -rf ./.depend
-	$(CC) $(CFLAGS) -MM $^>>./.depend;
-
-clean:
-	rm $(OBJS) ix
-
-dist-clean: clean
-	rm *~ .dependnos
+	rm -f ./.depend
+	$(foreach SRC,$(SRCS),$(CC) -MM -MT $(SRC:.c=.o) $(SRC) >> .depend;)
 
 include .depend
+
+ix: $(OBJS)
+	$(LD) $(LDFLAGS) -o ix $(OBJS) $(LDLIBS)
+
+clean:
+	rm $(OBJS) ix .depend
+
+dist-clean: clean
+	rm *~
 
