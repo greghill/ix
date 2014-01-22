@@ -7,3 +7,15 @@ main.blg
 main.pdf
 latex-all.tex
 *eps-converted-to.pdf
+*.o
+*.d
+*.a
+*.swp
+*.swo
+*.hi
+*.cmd
+*.out
+tags
+.depend
+ix/ix
+
