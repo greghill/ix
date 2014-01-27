@@ -6,7 +6,7 @@
 
 #include <asm/cpu.h>
 
-typedef _Bool bool;
+typedef int bool;
 #define false 0
 #define true 1
 
