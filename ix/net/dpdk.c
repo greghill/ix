@@ -33,6 +33,8 @@
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
 
+#include <ix/dyncore.h>
+
 #include "ipv4.h"
 #include "bench.h"
 #include "cfg.h"
@@ -98,6 +100,11 @@ struct rte_mempool *dpdk_pool;
 int dpdk_port;
 
 #define MAX_PKT_BURST	32
+
+static int has_pending_pkts(__attribute__((unused)) void *dummy)
+{
+	return rte_eth_rx_queue_count(dpdk_port, 0) > 0;
+}
 
 static void dpdk_rx_pkts(void)
 {
@@ -178,11 +185,7 @@ link_down:
 
 static int dpdk_launch_one_lcore(__attribute__((unused)) void *dummy)
 {
-	printf("launched lcore\n");
-	while (1) {
-		dpdk_rx_pkts();
-	}
-
+	dpdk_rx_pkts();
 	return 0;
 }
 
@@ -214,20 +217,11 @@ static int dpdk_init(void)
 		ret = dpdk_probe_one(i);
 		if (!ret) {
 			printf("DPDK is ready\n");
-			goto found;
+			return 0;
 		}
 	}
 
 	return -ENODEV;
-
-found:
-	rte_eal_mp_remote_launch(dpdk_launch_one_lcore, NULL, CALL_MASTER);
-	RTE_LCORE_FOREACH_SLAVE(i) {
-		if (rte_eal_wait_lcore(i) < 0)
-			return -1;
-	}
-
-	return 0;
 }
 
 extern int timer_init(void);
@@ -246,6 +240,7 @@ int main(int argc, char *argv[])
 	timer_init();
 	arp_init();
 	dpdk_init();
+	dyncore_init(dpdk_launch_one_lcore, has_pending_pkts);
 
 	return 0;
 }
