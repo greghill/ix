@@ -2,6 +2,8 @@
  * atomic.h - utilities for atomically manipulating memory
  */
 
+#pragma once
+
 /**
  * mb - a memory barrier
  *

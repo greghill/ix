@@ -2,6 +2,8 @@
  * delay.h - tools for pausing the CPU
  */
 
+#pragma once
+
 #include <ix/types.h>
 
 extern void __timer_delay_us(uint64_t us);

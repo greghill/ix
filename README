@@ -14,8 +14,7 @@ here.
 nos: The BMOS "libevent" library OS lives here. Currently it is built
 on top of DPDK but eventually it will use a custom driver stack and be
 built on top of Dune. DPDK is a good temporary solution, but doesn't
-integrate well with our control plane and is inflexible in terms of
-zero-copy, queue size adjustments, and possibly IOMMU configuration.
+integrate well with our control plane.
 
 lcp: Contains the Linux control-plane. This is a system for configuring
 Linux to get out of the way so that whole cores can be allocated to app
