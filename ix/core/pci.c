@@ -267,7 +267,7 @@ void *pci_map_mem_bar(struct pci_dev *dev, struct pci_bar *bar, bool wc)
 	}
 
 	fd = open(path, O_RDWR);
-	if (!fd)
+	if (fd == -1)
 		return NULL;
 
 	vaddr = mmap(NULL, bar->len, PROT_READ | PROT_WRITE,
