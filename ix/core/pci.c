@@ -276,6 +276,8 @@ void *pci_map_mem_bar(struct pci_dev *dev, struct pci_bar *bar, bool wc)
 	if (vaddr == MAP_FAILED)
 		return NULL;
 
+	/* FIXME: hook into Dune here */
+
 	return vaddr;
 }
 
@@ -286,6 +288,7 @@ void *pci_map_mem_bar(struct pci_dev *dev, struct pci_bar *bar, bool wc)
  */
 void pci_unmap_mem_bar(struct pci_bar *bar, void *vaddr)
 {
+	/* FIXME: hook into Dune here */
 	munmap(vaddr, bar->len);
 }
 
