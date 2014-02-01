@@ -18,7 +18,7 @@ CC	= gcc
 CFLAGS	= -g -Wall -O3 -I$(DPDK_INC_PATH) -I./inc
 LD	= gcc
 LDFLAGS	=
-LDLIBS	= -L$(DPDK_LIB_PATH) -lrt -ldl -lpthread -lm $(addprefix -l, $(DPDK_LIBS))
+LDLIBS	= -L$(DPDK_LIB_PATH) -lrt -ldl -lpthread -lm -lnuma $(addprefix -l, $(DPDK_LIBS))
 
 SRCS =
 DIRS = core net ixgbe

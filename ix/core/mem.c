@@ -46,7 +46,7 @@ void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 		return NULL;
 #endif
 	default: /* fail on other sizes */
-		return NULL;		
+		return NULL;
 	}
 
 	vaddr = mmap(NULL, len, PROT_READ | PROT_WRITE, flags, -1, 0);
@@ -128,7 +128,7 @@ int mem_lookup_page_phys_addrs(void *addr, int nr, int size,
 			ret = -EIO;
 			goto out;
 		}
-		
+	
 		if (read(fd, &tmp, sizeof(uint64_t)) <= 0) {
 			ret = -EIO;
 			goto out;

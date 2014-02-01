@@ -10,8 +10,8 @@
 /* size values */
 enum {
 	PAGE_SIZE_4KB = (1 << 12), /* 4096 bytes */
-	PAGE_SIZE_2MB = (1 << 21), /* 2097152 bytes */ 
-	PAGE_SIZE_1GB = (1 << 30), /* 1073741824 bytes */ 
+	PAGE_SIZE_2MB = (1 << 21), /* 2097152 bytes */
+	PAGE_SIZE_1GB = (1 << 30), /* 1073741824 bytes */
 };
 
 /*
