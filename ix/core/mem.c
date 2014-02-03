@@ -32,14 +32,14 @@ void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 	size_t len = nr * size;
 
 	switch (size) {
-	case PAGE_SIZE_4KB:
+	case PGSIZE_4KB:
 		break;
-	case PAGE_SIZE_2MB:
+	case PGSIZE_2MB:
 		flags |= MAP_HUGETLB;
 #ifdef MAP_HUGE_2MB
 		flags |= MAP_HUGE_2MB;
 #endif
-	case PAGE_SIZE_1GB:
+	case PGSIZE_1GB:
 #ifdef MAP_HUGE_1GB
 		flags |= MAP_HUGETLB | MAP_HUGE_1GB;
 #else
@@ -123,7 +123,7 @@ int mem_lookup_page_phys_addrs(void *addr, int nr, int size,
 
 	for (i = 0; i < nr; i++) {
 		if (lseek(fd, (((uintptr_t) addr + (i * size)) /
-		    PAGE_SIZE_4KB) * sizeof(uint64_t), SEEK_SET) ==
+		    PGSIZE_4KB) * sizeof(uint64_t), SEEK_SET) ==
 		    (off_t) -1) {
 			ret = -EIO;
 			goto out;
@@ -134,7 +134,7 @@ int mem_lookup_page_phys_addrs(void *addr, int nr, int size,
 			goto out;
 		}
 
-		paddrs[i] = (tmp & 0x7fffffffffffffULL) * PAGE_SIZE_4KB;
+		paddrs[i] = (tmp & 0x7fffffffffffffULL) * PGSIZE_4KB;
 	}
 
 out:
