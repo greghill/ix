@@ -26,10 +26,22 @@
 #define cpu_relax() \
 	asm volatile("pause")
 
+#define cpu_serialize() \
+	asm volatile("cpuid" : : : "%rax", "%rbx", "%rcx", "%rdx");
+
 static inline unsigned long rdtscll(void)
 {
 	unsigned int a, d;
 	asm volatile("rdtsc" : "=a" (a), "=d" (d));
+	return ((unsigned long) a) | (((unsigned long) d) << 32);
+}
+
+static inline unsigned long rdtscllp(unsigned int *aux)
+{
+	unsigned int a, d, c;
+	asm volatile("rdtscp" : "=a" (a), "=d" (d), "=c" (c));
+	if (aux)
+		*aux = c;
 	return ((unsigned long) a) | (((unsigned long) d) << 32);
 }
 

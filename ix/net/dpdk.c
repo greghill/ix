@@ -34,9 +34,9 @@
 #include <rte_mbuf.h>
 
 #include <ix/dyncore.h>
+#include <asm/cpu.h>
 
 #include "ipv4.h"
-#include "bench.h"
 #include "cfg.h"
 
 #define MBUF_SIZE (2048 + sizeof(struct rte_mbuf) + RTE_PKTMBUF_HEADROOM)
@@ -112,14 +112,15 @@ static void dpdk_rx_pkts(void)
 	int nb_rx;
 	unsigned long tsc;
 
-	synch_tsc();
+	cpu_serialize();
 	tsc = rdtscll();
 	nb_rx = rte_eth_rx_burst(dpdk_port, 0, pkts_burst,
 				 MAX_PKT_BURST);
 
 	if (nb_rx) {
 		ipv4_rx_pkts(nb_rx, pkts_burst);
-		printf("%d packets took %ld cycles\n", nb_rx, rdtscllp() - tsc);
+		printf("%d packets took %ld cycles\n",
+		       nb_rx, rdtscllp(NULL) - tsc);
 	}
 }
 
@@ -244,3 +245,4 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+
