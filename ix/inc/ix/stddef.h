@@ -96,4 +96,30 @@
 	  typeof(b) _b = (b); \
 	  _a < _b ? _a : _b; })
 
+/**
+ * align_up - rounds a value up to an alignment
+ * @x: the value
+ * @a: the alignment (must be power of 2)
+ *
+ * Returns an aligned value.
+ */
+#define align_up(x, a)	((((x) - 1) | ((typeof(x)) (a) - 1)) + 1)
+
+/**
+ * align_down - rounds a value down to an alignment
+ * @x: the value
+ * @a: the alignment (must be power of 2)
+ *
+ * Returns an aligned value.
+ */
+#define align_down(x, a) ((x) & ~((typeof(x)) (a) - 1))
+
+/**
+ * div_up - divides two numbers, rounding up to an integer
+ * @x: the dividend
+ * @d: the divisor
+ *
+ * Returns a rounded-up quotient.
+ */
+#define div_up(x, d) ((((x) + (d) - 1)) / (d))
 
