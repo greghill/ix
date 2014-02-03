@@ -39,19 +39,21 @@ void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 #ifdef MAP_HUGE_2MB
 		flags |= MAP_HUGE_2MB;
 #endif
+		break;
 	case PGSIZE_1GB:
 #ifdef MAP_HUGE_1GB
 		flags |= MAP_HUGETLB | MAP_HUGE_1GB;
 #else
-		return NULL;
+		return MAP_FAILED;
 #endif
+		break;
 	default: /* fail on other sizes */
-		return NULL;
+		return MAP_FAILED;
 	}
 
 	vaddr = mmap(NULL, len, PROT_READ | PROT_WRITE, flags, -1, 0);
 	if (vaddr == MAP_FAILED)
-		return NULL;
+		return MAP_FAILED;
 
 	if (mbind(vaddr, len, numa_policy, mask ? mask->maskp : NULL,
 		  mask ? mask->size : 0, MPOL_MF_STRICT))
@@ -63,7 +65,7 @@ void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 
 fail:
 	munmap(vaddr, len);
-	return NULL;
+	return MAP_FAILED;
 }
 
 /**
