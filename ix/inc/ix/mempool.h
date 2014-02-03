@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ix/stddef.h>
+#include <ix/mem.h>
 
 struct mempool_hdr {
 	struct mempool_hdr *next;
@@ -13,8 +14,8 @@ struct mempool_hdr {
 struct mempool {
 	void *buf;
 	struct mempool_hdr *head;
-	size_t len;
-	int count;
+	physaddr_t *phys_addrs;
+	int nr_pages;
 };
 
 /**
@@ -36,6 +37,7 @@ static inline void *mempool_alloc(struct mempool *m)
 /**
  * mempool_free - frees an element back in to a memory pool
  * @m: the memory pool
+ * @ptr: the element
  *
  * NOTE: Must be the same memory pool that it was allocated from
  */
@@ -47,6 +49,24 @@ static inline void mempool_free(struct mempool *m, void *ptr)
 	m->head = elem;
 }
 
-extern int mempool_create(struct mempool *m, int count, size_t len);
+/**
+ * mempool_get_phys - gets the physical address of an element
+ * @m: the memory pool
+ * @ptr: the element
+ *
+ * NOTE: This routine can only be used if the mempool was created
+ * with mempool_create_phys(). Otherwise there will be unpredicable
+ * results.
+ *
+ * Returns a physical address.
+ */
+static inline physaddr_t mempool_get_phys(struct mempool *m, void *ptr)
+{
+	return m->phys_addrs[PGN_2MB(ptr)] + PGOFF_2MB(ptr);
+}
+
+extern int mempool_create(struct mempool *m, int nr_elems, size_t elem_len);
+extern int mempool_create_phys(struct mempool *m, int nr_elems,
+			       size_t elem_len);
 extern void mempool_destroy(struct mempool *m);
 
