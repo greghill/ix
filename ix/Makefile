@@ -7,6 +7,10 @@ ifeq ($(DPDK_SDK),)
 $(error "Please set the DPDK_SDK environment variable to your DPDK path")
 endif
 
+ifeq ($(DUNE_SDK),)
+$(error "Please set the DUNE_SDK environment variable to your Dune path")
+endif
+
 DPDK_INC_PATH	= $(DPDK_SDK)/build/include
 DPDK_LIB_PATH	= $(DPDK_SDK)/build/lib
 DPDK_LIBS	= ethdev rte_cmdline rte_hash rte_kni rte_lpm \
@@ -15,21 +19,26 @@ DPDK_LIBS	= ethdev rte_cmdline rte_hash rte_kni rte_lpm \
 		  rte_power rte_ring rte_sched rte_timer rte_eal rte_pmd_ring
 
 CC	= gcc
-CFLAGS	= -g -Wall -O3 -I$(DPDK_INC_PATH) -I./inc
+CFLAGS	= -g -Wall -O3 -I$(DPDK_INC_PATH) -I$(DUNE_SDK)/libdune -I./inc
 LD	= gcc
 LDFLAGS	=
-LDLIBS	= -L$(DPDK_LIB_PATH) -lrt -ldl -lpthread -lm -lnuma $(addprefix -l, $(DPDK_LIBS))
+LDLIBS	= -L$(DPDK_LIB_PATH) -lrt -lpthread -lm -lnuma $(addprefix -l, $(DPDK_LIBS)) -ldl
 
 SRCS =
-DIRS = core net ixgbe
+DIRS = core libdune net ixgbe
 
 define register_dir
 SRCS += $(patsubst %, $(1)/%, $(2))
 endef
 
+define register_dir_asm
+ASM_SRCS += $(patsubst %, $(1)/%, $(2))
+endef
+
 include $(patsubst %, %/dir.mk, $(DIRS))
 
 OBJS=$(subst .c,.o,$(SRCS))
+OBJS+=$(subst .S,.o,$(ASM_SRCS))
 
 all: ix
 
@@ -37,7 +46,7 @@ depend: .depend
 
 .depend: $(SRCS)
 	rm -f ./.depend
-	$(foreach SRC,$(SRCS),$(CC) -MM -MT $(SRC:.c=.o) $(SRC) >> .depend;)
+	$(foreach SRC,$(SRCS),$(CC) -I$(DUNE_SDK)/libdune -MM -MT $(SRC:.c=.o) $(SRC) >> .depend;)
 
 include .depend
 
