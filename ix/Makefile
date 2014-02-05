@@ -19,13 +19,13 @@ DPDK_LIBS	= ethdev rte_cmdline rte_hash rte_kni rte_lpm \
 		  rte_power rte_ring rte_sched rte_timer rte_eal rte_pmd_ring
 
 CC	= gcc
-CFLAGS	= -g -Wall -O3 -I$(DPDK_INC_PATH) -I$(DUNE_SDK)/libdune -I./inc
+CFLAGS	= -g -Wall -O3 -I$(DPDK_INC_PATH) -I$(DUNE_SDK) -I$(DUNE_SDK)/libdune -I./inc
 LD	= gcc
 LDFLAGS	=
 LDLIBS	= -L$(DPDK_LIB_PATH) -lrt -lpthread -lm -lnuma $(addprefix -l, $(DPDK_LIBS)) -ldl
 
 SRCS =
-DIRS = core libdune net ixgbe
+DIRS = core libdune net ixgbe sandbox
 
 define register_dir
 SRCS += $(patsubst %, $(1)/%, $(2))
@@ -46,7 +46,7 @@ depend: .depend
 
 .depend: $(SRCS)
 	rm -f ./.depend
-	$(foreach SRC,$(SRCS),$(CC) -I$(DUNE_SDK)/libdune -MM -MT $(SRC:.c=.o) $(SRC) >> .depend;)
+	$(foreach SRC,$(SRCS),$(CC) -I$(DUNE_SDK) -I$(DUNE_SDK)/libdune -MM -MT $(SRC:.c=.o) $(SRC) >> .depend;)
 
 include .depend
 
