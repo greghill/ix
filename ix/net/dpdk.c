@@ -33,7 +33,6 @@
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
 
-#include <ix/dyncore.h>
 #include <asm/cpu.h>
 
 #include "ipv4.h"
@@ -99,34 +98,7 @@ static const struct rte_eth_txconf tx_conf = {
 struct rte_mempool *dpdk_pool;
 int dpdk_port;
 
-extern struct nic_operations dpdk_nic_ops;
-
-struct nic_operations *nic_ops = &dpdk_nic_ops;
-
 #define MAX_PKT_BURST	32
-
-static int has_pending_pkts(__attribute__((unused)) void *dummy)
-{
-	return rte_eth_rx_queue_count(dpdk_port, 0) > 0;
-}
-
-static void dpdk_rx_pkts(void)
-{
-	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
-	int nb_rx;
-	unsigned long tsc;
-
-	cpu_serialize();
-	tsc = rdtscll();
-	nb_rx = rte_eth_rx_burst(dpdk_port, 0, pkts_burst,
-				 MAX_PKT_BURST);
-
-	if (nb_rx) {
-		ipv4_rx_pkts(nb_rx, pkts_burst);
-		printf("%d packets took %ld cycles\n",
-		       nb_rx, rdtscllp(NULL) - tsc);
-	}
-}
 
 static int dpdk_probe_one(int port)
 {
@@ -188,15 +160,13 @@ link_down:
 	return -EIO;
 }
 
-static int dpdk_launch_one_lcore(__attribute__((unused)) void *dummy)
-{
-	dpdk_rx_pkts();
-	return 0;
-}
-
-static int dpdk_init(void)
+int dpdk_init(int argc, char *argv[])
 {
 	int nb_ports, i, ret;
+
+	ret = rte_eal_init(argc, argv);
+	if (ret < 0)
+		rte_exit(EXIT_FAILURE, "Invalid EAL arguments\n");
 
 	dpdk_pool = rte_mempool_create("mbuf_pool", NB_MBUF,
 			MBUF_SIZE, 32,
@@ -228,25 +198,3 @@ static int dpdk_init(void)
 
 	return -ENODEV;
 }
-
-extern int timer_init(void);
-extern int arp_init(void);
-
-int main(int argc, char *argv[])
-{
-	int ret;
-
-	ret = rte_eal_init(argc, argv);
-	if (ret < 0)
-		rte_exit(EXIT_FAILURE, "Invalid EAL arguments\n");
-	argc -= ret;
-	argv += ret;
-
-	timer_init();
-	arp_init();
-	dpdk_init();
-	dyncore_init(dpdk_launch_one_lcore, has_pending_pkts);
-
-	return 0;
-}
-
