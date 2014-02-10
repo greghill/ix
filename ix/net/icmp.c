@@ -17,6 +17,7 @@
 #include <net/icmp.h>
 
 #include "net.h"
+#include "nic.h"
 #include "cfg.h"
 
 static int icmp_reflect(struct rte_mbuf *pkt, struct icmp_hdr *hdr, int len)
@@ -35,10 +36,10 @@ static int icmp_reflect(struct rte_mbuf *pkt, struct icmp_hdr *hdr, int len)
 	hdr->chksum = 0;
 	hdr->chksum = hton16(~(chksum_internet((void *) hdr, len)));
 
-	ret = dpdk_tx_one_pkt(pkt);
+	ret = nic_ops->tx_one_pkt(pkt);
 
 	if (unlikely(ret != 1)) {
-		rte_pktmbuf_free(pkt);
+		nic_ops->free_pkt(pkt);
 		return -EIO;
 	}
 
@@ -71,6 +72,6 @@ void icmp_input(struct rte_mbuf *pkt, struct icmp_hdr *hdr, int len)
 	return;
 
 out:
-	rte_pktmbuf_free(pkt);
+	nic_ops->free_pkt(pkt);
 }
 

@@ -99,6 +99,10 @@ static const struct rte_eth_txconf tx_conf = {
 struct rte_mempool *dpdk_pool;
 int dpdk_port;
 
+extern struct nic_operations dpdk_nic_ops;
+
+struct nic_operations *nic_ops = &dpdk_nic_ops;
+
 #define MAX_PKT_BURST	32
 
 static int has_pending_pkts(__attribute__((unused)) void *dummy)

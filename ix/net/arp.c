@@ -23,6 +23,7 @@
 #include <net/arp.h>
 
 #include "net.h"
+#include "nic.h"
 #include "cfg.h"
 
 #define ARP_PKT_SIZE (sizeof(struct eth_hdr) +		\
@@ -143,7 +144,7 @@ static int arp_send_pkt(uint16_t op,
 	struct arp_hdr *arphdr;
 	struct arp_hdr_ethip *ethip;
 
-	pkt = dpdk_alloc_mbuf();
+	pkt = nic_ops->alloc_pkt();
 	if (unlikely(!pkt))
 		return -ENOMEM;
 
@@ -170,10 +171,10 @@ static int arp_send_pkt(uint16_t op,
 	pkt->pkt.data_len = ARP_PKT_SIZE;
 	pkt->pkt.nb_segs = 1;
 
-	ret = dpdk_tx_one_pkt(pkt);
+	ret = nic_ops->tx_one_pkt(pkt);
 
 	if (unlikely(ret != 1)) {
-		rte_pktmbuf_free(pkt);
+		nic_ops->free_pkt(pkt);
 		return -EIO;
 	}
 
@@ -199,10 +200,10 @@ static int arp_send_response_reuse(struct rte_mbuf *pkt,
 	pkt->pkt.data_len = ARP_PKT_SIZE;
 	pkt->pkt.nb_segs = 1;
 
-	ret = dpdk_tx_one_pkt(pkt);
+	ret = nic_ops->tx_one_pkt(pkt);
 
 	if (unlikely(ret != 1)) {
-		rte_pktmbuf_free(pkt);
+		nic_ops->free_pkt(pkt);
 		return -EIO;
 	}
 
@@ -260,7 +261,7 @@ void arp_input(struct rte_mbuf *pkt, struct arp_hdr *hdr)
 	}
 
 out:
-	rte_pktmbuf_free(pkt);
+	nic_ops->free_pkt(pkt);
 }
 
 /**

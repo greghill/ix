@@ -12,6 +12,7 @@
 #include <net/ip.h>
 
 #include "net.h"
+#include "nic.h"
 
 static void ipv4_ip_input(struct rte_mbuf *pkt, struct ip_hdr *hdr)
 {
@@ -50,7 +51,7 @@ static void ipv4_ip_input(struct rte_mbuf *pkt, struct ip_hdr *hdr)
 	}
 
 out:
-	rte_pktmbuf_free(pkt);
+	nic_ops->free_pkt(pkt);
 }
 
 static void ipv4_rx_eth_pkt(struct rte_mbuf *pkt)
@@ -65,7 +66,7 @@ static void ipv4_rx_eth_pkt(struct rte_mbuf *pkt)
 		arp_input(pkt, next_hdr(ethhdr, struct arp_hdr *));
 		break;
 	default:
-		rte_pktmbuf_free(pkt);
+		nic_ops->free_pkt(pkt);
 	}
 }
 
