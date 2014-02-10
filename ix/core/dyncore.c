@@ -251,7 +251,25 @@ static int dune_start_workers(void)
 
 int dyncore_init(dune_worker_cb cb, dune_worker_pending pending)
 {
+#ifdef DYNCORE_DEBUG
+	/* FIXME: not exactly the same behavior as the other ifdef branch. this branch blocks, the other returns. */
+	struct worker worker;
+
+	worker.cpu = 0;
+	worker.active = 1;
+	worker.stop = 0;
+
+	while (1) {
+		while (!pending(&worker))
+			cpu_relax();
+		if (cb(&worker))
+			break;
+	}
+
+	return 0;
+#else
 	dune_register_worker(cb, pending);
 	dune_start_workers();
 	return 0;
+#endif
 }

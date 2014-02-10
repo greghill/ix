@@ -24,6 +24,10 @@ LD	= gcc
 LDFLAGS	=
 LDLIBS	= -L$(DPDK_LIB_PATH) -lrt -lpthread -lm -lnuma $(addprefix -l, $(DPDK_LIBS)) -ldl
 
+ifneq ($(DYNCORE_DEBUG),)
+CFLAGS += -DDYNCORE_DEBUG
+endif
+
 SRCS =
 DIRS = core libdune net ixgbe sandbox
 
