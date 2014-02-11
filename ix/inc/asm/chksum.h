@@ -18,7 +18,7 @@ static inline uint16_t chksum_internet(const char *buf, int len)
 {
         uint64_t sum;
 
-        asm ("xorq %0, %0\n"
+        asm volatile ("xorq %0, %0\n"
 
              /* process 8 byte chunks */
              "movl %2, %%edx\n"
