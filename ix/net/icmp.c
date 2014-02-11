@@ -34,7 +34,7 @@ static int icmp_reflect(struct rte_mbuf *pkt, struct icmp_hdr *hdr, int len)
 	iphdr->src_addr.addr = hton32(cfg_host_addr.addr);
 
 	hdr->chksum = 0;
-	hdr->chksum = hton16(~(chksum_internet((void *) hdr, len)));
+	hdr->chksum = chksum_internet((void *) hdr, len);
 
 	ret = nic_ops->tx_one_pkt(pkt);
 
