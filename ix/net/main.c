@@ -19,12 +19,12 @@ static int receive_pkts(__attribute__((unused)) void *dummy)
 	unsigned long tsc;
 
 	cpu_serialize();
-	tsc = rdtscll();
+	tsc = rdtsc();
 	nb_rx = nic_ops->receive_one_pkt(pkts_burst);
 
 	if (nb_rx) {
 		ipv4_rx_pkts(nb_rx, pkts_burst);
-		printf("%d packets took %ld cycles\n", nb_rx, rdtscllp(NULL) - tsc);
+		printf("%d packets took %ld cycles\n", nb_rx, rdtscp(NULL) - tsc);
 	}
 	return 0;
 }
@@ -34,6 +34,7 @@ static int has_pending_pkts(__attribute__((unused)) void *dummy)
 	return nic_ops->has_pending_pkts();
 }
 
+#if 0
 int main(int argc, char *argv[])
 {
 	timer_init();
@@ -43,3 +44,4 @@ int main(int argc, char *argv[])
 
 	return 0;
 }
+#endif

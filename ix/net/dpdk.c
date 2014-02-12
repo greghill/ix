@@ -98,8 +98,6 @@ static const struct rte_eth_txconf tx_conf = {
 struct rte_mempool *dpdk_pool;
 int dpdk_port;
 
-#define MAX_PKT_BURST	32
-
 static int dpdk_probe_one(int port)
 {
 	int ret;
@@ -198,3 +196,4 @@ int dpdk_init(int argc, char *argv[])
 
 	return -ENODEV;
 }
+

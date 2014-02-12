@@ -29,14 +29,14 @@
 #define cpu_serialize() \
 	asm volatile("cpuid" : : : "%rax", "%rbx", "%rcx", "%rdx");
 
-static inline unsigned long rdtscll(void)
+static inline unsigned long rdtsc(void)
 {
 	unsigned int a, d;
 	asm volatile("rdtsc" : "=a" (a), "=d" (d));
 	return ((unsigned long) a) | (((unsigned long) d) << 32);
 }
 
-static inline unsigned long rdtscllp(unsigned int *aux)
+static inline unsigned long rdtscp(unsigned int *aux)
 {
 	unsigned int a, d, c;
 	asm volatile("rdtscp" : "=a" (a), "=d" (d), "=c" (c));

@@ -55,9 +55,9 @@ static int cycles_per_us;
 void __timer_delay_us(uint64_t us)
 {
 	uint64_t cycles = us * cycles_per_us;
-	unsigned long start = rdtscll();
+	unsigned long start = rdtsc();
 
-	while (rdtscll() - start < cycles)
+	while (rdtsc() - start < cycles)
 		cpu_relax();	
 }
 
@@ -161,7 +161,7 @@ static void timer_reinsert_bucket(struct hlist_head *h)
  */
 void timer_run(void)
 {
-	now_us = rdtscll() / cycles_per_us;
+	now_us = rdtsc() / cycles_per_us;
 
 	for (; timer_pos <= now_us; timer_pos += MIN_DELAY_US) {
 		int high_off = WHEEL_OFFSET(timer_pos, 0);
@@ -188,13 +188,15 @@ timer_calibrate_tsc(void)
 	struct timespec sleeptime = {.tv_nsec = 5E8 }; /* 1/2 second */
 	struct timespec t_start, t_end;
 
+	cpu_serialize();
 	if (clock_gettime(CLOCK_MONOTONIC_RAW, &t_start) == 0) {
-		uint64_t ns, end, start = rdtscll();
+		uint64_t ns, end, start;
 		double secs;
 
+		start = rdtsc();
 		nanosleep(&sleeptime,NULL);
 		clock_gettime(CLOCK_MONOTONIC_RAW, &t_end);
-		end = rdtscll();
+		end = rdtscp(NULL);
 		ns = ((t_end.tv_sec - t_start.tv_sec) * 1E9);
 		ns += (t_end.tv_nsec - t_start.tv_nsec);
 
@@ -221,7 +223,7 @@ int timer_init(void)
 	if (ret)
 		return ret;
 
-	now_us = rdtscll() / cycles_per_us;
+	now_us = rdtsc() / cycles_per_us;
 	timer_pos = now_us;
 	return 0;
 }

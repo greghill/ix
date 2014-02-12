@@ -21,11 +21,26 @@ struct eth_addr {
 	uint8_t addr[ETH_ADDR_LEN];
 } __packed;
 
+
+#define ETH_ADDR_LOCAL_ADMIN	0x02 /* locally assigned */
+#define ETH_ADDR_GROUP		0x01 /* multicast or broadcast */
 #define ETH_ADDR_BROADCAST {.addr = {0xFF, 0XFF, 0XFF, 0XFF, 0XFF, 0XFF},}
 
 static inline bool eth_addr_is_multicast(struct eth_addr *addr)
 {
-	return (addr->addr[0] & 0x1);
+	return (addr->addr[0] & ETH_ADDR_GROUP);
+}
+
+static inline bool eth_addr_is_zero(struct eth_addr *addr)
+{
+	int i;
+
+	for (i = 0; i < ETH_ADDR_LEN; i++) {
+		if (addr->addr[i] != 0)
+			return false;
+	}
+
+	return true;
 }
 
 struct eth_hdr {
@@ -33,7 +48,6 @@ struct eth_hdr {
 	struct eth_addr	shost;
 	uint16_t	type;
 } __packed;
-
 
 /*
  *  NOTE: 0x0000-0x05DC (0..1500) are generally IEEE 802.3 length fields.

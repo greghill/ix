@@ -1,35 +1,23 @@
 # A Makefile for IX.
 #
-# NOTE: The environment variable DPDK_SDK must be set to the DPDK install
 # path for this Makefile to work properly.
-
-ifeq ($(DPDK_SDK),)
-$(error "Please set the DPDK_SDK environment variable to your DPDK path")
-endif
 
 ifeq ($(DUNE_SDK),)
 $(error "Please set the DUNE_SDK environment variable to your Dune path")
 endif
 
-DPDK_INC_PATH	= $(DPDK_SDK)/build/include
-DPDK_LIB_PATH	= $(DPDK_SDK)/build/lib
-DPDK_LIBS	= ethdev rte_cmdline rte_hash rte_kni rte_lpm \
-		  rte_malloc rte_mempool rte_meter rte_mbuf \
-		  rte_pmd_e1000 rte_pmd_ixgbe rte_pmd_virtio \
-		  rte_power rte_ring rte_sched rte_timer rte_eal rte_pmd_ring
-
 CC	= gcc
-CFLAGS	= -g -Wall -O3 -I$(DPDK_INC_PATH) -I$(DUNE_SDK) -I$(DUNE_SDK)/libdune -I./inc
+CFLAGS	= -g -Wall -O3 -I$(DUNE_SDK) -I$(DUNE_SDK)/libdune -I./inc
 LD	= gcc
 LDFLAGS	=
-LDLIBS	= -L$(DPDK_LIB_PATH) -lrt -lpthread -lm -lnuma $(addprefix -l, $(DPDK_LIBS)) -ldl
+LDLIBS	= -lrt -lpthread -lm -lnuma -ldl
 
 ifneq ($(DYNCORE_DEBUG),)
 CFLAGS += -DDYNCORE_DEBUG
 endif
 
 SRCS =
-DIRS = core libdune net ixgbe sandbox
+DIRS = core libdune ixgbe sandbox
 
 define register_dir
 SRCS += $(patsubst %, $(1)/%, $(2))

@@ -14,6 +14,22 @@
 #include "net.h"
 #include "nic.h"
 
+/**
+ * ip_addr_to_str - prints an IP address as a human-readable string
+ * @addr: the ip address
+ * @str: a buffer to store the string
+ *
+ * The buffer must be IP_ADDR_STR_LEN in size.
+ */
+void ip_addr_to_str(struct ip_addr *addr, char *str)
+{
+	snprintf(str, IP_ADDR_STR_LEN, "%d.%d.%d.%d",
+		 ((addr->addr >> 24) & 0xff),
+                 ((addr->addr >> 16) & 0xff),
+                 ((addr->addr >> 8) & 0xff),
+                 (addr->addr & 0xff));
+}
+
 static void ipv4_ip_input(struct rte_mbuf *pkt, struct ip_hdr *hdr)
 {
 	int hdrlen, pktlen;

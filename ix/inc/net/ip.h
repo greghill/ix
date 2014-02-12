@@ -51,6 +51,10 @@ struct ip_addr {
 	(((uint32_t) a << 24) | ((uint32_t) b << 16) |	\
 	 ((uint32_t) c << 8) | (uint32_t) d)
 
+#define IP_ADDR_STR_LEN	16
+
+extern void ip_addr_to_str(struct ip_addr *addr, char *str);
+
 /*
  * Structure of an internet header, naked of options.
  */
