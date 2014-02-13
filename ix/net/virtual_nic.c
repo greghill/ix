@@ -59,6 +59,11 @@ static int raw_socket_init(const char *device)
 	return sock;
 }
 
+static void virtual_init(void)
+{
+	sock = raw_socket_init("eth0");
+}
+
 static int virtual_has_pending_pkts(void)
 {
 	return 1;
@@ -67,9 +72,6 @@ static int virtual_has_pending_pkts(void)
 static int virtual_receive_one_pkt(struct rte_mbuf **pkt)
 {
 	int size;
-
-	if (!sock)
-		sock = raw_socket_init("eth0");
 
 	size = recv(sock, buffer, sizeof(buffer), 0);
 	if (!memcmp(buffer, &cfg_mac, ETH_ALEN) || !memcmp(buffer, broadcast_mac, ETH_ALEN)) {
@@ -104,6 +106,7 @@ static struct rte_mbuf *virtual_alloc_pkt()
 }
 
 struct nic_operations virtual_nic_ops = {
+  .init             = virtual_init,
   .has_pending_pkts = virtual_has_pending_pkts,
   .receive_one_pkt  = virtual_receive_one_pkt,
   .tx_one_pkt       = virtual_tx_one_pkt,

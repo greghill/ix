@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
 	timer_init();
 	arp_init();
 	dpdk_init(argc, argv);
+	nic_ops->init();
 	dyncore_init(receive_pkts, has_pending_pkts);
 
 	return 0;

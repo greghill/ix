@@ -3,6 +3,10 @@
 #include "net.h"
 #include "nic.h"
 
+static void dpdk_init(void)
+{
+}
+
 static int dpdk_has_pending_pkts(void)
 {
 	return rte_eth_rx_queue_count(dpdk_port, 0) > 0;
@@ -24,6 +28,7 @@ static struct rte_mbuf *dpdk_alloc_pkt()
 }
 
 struct nic_operations dpdk_nic_ops = {
+  .init             = dpdk_init,
   .has_pending_pkts = dpdk_has_pending_pkts,
   .receive_one_pkt  = dpdk_receive_one_pkt,
   .tx_one_pkt       = dpdk_tx_one_pkt,
