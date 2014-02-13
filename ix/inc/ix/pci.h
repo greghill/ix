@@ -27,6 +27,8 @@ struct pci_addr {
 	uint8_t func;
 };
 
+extern int pci_str_to_addr(const char *str, struct pci_addr *addr);
+
 struct pci_dev {
 	struct pci_addr addr;
 

@@ -86,9 +86,13 @@ static int pci_scan_dev_info(struct pci_dev *dev, const char *dir_path)
 	}
 
 	snprintf(file_path, sizeof(file_path), "%s/max_vfs", dir_path);
-	if (sysfs_parse_val(file_path, &tmp))
-		return -EIO;
-	dev->max_vfs = (uint16_t)tmp;
+	if (access(file_path, R_OK)) {
+		dev->max_vfs = 0;
+	} else {
+		if (sysfs_parse_val(file_path, &tmp))
+			return -EIO;
+		dev->max_vfs = (uint16_t)tmp;
+	}
 
 	return 0;
 }
@@ -128,11 +132,34 @@ out:
 	return ret;
 }
 
+/**
+ * pci_str_to_addr - converts is string to a PCI address
+ * @str: the input string
+ * @addr: a pointer to the output address
+ *
+ * String format is DDDD:BB:SS.f, where D = domain (hex), B = bus (hex),
+ * S = slot (hex), and f = function number (decimal).
+ *
+ * Returns 0 if successful, otherwise failure.
+ */
+int pci_str_to_addr(const char *str, struct pci_addr *addr)
+{
+	int ret;
+
+	ret = sscanf(str, "%04hx:%02hhx:%02hhx.%hhd",
+		     &addr->domain, &addr->bus,
+		     &addr->slot, &addr->func);
+
+	if (ret != 4)
+		return -EINVAL;
+	return 0;
+}
+
 static void pci_dump_dev(struct pci_dev *dev)
 {
 	int i;
 
-	log_info("pci: created device %04x:%02x:%02x.%d - NUMA node %d\n",
+	log_info("pci: created device %04x:%02x:%02x.%d, NUMA node %d\n",
 		 dev->addr.domain, dev->addr.bus,
 		 dev->addr.slot, dev->addr.func,
 		 dev->numa_node);
