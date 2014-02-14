@@ -94,7 +94,6 @@ def init_raw_socket(device):
   return sock
 
 def is_pkt_for_me(packet):
-  return packet.data[0:6] == MY_MAC
   return packet.data[0:6] == BROADCAST_MAC or packet.data[0:6] == MY_MAC
 
 def main():
