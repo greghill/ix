@@ -109,7 +109,7 @@ static int virtual_receive_one_pkt(struct rte_mbuf **pkt)
 		mypkt.pkt.data = packet->data;
 		mypkt.pkt.data_len = packet->size;
 		/* HACK: Store packet address. */
-		mypkt.pkt.next = (void*) packet - mempool_base;
+		mypkt.pkt.next = (void*) ((void*) packet - mempool_base);
 		return 1;
 	}
 
