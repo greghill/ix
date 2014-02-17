@@ -16,15 +16,12 @@ static int receive_pkts(__attribute__((unused)) void *dummy)
 {
 	struct rte_mbuf *pkts_burst[1];
 	int nb_rx;
-	unsigned long tsc;
 
 	cpu_serialize();
-	tsc = rdtscll();
 	nb_rx = nic_ops->receive_one_pkt(pkts_burst);
 
 	if (nb_rx) {
 		ipv4_rx_pkts(nb_rx, pkts_burst);
-		printf("%d packets took %ld cycles\n", nb_rx, rdtscllp(NULL) - tsc);
 	}
 	return 0;
 }
