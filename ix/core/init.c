@@ -32,13 +32,22 @@ static int hw_init_one(const char *pci_addr)
 	ret = ixgbe_init(dev, &eth);
 	if (ret) {
 		log_err("init: failed to start driver\n");
-		free(dev);
-		return ret;
+		goto err;
 	}
 
-	eth_dev_start(eth);
+	ret = eth_dev_start(eth);
+	if (ret) {
+		log_err("init: unable to start ethernet device\n");
+		goto err_start;
+	}
 
 	return 0;
+
+err_start:
+	eth_dev_destroy(eth);
+err:
+	free(dev);
+	return ret;
 }
 
 int main(int argc, char *argv[])
