@@ -22,8 +22,6 @@
 #define IXGBE_MIN_RING_DESC	64
 #define IXGBE_MAX_RING_DESC	4096
 
-#define PTHRESH
-
 struct rx_entry {
 	struct mbuf *mbuf;
 };
