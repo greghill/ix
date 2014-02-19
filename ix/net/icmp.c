@@ -17,13 +17,12 @@
 #include <net/icmp.h>
 
 #include "net.h"
-#include "nic.h"
 #include "cfg.h"
 
-static int icmp_reflect(struct rte_mbuf *pkt, struct icmp_hdr *hdr, int len)
+static int icmp_reflect(struct mbuf *pkt, struct icmp_hdr *hdr, int len)
 {
-	struct eth_hdr *ethhdr = rte_pktmbuf_mtod(pkt, struct eth_hdr *);
-	struct ip_hdr *iphdr = next_hdr(ethhdr, struct ip_hdr *);
+	struct eth_hdr *ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
+	struct ip_hdr *iphdr = mbuf_nextd(ethhdr, struct ip_hdr *);
 	int ret;
 
 	ethhdr->dhost = ethhdr->shost;
@@ -36,10 +35,10 @@ static int icmp_reflect(struct rte_mbuf *pkt, struct icmp_hdr *hdr, int len)
 	hdr->chksum = 0;
 	hdr->chksum = chksum_internet((void *) hdr, len);
 
-	ret = nic_ops->tx_one_pkt(pkt);
+	ret = eth_tx_xmit_one(eth_tx, pkt, pkt->len);
 
 	if (unlikely(ret != 1)) {
-		nic_ops->free_pkt(pkt);
+		mbuf_free(pkt);
 		return -EIO;
 	}
 
@@ -51,7 +50,7 @@ static int icmp_reflect(struct rte_mbuf *pkt, struct icmp_hdr *hdr, int len)
  * @pkt: the packet
  * @hdr: the ICMP header
  */
-void icmp_input(struct rte_mbuf *pkt, struct icmp_hdr *hdr, int len)
+void icmp_input(struct mbuf *pkt, struct icmp_hdr *hdr, int len)
 {
 	if (len < ICMP_MINLEN)
 		goto out;
@@ -65,6 +64,7 @@ void icmp_input(struct rte_mbuf *pkt, struct icmp_hdr *hdr, int len)
 	case ICMP_ECHO:
 		hdr->type = ICMP_ECHOREPLY;
 		icmp_reflect(pkt, hdr, len);
+		break;
 	default:
 		goto out;
 	}
@@ -72,6 +72,6 @@ void icmp_input(struct rte_mbuf *pkt, struct icmp_hdr *hdr, int len)
 	return;
 
 out:
-	nic_ops->free_pkt(pkt);
+	mbuf_free(pkt);
 }
 

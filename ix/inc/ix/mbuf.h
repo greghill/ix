@@ -38,30 +38,42 @@ struct mbuf {
 
 /**
  * mbuf_mtod - cast a pointer to the beginning of the data
- * @m: the mbuf
+ * @mbuf: the mbuf
  * @type: the type to cast
  */
-#define mbuf_mtod(m, type) ((type) \
-	((uintptr_t) (m) + MBUF_HEADER_LEN))
+#define mbuf_mtod(mbuf, type) \
+	((type) ((uintptr_t) (mbuf) + MBUF_HEADER_LEN))
 
 /**
  * mbuf_nextd_off - advance a data pointer by an offset
- * @d: the starting data pointer
+ * @ptr: the starting data pointer
  * @type: the new type to cast
  * @off: the offset
  */
-#define mbuf_nextd_off(d, type, off) \
-	((type) ((uintptr_t) (d) + (off)))
+#define mbuf_nextd_off(ptr, type, off) \
+	((type) ((uintptr_t) (ptr) + (off)))
 
 /**
  * mbuf_nextd - advance a data pointer to the end of the current type
- * @d: the starting data pointer
+ * @ptr: the starting data pointer
  * @type: the new type to cast
  *
  * Automatically infers the size of the starting data structure.
  */
-#define mbuf_nextd(d, type) \
-	mbuf_nextd_off(d, type, sizeof(typeof(*buf)))
+#define mbuf_nextd(ptr, type) \
+	mbuf_nextd_off(ptr, type, sizeof(typeof(*ptr)))
+
+/**
+ * mbuf_enough_space - determines if the buffer is large enough
+ * @mbuf: the mbuf
+ * @pos: a pointer to the current position in the mbuf data
+ * @sz: the length to go past the current position
+ *
+ * Returns true if there is room, otherwise false.
+ */
+#define mbuf_enough_space(mbuf, pos, sz) \
+	((uintptr_t) (pos) - ((uintptr_t) (mbuf) + MBUF_HEADER_LEN) + (sz) <= \
+	 (mbuf)->len)
 
 /**
  * mbuf_alloc - allocate an mbuf from a memory pool
@@ -105,4 +117,10 @@ extern struct mempool mbuf_mempool;
 
 extern int mbuf_init_core(void);
 extern void mbuf_exit_core(void);
+
+/*
+ * direct dispatches into network stack
+ * FIXME: add a function for each entry point (e.g. udp and tcp)
+ */
+extern void eth_input(struct mbuf *pkt);
 

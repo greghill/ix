@@ -7,6 +7,7 @@
 #include <ix/errno.h>
 #include <ix/pci.h>
 #include <ix/ethdev.h>
+#include <ix/timer.h>
 
 extern int timer_init(void);
 extern int net_init(void);
@@ -50,6 +51,15 @@ err:
 	return ret;
 }
 
+void main_loop(void)
+{
+	while (1) {
+		timer_run();
+		eth_tx_reclaim(eth_tx);
+		eth_rx_poll(eth_rx);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -80,11 +90,13 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-//	ret = net_init();
+	ret = net_init();
 	if (ret) {
 		log_err("init: failed to initialize net\n");
 		return ret;
 	}
+
+	main_loop();
 
 	return 0;
 }

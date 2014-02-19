@@ -23,7 +23,6 @@
 #include <net/arp.h>
 
 #include "net.h"
-#include "nic.h"
 #include "cfg.h"
 
 #define ARP_PKT_SIZE (sizeof(struct eth_hdr) +		\
@@ -139,18 +138,18 @@ static int arp_send_pkt(uint16_t op,
 			struct eth_addr *target_mac)
 {
 	int ret;
-	struct rte_mbuf *pkt;
+	struct mbuf *pkt;
 	struct eth_hdr *ethhdr;
 	struct arp_hdr *arphdr;
 	struct arp_hdr_ethip *ethip;
 
-	pkt = nic_ops->alloc_pkt();
+	pkt = mbuf_alloc(&mbuf_mempool);
 	if (unlikely(!pkt))
 		return -ENOMEM;
 
-	ethhdr = rte_pktmbuf_mtod(pkt, struct eth_hdr *);
-	arphdr = next_hdr(ethhdr, struct arp_hdr *);
-	ethip = next_hdr(arphdr, struct arp_hdr_ethip *);
+	ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
+	arphdr = mbuf_nextd(ethhdr, struct arp_hdr *);
+	ethip = mbuf_nextd(arphdr, struct arp_hdr_ethip *);
 
 	ethhdr->dhost = *target_mac;
 	ethhdr->shost = cfg_mac;
@@ -167,26 +166,22 @@ static int arp_send_pkt(uint16_t op,
 	ethip->target_mac = *target_mac;
 	ethip->target_ip.addr = hton32(target_ip->addr);
 
-	pkt->pkt.pkt_len = ARP_PKT_SIZE;
-	pkt->pkt.data_len = ARP_PKT_SIZE;
-	pkt->pkt.nb_segs = 1;
-
-	ret = nic_ops->tx_one_pkt(pkt);
+	ret = eth_tx_xmit_one(eth_tx, pkt, ARP_PKT_SIZE);
 
 	if (unlikely(ret != 1)) {
-		nic_ops->free_pkt(pkt);
+		mbuf_free(pkt);
 		return -EIO;
 	}
 
 	return 0;
 }
 
-static int arp_send_response_reuse(struct rte_mbuf *pkt,
+static int arp_send_response_reuse(struct mbuf *pkt,
 				   struct arp_hdr *arphdr,
 				   struct arp_hdr_ethip *ethip)
 {
 	int ret;
-	struct eth_hdr *ethhdr = rte_pktmbuf_mtod(pkt, struct eth_hdr *);
+	struct eth_hdr *ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
 	ethhdr->dhost = ethhdr->shost;
 	arphdr->op = hton16(ARP_OP_REPLY);
 	ethip->target_mac = ethip->sender_mac;
@@ -196,14 +191,10 @@ static int arp_send_response_reuse(struct rte_mbuf *pkt,
 	ethip->sender_ip.addr = hton32(cfg_host_addr.addr);
 	ethip->sender_mac = cfg_mac;
 
-	pkt->pkt.pkt_len = ARP_PKT_SIZE;
-	pkt->pkt.data_len = ARP_PKT_SIZE;
-	pkt->pkt.nb_segs = 1;
-
-	ret = nic_ops->tx_one_pkt(pkt);
+	ret = eth_tx_xmit_one(eth_tx, pkt, ARP_PKT_SIZE);
 
 	if (unlikely(ret != 1)) {
-		nic_ops->free_pkt(pkt);
+		mbuf_free(pkt);
 		return -EIO;
 	}
 
@@ -215,26 +206,26 @@ static int arp_send_response_reuse(struct rte_mbuf *pkt,
  * @pkt: the packet
  * @hdr: the ARP header (inside the packet)
  */
-void arp_input(struct rte_mbuf *pkt, struct arp_hdr *hdr)
+void arp_input(struct mbuf *pkt, struct arp_hdr *hdr)
 {
 	int op;
 	struct arp_hdr_ethip *ethip;
 	struct ip_addr sender_ip, target_ip;
 	bool am_target;
 
-	if (!enough_space(pkt, hdr))
+	if (!mbuf_enough_space(pkt, hdr, sizeof(struct arp_hdr)))
 		goto out;
 
 	/* make sure the arp header is valid */
 	if (ntoh16(hdr->htype) != ARP_HTYPE_ETHER ||
 	    ntoh16(hdr->ptype) != ETHTYPE_IP ||
-	    hdr->hlen != sizeof(struct ether_addr) ||
+	    hdr->hlen != sizeof(struct eth_addr) ||
 	    hdr->plen != sizeof(struct ip_addr))
 		goto out;
 
 	/* now validate the variable length portion */
-	ethip = next_hdr(hdr, struct arp_hdr_ethip *);
-	if (!enough_space(pkt, ethip))
+	ethip = mbuf_nextd(hdr, struct arp_hdr_ethip *);
+	if (!mbuf_enough_space(pkt, ethip, sizeof(struct arp_hdr_ethip)))
 		goto out;
 
 	op = ntoh16(hdr->op);
@@ -261,7 +252,7 @@ void arp_input(struct rte_mbuf *pkt, struct arp_hdr *hdr)
 	}
 
 out:
-	nic_ops->free_pkt(pkt);
+	mbuf_free(pkt);
 }
 
 /**

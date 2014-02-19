@@ -1,18 +1,19 @@
 /*
- * ipv4.c - Ethernet + IP Version 4 Support
+ * ip.c - Ethernet + IP Version 4 Support
  */
+
+#define DEBUG 1
 
 #include <stdio.h>
 
 #include <ix/stddef.h>
 #include <ix/byteorder.h>
-#include <ix/timer.h>
+#include <ix/log.h>
 
 #include <net/ethernet.h>
 #include <net/ip.h>
 
 #include "net.h"
-#include "nic.h"
 
 /**
  * ip_addr_to_str - prints an IP address as a human-readable string
@@ -30,12 +31,12 @@ void ip_addr_to_str(struct ip_addr *addr, char *str)
                  (addr->addr & 0xff));
 }
 
-static void ipv4_ip_input(struct rte_mbuf *pkt, struct ip_hdr *hdr)
+static void ip_input(struct mbuf *pkt, struct ip_hdr *hdr)
 {
 	int hdrlen, pktlen;
 
 	/* check that the packet is long enough */
-	if (!enough_space(pkt, hdr))
+	if (!mbuf_enough_space(pkt, hdr, sizeof(struct ip_hdr)))
 		goto out;
 	/* check for IP version 4 */
 	if (hdr->version != 4)
@@ -61,39 +62,35 @@ static void ipv4_ip_input(struct rte_mbuf *pkt, struct ip_hdr *hdr)
 	switch(hdr->proto) {
 	case IPPROTO_ICMP:
 		icmp_input(pkt,
-			   next_hdr_off(hdr, struct icmp_hdr *, hdrlen),
+			   mbuf_nextd_off(hdr, struct icmp_hdr *, hdrlen),
 			   pktlen);
 		return;
 	}
 
 out:
-	nic_ops->free_pkt(pkt);
+	mbuf_free(pkt);
 }
 
-static void ipv4_rx_eth_pkt(struct rte_mbuf *pkt)
+/**
+ * eth_input - process an ethernet packet
+ * @pkt: the mbuf containing the packet
+ */
+void eth_input(struct mbuf *pkt)
 {
-	struct eth_hdr *ethhdr = rte_pktmbuf_mtod(pkt, struct eth_hdr *);
+	struct eth_hdr *ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
+
+	log_debug("ip: got ethernet packet of len %ld, type %x\n",
+		  pkt->len, ntoh16(ethhdr->type));
 
 	switch (ntoh16(ethhdr->type)) {
 	case ETHTYPE_IP:
-		ipv4_ip_input(pkt, next_hdr(ethhdr, struct ip_hdr *));
+		ip_input(pkt, mbuf_nextd(ethhdr, struct ip_hdr *));
 		break;
 	case ETHTYPE_ARP:
-		arp_input(pkt, next_hdr(ethhdr, struct arp_hdr *));
+		arp_input(pkt, mbuf_nextd(ethhdr, struct arp_hdr *));
 		break;
 	default:
-		nic_ops->free_pkt(pkt);
-	}
-}
-
-void ipv4_rx_pkts(int n, struct rte_mbuf *pktv[])
-{
-	int i;
-
-	timer_run();
-
-	for (i = 0; i < n; i++) {
-		ipv4_rx_eth_pkt(pktv[i]);
+		mbuf_free(pkt);
 	}
 }
 

@@ -11,6 +11,10 @@
 
 #include <net/ethernet.h>
 
+struct rte_eth_dev *eth_dev;
+struct eth_rx_queue *eth_rx;
+struct eth_tx_queue *eth_tx;
+
 static const struct rte_eth_conf default_conf = {
         .rxmode = {
                 .split_hdr_size = 0,
@@ -29,11 +33,11 @@ static const struct rte_eth_conf default_conf = {
 #define ETH_DEV_TX_QUEUE_SZ	1024
 
 /**
- * eth_get_hw_mac - retreives the default MAC address
+ * eth_dev_get_hw_mac - retreives the default MAC address
  * @dev: the ethernet device
  * @mac_addr: pointer to store the mac
  */
-void eth_get_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr)
+void eth_dev_get_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr)
 {
 	memcpy(&mac_addr->addr[0], &dev->data->mac_addrs[0], ETH_ADDR_LEN);
 }
@@ -78,7 +82,7 @@ int eth_dev_start(struct rte_eth_dev *dev)
 	dev->dev_ops->promiscuous_disable(dev);
 	dev->dev_ops->allmulticast_enable(dev);
 
-	eth_get_hw_mac(dev, &macaddr);
+	eth_dev_get_hw_mac(dev, &macaddr);
 	log_info("eth: started an ethernet device\n");
 	log_info("eth:\tMAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
 		 macaddr.addr[0], macaddr.addr[1],
@@ -96,6 +100,10 @@ int eth_dev_start(struct rte_eth_dev *dev)
 			 (link.link_duplex == ETH_LINK_FULL_DUPLEX) ?
 			 ("full-duplex") : ("half-duplex\n"));
 	}
+
+	eth_dev = dev;
+	eth_rx = dev->data->rx_queues[0];
+	eth_tx = dev->data->tx_queues[0];
 
 	return 0;
 
@@ -125,6 +133,9 @@ void eth_dev_stop(struct rte_eth_dev *dev)
 	free(dev->data->tx_queues);
 	free(dev->data->rx_queues);
 
+	eth_dev = NULL;
+	eth_rx = NULL;
+	eth_tx = NULL;
 } 
 
 /**

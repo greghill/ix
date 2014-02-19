@@ -33,6 +33,8 @@ int net_init(void)
 
 	net_dump_cfg();
 
+	eth_dev_get_hw_mac(eth_dev, &cfg_mac);
+
 	ret = arp_init();
 	if (ret) {
 		log_err("net: failed to initialize arp\n");

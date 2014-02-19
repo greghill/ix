@@ -990,7 +990,7 @@ static inline int eth_tx_reclaim(struct eth_tx_queue *tx)
 
 /**
  * eth_tx_xmit - transmits packets on a TX queue
- * @tx: the tX queue
+ * @tx: the TX queue
  * @nr: the number of mbufs to transmit
  * @mbufs: an array of mbufs to process
  *
@@ -1000,6 +1000,26 @@ static inline int eth_tx_xmit(struct eth_tx_queue *tx,
 			      int nr, struct mbuf **mbufs)
 {
 	return tx->xmit(tx, nr, mbufs);
+}
+
+/**
+ * eth_tx_xmit_one - transmits a single packet on a TX queue
+ * @tx: the TX queue
+ * @mbuf: the packet
+ * @len: the length of the packet
+ *
+ * Returns 1 if successful, otherwise the packet wasn't sent.
+ */
+static inline int eth_tx_xmit_one(struct eth_tx_queue *tx,
+				  struct mbuf *mbuf, size_t len)
+{
+	struct mbuf *mbufs[1];
+
+	mbufs[0] = mbuf;
+	mbuf->len = len;
+	mbuf->nr_iov = 0;
+
+	return eth_tx_xmit(tx, 1, mbufs);
 }
 
 
@@ -1046,4 +1066,13 @@ extern struct rte_eth_dev *eth_dev_alloc(size_t private_len);
 extern int eth_dev_start(struct rte_eth_dev *dev);
 extern void eth_dev_stop(struct rte_eth_dev *dev);
 extern void eth_dev_destroy(struct rte_eth_dev *dev);
+
+/*
+ * globals
+ * FIXME: make RX per-core or more than one per-core.
+ * FIXME: make TX per-core.
+ */
+extern struct rte_eth_dev *eth_dev;
+extern struct eth_rx_queue *eth_rx;
+extern struct eth_tx_queue *eth_tx;
 

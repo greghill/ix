@@ -151,9 +151,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		rxdp->read.hdr_addr = cpu_to_le32(new_b->paddr);
 		rxdp->read.pkt_addr = cpu_to_le32(new_b->paddr);
 
-		/* temporary hack before plugging in to netstack */
-		log_info("got packet of len %ld\n", b->len);
-		mbuf_free(b);
+		eth_input(b);
 
 		rxq->pos++;
 		nb_descs++;
@@ -270,7 +268,7 @@ static int ixgbe_tx_reclaim(struct eth_tx_queue *tx)
 	volatile union ixgbe_adv_tx_desc *txdp;
 	int idx = 0, nb_desc = 0;
 
-	while (1) {
+	while ((uint16_t) (txq->head + idx) != txq->tail) {
 		txe = &txq->ring_entries[(txq->head + idx) & (txq->len - 1)];
 
 		if (!txe->mbuf) {
@@ -289,7 +287,7 @@ static int ixgbe_tx_reclaim(struct eth_tx_queue *tx)
 	}
 
 	txq->head += nb_desc;
-	return txq->tail - txq->head;
+	return (uint16_t) (txq->len + txq->head - txq->tail);
 }
 
 static int ixgbe_tx_xmit_one(struct tx_queue *txq, struct mbuf *mbuf)
@@ -302,9 +300,9 @@ static int ixgbe_tx_xmit_one(struct tx_queue *txq, struct mbuf *mbuf)
 	 * Make sure enough space is available in the descriptor ring
 	 * NOTE: This should work correctly even with overflow...
 	 */
-	if (unlikely(txq->tail + nr_iov - txq->head >= txq->len)) {
+	if (unlikely((uint16_t) (txq->tail + nr_iov - txq->head) >= txq->len)) {
 		ixgbe_tx_reclaim(&txq->etxq);
-		if (txq->tail + nr_iov - txq->head >= txq->len)
+		if ((uint16_t) (txq->tail + nr_iov - txq->head) >= txq->len)
 			return -EAGAIN;
 	}
 
