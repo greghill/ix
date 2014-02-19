@@ -344,7 +344,7 @@ static int ixgbe_tx_xmit_one(struct tx_queue *txq, struct mbuf *mbuf)
 	}
 
 	txdp->read.cmd_type_len = cpu_to_le32(type_len);
-	txdp->read.olinfo_status = (pay_len << IXGBE_ADVTXD_PAYLEN_SHIFT);
+	txdp->read.olinfo_status = cpu_to_le32(pay_len << IXGBE_ADVTXD_PAYLEN_SHIFT);
 
 	txq->tail += nr_iov + 1;
 
