@@ -184,23 +184,15 @@ struct ixgbe_adapter {
  */
 void ixgbe_dev_clear_queues(struct rte_eth_dev *dev);
 
-void ixgbe_dev_rx_queue_release(void *rxq);
+void ixgbe_dev_rx_queue_release(struct eth_rx_queue *rxq);
 
-void ixgbe_dev_tx_queue_release(void *txq);
+void ixgbe_dev_tx_queue_release(struct eth_tx_queue *txq);
 
-int  ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, uint16_t rx_queue_id,
-		uint16_t nb_rx_desc, unsigned int socket_id,
-		const struct rte_eth_rxconf *rx_conf,
-		struct mempool *mb_pool);
+int  ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, int rx_queue_id,
+		int numa_node, uint16_t nb_rx_desc);
 
-int  ixgbe_dev_tx_queue_setup(struct rte_eth_dev *dev, uint16_t tx_queue_id,
-		uint16_t nb_tx_desc, unsigned int socket_id,
-		const struct rte_eth_txconf *tx_conf);
-
-uint32_t ixgbe_dev_rx_queue_count(struct rte_eth_dev *dev, 
-		uint16_t rx_queue_id);
-
-int ixgbe_dev_rx_descriptor_done(void *rx_queue, uint16_t offset);
+int  ixgbe_dev_tx_queue_setup(struct rte_eth_dev *dev, int tx_queue_id,
+		int numa_node, uint16_t nb_tx_desc);
 
 int ixgbe_dev_rx_init(struct rte_eth_dev *dev);
 

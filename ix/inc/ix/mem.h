@@ -46,6 +46,10 @@ enum {
 
 typedef unsigned long physaddr_t;
 
+#ifndef MAP_FAILED
+#define MAP_FAILED	((void *) -1)
+#endif
+
 extern void *
 mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy);
 extern void *

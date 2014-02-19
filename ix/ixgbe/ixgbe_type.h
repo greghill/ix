@@ -3150,6 +3150,7 @@ struct ixgbe_hw {
 	int api_version;
 	bool force_full_reset;
 	bool allow_unsupported_sfp;
+	int num_vfs;
 };
 
 #define ixgbe_call_func(hw, func, params, error) \

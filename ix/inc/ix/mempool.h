@@ -62,7 +62,8 @@ static inline void mempool_free(struct mempool *m, void *ptr)
  */
 static inline physaddr_t mempool_get_phys(struct mempool *m, void *ptr)
 {
-	return m->phys_addrs[PGN_2MB(ptr)] + PGOFF_2MB(ptr);
+	return m->phys_addrs[PGN_2MB((uintptr_t) ptr - (uintptr_t) m->buf)] +
+	       PGOFF_2MB(ptr);
 }
 
 extern int mempool_create(struct mempool *m, int nr_elems, size_t elem_len);

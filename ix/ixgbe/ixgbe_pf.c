@@ -42,12 +42,6 @@
 
 #define IXGBE_MAX_VFTA     (128)
 
-static inline uint16_t
-dev_num_vf(struct rte_eth_dev *eth_dev)
-{
-	return eth_dev->pci_dev->max_vfs;
-}
-
 static inline 
 int ixgbe_vf_perm_addr_gen(struct rte_eth_dev *dev, uint16_t vf_num)
 {
@@ -87,11 +81,11 @@ void ixgbe_pf_host_init(struct rte_eth_dev *eth_dev)
         IXGBE_DEV_PRIVATE_TO_UTA(eth_dev->data->dev_private);
 	struct ixgbe_hw *hw = 
 		IXGBE_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);
-	uint16_t vf_num;
+	uint16_t vf_num = hw->num_vfs;
 	uint8_t nb_queue;
 
 	RTE_ETH_DEV_SRIOV(eth_dev).active = 0;
-	if (0 == (vf_num = dev_num_vf(eth_dev)))
+	if (!vf_num)
 		return;
 
 	*vfinfo = malloc(sizeof(struct ixgbe_vf_info) * vf_num);
@@ -133,15 +127,15 @@ int ixgbe_pf_host_configure(struct rte_eth_dev *eth_dev)
 {
 	uint32_t vtctl, fcrth;
 	uint32_t vfre_slot, vfre_offset;
-	uint16_t vf_num;
 	const uint8_t VFRE_SHIFT = 5;  /* VFRE 32 bits per slot */
 	const uint8_t VFRE_MASK = (uint8_t)((1U << VFRE_SHIFT) - 1);
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);
+	uint16_t vf_num = hw->num_vfs;
 	uint32_t gpie, gcr_ext;
 	uint32_t vlanctrl;
 	int i;
 
-	if (0 == (vf_num = dev_num_vf(eth_dev)))
+	if (!vf_num)
 		return -1;
 
 	/* enable VMDq and set the default pool for PF */
@@ -235,7 +229,7 @@ set_rx_mode(struct rte_eth_dev *dev)
 		(struct rte_eth_dev_data*)dev->data->dev_private;
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 	u32 fctrl, vmolr = IXGBE_VMOLR_BAM | IXGBE_VMOLR_AUPE;
-	uint16_t vfn = dev_num_vf(dev);
+	uint16_t vfn = hw->num_vfs;
 
 	/* Check for Promiscuous and All Multicast modes */
 	fctrl = IXGBE_READ_REG(hw, IXGBE_FCTRL);
@@ -529,7 +523,7 @@ void ixgbe_pf_mbx_process(struct rte_eth_dev *eth_dev)
 	struct ixgbe_hw *hw = 
 		IXGBE_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);
 
-	for (vf = 0; vf < dev_num_vf(eth_dev); vf++) {
+	for (vf = 0; vf < hw->num_vfs; vf++) {
 		/* check & process vf function level reset */
 		if (!ixgbe_check_for_rst(hw, vf))
 			ixgbe_vf_reset_event(eth_dev, vf);

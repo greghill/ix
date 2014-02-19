@@ -3393,7 +3393,8 @@ u16 ixgbe_get_pcie_msix_count_generic(struct ixgbe_hw *hw)
 {
 	u16 msix_count = 1;
 	u16 max_msix_count;
-	u16 pcie_offset;
+	/* FIXME: IXGBE_READ_PCIE_WORD is currently a no-op */
+	u16 __notused pcie_offset;
 
 	switch (hw->mac.type) {
 	case ixgbe_mac_82598EB:

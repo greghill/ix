@@ -102,6 +102,12 @@ void mem_free_pages(void *addr, int nr, int size)
 	munmap(addr, nr * size);
 }
 
+#define PAGEMAP_PGN_MASK	0x7fffffffffffffULL
+#define PAGEMAP_FLAG_PRESENT	(1ULL << 63)
+#define PAGEMAP_FLAG_SWAPPED	(1ULL << 62)
+#define PAGEMAP_FLAG_FILE	(1ULL << 61)
+#define PAGEMAP_FLAG_SOFTDIRTY	(1ULL << 55)
+
 /**
  * mem_lookup_page_phys_addrs - determines the host-physical address of pages
  * @addr: a pointer to the start of the pages (must be @size aligned)
@@ -136,7 +142,12 @@ int mem_lookup_page_phys_addrs(void *addr, int nr, int size,
 			goto out;
 		}
 
-		paddrs[i] = (tmp & 0x7fffffffffffffULL) * PGSIZE_4KB;
+		if (!(tmp & PAGEMAP_FLAG_PRESENT)) {
+			ret = -ENODEV;
+			goto out;
+		}
+
+		paddrs[i] = (tmp & PAGEMAP_PGN_MASK) * PGSIZE_4KB;
 	}
 
 out:

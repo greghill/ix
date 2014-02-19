@@ -8,28 +8,24 @@
 #include <ix/mem.h>
 #include <ix/mempool.h>
 
+struct mbuf_iov {
+	physaddr_t base;
+	size_t len;
+};
+
 struct mbuf {
 	struct mempool *pool;	/* the pool the mbuf was allocated from */
 	physaddr_t paddr;	/* the physical address of the mbuf data */
 	size_t len;		/* the length of the mbuf data */
 	struct mbuf *next;	/* the next buffer of the packet
 				 * (can happen with recieve-side coalescing) */
-
-	/* offload features */
-	union {
-		uint32_t rss;
-		struct {
-			uint16_t hash;
-			uint16_t id;
-		} fdir;
-		uint32_t sched;
-	} hash;
-	uint32_t ol_flags;
+	struct mbuf_iov *iovs;	/* transmit scatter-gather array */
+	int nr_iov;		/* the number of scatter-gather vectors */
 };
 
 #define MBUF_HEADER_LEN		64	/* one cache line */
 #define MBUF_DATA_LEN		2048	/* 2 kb */
-//BUILD_ASSERT(sizeof(struct mbuf) <= MBUF_HEADER_LEN);
+#define MBUF_LEN		(MBUF_HEADER_LEN + MBUF_DATA_LEN)
 
 /**
  * mbuf_mtod_off - cast a pointer to the data with an offset
@@ -94,4 +90,19 @@ static inline void mbuf_free(struct mbuf *m)
 {
 	mempool_free(m->pool, m);
 }
+
+/**
+ * mbuf_xmit_done - called when a TX queue completes an mbuf
+ * @m: the mbuf
+ */
+static inline void mbuf_xmit_done(struct mbuf *m)
+{
+	/* FIXME: will need to propogate up to user application */
+	mbuf_free(m);
+}
+
+extern struct mempool mbuf_mempool;
+
+extern int mbuf_init_core(void);
+extern void mbuf_exit_core(void);
 

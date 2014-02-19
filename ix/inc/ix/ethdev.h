@@ -717,29 +717,21 @@ typedef void (*eth_dev_infos_get_t)(struct rte_eth_dev *dev,
 /**< @internal Get specific informations of an Ethernet device. */
 
 typedef int (*eth_rx_queue_setup_t)(struct rte_eth_dev *dev,
-				    uint16_t rx_queue_id,
-				    uint16_t nb_rx_desc,
-				    unsigned int socket_id,
-				    const struct rte_eth_rxconf *rx_conf,
-				    struct mempool *mb_pool);
+				    int rx_queue_id,
+				    int numa_node,
+				    uint16_t nb_rx_desc);
 /**< @internal Set up a receive queue of an Ethernet device. */
 
 typedef int (*eth_tx_queue_setup_t)(struct rte_eth_dev *dev,
-				    uint16_t tx_queue_id,
-				    uint16_t nb_tx_desc,
-				    unsigned int socket_id,
-				    const struct rte_eth_txconf *tx_conf);
+				    int tx_queue_id,
+				    int numa_node,
+				    uint16_t nb_tx_desc);
 /**< @internal Setup a transmit queue of an Ethernet device. */
-
-typedef void (*eth_queue_release_t)(void *queue);
+struct eth_rx_queue;
+struct eth_tx_queue;
+typedef void (*eth_rx_queue_release_t)(struct eth_rx_queue *queue);
+typedef void (*eth_tx_queue_release_t)(struct eth_tx_queue *queue);
 /**< @internal Release memory resources allocated by given RX/TX queue. */
-
-typedef uint32_t (*eth_rx_queue_count_t)(struct rte_eth_dev *dev,
-					 uint16_t rx_queue_id);
-/**< @Get number of available descriptors on a receive queue of an Ethernet device. */
-
-typedef int (*eth_rx_descriptor_done_t)(void *rxq, uint16_t offset);
-/**< @Check DD bit of specific RX descriptor */
 
 typedef int (*vlan_filter_set_t)(struct rte_eth_dev *dev,
 				  uint16_t vlan_id,
@@ -756,16 +748,6 @@ typedef void (*vlan_offload_set_t)(struct rte_eth_dev *dev, int mask);
 typedef void (*vlan_strip_queue_set_t)(struct rte_eth_dev *dev,
 				  uint16_t rx_queue_id,
 				  int on);
-/**< @internal VLAN stripping enable/disable by an queue of Ethernet device. */
-
-typedef uint16_t (*eth_rx_burst_t)(void *rxq,
-				   struct mbuf **rx_pkts,
-				   uint16_t nb_pkts);
-/**< @internal Retrieve input packets from a receive queue of an Ethernet device. */
-
-typedef uint16_t (*eth_tx_burst_t)(void *txq,
-				   struct mbuf **tx_pkts,
-				   uint16_t nb_pkts);
 /**< @internal Send output packets on a transmit queue of an Ethernet device. */
 
 typedef int (*fdir_add_signature_filter_t)(struct rte_eth_dev *dev,
@@ -902,11 +884,9 @@ struct eth_dev_ops {
 	vlan_strip_queue_set_t     vlan_strip_queue_set; /**< VLAN Stripping on queue. */
 	vlan_offload_set_t         vlan_offload_set; /**< Set VLAN Offload. */
 	eth_rx_queue_setup_t       rx_queue_setup;/**< Set up device RX queue.*/
-	eth_queue_release_t        rx_queue_release;/**< Release RX queue.*/
-	eth_rx_queue_count_t       rx_queue_count; /**< Get Rx queue count. */
-	eth_rx_descriptor_done_t   rx_descriptor_done;  /**< Check rxd DD bit */
+	eth_rx_queue_release_t     rx_queue_release;/**< Release RX queue.*/
 	eth_tx_queue_setup_t       tx_queue_setup;/**< Set up device TX queue.*/
-	eth_queue_release_t        tx_queue_release;/**< Release TX queue.*/
+	eth_tx_queue_release_t     tx_queue_release;/**< Release TX queue.*/
 	eth_dev_led_on_t           dev_led_on;    /**< Turn on LED. */
 	eth_dev_led_off_t          dev_led_off;   /**< Turn off LED. */
 	flow_ctrl_set_t            flow_ctrl_set; /**< Setup flow control. */
@@ -955,8 +935,6 @@ struct eth_dev_ops {
  * process, while the actual configuration data for the device is shared.
  */
 struct rte_eth_dev {
-	eth_rx_burst_t rx_pkt_burst; /**< Pointer to PMD receive function. */
-	eth_tx_burst_t tx_pkt_burst; /**< Pointer to PMD transmit function. */
 	struct rte_eth_dev_data *data;  /**< Pointer to device data */
 	struct eth_dev_ops *dev_ops;    /**< Functions exported by PMD */
 	struct pci_dev *pci_dev; /**< PCI info. supplied by probing */
@@ -970,6 +948,61 @@ struct rte_eth_dev_sriov {
 };
 #define RTE_ETH_DEV_SRIOV(dev)         ((dev)->data->sriov)
 
+
+/*
+ * The Queue API
+ */
+
+struct eth_rx_queue {
+	int (*poll) (struct eth_rx_queue *rx);
+};
+
+/**
+ * eth_rx_poll - processes all pending packets on an RX queue
+ * @rx: the RX queue
+ *
+ * Returns the number of packets processed.
+ */
+static inline int eth_rx_poll(struct eth_rx_queue *rx)
+{
+	return rx->poll(rx);
+}
+
+struct eth_tx_queue {
+	int (*reclaim) (struct eth_tx_queue *tx);
+	int (*xmit) (struct eth_tx_queue *tx, int nr, struct mbuf **mbufs);
+};
+
+/**
+ * eth_tx_reclaim - scans the queue and reclaims finished buffers
+ * @tx: the TX queue
+ *
+ * NOTE: scatter-gather mbuf's can span multiple descriptors, so
+ * take that into account when interpreting the count provided by
+ * this function.
+ *
+ * Returns an available descriptor count.
+ */
+static inline int eth_tx_reclaim(struct eth_tx_queue *tx)
+{
+	return tx->reclaim(tx);
+}
+
+/**
+ * eth_tx_xmit - transmits packets on a TX queue
+ * @tx: the tX queue
+ * @nr: the number of mbufs to transmit
+ * @mbufs: an array of mbufs to process
+ *
+ * Returns the number of mbuf's transmitted.
+ */
+static inline int eth_tx_xmit(struct eth_tx_queue *tx,
+			      int nr, struct mbuf **mbufs)
+{
+	return tx->xmit(tx, nr, mbufs);
+}
+
+
 /**
  * @internal
  * The data part, with no function pointers, associated with each ethernet device.
@@ -978,8 +1011,8 @@ struct rte_eth_dev_sriov {
  * processes in a multi-process configuration.
  */
 struct rte_eth_dev_data {
-	void **rx_queues; /**< Array of pointers to RX queues. */
-	void **tx_queues; /**< Array of pointers to TX queues. */
+	struct eth_rx_queue **rx_queues; /**< Array of pointers to RX queues. */
+	struct eth_tx_queue **tx_queues; /**< Array of pointers to TX queues. */
 	uint16_t nb_rx_queues; /**< Number of RX queues. */
 	uint16_t nb_tx_queues; /**< Number of TX queues. */
 	
@@ -997,6 +1030,8 @@ struct rte_eth_dev_data {
 	uint64_t mac_pool_sel[ETH_NUM_RECEIVE_MAC_ADDR]; 
 	/** bitmap array of associating Ethernet MAC addresses to pools */
 	struct eth_addr* hash_mac_addrs;
+
+	uint32_t max_frame_size;
 	/** Device Ethernet MAC addresses of hash filtering. */
 	uint8_t port_id;           /**< Device [external] port identifier. */
 	uint8_t promiscuous   : 1, /**< RX promiscuous mode ON(1) / OFF(0). */
@@ -1005,8 +1040,10 @@ struct rte_eth_dev_data {
 		dev_started : 1;   /**< Device state: STARTED(1) / STOPPED(0). */
 };
 
+extern void
+eth_dev_get_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr);
 extern struct rte_eth_dev *eth_dev_alloc(size_t private_len);
 extern int eth_dev_start(struct rte_eth_dev *dev);
-extern int eth_dev_stop(struct rte_eth_dev *dev);
+extern void eth_dev_stop(struct rte_eth_dev *dev);
 extern void eth_dev_destroy(struct rte_eth_dev *dev);
 

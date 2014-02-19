@@ -5,7 +5,11 @@
 #include <string.h>
 
 #include <ix/stddef.h>
+#include <ix/errno.h>
 #include <ix/ethdev.h>
+#include <ix/log.h>
+
+#include <net/ethernet.h>
 
 static const struct rte_eth_conf default_conf = {
         .rxmode = {
@@ -20,6 +24,108 @@ static const struct rte_eth_conf default_conf = {
                 .mq_mode = ETH_MQ_TX_NONE,
         },
 };
+
+#define ETH_DEV_RX_QUEUE_SZ	512
+#define ETH_DEV_TX_QUEUE_SZ	1024
+
+/**
+ * eth_get_hw_mac - retreives the default MAC address
+ * @dev: the ethernet device
+ * @mac_addr: pointer to store the mac
+ */
+void eth_get_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr)
+{
+	memcpy(&mac_addr->addr[0], &dev->data->mac_addrs[0], ETH_ADDR_LEN);
+}
+
+/**
+ * eth_dev_start - starts an ethernet device
+ * @dev: the ethernet device
+ *
+ * Returns 0 if successful, otherwise failure.
+ */
+int eth_dev_start(struct rte_eth_dev *dev)
+{
+	int ret;
+	struct eth_addr macaddr;
+	struct rte_eth_link link;
+
+	dev->data->rx_queues = malloc(sizeof(struct eth_rx_queue *));
+	if (!dev->data->rx_queues)
+		return -ENOMEM;
+
+	dev->data->tx_queues = malloc(sizeof(struct eth_tx_queue *));
+	if (!dev->data->tx_queues) {
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	dev->data->nb_rx_queues = 1;
+	dev->data->nb_tx_queues = 1;
+
+	ret = dev->dev_ops->rx_queue_setup(dev, 0, -1, ETH_DEV_RX_QUEUE_SZ);
+	if (ret)
+		goto err_rxsetup;
+
+	ret = dev->dev_ops->tx_queue_setup(dev, 0, -1, ETH_DEV_TX_QUEUE_SZ);
+	if (ret)
+		goto err_txsetup;
+
+	ret = dev->dev_ops->dev_start(dev);
+	if (ret)
+		goto err_start;
+
+	dev->dev_ops->promiscuous_disable(dev);
+	dev->dev_ops->allmulticast_enable(dev);
+
+	eth_get_hw_mac(dev, &macaddr);
+	log_info("eth: started an ethernet device\n");
+	log_info("eth:\tMAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
+		 macaddr.addr[0], macaddr.addr[1],
+		 macaddr.addr[2], macaddr.addr[3],
+		 macaddr.addr[4], macaddr.addr[5]);
+
+	dev->dev_ops->link_update(dev, 1);
+	link = dev->data->dev_link;
+
+	if (!link.link_status) {
+		log_warn("eth:\tlink appears to be down, check connection.\n");
+	} else {
+		log_info("eth:\tlink up - speed %u Mbps, %s\n",
+			 (uint32_t) link.link_speed,
+			 (link.link_duplex == ETH_LINK_FULL_DUPLEX) ?
+			 ("full-duplex") : ("half-duplex\n"));
+	}
+
+	return 0;
+
+
+err_start:
+	dev->dev_ops->tx_queue_release(dev->data->tx_queues[0]);
+err_txsetup:
+	dev->dev_ops->rx_queue_release(dev->data->rx_queues[0]);
+err_rxsetup:
+	free(dev->data->tx_queues);
+err:
+	free(dev->data->rx_queues);
+	return ret;
+}
+
+/**
+ * eth_dev_stop - stops an ethernet device
+ * @dev: the ethernet device
+ */
+void eth_dev_stop(struct rte_eth_dev *dev)
+{
+	dev->dev_ops->dev_stop(dev);
+	dev->dev_ops->tx_queue_release(dev->data->tx_queues[0]);
+	dev->dev_ops->rx_queue_release(dev->data->rx_queues[0]);
+	dev->data->nb_rx_queues = 0;
+	dev->data->nb_tx_queues = 0;
+	free(dev->data->tx_queues);
+	free(dev->data->rx_queues);
+
+} 
 
 /**
  * eth_dev_alloc - allocates an ethernet device

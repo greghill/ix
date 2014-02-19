@@ -17,7 +17,7 @@ CFLAGS += -DDYNCORE_DEBUG
 endif
 
 SRCS =
-DIRS = core libdune ixgbe sandbox
+DIRS = core ixgbe libdune sandbox
 
 define register_dir
 SRCS += $(patsubst %, $(1)/%, $(2))
@@ -38,7 +38,7 @@ depend: .depend
 
 .depend: $(SRCS)
 	rm -f ./.depend
-	$(foreach SRC,$(SRCS),$(CC) -I$(DUNE_SDK) -I$(DUNE_SDK)/libdune -MM -MT $(SRC:.c=.o) $(SRC) >> .depend;)
+	$(foreach SRC,$(SRCS),$(CC) -I$(DUNE_SDK) -I$(DUNE_SDK)/libdune -I./inc -MM -MT $(SRC:.c=.o) $(SRC) >> .depend;)
 
 include .depend
 
