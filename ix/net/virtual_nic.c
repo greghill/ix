@@ -1,81 +1,115 @@
-#include <arpa/inet.h>
-#include <linux/if.h>
-#include <linux/if_ether.h>
-#include <net/ethernet.h>
-#include <netpacket/packet.h>
+#include <fcntl.h>
 #include <string.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <sys/types.h>
-#include <netinet/ether.h>
+#include <unistd.h>
 
-#include "cfg.h"
+#include <ix/mempool.h>
+#include <ix/queue.h>
+
 #include "nic.h"
 
-static char buffer[4096];
-
 static struct rte_mbuf mypkt;
-static int sock;
-static char broadcast_mac[] = {0xff,0xff,0xff,0xff,0xff,0xff};
-static int iface_index;
 
-static int raw_socket_init(const char *device)
+struct packet {
+	int size;
+	char data[];
+};
+
+static struct {
+	struct queue rx_queue;
+	struct queue tx_queue;
+	char mempool_area[];
+} *shmem;
+
+static struct mempool mempool;
+
+void *mempool_base;
+
+/* Verbatim copy from ix/core/mempool.c. */
+static void mempool_init_buf(struct mempool *m, int nr_elems, size_t elem_len)
 {
-	struct ifreq ifr;
-	int sock;
+	int i;
+	uintptr_t pos = (uintptr_t) m->buf;
+	uintptr_t next_pos = pos + elem_len;
 
-	memset (&ifr, 0, sizeof (struct ifreq));
+	m->head = (struct mempool_hdr *)pos;
 
-	if ((sock = socket(PF_PACKET, SOCK_RAW, htons (ETH_P_ALL))) < 1) {
-		printf("ERROR: Could not open socket, Got #?\n");
-		exit(1);
+	for (i = 0; i < nr_elems - 1; i++) {
+		((struct mempool_hdr *)pos)->next =
+			(struct mempool_hdr *)next_pos;
+
+		pos = next_pos;
+		next_pos += elem_len;
 	}
 
-	strcpy(ifr.ifr_name, device);
+	((struct mempool_hdr *)pos)->next = NULL;
+}
 
-	if (ioctl(sock, SIOCGIFINDEX, &ifr) == -1) {
-		perror("Error: Could not retrive the interface index from the device.\n");
-		exit(1);
-	}
+/* Temporary hack to create the mempool inside the shared memory region. Copied from ix/core/mempool.c. */
+static int prealloc_mempool_create(void *buf, struct mempool *m, int nr_elems, size_t elem_len)
+{
+	int nr_pages;
 
-	iface_index = ifr.ifr_ifindex;
+	if (!elem_len || !nr_elems)
+		return -EINVAL;
 
-	if (ioctl(sock, SIOCGIFFLAGS, &ifr) == -1) {
-		perror("Error: Could not retrive the flags from the device.\n");
-		exit(1);
-	}
+	elem_len = align_up(elem_len, sizeof(long));
+	nr_pages = PGN_2MB(nr_elems * elem_len + PGMASK_2MB);
+	nr_elems = nr_pages * PGSIZE_2MB / elem_len;
+	m->nr_pages = nr_pages;
 
-	ifr.ifr_flags |= IFF_PROMISC;
-	if (ioctl(sock, SIOCSIFFLAGS, &ifr) == -1) {
-		perror("Error: Could not set flag IFF_PROMISC");
-		exit(1);
-	}
+	m->buf = buf;
 
-	if (ioctl(sock, SIOCGIFINDEX, &ifr) < 0) {
-		perror("Error: Error getting the device index.\n");
-		exit(1);
-	}
+	mempool_init_buf(m, nr_elems, elem_len);
+	return 0;
+}
 
-	return sock;
+static void *queue_item_alloc(void)
+{
+	void *ret = (void *) (mempool_alloc(&mempool) - mempool_base);
+	return ret;
+}
+
+static void virtual_init(void)
+{
+	int shmfd;
+
+	shmfd = shm_open("/vnic_shmem", O_RDWR | O_CREAT, 0777);
+	ftruncate(shmfd, 4*1<<20);
+	shmem = mmap(NULL, 4*1<<20, PROT_READ|PROT_WRITE, MAP_SHARED, shmfd, 0);
+
+	mempool_base = shmem->mempool_area;
+
+	prealloc_mempool_create(mempool_base, &mempool, 64, 4096);
+
+	/* HACK: Allocate and throw away first element (acts as NULL). */
+	mempool_alloc(&mempool);
+
+	queue_init(&shmem->rx_queue, queue_item_alloc);
+	queue_init(&shmem->tx_queue, queue_item_alloc);
+
+	queue_populate(&shmem->rx_queue);
 }
 
 static int virtual_has_pending_pkts(void)
 {
-	return 1;
+	return !queue_empty(&shmem->rx_queue);
 }
 
 static int virtual_receive_one_pkt(struct rte_mbuf **pkt)
 {
-	int size;
+	struct packet *packet;
 
-	if (!sock)
-		sock = raw_socket_init("eth0");
+	packet = (struct packet *) ((unsigned long long) queue_dequeue(&shmem->rx_queue) + mempool_base);
 
-	size = recv(sock, buffer, sizeof(buffer), 0);
-	if (!memcmp(buffer, &cfg_mac, ETH_ALEN) || !memcmp(buffer, broadcast_mac, ETH_ALEN)) {
+	if (packet) {
 		pkt[0] = &mypkt;
-		mypkt.pkt.data = buffer;
-		mypkt.pkt.data_len = size;
+		mypkt.pkt.data = packet->data;
+		mypkt.pkt.data_len = packet->size;
+		/* HACK: Store packet address. */
+		mypkt.pkt.next = (void*) ((void*) packet - mempool_base);
 		return 1;
 	}
 
@@ -84,14 +118,25 @@ static int virtual_receive_one_pkt(struct rte_mbuf **pkt)
 
 static int virtual_tx_one_pkt(struct rte_mbuf *pkt)
 {
-	struct sockaddr_ll sa;
+	int i;
+	struct packet *packet;
 
-	sa.sll_family = PF_PACKET;
-	sa.sll_halen = ETH_ALEN;
-	memcpy(sa.sll_addr, pkt[0].pkt.data, ETH_ALEN);
-	sa.sll_ifindex = iface_index;
-	sendto(sock, pkt[0].pkt.data, pkt[0].pkt.data_len, 0, (struct sockaddr *) &sa, sizeof(sa));
-	return 1;
+	for (i = 0; i < QUEUE_SIZE; i++) {
+		if (!shmem->tx_queue.item[i].done || !shmem->tx_queue.item[i].data_offset)
+			continue;
+		mempool_free(&mempool, shmem->tx_queue.item[i].data_offset + mempool_base);
+		shmem->tx_queue.item[i].data_offset = 0;
+	}
+
+	/* HACK: Until we get rid of rte_mbuf. */
+	packet = (struct packet *) ((void *) pkt[0].pkt.next + (unsigned long long) mempool_base);
+	packet->size = pkt[0].pkt.data_len;
+	if (packet->data != pkt[0].pkt.data) {
+		fprintf(stderr, "packet not reused %p %p\n", packet->data, pkt[0].pkt.data);
+		exit(1);
+	}
+
+	return queue_enqueue(&shmem->tx_queue, (void *) ((void *) packet - mempool_base));
 }
 
 static void virtual_free_pkt(struct rte_mbuf *pkt)
@@ -104,6 +149,7 @@ static struct rte_mbuf *virtual_alloc_pkt()
 }
 
 struct nic_operations virtual_nic_ops = {
+  .init             = virtual_init,
   .has_pending_pkts = virtual_has_pending_pkts,
   .receive_one_pkt  = virtual_receive_one_pkt,
   .tx_one_pkt       = virtual_tx_one_pkt,

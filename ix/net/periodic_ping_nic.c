@@ -13,6 +13,10 @@ static struct rte_mbuf mypkt = {
   },
 };
 
+static void pping_init(void)
+{
+}
+
 static int pping_has_pending_pkts(void)
 {
 	return 1;
@@ -57,6 +61,7 @@ static struct rte_mbuf *pping_alloc_pkt()
 }
 
 struct nic_operations pping_nic_ops = {
+  .init             = pping_init,
   .has_pending_pkts = pping_has_pending_pkts,
   .receive_one_pkt  = pping_receive_one_pkt,
   .tx_one_pkt       = pping_tx_one_pkt,
