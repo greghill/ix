@@ -132,14 +132,14 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 	int nb_descs = 0;
 
 	while (1) {
-		rxdp = &rxq->ring[rxq->pos];
+		rxdp = &rxq->ring[rxq->pos & (rxq->len - 1)];
 		status = le32_to_cpu(rxdp->wb.upper.status_error);
 
 		if (!(status & IXGBE_RXDADV_STAT_DD))
 			break;
 		rxd = *rxdp;
 
-		rxqe = &rxq->ring_entries[rxq->pos];
+		rxqe = &rxq->ring_entries[rxq->pos & (rxq->len -1)];
 		b = rxqe->mbuf;
 		b->len = le32_to_cpu(rxd.wb.upper.length);
 
@@ -157,7 +157,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		log_info("got packet of len %ld\n", b->len);
 		mbuf_free(b);
 
-		rxq->pos = ((rxq->pos + 1) & (rxq->len - 1));
+		rxq->pos++;
 		nb_descs++;
 	}
 
@@ -265,6 +265,109 @@ err:
 	return ret;
 }
 
+static int ixgbe_tx_reclaim(struct eth_tx_queue *tx)
+{
+	struct tx_queue *txq = eth_tx_queue_to_drv(tx);
+	struct tx_entry *txe;
+	volatile union ixgbe_adv_tx_desc *txdp;
+	int idx = 0, nb_desc = 0;
+
+	while (1) {
+		txe = &txq->ring_entries[(txq->head + idx) & (txq->len - 1)];
+
+		if (!txe->mbuf) {
+			idx++;
+			continue;
+		}
+
+		txdp = &txq->ring[(txq->head + idx) & (txq->len - 1)];
+		if (!(le32_to_cpu(txdp->wb.status) & IXGBE_TXD_STAT_DD))
+			break;
+
+		mbuf_xmit_done(txe->mbuf);
+		txe->mbuf = NULL;
+		idx++;
+		nb_desc = idx;
+	}
+
+	txq->head += nb_desc;
+	return txq->tail - txq->head;
+}
+
+static int ixgbe_tx_xmit_one(struct tx_queue *txq, struct mbuf *mbuf)
+{
+	volatile union ixgbe_adv_tx_desc *txdp;
+	int i, nr_iov = mbuf->nr_iov;
+	uint32_t type_len, pay_len = mbuf->len;
+
+	/*
+	 * Make sure enough space is available in the descriptor ring
+	 * NOTE: This should work correctly even with overflow...
+	 */
+	if (unlikely(txq->tail + nr_iov - txq->head >= txq->len)) {
+		ixgbe_tx_reclaim(&txq->etxq);
+		if (txq->tail + nr_iov - txq->head >= txq->len)
+			return -EAGAIN;
+	}
+
+	for (i = 0; i < nr_iov; i++) {
+		struct mbuf_iov iov = mbuf->iovs[i];
+		txdp = &txq->ring[(txq->tail + i + 1) & (txq->len - 1)];
+
+		txdp->read.buffer_addr = cpu_to_le64(iov.base);
+		type_len = (IXGBE_ADVTXD_DTYP_DATA |
+			    IXGBE_ADVTXD_DCMD_IFCS |
+			    IXGBE_ADVTXD_DCMD_DEXT);
+		type_len |= iov.len;
+		if (i == nr_iov - 1) {
+			type_len |= (IXGBE_ADVTXD_DCMD_EOP |
+				     IXGBE_ADVTXD_DCMD_RS);
+		}
+
+		txdp->read.cmd_type_len = cpu_to_le32(type_len);
+		txdp->read.olinfo_status = 0;
+		pay_len += iov.len;
+	}
+
+	txq->ring_entries[(txq->tail + nr_iov) & (txq->len - 1)].mbuf = mbuf;
+
+	txdp = &txq->ring[txq->tail & (txq->len - 1)];	
+	txdp->read.buffer_addr = cpu_to_le64(mbuf->paddr);
+
+	type_len = (IXGBE_ADVTXD_DTYP_DATA |
+		    IXGBE_ADVTXD_DCMD_IFCS |
+		    IXGBE_ADVTXD_DCMD_DEXT);
+	type_len |= mbuf->len;
+	if (!nr_iov) {
+		type_len |= (IXGBE_ADVTXD_DCMD_EOP |
+			     IXGBE_ADVTXD_DCMD_RS);
+	}
+
+	txdp->read.cmd_type_len = cpu_to_le32(type_len);
+	txdp->read.olinfo_status = (pay_len << IXGBE_ADVTXD_PAYLEN_SHIFT);
+
+	txq->tail += nr_iov + 1;
+
+	return 0;
+}
+
+static int ixgbe_tx_xmit(struct eth_tx_queue *tx, int nr, struct mbuf **mbufs)
+{
+	struct tx_queue *txq = eth_tx_queue_to_drv(tx);
+	int nb_pkts = 0;
+
+	while (nb_pkts < nr) {
+		if (ixgbe_tx_xmit_one(txq, mbufs[nb_pkts]))
+			break;
+
+		nb_pkts++;	
+	}
+
+	IXGBE_PCI_REG_WRITE(txq->tdt_reg_addr, (txq->tail & (txq->len - 1)));
+
+	return nb_pkts;
+}
+
 /**
  * ixgbe_dev_rx_queue_release - frees an RX queue
  * @rxq: the RX queue to free
@@ -366,6 +469,9 @@ int ixgbe_dev_tx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 		txq->tdt_reg_addr = IXGBE_PCI_REG_ADDR(hw, IXGBE_VFTDT(queue_idx));
 	else
 		txq->tdt_reg_addr = IXGBE_PCI_REG_ADDR(hw, IXGBE_TDT(txq->reg_idx));
+
+	txq->etxq.reclaim = ixgbe_tx_reclaim;
+	txq->etxq.xmit = ixgbe_tx_xmit;
 
 	ixgbe_reset_tx_queue(txq);
 	dev->data->tx_queues[queue_idx] = &txq->etxq;
