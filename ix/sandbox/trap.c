@@ -34,7 +34,7 @@
 
 #include "sandbox.h"
 #include "boxer.h"
-#include "libdune/cpu-x86.h"
+#include <cpu-x86.h>
 
 struct thread_arg {
 	pthread_cond_t	ta_cnd;

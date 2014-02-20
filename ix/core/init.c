@@ -51,7 +51,7 @@ err:
 	return ret;
 }
 
-void main_loop(void)
+static void main_loop(void)
 {
 	while (1) {
 		timer_run();

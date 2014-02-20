@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <stdint.h>
 
-#include "libdune/dune.h"
+#include <dune.h>
 
 // address layout
 // - Each untrusted memory reference must be less then

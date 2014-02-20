@@ -2,12 +2,9 @@
 #
 # path for this Makefile to work properly.
 
-ifeq ($(DUNE_SDK),)
-$(error "Please set the DUNE_SDK environment variable to your Dune path")
-endif
-
+INC	= -I./inc -I./libdune
 CC	= gcc
-CFLAGS	= -g -Wall -O3 -I$(DUNE_SDK) -I$(DUNE_SDK)/libdune -I./inc
+CFLAGS	= -g -Wall -O3 $(INC)
 LD	= gcc
 LDFLAGS	=
 LDLIBS	= -lrt -lpthread -lm -lnuma -ldl
@@ -38,7 +35,7 @@ depend: .depend
 
 .depend: $(SRCS)
 	rm -f ./.depend
-	$(foreach SRC,$(SRCS),$(CC) -I$(DUNE_SDK) -I$(DUNE_SDK)/libdune -I./inc -MM -MT $(SRC:.c=.o) $(SRC) >> .depend;)
+	$(foreach SRC,$(SRCS),$(CC) $(INC) -MM -MT $(SRC:.c=.o) $(SRC) >> .depend;)
 
 include .depend
 
