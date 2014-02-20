@@ -9,6 +9,8 @@
 #include <ix/ethdev.h>
 #include <ix/timer.h>
 
+#include <dune.h>
+
 extern int timer_init(void);
 extern int net_init(void);
 extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
@@ -60,6 +62,22 @@ static void main_loop(void)
 	}
 }
 
+static void
+pgflt_handler(uintptr_t addr, uint64_t fec, struct dune_tf *tf)
+{
+	int ret;
+	ptent_t *pte;
+	bool was_user = (tf->cs & 0x3);
+
+	if (was_user) {
+		dune_die();
+	} else {
+		ret = dune_vm_lookup(pgroot, (void *) addr, CREATE_NORMAL, &pte);
+		assert(!ret);
+		*pte = PTE_P | PTE_W | PTE_ADDR(dune_va_to_pa((void *) addr));
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -71,6 +89,14 @@ int main(int argc, char *argv[])
 		log_err("init: format -> ix [ETH_PCI_ADDR]\n");
 		return -EINVAL;
 	}
+
+	ret = dune_init(false);
+	if (ret) {
+		log_err("init: failed to initialize dune\n");
+		return ret;
+	}
+
+	dune_register_pgflt_handler(pgflt_handler);
 
 	ret = timer_init();
 	if (ret) {
@@ -93,6 +119,12 @@ int main(int argc, char *argv[])
 	ret = net_init();
 	if (ret) {
 		log_err("init: failed to initialize net\n");
+		return ret;
+	}
+
+	ret = dune_enter();
+	if (ret) {
+		log_err("init: unable to enter dune mode\n");
 		return ret;
 	}
 
