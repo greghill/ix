@@ -18,4 +18,9 @@ latex-all.tex
 tags
 .depend
 ix/ix
+*.mod
+*.mod.c
+*.ko
+*.symvers
+modules.order
 
