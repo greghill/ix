@@ -19,6 +19,8 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
+#include <dune.h>
+
 #define PCI_SYSFS_PATH "/sys/bus/pci/devices"
 
 static int sysfs_parse_val(const char *path, uint64_t *val)
@@ -303,7 +305,13 @@ void *pci_map_mem_bar(struct pci_dev *dev, struct pci_bar *bar, bool wc)
 	if (vaddr == MAP_FAILED)
 		return NULL;
 
-	/* FIXME: hook into Dune here */
+	/* FIXME: write-combining support needed */
+	if (dune_vm_map_phys(pgroot, vaddr, bar->len,
+			     (void *) dune_va_to_pa(vaddr),
+			     PERM_R | PERM_W | PERM_UC)) {
+		munmap(vaddr, bar->len);
+		return NULL;
+	}
 
 	return vaddr;
 }
@@ -315,7 +323,7 @@ void *pci_map_mem_bar(struct pci_dev *dev, struct pci_bar *bar, bool wc)
  */
 void pci_unmap_mem_bar(struct pci_bar *bar, void *vaddr)
 {
-	/* FIXME: hook into Dune here */
+	dune_vm_unmap(pgroot, vaddr, bar->len);
 	munmap(vaddr, bar->len);
 }
 

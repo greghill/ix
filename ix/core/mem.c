@@ -6,6 +6,8 @@
 #include <ix/mem.h>
 #include <ix/errno.h>
 
+#include <dune.h>
+
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <asm/mman.h>
@@ -30,6 +32,7 @@ void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 	void *vaddr;
 	int flags = MAP_PRIVATE | MAP_ANONYMOUS;
 	size_t len = nr * size;
+	int perm;
 
 	switch (size) {
 	case PGSIZE_4KB:
@@ -59,7 +62,14 @@ void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 		  mask ? mask->size : 0, MPOL_MF_STRICT))
 		goto fail;
 
-	/* FIXME: hook into Dune here */
+	perm = PERM_R | PERM_W;
+	if (size == PGSIZE_2MB)
+		perm |= PERM_BIG;
+	else if (size == PGSIZE_1GB)
+		perm |= PERM_BIG_1GB;
+	if (dune_vm_map_phys(pgroot, vaddr, len,
+			     (void *) dune_va_to_pa(vaddr), perm))
+		goto fail;
 
 	return vaddr;
 
@@ -97,8 +107,7 @@ void *mem_alloc_pages_onnode(int nr, int size, int node, int numa_policy)
  */
 void mem_free_pages(void *addr, int nr, int size)
 {
-	/* FIXME: hook into Dune here */
-
+	dune_vm_unmap(pgroot, addr, nr * size);
 	munmap(addr, nr * size);
 }
 

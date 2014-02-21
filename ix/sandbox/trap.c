@@ -8,6 +8,7 @@
 
 #include <errno.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include <fcntl.h>
 #include <sys/syscall.h>
 #include <asm/prctl.h>
