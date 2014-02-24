@@ -14,7 +14,7 @@ CFLAGS += -DDYNCORE_DEBUG
 endif
 
 SRCS =
-DIRS = core ixgbe libdune net sandbox
+DIRS = core ixgbe libdune net sandbox vnic
 
 define register_dir
 SRCS += $(patsubst %, $(1)/%, $(2))

@@ -14,6 +14,7 @@
 extern int timer_init(void);
 extern int net_init(void);
 extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
+extern int virtual_init(void);
 
 static int hw_init_one(const char *pci_addr)
 {
@@ -110,10 +111,18 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-	ret = hw_init_one(argv[1]);
-	if (ret) {
-		log_err("init: failed to initialize ethernet device\n");
-		return ret;
+	if (!strcmp(argv[1], "virtual")) {
+		ret = virtual_init();
+		if (ret) {
+			log_err("init: failed to initialize ethernet device\n");
+			return ret;
+		}
+	} else {
+		ret = hw_init_one(argv[1]);
+		if (ret) {
+			log_err("init: failed to initialize ethernet device\n");
+			return ret;
+		}
 	}
 
 	ret = net_init();
