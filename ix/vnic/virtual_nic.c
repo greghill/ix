@@ -5,27 +5,183 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <ix/errno.h>
+#include <ix/ethdev.h>
+#include <ix/log.h>
 #include <ix/mempool.h>
-#include <ix/queue.h>
 
-#include "nic.h"
+#define QUEUE_SIZE 16
 
-static struct rte_mbuf mypkt;
-
-struct packet {
-	int size;
-	char data[];
+struct descriptor {
+	unsigned int done;
+	unsigned int len;
+	unsigned long long addr;
 };
 
+struct queue_entry {
+        struct mbuf *mbuf;
+};
+
+struct rx_queue {
+	unsigned int pos;
+	unsigned int len;
+	struct descriptor *ring;
+	struct queue_entry ring_entries[QUEUE_SIZE];
+} rx_queue;
+
+struct tx_queue {
+	unsigned int head;
+	unsigned int tail;
+	unsigned int len;
+	struct descriptor *ring;
+	struct queue_entry ring_entries[QUEUE_SIZE];
+} tx_queue;
+
 static struct {
-	struct queue rx_queue;
-	struct queue tx_queue;
-	char mempool_area[];
+	unsigned int rx_head;
+	unsigned int tx_head;
+	unsigned int rx_tail;
+	unsigned int tx_tail;
+	struct descriptor rx_ring[QUEUE_SIZE];
+	struct descriptor tx_ring[QUEUE_SIZE];
+	struct mbuf mempool_area[];
 } *shmem;
 
 static struct mempool mempool;
 
 void *mempool_base;
+
+struct eth_addr virtual_eth_addr = { .addr = {0x00, 0x16, 0x3e, 0x1f, 0x4a, 0x6b} };
+static struct rte_eth_dev_data virtual_eth_dev_data;
+static struct rte_eth_dev virtual_eth_dev;
+
+static struct mbuf *virtual_mbuf_alloc(struct mempool *pool)
+{
+        struct mbuf *m = mempool_alloc(pool);
+        if (unlikely(!m))
+                return NULL;
+
+        m->pool = pool;
+        m->paddr = mbuf_mtod(m, void *) - mempool_base;
+        m->next = NULL;
+
+        return m;
+}
+
+static int virtual_poll(struct eth_rx_queue *rx)
+{
+	struct rx_queue *rxq = &rx_queue;
+	volatile struct descriptor *rxdp;
+	struct mbuf *b, *new_b;
+	struct queue_entry *rxqe;
+	int nb_descs = 0;
+
+	while (1) {
+		rxdp = &rxq->ring[rxq->pos & (rxq->len - 1)];
+		if (!rxdp->done)
+			break;
+
+		rxqe = &rxq->ring_entries[rxq->pos & (rxq->len -1)];
+		b = rxqe->mbuf;
+		b->len = rxdp->len;
+
+		new_b = virtual_mbuf_alloc(&mempool);
+		if (unlikely(!new_b)) {
+			log_err("ixgbe: unable to allocate RX mbuf\n");
+			return nb_descs;
+		}
+
+		rxqe->mbuf = new_b;
+		rxdp->addr = new_b->paddr;
+		rxdp->done = 0;
+
+		eth_input(b);
+
+		rxq->pos++;
+		nb_descs++;
+	}
+
+	if (nb_descs) {
+		/* inform HW that more descriptors have become available */
+		shmem->rx_tail = (rxq->pos - 1) & (rxq->len - 1);
+	}
+
+	return nb_descs;
+}
+
+static int virtual_reclaim(struct eth_tx_queue *tx)
+{
+	struct tx_queue *txq = &tx_queue;
+	struct queue_entry *txe;
+	struct descriptor *txdp;
+	int idx = 0, nb_desc = 0;
+
+	while ((uint16_t) (txq->head + idx) != txq->tail) {
+		txe = &txq->ring_entries[(txq->head + idx) & (txq->len - 1)];
+
+		if (!txe->mbuf) {
+			idx++;
+			continue;
+		}
+
+		txdp = &txq->ring[(txq->head + idx) & (txq->len - 1)];
+		if (!txdp->done)
+			break;
+
+		mbuf_xmit_done(txe->mbuf);
+		txe->mbuf = NULL;
+		idx++;
+		nb_desc = idx;
+	}
+
+	txq->head += nb_desc;
+	return (uint16_t) (txq->len + txq->head - txq->tail);
+}
+
+static int virtual_tx_xmit_one(struct tx_queue *txq, struct mbuf *mbuf)
+{
+	struct descriptor *txdp;
+
+	if (unlikely((uint16_t) (txq->tail - txq->head) >= txq->len))
+		return -EAGAIN;
+
+	txq->ring_entries[(txq->tail) & (txq->len - 1)].mbuf = mbuf;
+
+	txdp = &txq->ring[txq->tail & (txq->len - 1)];
+	txdp->addr = mbuf->paddr;
+	txdp->len = mbuf->len;
+	txdp->done = 0;
+
+	txq->tail++;
+
+	return 0;
+}
+
+static int virtual_xmit(struct eth_tx_queue *tx, int nr, struct mbuf **mbufs)
+{
+	struct tx_queue *txq = &tx_queue;
+	int nb_pkts = 0;
+
+	while (nb_pkts < nr) {
+		if (virtual_tx_xmit_one(txq, mbufs[nb_pkts]))
+			break;
+
+		nb_pkts++;
+	}
+
+	shmem->tx_tail = txq->tail & (txq->len - 1);
+
+	return nb_pkts;
+}
+
+static struct eth_rx_queue virtual_eth_rx = {
+	.poll    = virtual_poll,
+};
+
+static struct eth_tx_queue virtual_eth_tx = {
+	.reclaim = virtual_reclaim,
+	.xmit    = virtual_xmit,
+};
 
 /* Verbatim copy from ix/core/mempool.c. */
 static void mempool_init_buf(struct mempool *m, int nr_elems, size_t elem_len)
@@ -66,18 +222,16 @@ static int prealloc_mempool_create(void *buf, struct mempool *m, int nr_elems, s
 	return 0;
 }
 
-static void *queue_item_alloc(void)
-{
-	void *ret = (void *) (mempool_alloc(&mempool) - mempool_base);
-	return ret;
-}
-
-static void virtual_init(void)
+int virtual_init(void)
 {
 	int shmfd;
+	int i;
+	struct mbuf *new_b;
 
 	shmfd = shm_open("/vnic_shmem", O_RDWR | O_CREAT, 0777);
-	ftruncate(shmfd, 4*1<<20);
+	if (ftruncate(shmfd, 4*1<<20)) {
+		return -EINVAL;
+	}
 	shmem = mmap(NULL, 4*1<<20, PROT_READ|PROT_WRITE, MAP_SHARED, shmfd, 0);
 
 	mempool_base = shmem->mempool_area;
@@ -87,72 +241,36 @@ static void virtual_init(void)
 	/* HACK: Allocate and throw away first element (acts as NULL). */
 	mempool_alloc(&mempool);
 
-	queue_init(&shmem->rx_queue, queue_item_alloc);
-	queue_init(&shmem->tx_queue, queue_item_alloc);
+	tx_queue.len = QUEUE_SIZE;
+	tx_queue.head = 0;
+	tx_queue.tail = 0;
+	tx_queue.ring = shmem->tx_ring;
+	shmem->tx_head = 0;
+	shmem->tx_tail = 0;
 
-	queue_populate(&shmem->rx_queue);
-}
+	rx_queue.len = QUEUE_SIZE;
+	rx_queue.ring = shmem->rx_ring;
+	shmem->rx_head = 0;
+	shmem->rx_tail = QUEUE_SIZE - 1;
 
-static int virtual_has_pending_pkts(void)
-{
-	return !queue_empty(&shmem->rx_queue);
-}
+	for (i = 0; i < rx_queue.len; i++) {
+		new_b = virtual_mbuf_alloc(&mempool);
+		if (unlikely(!new_b)) {
+			log_err("ixgbe: unable to allocate RX mbuf\n");
+			return -ENOMEM;
+		}
 
-static int virtual_receive_one_pkt(struct rte_mbuf **pkt)
-{
-	struct packet *packet;
-
-	packet = (struct packet *) ((unsigned long long) queue_dequeue(&shmem->rx_queue) + mempool_base);
-
-	if (packet) {
-		pkt[0] = &mypkt;
-		mypkt.pkt.data = packet->data;
-		mypkt.pkt.data_len = packet->size;
-		/* HACK: Store packet address. */
-		mypkt.pkt.next = (void*) ((void*) packet - mempool_base);
-		return 1;
+		rx_queue.ring_entries[i].mbuf = new_b;
+		rx_queue.ring[i].addr = new_b->paddr;
+		rx_queue.ring[i].done = 0;
 	}
+
+	virtual_eth_dev.data = &virtual_eth_dev_data;
+	virtual_eth_dev_data.mac_addrs = &virtual_eth_addr;
+
+	eth_dev = &virtual_eth_dev;
+	eth_rx = &virtual_eth_rx;
+	eth_tx = &virtual_eth_tx;
 
 	return 0;
 }
-
-static int virtual_tx_one_pkt(struct rte_mbuf *pkt)
-{
-	int i;
-	struct packet *packet;
-
-	for (i = 0; i < QUEUE_SIZE; i++) {
-		if (!shmem->tx_queue.item[i].done || !shmem->tx_queue.item[i].data_offset)
-			continue;
-		mempool_free(&mempool, shmem->tx_queue.item[i].data_offset + mempool_base);
-		shmem->tx_queue.item[i].data_offset = 0;
-	}
-
-	/* HACK: Until we get rid of rte_mbuf. */
-	packet = (struct packet *) ((void *) pkt[0].pkt.next + (unsigned long long) mempool_base);
-	packet->size = pkt[0].pkt.data_len;
-	if (packet->data != pkt[0].pkt.data) {
-		fprintf(stderr, "packet not reused %p %p\n", packet->data, pkt[0].pkt.data);
-		exit(1);
-	}
-
-	return queue_enqueue(&shmem->tx_queue, (void *) ((void *) packet - mempool_base));
-}
-
-static void virtual_free_pkt(struct rte_mbuf *pkt)
-{
-}
-
-static struct rte_mbuf *virtual_alloc_pkt()
-{
-	return 0;
-}
-
-struct nic_operations virtual_nic_ops = {
-  .init             = virtual_init,
-  .has_pending_pkts = virtual_has_pending_pkts,
-  .receive_one_pkt  = virtual_receive_one_pkt,
-  .tx_one_pkt       = virtual_tx_one_pkt,
-  .free_pkt         = virtual_free_pkt,
-  .alloc_pkt        = virtual_alloc_pkt,
-};
