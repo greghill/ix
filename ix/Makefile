@@ -6,7 +6,7 @@ INC	= -I./inc -I./libdune -include../dune/dune.h
 CC	= gcc
 CFLAGS	= -g -Wall -O3 $(INC)
 LD	= gcc
-LDFLAGS	=
+LDFLAGS	= -T ix.ld
 LDLIBS	= -lrt -lpthread -lm -lnuma -ldl
 
 ifneq ($(DYNCORE_DEBUG),)
