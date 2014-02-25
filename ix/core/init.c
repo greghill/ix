@@ -15,6 +15,7 @@ extern int timer_init(void);
 extern int net_init(void);
 extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
 extern int virtual_init(void);
+extern int read_configuration(const char *path);
 
 static int hw_init_one(const char *pci_addr)
 {
@@ -89,6 +90,12 @@ int main(int argc, char *argv[])
 		log_err("init: invalid arguments\n");
 		log_err("init: format -> ix [ETH_PCI_ADDR]\n");
 		return -EINVAL;
+	}
+
+	ret = read_configuration("ix.cfg");
+	if (ret) {
+		log_err("init: failed to read and parse configuration\n");
+		return ret;
 	}
 
 	ret = dune_init(false);

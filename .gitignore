@@ -18,6 +18,7 @@ latex-all.tex
 tags
 .depend
 ix/ix
+ix/ix.cfg
 *.mod
 *.mod.c
 *.ko
