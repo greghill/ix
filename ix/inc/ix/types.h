@@ -43,3 +43,11 @@ typedef struct {
 	volatile int locked;
 } spinlock_t;
 
+typedef struct {
+	int cnt;
+} atomic_t;
+
+typedef struct {
+	long cnt;
+} atomic64_t;
+
