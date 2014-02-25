@@ -77,7 +77,7 @@ struct ip_hdr {
 #define	IP_OFFMASK 0x1fff		/* mask for fragmenting bits */
 	uint8_t ttl;			/* time to live */
 	uint8_t proto;			/* protocol */
-	uint16_t chksum;			/* checksum */
+	uint16_t chksum;		/* checksum */
 	struct	ip_addr src_addr;	/* source address */
 	struct  ip_addr dst_addr;	/* dest address */
 } __packed __aligned(4);

@@ -129,14 +129,14 @@ int mempool_create_phys(struct mempool *m, int nr_elems, size_t elem_len)
 	mempool_init_buf_phys(m, elems_per_page, nr_pages, elem_len);
 
 	/* FIXME: is this NUMA safe? */
-	m->phys_addrs = malloc(sizeof(physaddr_t) * nr_pages);
-	if (!m->phys_addrs) {
+	m->mach_addrs = malloc(sizeof(machaddr_t) * nr_pages);
+	if (!m->mach_addrs) {
 		ret = -ENOMEM;
 		goto fail;
 	}
 
-	ret = mem_lookup_page_phys_addrs(m->buf, nr_pages,
-					 PGSIZE_2MB, m->phys_addrs);
+	ret = mem_lookup_page_machine_addrs(m->buf, nr_pages,
+					    PGSIZE_2MB, m->mach_addrs);
 	if (ret)
 		goto fail;
 
@@ -157,9 +157,9 @@ void mempool_destroy(struct mempool *m)
 	m->buf = NULL;
 	m->head = NULL;
 
-	if (m->phys_addrs) {
-		free(m->phys_addrs);
-		m->phys_addrs = NULL;
+	if (m->mach_addrs) {
+		free(m->mach_addrs);
+		m->mach_addrs = NULL;
 	}
 }
 

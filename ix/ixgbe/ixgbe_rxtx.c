@@ -29,7 +29,7 @@ struct rx_entry {
 struct rx_queue {
 	struct eth_rx_queue	erxq;
 	volatile union ixgbe_adv_rx_desc *ring;
-	physaddr_t		ring_physaddr;
+	machaddr_t		ring_physaddr;
 	struct rx_entry		*ring_entries;
 
 	volatile uint32_t	*rdt_reg_addr;
@@ -66,7 +66,7 @@ struct tx_entry {
 struct tx_queue {
 	struct eth_tx_queue	etxq;
 	volatile union ixgbe_adv_tx_desc *ring;
-	physaddr_t		ring_physaddr;
+	machaddr_t		ring_physaddr;
 	struct tx_entry		*ring_entries;
 
 	volatile uint32_t	*tdt_reg_addr;
@@ -107,8 +107,8 @@ static int ixgbe_alloc_rx_mbufs(struct rx_queue *rxq)
 			goto fail;
 
 		rxq->ring_entries[i].mbuf = b;
-		rxq->ring[i].read.hdr_addr = cpu_to_le32(b->paddr);
-		rxq->ring[i].read.pkt_addr = cpu_to_le32(b->paddr);
+		rxq->ring[i].read.hdr_addr = cpu_to_le32(b->maddr);
+		rxq->ring[i].read.pkt_addr = cpu_to_le32(b->maddr);
 	}
 
 	return 0;
@@ -148,8 +148,8 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		}
 
 		rxqe->mbuf = new_b;
-		rxdp->read.hdr_addr = cpu_to_le32(new_b->paddr);
-		rxdp->read.pkt_addr = cpu_to_le32(new_b->paddr);
+		rxdp->read.hdr_addr = cpu_to_le32(new_b->maddr);
+		rxdp->read.pkt_addr = cpu_to_le32(new_b->maddr);
 
 		eth_input(b);
 
@@ -180,7 +180,7 @@ int ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 {
 	struct ixgbe_hw *hw;
 	void *page;
-	physaddr_t page_phys;
+	machaddr_t page_phys;
 	int ret;
 	struct rx_queue *rxq;
 
@@ -224,7 +224,7 @@ int ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 	rxq->len = nb_desc;
 	rxq->pos = 0;
 
-	ret = mem_lookup_page_phys_addr(page, PGSIZE_2MB, &page_phys);
+	ret = mem_lookup_page_machine_addr(page, PGSIZE_2MB, &page_phys);
 	if (ret)
 		goto err;
 	rxq->ring_physaddr = page_phys +
@@ -328,7 +328,7 @@ static int ixgbe_tx_xmit_one(struct tx_queue *txq, struct mbuf *mbuf)
 	txq->ring_entries[(txq->tail + nr_iov) & (txq->len - 1)].mbuf = mbuf;
 
 	txdp = &txq->ring[txq->tail & (txq->len - 1)];	
-	txdp->read.buffer_addr = cpu_to_le64(mbuf->paddr);
+	txdp->read.buffer_addr = cpu_to_le64(mbuf->maddr);
 
 	type_len = (IXGBE_ADVTXD_DTYP_DATA |
 		    IXGBE_ADVTXD_DCMD_IFCS |
@@ -404,7 +404,7 @@ int ixgbe_dev_tx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 	struct tx_queue *txq;
 	struct ixgbe_hw *hw;
 	void *page;
-	physaddr_t page_phys;
+	machaddr_t page_phys;
 	int ret;
 
 	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
@@ -446,7 +446,7 @@ int ixgbe_dev_tx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 		sizeof(union ixgbe_adv_tx_desc) * nb_desc);
 	txq->len = nb_desc;
 
-	ret = mem_lookup_page_phys_addr(page, PGSIZE_2MB, &page_phys);
+	ret = mem_lookup_page_machine_addr(page, PGSIZE_2MB, &page_phys);
 	if (ret) {
 		goto err;
 	}

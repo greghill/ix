@@ -52,20 +52,27 @@ static void ip_input(struct mbuf *pkt, struct ip_hdr *hdr)
 	hdrlen = hdr->header_len * sizeof(uint32_t);
 	pktlen = ntoh16(hdr->len);
 
-	/* FIXME: make sure pktlen isn't greater than the buffer size */
 	/* the ip total length must be large enough to hold the header */
 	if (pktlen < hdrlen)
+		goto out;
+	if (!mbuf_enough_space(pkt, hdr, pktlen))
 		goto out;
 
 	pktlen -= hdrlen;
 
 	switch(hdr->proto) {
+	case IPPROTO_UDP:
+		udp_input(pkt, hdr,
+			  mbuf_nextd_off(hdr, struct udp_hdr *, hdrlen));
+		break;
 	case IPPROTO_ICMP:
 		icmp_input(pkt,
 			   mbuf_nextd_off(hdr, struct icmp_hdr *, hdrlen),
 			   pktlen);
-		return;
+		break;
 	}
+
+	return;
 
 out:
 	mbuf_free(pkt);

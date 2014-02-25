@@ -14,7 +14,7 @@ struct mempool_hdr {
 struct mempool {
 	void *buf;
 	struct mempool_hdr *head;
-	physaddr_t *phys_addrs;
+	machaddr_t *mach_addrs;
 	int nr_pages;
 };
 
@@ -50,19 +50,19 @@ static inline void mempool_free(struct mempool *m, void *ptr)
 }
 
 /**
- * mempool_get_phys - gets the physical address of an element
+ * mempool_get_mach - gets the machine address of an element
  * @m: the memory pool
  * @ptr: the element
  *
  * NOTE: This routine can only be used if the mempool was created
- * with mempool_create_phys(). Otherwise there will be unpredicable
+ * with mempool_create_mach(). Otherwise there will be unpredicable
  * results.
  *
- * Returns a physical address.
+ * Returns a machine address.
  */
-static inline physaddr_t mempool_get_phys(struct mempool *m, void *ptr)
+static inline physaddr_t mempool_get_mach(struct mempool *m, void *ptr)
 {
-	return m->phys_addrs[PGN_2MB((uintptr_t) ptr - (uintptr_t) m->buf)] +
+	return m->mach_addrs[PGN_2MB((uintptr_t) ptr - (uintptr_t) m->buf)] +
 	       PGOFF_2MB(ptr);
 }
 

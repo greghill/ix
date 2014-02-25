@@ -32,6 +32,8 @@
 
 #include <emmintrin.h>
 
+#define ATOMIC_INIT(val) {(val)}
+
 static inline int atomic_read(const atomic_t *a)
 {
 	return *((volatile int *) &a->cnt);

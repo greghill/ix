@@ -5,6 +5,7 @@
 #include <ix/stddef.h>
 #include <ix/mem.h>
 #include <ix/errno.h>
+#include <ix/atomic.h>
 
 #include <dune.h>
 
@@ -18,6 +19,15 @@
 #warning "Your system does not support MAP_HUGETLB page sizes"
 #endif
 
+/*
+ * Current Mapping Strategy:
+ * 2 megabyte pages grow up from MEM_PHYS_BASE_ADDR
+ * 1 gigabyte pages grow down from MEM_PHYS_BASE_ADDR
+ * 4 kilobyte pages are allocated from the standard mmap region
+ */
+static atomic64_t up_base = ATOMIC_INIT(MEM_PHYS_BASE_ADDR);
+static atomic64_t down_base = ATOMIC_INIT(MEM_PHYS_BASE_ADDR);
+
 /**
  * mem_alloc_pages - allocates pages of memory
  * @nr: the number of pages to allocate
@@ -29,7 +39,7 @@
  */
 void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 {
-	void *vaddr;
+	void *vaddr = NULL;
 	int flags = MAP_PRIVATE | MAP_ANONYMOUS;
 	size_t len = nr * size;
 	int perm;
@@ -38,14 +48,16 @@ void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 	case PGSIZE_4KB:
 		break;
 	case PGSIZE_2MB:
-		flags |= MAP_HUGETLB;
+		vaddr = (void *) atomic64_fetch_and_add(&up_base, len);
+		flags |= MAP_HUGETLB | MAP_FIXED;
 #ifdef MAP_HUGE_2MB
 		flags |= MAP_HUGE_2MB;
 #endif
 		break;
 	case PGSIZE_1GB:
 #ifdef MAP_HUGE_1GB
-		flags |= MAP_HUGETLB | MAP_HUGE_1GB;
+		vaddr = (void *) atomic64_sub_and_fetch(&down_base, len);
+		flags |= MAP_HUGETLB | MAP_HUGE_1GB | MAP_FIXED;
 #else
 		return MAP_FAILED;
 #endif
@@ -54,7 +66,7 @@ void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 		return MAP_FAILED;
 	}
 
-	vaddr = mmap(NULL, len, PROT_READ | PROT_WRITE, flags, -1, 0);
+	vaddr = mmap(vaddr, len, PROT_READ | PROT_WRITE, flags, -1, 0);
 	if (vaddr == MAP_FAILED)
 		return MAP_FAILED;
 
@@ -118,21 +130,29 @@ void mem_free_pages(void *addr, int nr, int size)
 #define PAGEMAP_FLAG_SOFTDIRTY	(1ULL << 55)
 
 /**
- * mem_lookup_page_phys_addrs - determines the host-physical address of pages
+ * mem_lookup_page_machine_addrs - determines the machine address of pages
  * @addr: a pointer to the start of the pages (must be @size aligned)
  * @nr: the number of pages
  * @size: the page size (4KB, 2MB, or 1GB)
- * @paddrs: a pointer to an array of physical addresses (of @nr elements)
+ * @maddrs: a pointer to an array of machine addresses (of @nr elements)
  *
- * @paddrs is filled with each page physical address.
+ * @maddrs is filled with each page machine address.
  *
  * Returns 0 if successful, otherwise failure.
  */
-int mem_lookup_page_phys_addrs(void *addr, int nr, int size,
-			       physaddr_t *paddrs)
+int mem_lookup_page_machine_addrs(void *addr, int nr, int size,
+			          machaddr_t *maddrs)
 {
 	int fd, i, ret = 0;
 	uint64_t tmp;
+
+	/*
+	 * 4 KB pages could be swapped out by the kernel, so it is not
+	 * safe to get a machine address. If we later decide to support
+	 * 4KB pages, then we need to mlock() the page first.
+	 */
+	if (size == PGSIZE_4KB)
+		return -EINVAL;
 
 	fd = open("/proc/self/pagemap", O_RDONLY);
 	if (fd < 0)
@@ -156,7 +176,7 @@ int mem_lookup_page_phys_addrs(void *addr, int nr, int size,
 			goto out;
 		}
 
-		paddrs[i] = (tmp & PAGEMAP_PGN_MASK) * PGSIZE_4KB;
+		maddrs[i] = (tmp & PAGEMAP_PGN_MASK) * PGSIZE_4KB;
 	}
 
 out:

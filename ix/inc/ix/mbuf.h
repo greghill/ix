@@ -9,13 +9,13 @@
 #include <ix/mempool.h>
 
 struct mbuf_iov {
-	physaddr_t base;
+	machaddr_t base;
 	size_t len;
 };
 
 struct mbuf {
 	struct mempool *pool;	/* the pool the mbuf was allocated from */
-	physaddr_t paddr;	/* the physical address of the mbuf data */
+	machaddr_t maddr;	/* the machine address of the mbuf data */
 	size_t len;		/* the length of the mbuf data */
 	struct mbuf *next;	/* the next buffer of the packet
 				 * (can happen with recieve-side coalescing) */
@@ -88,7 +88,7 @@ static inline struct mbuf *mbuf_alloc(struct mempool *pool)
 		return NULL;
 
 	m->pool = pool;
-	m->paddr = mempool_get_phys(pool, mbuf_mtod(m, void *));
+	m->maddr = mempool_get_mach(pool, mbuf_mtod(m, void *));
 	m->next = NULL;
 
 	return m;

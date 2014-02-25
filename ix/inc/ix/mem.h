@@ -44,7 +44,11 @@ enum {
  * MPOL_INTERLEAVE - interleave nodes in the mask (good for throughput)
  */
 
-typedef unsigned long physaddr_t;
+typedef unsigned long machaddr_t; /* host physical addresses */
+typedef unsigned long physaddr_t; /* guest physical addresses */
+typedef unsigned long virtaddr_t; /* guest virtual addresses */
+
+#define MEM_PHYS_BASE_ADDR 0x4000000000
 
 #ifndef MAP_FAILED
 #define MAP_FAILED	((void *) -1)
@@ -55,8 +59,8 @@ mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy);
 extern void *
 mem_alloc_pages_onnode(int nr, int size, int node, int numa_policy);
 extern void mem_free_pages(void *addr, int nr, int size);
-extern int mem_lookup_page_phys_addrs(void *addr, int nr, int size,
-				      physaddr_t *paddrs);
+extern int mem_lookup_page_machine_addrs(void *addr, int nr, int size,
+				         machaddr_t *maddrs);
 
 /**
  * mem_alloc_page - allocates a page of memory
@@ -97,16 +101,16 @@ static inline void mem_free_page(void *addr, int size)
 }
 
 /**
- * mem_lookup_page_phys_addr - determines the host-physical address of a page
+ * mem_lookup_page_machine_addr - determines the machine address of a page
  * @addr: a pointer to the page
  * @size: the page size (4KB, 2MB, or 1GB)
- * @paddr: a pointer to store the result
+ * @maddr: a pointer to store the result
  *
  * Returns 0 if successful, otherwise failure.
  */
 static inline int
-mem_lookup_page_phys_addr(void *addr, int size, physaddr_t *paddr)
+mem_lookup_page_machine_addr(void *addr, int size, machaddr_t *maddr)
 {
-	return mem_lookup_page_phys_addrs(addr, 1, size, paddr);
+	return mem_lookup_page_machine_addrs(addr, 1, size, maddr);
 }
 

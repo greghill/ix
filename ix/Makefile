@@ -2,7 +2,7 @@
 #
 # path for this Makefile to work properly.
 
-INC	= -I./inc -I./libdune
+INC	= -I./inc -I./libdune -include../dune/dune.h
 CC	= gcc
 CFLAGS	= -g -Wall -O3 $(INC)
 LD	= gcc
