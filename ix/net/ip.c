@@ -8,11 +8,18 @@
 
 #include <ix/stddef.h>
 #include <ix/byteorder.h>
+#include <ix/errno.h>
 #include <ix/log.h>
+
+#include <asm/chksum.h>
 
 #include <net/ethernet.h>
 #include <net/ip.h>
 
+/* FIXME: remove when we integrate better with LWIP */
+#include <lwip/pbuf.h>
+
+#include "cfg.h"
 #include "net.h"
 
 /**
@@ -105,3 +112,59 @@ void eth_input(struct mbuf *pkt)
 	}
 }
 
+/* FIXME: change when we integrate better with LWIP */
+int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest, uint8_t ttl, uint8_t tos, uint8_t proto)
+{
+	int ret;
+	struct mbuf *pkt;
+	struct eth_hdr *ethhdr;
+	struct ip_hdr *iphdr;
+	unsigned char *payload;
+	struct pbuf *curp;
+
+	pkt = mbuf_alloc(&mbuf_mempool);
+	if (unlikely(!pkt))
+		return -ENOMEM;
+
+	ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
+	iphdr = mbuf_nextd(ethhdr, struct ip_hdr *);
+	payload = mbuf_nextd(iphdr, unsigned char *);
+
+	dest->addr = ntoh32(dest->addr);
+	if (arp_lookup_mac(dest, &ethhdr->dhost)) {
+		log_err("ARP lookup failed.\n");
+		mbuf_free(pkt);
+		return -EIO;
+	}
+	dest->addr = hton32(dest->addr);
+
+	ethhdr->shost = cfg_mac;
+	ethhdr->type = hton16(ETHTYPE_IP);
+
+	iphdr->header_len = sizeof(struct ip_hdr) / 4;
+	iphdr->version = 4;
+	iphdr->tos = tos;
+	iphdr->len = hton16(sizeof(struct ip_hdr) + p->tot_len);
+	iphdr->id = 0;
+	iphdr->off = 0;
+	iphdr->ttl = ttl;
+	iphdr->chksum = 0;
+	iphdr->proto = proto;
+	iphdr->src_addr.addr = src->addr;
+	iphdr->dst_addr.addr = dest->addr;
+	iphdr->chksum = chksum_internet((void *) iphdr, sizeof(struct ip_hdr));
+
+	for (curp = p; curp; curp = curp->next) {
+		memcpy(payload, curp->payload, curp->len);
+		payload += curp->len;
+	}
+
+	ret = eth_tx_xmit_one(eth_tx, pkt, sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + p->tot_len);
+
+	if (unlikely(ret != 1)) {
+		mbuf_free(pkt);
+		return -EIO;
+	}
+
+	return 0;
+}
