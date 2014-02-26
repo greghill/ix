@@ -2,7 +2,7 @@
 #
 # path for this Makefile to work properly.
 
-INC	= -I./inc -I./libdune -include../dune/dune.h
+INC	= -I./inc -I./libdune -I./inc/lwip -I./inc/lwip/ipv4 -I./inc/lwip/ipv6 -include../dune/dune.h
 CC	= gcc
 CFLAGS	= -g -Wall -O3 $(INC)
 LD	= gcc
@@ -14,7 +14,7 @@ CFLAGS += -DDYNCORE_DEBUG
 endif
 
 SRCS =
-DIRS = core ixgbe libdune net sandbox vnic
+DIRS = core ixgbe libdune lwip net sandbox vnic
 
 define register_dir
 SRCS += $(patsubst %, $(1)/%, $(2))
