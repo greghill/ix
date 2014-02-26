@@ -61,6 +61,10 @@ static void ip_input(struct mbuf *pkt, struct ip_hdr *hdr)
 	pktlen -= hdrlen;
 
 	switch(hdr->proto) {
+	case IPPROTO_TCP:
+		/* FIXME: change when we integrate better with LWIP */
+		tcp_input_tmp(pkt, hdr, mbuf_nextd_off(hdr, void *, hdrlen));
+		break;
 	case IPPROTO_UDP:
 		udp_input(pkt, hdr,
 			  mbuf_nextd_off(hdr, struct udp_hdr *, hdrlen));

@@ -11,6 +11,11 @@
 
 #include <dune.h>
 
+/* FIXME: remove when we replace LWIP memory management with ours */
+#include <lwip/mem.h>
+#include <lwip/memp.h>
+#include <lwip/pbuf.h>
+
 extern int timer_init(void);
 extern int net_init(void);
 extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
@@ -143,6 +148,11 @@ int main(int argc, char *argv[])
 		log_err("init: unable to enter dune mode\n");
 		return ret;
 	}
+
+	/* FIXME: remove when we replace LWIP memory management with ours */
+	mem_init();
+	memp_init();
+	pbuf_init();
 
 	main_loop();
 
