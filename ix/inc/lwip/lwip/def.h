@@ -92,9 +92,9 @@ extern "C" {
 #else /* BYTE_ORDER != BIG_ENDIAN */
 #if LWIP_PLATFORM_BYTESWAP
 #define lwip_htons(x) LWIP_PLATFORM_HTONS(x)
-#define lwip_ntohs(x) LWIP_PLATFORM_HTONS(x)
+#define lwip_ntohs(x) LWIP_PLATFORM_NTOHS(x)
 #define lwip_htonl(x) LWIP_PLATFORM_HTONL(x)
-#define lwip_ntohl(x) LWIP_PLATFORM_HTONL(x)
+#define lwip_ntohl(x) LWIP_PLATFORM_NTOHL(x)
 #else /* LWIP_PLATFORM_BYTESWAP */
 u16_t lwip_htons(u16_t x);
 u16_t lwip_ntohs(u16_t x);
