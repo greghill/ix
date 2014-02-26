@@ -21,6 +21,7 @@ extern int net_init(void);
 extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
 extern int virtual_init(void);
 extern int read_configuration(const char *path);
+extern int tcp_echo_server_init(int port);
 
 static int hw_init_one(const char *pci_addr)
 {
@@ -153,6 +154,8 @@ int main(int argc, char *argv[])
 	mem_init();
 	memp_init();
 	pbuf_init();
+
+	tcp_echo_server_init(1234);
 
 	main_loop();
 
