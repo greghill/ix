@@ -1,0 +1,27 @@
+######################################
+# Mutilate Experiment: Basic (Untuned)
+######################################
+#  - Default inter-arrival distribution, key size, and value size
+#  - Constant, balanced connections from clients
+#  - Intended for un-tuned machines (i.e. no thread or network optimizations)
+###
+
+# Set the parameters for the master, which does latency measurements
+-T 24
+-Q 1000
+-C 4
+
+# 4 connections per agent thread
+-c 4
+
+# 20 seconds per test
+-t 20
+
+# Use 1M records
+-r 1000000
+
+# Update ratio of 3.3%, from the Facebook paper
+-u 0.033
+
+# Scan QPS from 1% to peak, step size of 1%
+--scan=4000:400000:4000

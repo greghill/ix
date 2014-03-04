@@ -1,0 +1,29 @@
+#############################
+# Mutilate Experiment: FB_ETC
+#############################
+#  - Models the Facebook ETC cache
+###
+
+# Set the parameters for the master, which does latency measurements
+-T 24
+-Q 1000
+-C 4
+
+# 16 connections per agent thread
+-c 16
+
+# 20 seconds per test
+-t 20
+
+# Use 1M records
+-r 1000000
+
+# Scan QPS from 1% to peak, step size of 1%
+--scan=18000:1800000:18000
+
+# Inter-arrival time, key size, value size, and update ratio
+# These are taken from the Facebook paper
+-K fb_key
+-V fb_value
+-i fb_ia
+-u 0.033
