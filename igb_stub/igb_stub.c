@@ -1,6 +1,8 @@
 #include <linux/module.h>
 #include <linux/pci.h>
 
+MODULE_LICENSE("GPL");
+
 /* Device IDs */
 #define IXGBE_DEV_ID_82598			0x10B6
 #define IXGBE_DEV_ID_82598_BX			0x1508
