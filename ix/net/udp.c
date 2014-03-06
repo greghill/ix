@@ -6,7 +6,9 @@
 
 #include <ix/stddef.h>
 #include <ix/byteorder.h>
+#include <ix/errno.h>
 #include <ix/log.h>
+#include <ix/syscall.h>
 
 #include <net/ip.h>
 #include <net/udp.h>
@@ -28,5 +30,21 @@ void udp_input(struct mbuf *pkt, struct ip_hdr *iphdr, struct udp_hdr *udphdr)
 		  src, dst, ntoh16(udphdr->src_port), ntoh16(udphdr->dst_port),
 		  ntoh16(udphdr->len));
 	mbuf_free(pkt);
+}
+
+int bsys_udp_send(void __user *addr, size_t len, struct ip_tuple __user *id)
+{
+	return -ENOSYS;
+}
+
+int bsys_udp_sendv(struct sg_entry __user *ents[], unsigned int nrents,
+		   struct ip_tuple __user *id)
+{
+	return -ENOSYS;
+}
+
+int bsys_udp_recv_done(uint64_t count)
+{
+	return -ENOSYS;
 }
 

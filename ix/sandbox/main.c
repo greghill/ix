@@ -8,6 +8,8 @@
 
 #include "sandbox.h"
 
+#include <ix/log.h>
+
 #define NUM_AUX 13
 
 struct elf_data {
@@ -23,25 +25,25 @@ static int process_elf_ph(struct dune_elf *elf, Elf64_Phdr *phdr)
 	off_t off;
 
 	if (phdr->p_type == PT_INTERP) {
-		printf("sandbox: .interp sections are not yet supported\n");
+		log_err("sandbox: .interp sections are not yet supported\n");
 		return -EINVAL;
 	}
 
 	if (phdr->p_type != PT_LOAD)
 		return 0; // continue to next section
-#if 0
-	printf("sandbox: loading segment - va 0x%09lx, len %lx\n",
+
+	log_info("sandbox: loading segment - va 0x%09lx, len %lx\n",
 	       phdr->p_vaddr, phdr->p_memsz);
-#endif
+
 	if (elf->hdr.e_type == ET_DYN)
 		off = LOADER_VADDR_OFF;
 	else
 		off = 0;
 
-	if (phdr->p_vaddr + off + phdr->p_memsz > APP_MAX_ELF_VADDR ||
-	    phdr->p_memsz > APP_MAX_ELF_VADDR || // for overflow
+	if (phdr->p_vaddr + off + phdr->p_memsz > MEM_IX_BASE_ADDR ||
+	    phdr->p_memsz > MEM_IX_BASE_ADDR || // for overflow
 	    phdr->p_filesz > phdr->p_memsz) {
-		printf("sandbox: segment address is insecure\n");
+		log_err("sandbox: segment address is insecure\n");
 		return -EINVAL;
 	}
 
@@ -51,13 +53,13 @@ static int process_elf_ph(struct dune_elf *elf, Elf64_Phdr *phdr)
 			      (void *) (phdr->p_vaddr + off),
 			      PERM_R | PERM_W);
 	if (ret) {
-		printf("sandbox: segment mapping failed\n");
+		log_err("sandbox: segment mapping failed\n");
 		return ret;
 	}
 
 	ret = dune_elf_load_ph(elf, phdr, off);
 	if (ret) {
-		printf("sandbox: segment load failed\n");
+		log_err("sandbox: segment load failed\n");
 		return ret;
 	}
 
@@ -71,7 +73,7 @@ static int process_elf_ph(struct dune_elf *elf, Elf64_Phdr *phdr)
 	ret = dune_vm_mprotect(pgroot, (void *) (phdr->p_vaddr + off),
 			      phdr->p_memsz, perm);
 	if (ret) {
-		printf("sandbox: segment protection failed\n");
+		log_err("sandbox: segment protection failed\n");
 		return ret;
 	}
 
@@ -89,7 +91,7 @@ static int load_elf(const char *path, struct elf_data *data)
 
 	if (elf.hdr.e_type != ET_EXEC &&
 	    elf.hdr.e_type != ET_DYN) {
-		printf("sandbox: ELF is not a valid type\n");
+		log_err("sandbox: ELF header is not a valid type\n");
 		ret = -EINVAL;
 		goto out;
 	}
@@ -276,7 +278,7 @@ static int run_app(uintptr_t sp, uintptr_t e_entry)
 
 extern char **environ;
 
-int boxer_main(int argc, char *argv[])
+int sandbox_init(int argc, char *argv[])
 {
 	int ret;
 	uintptr_t sp;
@@ -285,46 +287,32 @@ int boxer_main(int argc, char *argv[])
 	if (argc < 2)
 		return -EINVAL;
 
-	/* XXX needed.  Probably does some libc stuff */
-	printf(" \b");
+	log_debug("sandbox: env = '%s'\n", environ[0]);
 
-//	printf("%s\n", environ[0]);
-
-	ret = dune_init(0);
-	if (ret) {
-		printf("sandbox: failed to initialize Dune\n");
-		return ret;
-	}
-
-	ret = dune_enter();
-	if (ret) {
-		printf("sandbox: failed to enter Dune mode\n");
-		return ret;
-	}
 
 	ret = load_elf(argv[1], &data);
 	if (ret)
 		return ret;
 
-//	printf("sandbox: entry addr is %lx\n", data.entry);
+	log_debug("sandbox: entry addr is %lx\n", data.entry);
 
 	dune_set_user_fs(0); // default starting fs
 
 	ret = trap_init();
 	if (ret) {
-		printf("failed to initialize trap handlers\n");
+		log_err("sandbox: failed to initialize trap handlers\n");
 		return ret;
 	}
 
 	ret = umm_alloc_stack(&sp);
 	if (ret) {
-		printf("failed to alloc stack\n");
+		log_err("sandbox: failed to alloc stack\n");
 		return ret;
 	}
 
 	sp = setup_arguments(sp, argv[1], &argv[2], environ, data);
 	if (!sp) {
-		printf("failed to setup arguments\n");
+		log_err("sandbox: failed to setup arguments\n");
 		return -EINVAL;
 	}
 

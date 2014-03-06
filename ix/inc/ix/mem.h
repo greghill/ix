@@ -48,7 +48,20 @@ typedef unsigned long machaddr_t; /* host physical addresses */
 typedef unsigned long physaddr_t; /* guest physical addresses */
 typedef unsigned long virtaddr_t; /* guest virtual addresses */
 
-#define MEM_PHYS_BASE_ADDR 0x4000000000
+#define MEM_IX_BASE_ADDR		0x70000000   /* the IX ELF is loaded here */
+#define MEM_PHYS_BASE_ADDR		0x4000000000 /* memory is allocated here (2MB going up, 1GB going down) */
+#define MEM_USER_DIRECT_BASE_ADDR	0x7000000000 /* start of direct user mappings (P = V) */
+#define MEM_USER_DIRECT_END_ADDR	0x7F00000000 /* end of direct user mappings (P = V) */
+#define MEM_USER_IX_BASE_ADDR		0x8000000000 /* user mappings controlled by IX */
+#define MEM_USER_IX_END_ADDR		0x100000000000 /* end of user mappings controlled by IX */
+#define MEM_USER_SYSMAP_BASE_ADDR	0x100000000000 /* batched system calls and network mbuf's */
+#define MEM_USER_SYSMAP_END_ADDR	0x110000000000 /* end of batched system calls and network mbuf's */
+
+#define MEM_USER_START			MEM_USER_DIRECT_BASE_ADDR
+#define MEM_USER_END			MEM_USER_SYSMAP_END_ADDR
+
+#define MEM_ZC_USER_START		MEM_USER_IX_BASE_ADDR
+#define MEM_ZC_USER_END			MEM_USER_SYSMAP_END_ADDR
 
 #ifndef MAP_FAILED
 #define MAP_FAILED	((void *) -1)

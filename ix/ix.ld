@@ -176,6 +176,15 @@ SECTIONS
     *(.ldata .ldata.* .gnu.linkonce.l.*)
     . = ALIGN(. != 0 ? 64 / 8 : 1);
   }
+
+  . = ALIGN(16);
+  __fixup_tbl :
+  {
+    PROVIDE(__fixup_tbl_start = .);
+    *(__fixup_tbl)
+    PROVIDE(__fixup_tbl_end = .);
+  }
+
   . = ALIGN(64 / 8);
   _end = .; PROVIDE (end = .);
   . = DATA_SEGMENT_END (.);

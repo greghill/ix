@@ -18,8 +18,10 @@
 
 #include "sandbox.h"
 
-#define USE_BIG_MEM 0
+#define USE_BIG_MEM 1
 
+#define UMM_ADDR_START	MEM_USER_DIRECT_BASE_ADDR
+#define UMM_ADDR_END	MEM_USER_DIRECT_END_ADDR
 
 // FIXME: these might need to be made thread safe
 static size_t brk_len = 0;
@@ -27,12 +29,13 @@ static size_t mmap_len = 0;
 
 static inline bool umm_space_left(size_t len)
 {
-	return (brk_len + mmap_len + len) < APP_MMAP_LEN;
+	return (brk_len + mmap_len + len) <
+	       (UMM_ADDR_END - UMM_ADDR_START);
 }
 
 static inline uintptr_t umm_get_map_pos(void)
 {
-	return mmap_base + APP_MMAP_BASE_OFF - mmap_len;
+	return UMM_ADDR_END - mmap_len;
 }
 
 static inline int prot_to_perm(int prot)
@@ -105,12 +108,12 @@ unsigned long umm_brk(unsigned long brk)
 	int ret;
 
 	if (!brk)
-		return mmap_base;
+		return UMM_ADDR_START;
 
-	if (brk < mmap_base)
+	if (brk < UMM_ADDR_START)
 		return -EINVAL;
 
-	len = brk - mmap_base;
+	len = brk - UMM_ADDR_START;
 
 #if USE_BIG_MEM
 	len = BIG_PGADDR(len + BIG_PGSIZE - 1);
@@ -124,14 +127,13 @@ unsigned long umm_brk(unsigned long brk)
 	if (len == brk_len) {
 		return brk;
 	} else if (len < brk_len) {
-//		printf("freeing heap %lx\n", brk_len - len);
-		ret = munmap((void *) (mmap_base + len), brk_len - len);
+		ret = munmap((void *) (UMM_ADDR_START + len), brk_len - len);
 		if (ret)
 			return -errno;
-		dune_vm_unmap(pgroot, (void *) (mmap_base + len),
+		dune_vm_unmap(pgroot, (void *) (UMM_ADDR_START + len),
 			      brk_len - len);
 	} else {
-		ret = umm_mmap_anom((void *) (mmap_base + brk_len),
+		ret = umm_mmap_anom((void *) (UMM_ADDR_START + brk_len),
 				    len - brk_len,
 				    PROT_READ | PROT_WRITE, USE_BIG_MEM);
 		if (ret)
@@ -147,8 +149,6 @@ unsigned long umm_map_big(size_t len, int prot)
 	int ret;
 	size_t full_len;
 	void *addr;
-
-//	printf("setting up a big page mapping of len %lx\n", len);
 
 	full_len = BIG_PGADDR(len + BIG_PGSIZE - 1) +
 		   BIG_PGOFF(umm_get_map_pos());

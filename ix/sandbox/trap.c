@@ -34,7 +34,6 @@
 #include <linux/unistd.h>
 
 #include "sandbox.h"
-#include "boxer.h"
 #include <cpu-x86.h>
 
 struct thread_arg {
@@ -46,50 +45,7 @@ struct thread_arg {
 
 int exec_execev(const char *filename, char *const argv[], char *const envp[]);
 
-static boxer_syscall_cb _syscall_monitor;
 static pthread_mutex_t _syscall_mtx;
-
-static void print_procmap(void)
-{
-	int fd, rd;
-	char buf[1024];
-
-	if ((fd = open("/proc/self/maps", O_RDONLY)) == -1)
-		err(1, "open()");
-
-	while ((rd = read(fd, buf, sizeof(buf))) > 0)
-		write(1, buf, rd);
-
-	if (rd == -1)
-		err(1, "read()");
-
-	close(fd);
-}
-
-static void
-pgflt_handler(uintptr_t addr, uint64_t fec, struct dune_tf *tf)
-{
-	int ret;
-	ptent_t *pte;
-	bool was_user = (tf->cs & 0x3);
-
-	if (was_user) {
-		pid_t tid = syscall(SYS_gettid);
-		printf("sandbox: got unexpected G3 page fault"
-		       " at addr %lx, fec %lx TID %d\n",
-		       addr, fec, tid);
-		dune_dump_trap_frame(tf);
-		print_procmap();
-		dune_ret_from_user(-EFAULT);
-	} else {
-		/* XXX use mem lock */
-		pthread_mutex_lock(&_syscall_mtx);
-		ret = dune_vm_lookup(pgroot, (void *) addr, CREATE_NORMAL, &pte);
-		assert(!ret);
-		*pte = PTE_P | PTE_W | PTE_ADDR(dune_va_to_pa((void *) addr));
-		pthread_mutex_unlock(&_syscall_mtx);
-	}
-}
 
 int check_extent(const void *ptr, size_t len)
 {
@@ -107,12 +63,12 @@ int check_string(const void *ptr)
 	void *pos;
 	size_t maxlen;
 
-	if ((uintptr_t) ptr < APP_MAX_ELF_VADDR)
-		maxlen = APP_MAX_ELF_VADDR - ((uintptr_t) ptr);
-	else if ((uintptr_t) ptr >= mmap_base) {
-		if ((uintptr_t) ptr >= mmap_base + APP_MMAP_LEN)
+	if ((uintptr_t) ptr < MEM_IX_BASE_ADDR)
+		maxlen = MEM_IX_BASE_ADDR - ((uintptr_t) ptr);
+	else if ((uintptr_t) ptr >= MEM_USER_DIRECT_BASE_ADDR) {
+		if ((uintptr_t) ptr >= MEM_USER_DIRECT_END_ADDR)
 			goto fault;
-		maxlen = mmap_base + APP_MMAP_LEN - ((uintptr_t) ptr);
+		maxlen = MEM_USER_DIRECT_END_ADDR - ((uintptr_t) ptr);
 	} else
 		goto fault;
 
@@ -125,11 +81,6 @@ int check_string(const void *ptr)
 fault:
 	printf("str ref addr %p is out of range\n", ptr);
 	return -EFAULT;
-}
-
-void boxer_register_syscall_monitor(boxer_syscall_cb cb)
-{
-	_syscall_monitor = cb;
 }
 
 void do_enter_thread(struct dune_tf *tf)
@@ -218,9 +169,9 @@ static long dune_clone(struct dune_tf *tf)
 {
 	unsigned long fs;
 	int rc;
-	unsigned long pc;
+	//unsigned long pc;
 
-	rdmsrl(MSR_GS_BASE, pc);
+	//rdmsrl(MSR_GS_BASE, pc);
 
 	if (ARG1(tf) != 0)
 		return dune_pthread_create(tf);
@@ -536,16 +487,6 @@ static int syscall_check_params(struct dune_tf *tf)
 	return 0;
 }
 
-static int syscall_allow(struct dune_tf *tf)
-{
-	if (!_syscall_monitor) {
-		tf->rax = -EPERM;
-		return 0;
-	}
-
-	return _syscall_monitor(tf);
-}
-
 static void syscall_do_foreal(struct dune_tf *tf)
 {
 	switch (tf->rax) {
@@ -665,9 +606,6 @@ static void syscall_handler(struct dune_tf *tf)
 	if (syscall_check_params(tf) == -1)
 		return;
 
-	if (!syscall_allow(tf))
-		return;
-
 	syscall_do(tf);
 }
 
@@ -681,7 +619,6 @@ int trap_init(void)
 	if (pthread_mutex_init(&_syscall_mtx, &attr))
 		return -1;
 
-	dune_register_pgflt_handler(pgflt_handler);
 	dune_register_syscall_handler(&syscall_handler);
 
 	return 0;

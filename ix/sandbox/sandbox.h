@@ -9,18 +9,11 @@
 #include <sys/types.h>
 #include <stdint.h>
 
+#include <ix/mem.h>
+
 #include <dune.h>
 
-// address layout
-// - Each untrusted memory reference must be less then
-//   APP_MAX_VADDR. (2 for GB .code and .data)
-// - Or can be between mmap_base - APP_MMAP_BASE_OFF
-//   and mmap_base - APP_MMAP_END_OFF.
-//   (8 GB for stack, heap, and mappings)
 #define LOADER_VADDR_OFF	0x6F000000
-#define APP_MAX_ELF_VADDR	0x70000000
-#define APP_MMAP_BASE_OFF	0x200000000
-#define APP_MMAP_LEN		0x200000000
 #define APP_STACK_SIZE		0x800000 /* 8 megabytes */
 
 /**
@@ -33,16 +26,20 @@ static inline bool mem_ref_is_safe(const void *ptr, size_t len)
 	uintptr_t begin = (uintptr_t) ptr;
 	uintptr_t end = (uintptr_t) (ptr + len);
 
-	if (len <= APP_MAX_ELF_VADDR &&
-	    begin >= 0 &&
-	    end <= APP_MAX_ELF_VADDR)
+	/* limit possible overflows */
+	if (len > MEM_USER_DIRECT_END_ADDR - MEM_USER_DIRECT_BASE_ADDR)
+		return false;
+
+	/* allow ELF data */
+	if (begin < MEM_IX_BASE_ADDR && end < MEM_IX_BASE_ADDR)
 		return true;
 
-	if (len <= APP_MMAP_LEN &&
-	    begin >= mmap_base &&
-	    end < mmap_base + APP_MMAP_LEN)
+	/* allow the user direct memory area */
+	if (begin >= MEM_USER_DIRECT_BASE_ADDR &&
+	    end <= MEM_USER_DIRECT_END_ADDR)
 		return true;
 
+	/* default deny everything else */
 	return false;
 }
 

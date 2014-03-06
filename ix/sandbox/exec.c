@@ -111,7 +111,7 @@ exec_execev(const char *filename, char *const argv[], char *const envp[])
             return -ENOEXEC;
         }
 
-        int arg_begin, arg_end;
+        int arg_begin; //, arg_end;
         if (page[interp_end] == '\n') {
             no_args = true;
         } else {
@@ -122,7 +122,7 @@ exec_execev(const char *filename, char *const argv[], char *const envp[])
             }
 
             arg_begin = interp_end + 1;
-            arg_end = i;
+            //arg_end = i;
             page[i] = '\0';
         }
         page[interp_end] = '\0';

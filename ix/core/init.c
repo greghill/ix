@@ -22,6 +22,9 @@ extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
 extern int virtual_init(void);
 extern int read_configuration(const char *path);
 extern int tcp_echo_server_init(int port);
+extern int sandbox_init(int argc, char *argv[]);
+
+volatile int uaccess_fault;
 
 static int hw_init_one(const char *pci_addr)
 {
@@ -78,7 +81,10 @@ pgflt_handler(uintptr_t addr, uint64_t fec, struct dune_tf *tf)
 	bool was_user = (tf->cs & 0x3);
 
 	if (was_user) {
-		dune_die();
+		printf("sandbox: got unexpected G3 page fault"
+		       " at addr %lx, fec %lx\n", addr, fec);
+		dune_dump_trap_frame(tf);
+		dune_ret_from_user(-EFAULT);
 	} else {
 		ret = dune_vm_lookup(pgroot, (void *) addr, CREATE_NORMAL, &pte);
 		assert(!ret);
@@ -157,7 +163,15 @@ int main(int argc, char *argv[])
 
 	tcp_echo_server_init(1234);
 
+#if 0
+	ret = sandbox_init(argc - 2, &argv[2]);
+	if (ret) {
+		log_err("init: failed to start sandbox\n");
+		return ret;
+	}
+#else
 	main_loop();
+#endif
 
 	return 0;
 }
