@@ -4,7 +4,11 @@
 #  - Default inter-arrival distribution, key size, and value size
 #  - Constant, balanced connections from clients
 #  - Intended for machines tuned only for thread pinning on memcached
+#  - Make sure to run "sysctl net.core.somaxconn=32768" first
 ###
+
+# Specify the standard set of agents for this experiment
+AGENTS:standard
 
 # Set the parameters for the master, which does latency measurements
 -T 24

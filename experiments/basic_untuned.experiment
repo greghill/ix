@@ -6,6 +6,9 @@
 #  - Intended for un-tuned machines (i.e. no thread or network optimizations)
 ###
 
+# Specify the standard set of agents for this experiment
+AGENTS:standard
+
 # Set the parameters for the master, which does latency measurements
 -T 24
 -Q 1000
@@ -24,4 +27,4 @@
 -u 0.033
 
 # Scan QPS from 1% to peak, step size of 1%
---scan=4000:400000:4000
+#--scan=4000:400000:4000

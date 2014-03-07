@@ -6,6 +6,9 @@
 #  - Intended for machines fully tuned for thread-pinning and network
 ###
 
+# Specify the standard set of agents for this experiment
+AGENTS:standard
+
 # Set the parameters for the master, which does latency measurements
 -T 24
 -Q 1000

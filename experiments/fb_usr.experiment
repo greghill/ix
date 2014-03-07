@@ -4,6 +4,9 @@
 #  - Models the Facebook USR cache
 ###
 
+# Specify the standard set of agents for this experiment
+AGENTS:standard
+
 # Set the parameters for the master, which does latency measurements
 -T 24
 -Q 1000
