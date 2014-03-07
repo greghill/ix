@@ -310,7 +310,7 @@ int sandbox_init(int argc, char *argv[])
 		return ret;
 	}
 
-	sp = setup_arguments(sp, argv[1], &argv[2], environ, data);
+	sp = setup_arguments(sp, argv[0], &argv[1], environ, data);
 	if (!sp) {
 		log_err("sandbox: failed to setup arguments\n");
 		return -EINVAL;

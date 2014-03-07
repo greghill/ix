@@ -56,6 +56,8 @@ static int bsys_dispatch(struct bsys_desc __user *d[], unsigned int nr)
 	unsigned long i;
 	int ret;
 
+	if (!nr)
+		return 0;
 	if (!uaccess_okay(d, sizeof(struct bsys_desc) * nr))
 		return -EFAULT;
 
@@ -87,7 +89,7 @@ int sys_bpoll(struct bsys_desc __user *d[], unsigned int nr)
 
 	/* FIXME: transmit waiting packets */
 
-	return ret;	
+	return ret;
 }
 
 /**
