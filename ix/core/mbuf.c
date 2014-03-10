@@ -1,7 +1,6 @@
 /*
  * mbuf.c - buffer management for network packets
  *
- * TODO: make per-cpu...
  * TODO: add support for mapping into user-level address space...
  */
 
@@ -9,28 +8,30 @@
 #include <ix/mem.h>
 #include <ix/mempool.h>
 #include <ix/mbuf.h>
+#include <ix/cpu.h>
 
 #define MBUF_CAPACITY	4096
 
-struct mempool mbuf_mempool;
+DEFINE_PERCPU(struct mempool, mbuf_mempool);
 
 /**
- * mbuf_init_core - allocates the core-local mbuf region
+ * mbuf_init_cpu - allocates the core-local mbuf region
  *
  * Returns 0 if successful, otherwise failure.
  */
-int mbuf_init_core(void)
+int mbuf_init_cpu(void)
 {
 	BUILD_ASSERT(sizeof(struct mbuf) <= MBUF_HEADER_LEN);
 
-	return mempool_create_phys(&mbuf_mempool, MBUF_CAPACITY, MBUF_LEN);
+	return mempool_create_phys(&percpu_get(mbuf_mempool),
+		MBUF_CAPACITY, MBUF_LEN);
 }
 
 /**
- * mbuf_exit_core - frees the core-local mbuf region
+ * mbuf_exit_cpu - frees the core-local mbuf region
  */
-void mbuf_exit_core(void)
+void mbuf_exit_cpu(void)
 {
-	mempool_destroy(&mbuf_mempool);
+	mempool_destroy(&percpu_get(mbuf_mempool));
 }
 

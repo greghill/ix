@@ -177,6 +177,16 @@ SECTIONS
     . = ALIGN(. != 0 ? 64 / 8 : 1);
   }
 
+  . = ALIGN(64);
+  __percpu_load = .;
+  .percpu 0 : AT(__percpu_load)
+  {
+    PROVIDE(__percpu_start = .);
+    *(.percpu)
+    PROVIDE(__percpu_end = .);
+  }
+  . = __percpu_load + SIZEOF(.percpu);
+
   . = ALIGN(16);
   __fixup_tbl :
   {

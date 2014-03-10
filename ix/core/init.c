@@ -8,6 +8,8 @@
 #include <ix/pci.h>
 #include <ix/ethdev.h>
 #include <ix/timer.h>
+#include <ix/cpu.h>
+#include <ix/mbuf.h>
 
 #include <dune.h>
 
@@ -16,7 +18,6 @@
 #include <lwip/memp.h>
 #include <lwip/pbuf.h>
 
-extern int timer_init(void);
 extern int net_init(void);
 extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
 extern int virtual_init(void);
@@ -92,6 +93,26 @@ pgflt_handler(uintptr_t addr, uint64_t fec, struct dune_tf *tf)
 	}
 }
 
+static int init_this_cpu(unsigned int cpu)
+{
+	int ret;
+
+	ret = cpu_init_one(cpu);
+	if (ret) {
+		log_err("init: unable to initialize CPU %d\n", cpu);
+		return ret;
+	}
+
+	ret = mbuf_init_cpu();
+	if (ret) {
+		log_err("init: unable to initialize mbufs\n");
+		return ret;
+	}
+
+	timer_init_cpu();
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -110,6 +131,12 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
+	ret = cpu_init();
+	if (ret) {
+		log_err("init: failed to initalize CPU cores\n");
+		return ret;
+	}
+
 	ret = dune_init(false);
 	if (ret) {
 		log_err("init: failed to initialize dune\n");
@@ -124,9 +151,9 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-	ret = mbuf_init_core();
+	ret = init_this_cpu(1);
 	if (ret) {
-		log_err("init: unable to initialize mbufs\n");
+		log_err("init: failed to initialize the local CPU\n");
 		return ret;
 	}
 
@@ -147,12 +174,6 @@ int main(int argc, char *argv[])
 	ret = net_init();
 	if (ret) {
 		log_err("init: failed to initialize net\n");
-		return ret;
-	}
-
-	ret = dune_enter();
-	if (ret) {
-		log_err("init: unable to enter dune mode\n");
 		return ret;
 	}
 

@@ -122,7 +122,7 @@ int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest, uint8_t
 	unsigned char *payload;
 	struct pbuf *curp;
 
-	pkt = mbuf_alloc(&mbuf_mempool);
+	pkt = mbuf_alloc_local();
 	if (unlikely(!pkt))
 		return -ENOMEM;
 
