@@ -264,7 +264,7 @@ out:
  */
 int arp_lookup_mac(struct ip_addr *addr, struct eth_addr *mac)
 {
-	struct arp_entry *e = arp_lookup(addr, false);
+	struct arp_entry *e = arp_lookup(addr, true);
 	if (!e)
 		return -ENOENT;
 
