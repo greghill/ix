@@ -76,5 +76,7 @@ static inline void timer_del(struct timer *t)
 }
 
 extern void timer_run(void);
+extern void timer_init_cpu(void);
 extern int timer_init(void);
 
+extern int cycles_per_us;

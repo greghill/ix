@@ -12,6 +12,7 @@
 #include <ix/timer.h>
 #include <ix/errno.h>
 #include <ix/log.h>
+#include <ix/cpu.h>
 
 #include <time.h>
 
@@ -44,9 +45,10 @@
  * Total range 0 to 256 seconds...
  */
 
-static struct hlist_head wheels[WHEEL_COUNT][WHEEL_SIZE];
-static uint64_t now_us, timer_pos;
-static int cycles_per_us;
+static DEFINE_PERCPU(struct hlist_head, wheels[WHEEL_COUNT][WHEEL_SIZE]);
+static DEFINE_PERCPU(uint64_t, now_us);
+static DEFINE_PERCPU(uint64_t, timer_pos);
+int cycles_per_us __aligned(64);
 
 /**
  * __timer_delay_us - spins the CPU for the specified delay
@@ -63,7 +65,7 @@ void __timer_delay_us(uint64_t us)
 
 static inline bool timer_expired(struct timer *t)
 {
-	return (t->expires <= now_us);
+	return (t->expires <= percpu_get(now_us));
 }
 
 static inline struct hlist_head *
@@ -73,7 +75,7 @@ __timer_get_bucket(uint64_t left, uint64_t expires)
 			>> WHEEL_SHIFT_LOG2);
 	int offset = WHEEL_OFFSET(expires, index);
 
-	return &wheels[index][offset];
+	return &percpu_get(wheels[index][offset]);
 }
 
 static void timer_insert(struct timer *t,
@@ -101,7 +103,7 @@ int timer_add(struct timer *t, uint64_t usecs)
 	 * Make sure the expiration time is rounded
 	 * up past the current bucket.
 	 */
-	expires = now_us + usecs + MIN_DELAY_US - 1;
+	expires = percpu_get(now_us) + usecs + MIN_DELAY_US - 1;
 	t->expires = expires;
 	timer_insert(t, usecs, expires);
 
@@ -118,7 +120,7 @@ int timer_add(struct timer *t, uint64_t usecs)
 void timer_add_for_next_tick(struct timer *t)
 {
 	uint64_t expires;
-	expires = now_us + MIN_DELAY_US;
+	expires = percpu_get(now_us) + MIN_DELAY_US;
 	t->expires = expires;
 	timer_insert(t, MIN_DELAY_US, expires);
 }
@@ -150,7 +152,7 @@ static void timer_reinsert_bucket(struct hlist_head *h)
 			continue;
 		}
 
-		timer_insert(t, t->expires - now_us, t->expires);
+		timer_insert(t, t->expires - percpu_get(now_us), t->expires);
 	}
 }
 
@@ -161,24 +163,27 @@ static void timer_reinsert_bucket(struct hlist_head *h)
  */
 void timer_run(void)
 {
-	now_us = rdtsc() / cycles_per_us;
+	uint64_t pos = percpu_get(timer_pos);
+	percpu_get(now_us) = rdtsc() / cycles_per_us;
 
-	for (; timer_pos <= now_us; timer_pos += MIN_DELAY_US) {
-		int high_off = WHEEL_OFFSET(timer_pos, 0);
+	for (; pos <= percpu_get(now_us); pos += MIN_DELAY_US) {
+		int high_off = WHEEL_OFFSET(pos, 0);
 
 		/* collapse longer-term buckets into shorter-term buckets */
 		if (!high_off) {
-			int med_off = WHEEL_OFFSET(timer_pos, 1);
-			timer_reinsert_bucket(&wheels[1][med_off]);
+			int med_off = WHEEL_OFFSET(pos, 1);
+			timer_reinsert_bucket(&percpu_get(wheels[1][med_off]));
 
 			if (!med_off) {
-				int low_off = WHEEL_OFFSET(timer_pos, 2);
-				timer_reinsert_bucket(&wheels[2][low_off]);
+				int low_off = WHEEL_OFFSET(pos, 2);
+				timer_reinsert_bucket(&percpu_get(wheels[2][low_off]));
 			}
 		}
 
-		timer_run_bucket(&wheels[0][high_off]);
+		timer_run_bucket(&percpu_get(wheels[0][high_off]));
 	}
+
+	percpu_get(timer_pos) = pos;
 }
 
 /* derived from DPDK */
@@ -211,7 +216,16 @@ timer_calibrate_tsc(void)
 }
 
 /**
- * timer_init - initializes the timer service
+ * timer_init_cpu - initializes the timer service for a core
+ */
+void timer_init_cpu(void)
+{
+	percpu_get(now_us) = rdtsc() / cycles_per_us;
+	percpu_get(timer_pos) = percpu_get(now_us);
+}
+
+/**
+ * timer_init - global timer initialization
  *
  * Returns 0 if successful, otherwise fail.
  */
@@ -223,8 +237,6 @@ int timer_init(void)
 	if (ret)
 		return ret;
 
-	now_us = rdtsc() / cycles_per_us;
-	timer_pos = now_us;
 	return 0;
 }
 

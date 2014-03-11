@@ -48,6 +48,7 @@ static uint64_t gdt_template[NR_GDT_ENTRIES] = {
 };
 
 struct dune_percpu {
+	uint64_t percpu_ptr;
 	uint64_t tmp;
 	uint64_t kfs_base;
 	uint64_t ufs_base;
@@ -360,7 +361,7 @@ static void do_vdso(void *addr, char *name)
 	*i = sysno;
 }
 
-static void setup_vdso(void *addr)
+static void setup_vdso(void *addr, size_t len)
 {
 	struct dune_elf elf;
 	struct dynsym *ds, *d;
@@ -372,7 +373,7 @@ static void setup_vdso(void *addr)
 	ds = xmalloc(sizeof(*ds));
 	elf.priv = ds;
 
-	if (dune_elf_open_mem(&elf, addr, PGSIZE))
+	if (dune_elf_open_mem(&elf, addr, len))
 		err(1, "dune_elf_open_mem()");
 
 	if (elf.hdr.e_type != ET_DYN)
@@ -418,7 +419,7 @@ static void __setup_mappings_cb(const struct dune_procmap_entry *ent)
 	}
 
 	if (ent->type == PROCMAP_TYPE_VDSO) {
-		setup_vdso((void*) ent->begin);
+		setup_vdso((void*) ent->begin, ent->end - ent->begin);
 		return;
 	}
 
@@ -455,7 +456,7 @@ static int __setup_mappings_precise(void)
 static void setup_vdso_cb(const struct dune_procmap_entry *ent)
 {
 	if (ent->type == PROCMAP_TYPE_VDSO) {
-		setup_vdso((void*) ent->begin);
+		setup_vdso((void*) ent->begin, ent->end - ent->begin);
 		return;
 	}
 }
@@ -616,6 +617,28 @@ int dune_enter(void)
 
 	lpercpu = percpu;
 	return 0;
+}
+
+int dune_enter_ex(void *percpu)
+{
+	int ret;
+	struct dune_percpu *pcpu = (struct dune_percpu *) percpu;
+	unsigned long fs_base;
+
+	if (arch_prctl(ARCH_GET_FS, &fs_base) == -1) {
+		printf("dune: failed to get FS register\n");
+		return -EIO;
+	}
+
+        pcpu->kfs_base = fs_base;
+	pcpu->ufs_base = fs_base;
+	pcpu->in_usermode = 0;
+
+	if ((ret = setup_safe_stack(pcpu))) {
+		return ret;
+	}
+
+	return do_dune_enter(pcpu);
 }
 
 /**

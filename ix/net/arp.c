@@ -143,7 +143,7 @@ static int arp_send_pkt(uint16_t op,
 	struct arp_hdr *arphdr;
 	struct arp_hdr_ethip *ethip;
 
-	pkt = mbuf_alloc(&mbuf_mempool);
+	pkt = mbuf_alloc_local();
 	if (unlikely(!pkt))
 		return -ENOMEM;
 
@@ -264,7 +264,7 @@ out:
  */
 int arp_lookup_mac(struct ip_addr *addr, struct eth_addr *mac)
 {
-	struct arp_entry *e = arp_lookup(addr, false);
+	struct arp_entry *e = arp_lookup(addr, true);
 	if (!e)
 		return -ENOENT;
 

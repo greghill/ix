@@ -8,6 +8,11 @@
 #include <ix/pci.h>
 #include <ix/ethdev.h>
 #include <ix/timer.h>
+#include <ix/cpu.h>
+#include <ix/mbuf.h>
+
+#include <net/ip.h>
+#include <net/icmp.h>
 
 #include <dune.h>
 
@@ -16,7 +21,6 @@
 #include <lwip/memp.h>
 #include <lwip/pbuf.h>
 
-extern int timer_init(void);
 extern int net_init(void);
 extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
 extern int virtual_init(void);
@@ -92,6 +96,56 @@ pgflt_handler(uintptr_t addr, uint64_t fec, struct dune_tf *tf)
 	}
 }
 
+static int init_this_cpu(unsigned int cpu)
+{
+	int ret;
+
+	ret = cpu_init_one(cpu);
+	if (ret) {
+		log_err("init: unable to initialize CPU %d\n", cpu);
+		return ret;
+	}
+
+	ret = mbuf_init_cpu();
+	if (ret) {
+		log_err("init: unable to initialize mbufs\n");
+		return ret;
+	}
+
+	timer_init_cpu();
+	return 0;
+}
+
+static int parse_ip_addr(const char *string, uint32_t *addr)
+{
+        unsigned char a, b, c, d;
+
+        if (sscanf(string, "%hhu.%hhu.%hhu.%hhu", &a, &b, &c, &d) != 4)
+                return -EINVAL;
+
+        *addr = MAKE_IP_ADDR(a, b, c, d);
+
+        return 0;
+}
+
+static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
+{
+	uint64_t last_ping = 0;
+	uint64_t now;
+
+	while (1) {
+		timer_run();
+		eth_tx_reclaim(eth_tx);
+		eth_rx_poll(eth_rx);
+
+		now = rdtsc();
+		if (now - last_ping >= 1000000ull * cycles_per_us) {
+			icmp_echo(dst, id, seq++, now);
+			last_ping = now;
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -110,6 +164,12 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
+	ret = cpu_init();
+	if (ret) {
+		log_err("init: failed to initalize CPU cores\n");
+		return ret;
+	}
+
 	ret = dune_init(false);
 	if (ret) {
 		log_err("init: failed to initialize dune\n");
@@ -124,9 +184,9 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-	ret = mbuf_init_core();
+	ret = init_this_cpu(1);
 	if (ret) {
-		log_err("init: unable to initialize mbufs\n");
+		log_err("init: failed to initialize the local CPU\n");
 		return ret;
 	}
 
@@ -150,12 +210,6 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-	ret = dune_enter();
-	if (ret) {
-		log_err("init: unable to enter dune mode\n");
-		return ret;
-	}
-
 	/* FIXME: remove when we replace LWIP memory management with ours */
 	mem_init();
 	memp_init();
@@ -170,6 +224,19 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 #else
+	if (argc >= 4 && strcmp(argv[2], "ping") == 0) {
+		struct ip_addr dst;
+
+		ret = parse_ip_addr(argv[3], &dst.addr);
+		if (ret) {
+			log_err("init: ping: invalid destination IP address\n");
+			return ret;
+		}
+
+		log_info("init: ping: starting...\n");
+		main_loop_ping(&dst, 0, 0);
+	}
+
 	main_loop();
 #endif
 

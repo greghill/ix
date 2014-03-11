@@ -7,6 +7,7 @@
 #include <ix/stddef.h>
 #include <ix/mem.h>
 #include <ix/mempool.h>
+#include <ix/cpu.h>
 
 struct mbuf_iov {
 	machaddr_t base;
@@ -113,10 +114,20 @@ static inline void mbuf_xmit_done(struct mbuf *m)
 	mbuf_free(m);
 }
 
-extern struct mempool mbuf_mempool;
+DECLARE_PERCPU(struct mempool, mbuf_mempool);
 
-extern int mbuf_init_core(void);
-extern void mbuf_exit_core(void);
+/**
+ * mbuf_alloc_local - allocate an mbuf from the core-local mempool
+ *
+ * Returns an mbuf, or NULL if out of memory.
+ */
+static inline struct mbuf *mbuf_alloc_local(void)
+{
+	return mbuf_alloc(&percpu_get(mbuf_mempool));
+}
+
+extern int mbuf_init_cpu(void);
+extern void mbuf_exit_cpu(void);
 
 /*
  * direct dispatches into network stack

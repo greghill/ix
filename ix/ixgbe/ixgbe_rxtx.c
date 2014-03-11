@@ -102,7 +102,7 @@ static int ixgbe_alloc_rx_mbufs(struct rx_queue *rxq)
 	int i;
 
 	for (i = 0; i < rxq->len; i++) {
-		struct mbuf *b = mbuf_alloc(&mbuf_mempool);
+		struct mbuf *b = mbuf_alloc_local();
 		if (!b)
 			goto fail;
 
@@ -141,7 +141,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		b = rxqe->mbuf;
 		b->len = le32_to_cpu(rxd.wb.upper.length);
 
-		new_b = mbuf_alloc(&mbuf_mempool);
+		new_b = mbuf_alloc_local();
 		if (unlikely(!new_b)) {
 			log_err("ixgbe: unable to allocate RX mbuf\n");
 			return nb_descs;

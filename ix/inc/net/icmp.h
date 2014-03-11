@@ -212,3 +212,4 @@ void	icmp_input(struct mbuf *, int);
 int	ip_next_mtu(int, int);
 #endif
 
+int icmp_echo(struct ip_addr *dest, uint16_t id, uint16_t seq, uint64_t timestamp);
