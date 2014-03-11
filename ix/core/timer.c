@@ -48,7 +48,7 @@
 static DEFINE_PERCPU(struct hlist_head, wheels[WHEEL_COUNT][WHEEL_SIZE]);
 static DEFINE_PERCPU(uint64_t, now_us);
 static DEFINE_PERCPU(uint64_t, timer_pos);
-static int cycles_per_us __aligned(64);
+int cycles_per_us __aligned(64);
 
 /**
  * __timer_delay_us - spins the CPU for the specified delay
