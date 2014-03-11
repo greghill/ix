@@ -41,6 +41,12 @@ then
     exit 3
 fi
 
+# Check if the MUTILATE_EXPERIMENT_PREFIX variable set and warn if not
+if [ "$(echo $MUTILATE_EXPERIMENT_PREFIX)" == "" ]
+then
+    echo "$0: warning: MUTILATE_EXPERIMENT_PREFIX not set, using PATH for mutilate" >&2
+fi
+
 # Build the command string for starting the agents and make sure it worked
 # Do this only if the agent profile specifies that agents should be started
 if [ -e $AGENT_RUN ]
@@ -76,7 +82,7 @@ do
     MUTILATE_AGENTS+="-a $i "
 done
 
-MUTILATE_CMD="mutilate --noload -v -s $1 $MUTILATE_AGENTS $MUTILATE_OPTS"
+MUTILATE_CMD="${MUTILATE_EXPERIMENT_PREFIX}/mutilate --loadonly -v -s $1 $MUTILATE_AGENTS $MUTILATE_OPTS"
 echo "$0: starting experiment" >&2
 echo "$0: $MUTILATE_CMD" >&2
-$MUTILATE_CMD #| tr -s ' ' ','
+$MUTILATE_CMD | tr -s ' ' ','

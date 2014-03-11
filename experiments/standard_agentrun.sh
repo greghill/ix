@@ -10,7 +10,10 @@
 for i in $@
 do
     case $i in
-        hotbox-*) echo "$i:${MUTILATE_EXPERIMENT_PREFIX}mutilate -T 8 -A -l 1" ;;
+        # Supply standard options to all agent hotbox machines
+        hotbox-*) echo "$i:${MUTILATE_EXPERIMENT_PREFIX}/mutilate -T 8 -A -l 1" ;;
+        
+        # Only use hotbox machines
         *) exit 1 ;;
     esac
 done
