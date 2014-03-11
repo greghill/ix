@@ -9,6 +9,7 @@
 #include <ix/stddef.h>
 #include <ix/errno.h>
 #include <ix/log.h>
+#include <ix/timer.h>
 
 #include <asm/chksum.h>
 
@@ -65,6 +66,21 @@ void icmp_input(struct mbuf *pkt, struct icmp_hdr *hdr, int len)
 		hdr->type = ICMP_ECHOREPLY;
 		icmp_reflect(pkt, hdr, len);
 		break;
+	case ICMP_ECHOREPLY:
+	{
+		uint16_t *seq;
+		uint64_t *icmptimestamp;
+		uint64_t time;
+
+		seq = mbuf_nextd_off(hdr, uint16_t *, sizeof(struct icmp_hdr) + 2);
+		icmptimestamp = mbuf_nextd_off(hdr, uint64_t *, sizeof(struct icmp_hdr) + 4);
+
+		time = (rdtsc() - *icmptimestamp) / cycles_per_us;
+
+		log_info("icmp: echo reply: %d bytes: icmp_req=%d time=%lld us\n",
+			 len, ntoh16(*seq), time);
+		goto out;
+	}
 	default:
 		goto out;
 	}
