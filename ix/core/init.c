@@ -11,6 +11,9 @@
 #include <ix/cpu.h>
 #include <ix/mbuf.h>
 
+#include <net/ip.h>
+#include <net/icmp.h>
+
 #include <dune.h>
 
 /* FIXME: remove when we replace LWIP memory management with ours */
@@ -113,6 +116,36 @@ static int init_this_cpu(unsigned int cpu)
 	return 0;
 }
 
+static int parse_ip_addr(const char *string, uint32_t *addr)
+{
+        unsigned char a, b, c, d;
+
+        if (sscanf(string, "%hhu.%hhu.%hhu.%hhu", &a, &b, &c, &d) != 4)
+                return -EINVAL;
+
+        *addr = MAKE_IP_ADDR(a, b, c, d);
+
+        return 0;
+}
+
+static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
+{
+	uint64_t last_ping = 0;
+	uint64_t now;
+
+	while (1) {
+		timer_run();
+		eth_tx_reclaim(eth_tx);
+		eth_rx_poll(eth_rx);
+
+		now = rdtsc();
+		if (now - last_ping >= 1000000ull * cycles_per_us) {
+			icmp_echo(dst, id, seq++, now);
+			last_ping = now;
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
@@ -191,6 +224,19 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 #else
+	if (argc >= 4 && strcmp(argv[2], "ping") == 0) {
+		struct ip_addr dst;
+
+		ret = parse_ip_addr(argv[3], &dst.addr);
+		if (ret) {
+			log_err("init: ping: invalid destination IP address\n");
+			return ret;
+		}
+
+		log_info("init: ping: starting...\n");
+		main_loop_ping(&dst, 0, 0);
+	}
+
 	main_loop();
 #endif
 
