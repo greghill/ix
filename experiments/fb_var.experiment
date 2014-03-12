@@ -22,7 +22,7 @@ AGENTS:standard
 -r 1000000
 
 # Scan QPS from 1% to peak, step size of 1%
---scan=18000:1800000:18000
+--scan=6000:600000:6000
 
 # Key size, value size, and update ratio
 # These are taken from the Facebook paper

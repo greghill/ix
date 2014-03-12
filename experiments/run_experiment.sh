@@ -82,7 +82,7 @@ do
     MUTILATE_AGENTS+="-a $i "
 done
 
-MUTILATE_CMD="${MUTILATE_EXPERIMENT_PREFIX}/mutilate --loadonly -v -s $1 $MUTILATE_AGENTS $MUTILATE_OPTS"
+MUTILATE_CMD="${MUTILATE_EXPERIMENT_PREFIX}/mutilate --noload -v -s $1 $MUTILATE_AGENTS $MUTILATE_OPTS"
 echo "$0: starting experiment" >&2
 echo "$0: $MUTILATE_CMD" >&2
 $MUTILATE_CMD | tr -s ' ' ','
