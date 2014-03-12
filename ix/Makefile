@@ -9,6 +9,10 @@ LD	= gcc
 LDFLAGS	= -T ix.ld
 LDLIBS	= -lrt -lpthread -lm -lnuma -ldl
 
+ifneq ($(DEBUG),)
+CFLAGS += -DDEBUG
+endif
+
 ifneq ($(DYNCORE_DEBUG),)
 CFLAGS += -DDYNCORE_DEBUG
 endif
