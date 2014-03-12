@@ -8,8 +8,6 @@
  * hard to add at all.
  */
 
-#define DEBUG 1
-
 #include <ix/stddef.h>
 #include <ix/errno.h>
 #include <ix/list.h>

@@ -2,8 +2,6 @@
  * ip.c - Ethernet + IP Version 4 Support
  */
 
-#define DEBUG 1
-
 #include <stdio.h>
 
 #include <ix/stddef.h>

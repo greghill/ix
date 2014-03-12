@@ -4,8 +4,6 @@
  * See RFC 792 for more details.
  */
 
-#define DEBUG 1
-
 #include <ix/stddef.h>
 #include <ix/errno.h>
 #include <ix/log.h>

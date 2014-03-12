@@ -2,8 +2,6 @@
  * udp.c - Unreliable Datagram Protocol (UDP) Support
  */
 
-#define DEBUG 1
-
 #include <ix/stddef.h>
 #include <ix/byteorder.h>
 #include <ix/errno.h>
