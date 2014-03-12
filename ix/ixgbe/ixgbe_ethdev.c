@@ -630,9 +630,9 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 	hw->vendor_id = pci_dev->vendor_id;
 	hw->num_vfs = pci_dev->max_vfs;
 
-	log_debug("ixgbe: port %d vendorID=0x%x deviceID=0x%x",
-		  eth_dev->data->port_id, pci_dev->id.vendor_id,
-		  pci_dev->id.device_id);
+	log_debug("ixgbe: vendorID=0x%x deviceID=0x%x\n",
+		  pci_dev->vendor_id,
+		  pci_dev->device_id);
 
 	mem_bar = pci_find_mem_bar(pci_dev, 0);
 	if (!mem_bar) {
