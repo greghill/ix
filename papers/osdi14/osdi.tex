@@ -1,0 +1,44 @@
+
+%%
+%% Submission requirements
+%% 12 pages + plus as many pages as needed for references.
+%%
+%% Blind reviewing of full papers will be done by the program committee
+%% and external review committee, with limited use of outside
+%% referees. Authors must make a good faith effort to anonymize their
+%% submissions, and they should not identify themselves either explicitly
+%% or by implication (e.g., through the references or
+%% acknowledgments). Submissions violating the detailed formatting and
+%% anonymization rules will not be considered for publication.
+
+
+\documentclass[10pt,twocolumn]{article}
+\usepackage{times}
+\usepackage{fullpage}
+
+% added for our purpose
+
+\usepackage{url}
+
+
+\begin{document}
+
+\title{\bf Title}
+\author{Paper \# 123 XXX}
+\date{}
+\maketitle
+\thispagestyle{empty}
+
+\input{abstract}
+\input{intro}
+\input{related}
+
+\input{internal-notes}
+
+
+
+\bibliography{../common/dblp,../common/gscholar,../common/misc}
+\bibliographystyle{abbrv} 
+
+\end{document}
+
