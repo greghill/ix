@@ -33,7 +33,7 @@ void tcp_input_tmp(struct mbuf *pkt, struct ip_hdr *iphdr, void *tcphdr)
 {
 	struct pbuf *pbuf;
 
-	pbuf = pbuf_alloc(PBUF_RAW, pkt->len - (tcphdr - mbuf_mtod(pkt, void*)), PBUF_ROM);
+	pbuf = pbuf_alloc(PBUF_RAW, ntoh16(iphdr->len) - iphdr->header_len * 4, PBUF_ROM);
 	pbuf->payload = tcphdr;
 	ip_data.current_iphdr_dest.addr = iphdr->dst_addr.addr;
 	ip_data.current_iphdr_src.addr = iphdr->src_addr.addr;
