@@ -17,8 +17,18 @@
 \usepackage{fullpage}
 
 % added for our purpose
-
 \usepackage{url}
+\usepackage{upgreek}
+\newcommand{\microsecond}{$\upmu{}s$}
+
+% debugging only
+\newcommand{\edb}[1]{\noindent{\color{Plum} {\bf \fbox{EdB}} {\it#1}}}
+\newcommand{\adam}[1]{\noindent{\color{Red} {\bf \fbox{AB}} {\it#1}}}
+\newcommand{\christos}[1]{\noindent{\color{Green} {\bf \fbox{CK}} {\it#1}}}
+\newcommand{\georgios}[1]{\noindent{\color{Blue} {\bf \fbox{GP}} {\it#1}}}
+%\newcommand{\babak}[1]{\noindent{\color{Purple} {\bf \fbox{BF}} {\it#1}}}
+\newcommand{\todo}{\noindent $\triangleright $~}
+
 
 
 \begin{document}
@@ -29,9 +39,10 @@
 \maketitle
 \thispagestyle{empty}
 
-\input{abstract}
-\input{intro}
-\input{related}
+%\input{abstract}
+\input{outline}
+%\input{intro}
+%\input{related}
 
 \input{internal-notes}
 
