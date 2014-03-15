@@ -35,7 +35,6 @@ void *__mem_alloc_pages(void *base, int nr, int size,
 	void *vaddr;
 	int flags = MAP_PRIVATE | MAP_ANONYMOUS;
 	size_t len = nr * size;
-	int perm;
 
 	switch (size) {
 	case PGSIZE_4KB:
@@ -64,12 +63,6 @@ void *__mem_alloc_pages(void *base, int nr, int size,
 	if (mbind(vaddr, len, numa_policy, mask ? mask->maskp : NULL,
 		  mask ? mask->size : 0, MPOL_MF_STRICT))
 		goto fail;
-
-	perm = PERM_R | PERM_W;
-	if (size == PGSIZE_2MB)
-		perm |= PERM_BIG;
-	else if (size == PGSIZE_1GB)
-		perm |= PERM_BIG_1GB;
 
 	if (vm_map_phys((physaddr_t) vaddr, (virtaddr_t) vaddr, nr, size,
 			VM_PERM_R | VM_PERM_W))
