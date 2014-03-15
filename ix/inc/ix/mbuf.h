@@ -8,6 +8,7 @@
 #include <ix/mem.h>
 #include <ix/mempool.h>
 #include <ix/cpu.h>
+#include <ix/page.h>
 
 struct mbuf_iov {
 	machaddr_t base;
@@ -16,7 +17,6 @@ struct mbuf_iov {
 
 struct mbuf {
 	struct mempool *pool;	/* the pool the mbuf was allocated from */
-	machaddr_t maddr;	/* the machine address of the mbuf data */
 	size_t len;		/* the length of the mbuf data */
 	struct mbuf *next;	/* the next buffer of the packet
 				 * (can happen with recieve-side coalescing) */
@@ -89,7 +89,6 @@ static inline struct mbuf *mbuf_alloc(struct mempool *pool)
 		return NULL;
 
 	m->pool = pool;
-	m->maddr = mempool_get_mach(pool, mbuf_mtod(m, void *));
 	m->next = NULL;
 
 	return m;
@@ -102,6 +101,30 @@ static inline struct mbuf *mbuf_alloc(struct mempool *pool)
 static inline void mbuf_free(struct mbuf *m)
 {
 	mempool_free(m->pool, m);
+}
+
+/**
+ * mbuf_get_data_machaddr - get the machine address of the mbuf data
+ * @m: the mbuf
+ *
+ * Returns a machine address.
+ */
+static inline machaddr_t mbuf_get_data_machaddr(struct mbuf *m)
+{
+	return page_machaddr(mbuf_mtod(m, void *));
+}
+
+/**
+ * mbuf_get_data_iomap - get the iomap (user-level) address of the mbuf data
+ * @m: the mbuf
+ *
+ * Returns a pointer.
+ */
+static inline void *mbuf_get_data_iomap(struct mbuf *m)
+{
+	return (void *) ((uintptr_t) m->pool->iomap_addr +
+			 mbuf_mtod(m, uintptr_t) -
+			 (uintptr_t) m->pool->buf);
 }
 
 /**

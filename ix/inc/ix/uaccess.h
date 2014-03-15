@@ -27,6 +27,22 @@ static inline bool uaccess_okay(void *addr, size_t len)
 }
 
 /**
+ * uaccess_zc_okay - determines if a memory object is safe to zero-copy
+ * @addr: the address
+ * @len: the length of the memory object
+ *
+ * Returns true if the memory is safe for zero-copy, otherwise false.
+ */
+static inline bool uaccess_zc_okay(void *addr, size_t len)
+{
+	if (len > MEM_ZC_USER_END - MEM_ZC_USER_START ||
+	    (uintptr_t) addr < MEM_ZC_USER_START ||
+	    (uintptr_t) addr + len > MEM_ZC_USER_END)
+		return false;
+	return true;
+}
+
+/**
  * copy_from_user - safely copies user memory to kernel memory
  * @user_src: the user source memory
  * @kern_dst: the kernel destination memory

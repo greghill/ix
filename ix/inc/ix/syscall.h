@@ -3,6 +3,7 @@
  */
 
 #include <ix/types.h>
+#include <ix/cpu.h>
 
 /*
  * System calls
@@ -197,6 +198,10 @@ extern int sys_bcall(struct bsys_desc __user *d[], unsigned int nr);
 
 struct dune_tf *tf;
 extern void do_syscall(struct dune_tf *tf, uint64_t sysnr);
+
+DECLARE_PERCPU(struct bsys_arr *, usys_arr);
+extern int syscall_init_cpu(void);
+extern void syscall_exit_cpu(void);
 
 #endif /* __KERNEL__ */
 

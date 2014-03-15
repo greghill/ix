@@ -62,10 +62,14 @@ static struct mbuf *virtual_mbuf_alloc(struct mempool *pool)
                 return NULL;
 
         m->pool = pool;
-        m->maddr = mbuf_mtod(m, void *) - mempool_base;
         m->next = NULL;
 
         return m;
+}
+
+static inline machaddr_t virtual_mbuf_machaddr(struct mbuf *m)
+{
+	return mbuf_mtod(m, void *) - mempool_base;
 }
 
 static int virtual_poll(struct eth_rx_queue *rx)
@@ -92,7 +96,7 @@ static int virtual_poll(struct eth_rx_queue *rx)
 		}
 
 		rxqe->mbuf = new_b;
-		rxdp->addr = new_b->maddr;
+		rxdp->addr = virtual_mbuf_machaddr(new_b);
 		rxdp->done = 0;
 
 		eth_input(b);
@@ -148,7 +152,7 @@ static int virtual_tx_xmit_one(struct tx_queue *txq, struct mbuf *mbuf)
 	txq->ring_entries[(txq->tail) & (txq->len - 1)].mbuf = mbuf;
 
 	txdp = &txq->ring[txq->tail & (txq->len - 1)];
-	txdp->addr = mbuf->maddr;
+	txdp->addr = virtual_mbuf_machaddr(mbuf);
 	txdp->len = mbuf->len;
 	txdp->done = 0;
 
@@ -261,7 +265,7 @@ int virtual_init(void)
 		}
 
 		rx_queue.ring_entries[i].mbuf = new_b;
-		rx_queue.ring[i].addr = new_b->maddr;
+		rx_queue.ring[i].addr = virtual_mbuf_machaddr(new_b);
 		rx_queue.ring[i].done = 0;
 	}
 

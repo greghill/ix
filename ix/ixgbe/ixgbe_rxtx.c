@@ -102,13 +102,15 @@ static int ixgbe_alloc_rx_mbufs(struct rx_queue *rxq)
 	int i;
 
 	for (i = 0; i < rxq->len; i++) {
+		machaddr_t maddr;
 		struct mbuf *b = mbuf_alloc_local();
 		if (!b)
 			goto fail;
 
+		maddr = mbuf_get_data_machaddr(b);
 		rxq->ring_entries[i].mbuf = b;
-		rxq->ring[i].read.hdr_addr = cpu_to_le32(b->maddr);
-		rxq->ring[i].read.pkt_addr = cpu_to_le32(b->maddr);
+		rxq->ring[i].read.hdr_addr = cpu_to_le32(maddr);
+		rxq->ring[i].read.pkt_addr = cpu_to_le32(maddr);
 	}
 
 	return 0;
@@ -126,6 +128,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 	union ixgbe_adv_rx_desc rxd;
 	struct mbuf *b, *new_b;
 	struct rx_entry *rxqe;
+	machaddr_t maddr;
 	uint32_t status;
 	int nb_descs = 0;
 
@@ -147,9 +150,10 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 			return nb_descs;
 		}
 
+		maddr = mbuf_get_data_machaddr(new_b);
 		rxqe->mbuf = new_b;
-		rxdp->read.hdr_addr = cpu_to_le32(new_b->maddr);
-		rxdp->read.pkt_addr = cpu_to_le32(new_b->maddr);
+		rxdp->read.hdr_addr = cpu_to_le32(maddr);
+		rxdp->read.pkt_addr = cpu_to_le32(maddr);
 
 		eth_input(b);
 
@@ -293,6 +297,7 @@ static int ixgbe_tx_reclaim(struct eth_tx_queue *tx)
 static int ixgbe_tx_xmit_one(struct tx_queue *txq, struct mbuf *mbuf)
 {
 	volatile union ixgbe_adv_tx_desc *txdp;
+	machaddr_t maddr;
 	int i, nr_iov = mbuf->nr_iov;
 	uint32_t type_len, pay_len = mbuf->len;
 
@@ -327,8 +332,9 @@ static int ixgbe_tx_xmit_one(struct tx_queue *txq, struct mbuf *mbuf)
 
 	txq->ring_entries[(txq->tail + nr_iov) & (txq->len - 1)].mbuf = mbuf;
 
-	txdp = &txq->ring[txq->tail & (txq->len - 1)];	
-	txdp->read.buffer_addr = cpu_to_le64(mbuf->maddr);
+	txdp = &txq->ring[txq->tail & (txq->len - 1)];
+	maddr = mbuf_get_data_machaddr(mbuf);
+	txdp->read.buffer_addr = cpu_to_le64(maddr);
 
 	type_len = (IXGBE_ADVTXD_DTYP_DATA |
 		    IXGBE_ADVTXD_DCMD_IFCS |

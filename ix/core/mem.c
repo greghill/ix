@@ -6,6 +6,8 @@
 #include <ix/mem.h>
 #include <ix/errno.h>
 #include <ix/atomic.h>
+#include <ix/lock.h>
+#include <ix/vm.h>
 
 #include <dune.h>
 
@@ -21,25 +23,16 @@
 
 /*
  * Current Mapping Strategy:
- * 2 megabyte pages grow up from MEM_PHYS_BASE_ADDR
- * 1 gigabyte pages grow down from MEM_PHYS_BASE_ADDR
+ * 2 megabyte and 1 gigabyte pages grow down from MEM_PHYS_BASE_ADDR
  * 4 kilobyte pages are allocated from the standard mmap region
  */
-static atomic64_t up_base = ATOMIC_INIT(MEM_PHYS_BASE_ADDR);
-static atomic64_t down_base = ATOMIC_INIT(MEM_PHYS_BASE_ADDR);
+static DEFINE_SPINLOCK(mem_lock);
+static uintptr_t mem_pos = MEM_PHYS_BASE_ADDR;
 
-/**
- * mem_alloc_pages - allocates pages of memory
- * @nr: the number of pages to allocate
- * @size: the page size (4KB, 2MB, or 1GB)
- * @mask: the numa node mask
- * @numa_policy: the numa policy
- *
- * Returns a pointer (virtual address) to a page, or NULL if fail.
- */
-void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
+void *__mem_alloc_pages(void *base, int nr, int size,
+			struct bitmask *mask, int numa_policy)
 {
-	void *vaddr = NULL;
+	void *vaddr;
 	int flags = MAP_PRIVATE | MAP_ANONYMOUS;
 	size_t len = nr * size;
 	int perm;
@@ -48,7 +41,6 @@ void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 	case PGSIZE_4KB:
 		break;
 	case PGSIZE_2MB:
-		vaddr = (void *) atomic64_fetch_and_add(&up_base, len);
 		flags |= MAP_HUGETLB | MAP_FIXED;
 #ifdef MAP_HUGE_2MB
 		flags |= MAP_HUGE_2MB;
@@ -56,7 +48,6 @@ void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 		break;
 	case PGSIZE_1GB:
 #ifdef MAP_HUGE_1GB
-		vaddr = (void *) atomic64_sub_and_fetch(&down_base, len);
 		flags |= MAP_HUGETLB | MAP_HUGE_1GB | MAP_FIXED;
 #else
 		return MAP_FAILED;
@@ -66,7 +57,7 @@ void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 		return MAP_FAILED;
 	}
 
-	vaddr = mmap(vaddr, len, PROT_READ | PROT_WRITE, flags, -1, 0);
+	vaddr = mmap(base, len, PROT_READ | PROT_WRITE, flags, -1, 0);
 	if (vaddr == MAP_FAILED)
 		return MAP_FAILED;
 
@@ -79,8 +70,9 @@ void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 		perm |= PERM_BIG;
 	else if (size == PGSIZE_1GB)
 		perm |= PERM_BIG_1GB;
-	if (dune_vm_map_phys(pgroot, vaddr, len,
-			     (void *) dune_va_to_pa(vaddr), perm))
+
+	if (vm_map_phys((physaddr_t) vaddr, (virtaddr_t) vaddr, nr, size,
+			VM_PERM_R | VM_PERM_W))
 		goto fail;
 
 	return vaddr;
@@ -88,6 +80,53 @@ void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
 fail:
 	munmap(vaddr, len);
 	return MAP_FAILED;
+}
+
+void *__mem_alloc_pages_onnode(void *base, int nr, int size, int node)
+{
+	void *vaddr;
+	struct bitmask *mask = numa_allocate_nodemask();
+
+	numa_bitmask_setbit(mask, node);
+	vaddr = __mem_alloc_pages(base, nr, size, mask, MPOL_BIND);
+	numa_bitmask_free(mask);
+
+	return vaddr;
+}
+
+/**
+ * mem_alloc_pages - allocates pages of memory
+ * @nr: the number of pages to allocate
+ * @size: the page size (4KB, 2MB, or 1GB)
+ * @mask: the numa node mask
+ * @numa_policy: the numa policy
+ *
+ * Returns a pointer (virtual address) to a page, or NULL if fail.
+ */
+void *mem_alloc_pages(int nr, int size, struct bitmask *mask, int numa_policy)
+{
+	void *base;
+
+	switch (size) {
+	case PGSIZE_4KB:
+		base = NULL;
+	case PGSIZE_2MB:
+		spin_lock(&mem_lock);
+		mem_pos -= PGSIZE_2MB * nr;
+		base = (void *) mem_pos;
+		spin_unlock(&mem_lock);
+		break;
+	case PGSIZE_1GB:
+		spin_lock(&mem_lock);
+		mem_pos = align_down(mem_pos - PGSIZE_1GB * nr, PGSIZE_1GB);
+		base = (void *) mem_pos;
+		spin_unlock(&mem_lock);
+		break;
+	default:
+		return MAP_FAILED;
+	}
+
+	return __mem_alloc_pages(base, nr, size, mask, numa_policy);
 }
 
 /**
@@ -119,7 +158,7 @@ void *mem_alloc_pages_onnode(int nr, int size, int node, int numa_policy)
  */
 void mem_free_pages(void *addr, int nr, int size)
 {
-	dune_vm_unmap(pgroot, addr, nr * size);
+	vm_unmap(addr, nr, size);
 	munmap(addr, nr * size);
 }
 

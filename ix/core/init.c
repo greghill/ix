@@ -10,6 +10,7 @@
 #include <ix/timer.h>
 #include <ix/cpu.h>
 #include <ix/mbuf.h>
+#include <ix/syscall.h>
 
 #include <net/ip.h>
 #include <net/icmp.h>
@@ -109,6 +110,12 @@ static int init_this_cpu(unsigned int cpu)
 	ret = mbuf_init_cpu();
 	if (ret) {
 		log_err("init: unable to initialize mbufs\n");
+		return ret;
+	}
+
+	ret = syscall_init_cpu();
+	if (ret) {
+		log_err("init: unable to initialize batched syscall array\n");
 		return ret;
 	}
 

@@ -12,8 +12,21 @@
 #include <ix/uaccess.h>
 #include <ix/timer.h>
 #include <ix/ethdev.h>
+#include <ix/cpu.h>
+#include <ix/page.h>
+#include <ix/vm.h>
 
 #include <dune.h>
+
+#define UARR_CAPACITY	8192
+
+DEFINE_PERCPU(struct bsys_arr *, usys_arr);
+DEFINE_PERCPU(void *, usys_iomap);
+
+static const int usys_nr = div_up(sizeof(struct bsys_arr) +
+				  UARR_CAPACITY * sizeof(struct bsys_desc),
+				  PGSIZE_2MB);
+
 
 typedef uint64_t (*bsysfn_t) (uint64_t, uint64_t, uint64_t, uint64_t);
 
@@ -126,5 +139,38 @@ void do_syscall(struct dune_tf *tf, uint64_t sysnr)
 
 	tf->rax = (uint64_t) sys_tbl[sysnr](tf->rdi, tf->rsi, tf->rdx,
 					    tf->rcx, tf->r8, tf->r9);
+}
+
+/**
+ * syscall_init_cpu - creates a user-mapped page for batched system calls
+ *
+ * Returns 0 if successful, otherwise fail.
+ */
+int syscall_init_cpu(void)
+{
+	void *addr, *iomap;
+
+	addr = page_alloc_contig(usys_nr);
+	if (!addr)
+		return -ENOMEM;
+
+	iomap = vm_map_to_user(addr, usys_nr, PGSIZE_2MB, VM_PERM_R);
+	if (!iomap) {
+		page_free_contig(addr, usys_nr);
+		return -ENOMEM;
+	}
+
+	percpu_get(usys_arr) = (struct bsys_arr *) addr;
+	percpu_get(usys_iomap) = iomap;
+	return 0;
+}
+
+/**
+ * syscall_exit_cpu - frees the user-mapped page for batched system calls
+ */
+void syscall_exit_cpu(void)
+{
+	vm_unmap(percpu_get(usys_iomap), usys_nr, PGSIZE_2MB);
+	page_free_contig((void *) percpu_get(usys_arr), usys_nr);
 }
 

@@ -24,6 +24,8 @@
 #include <ix/errno.h>
 #include <ix/mempool.h>
 #include <sys/mman.h>
+#include <ix/page.h>
+#include <ix/vm.h>
 
 static void mempool_init_buf(struct mempool *m, int nr_elems, size_t elem_len)
 {
@@ -74,8 +76,20 @@ int mempool_create(struct mempool *m, int nr_elems, size_t elem_len)
 	return 0;
 }
 
-static void mempool_init_buf_phys(struct mempool *m, int elems_per_page,
-				  int nr_pages, size_t elem_len)
+/**
+ * mempool_destroy - cleans up a memory pool and frees memory
+ * @m: the memory pool
+ */ 
+void mempool_destroy(struct mempool *m)
+{
+	mem_free_pages(m->buf, m->nr_pages, PGSIZE_2MB);
+	m->buf = NULL;
+	m->head = NULL;
+}
+
+static void
+mempool_init_buf_with_pages(struct mempool *m, int elems_per_page,
+			    int nr_pages, size_t elem_len)
 {
 	int i, j;
 	struct mempool_hdr *cur, *prev = (struct mempool_hdr *) &m->head;
@@ -95,25 +109,24 @@ static void mempool_init_buf_phys(struct mempool *m, int elems_per_page,
 }
 
 /**
- * mempool_create_phys - initializes a memory pool with physical pages
+ * mempool_pagemem_create - initializes a memory pool with page memory
  * @m: the memory pool
  * @nr_elems: the minimum number of elements
  * @elem_len: the length of each element
  *
- * Use this variant if you need the physical addresses of elements in the
- * pool. Otherwise, mempool_create() is a better option because it has more
- * efficient element packing. Physical addresses can be retrieved using
- * mempool_get_phys().
+ * Use this variant if you need objects to not cross page boundaries or
+ * want to map the memory at user-level. Otherwise, mempool_create() is
+ * a better option because it has more efficient element packing.
  *
- * NOTE: Just like mempool_create(), mempool_create_phys() will always
+ * NOTE: Just like mempool_create(), mempool_pagemem_create() will always
  * create at least @nr_elems elements, but it may create more depending on
  * page alignment.
  *
  * Returns 0 if successful, otherwise fail.
  */
-int mempool_create_phys(struct mempool *m, int nr_elems, size_t elem_len)
+int mempool_pagemem_create(struct mempool *m, int nr_elems, size_t elem_len)
 {
-	int nr_pages, elems_per_page, ret;
+	int nr_pages, elems_per_page;
 
 	if (!elem_len || elem_len > PGSIZE_2MB || !nr_elems)
 		return -EINVAL;
@@ -121,45 +134,48 @@ int mempool_create_phys(struct mempool *m, int nr_elems, size_t elem_len)
 	elem_len = align_up(elem_len, sizeof(long));
 	elems_per_page = PGSIZE_2MB / elem_len;
 	nr_pages = div_up(nr_elems, elems_per_page);
+	m->nr_pages = nr_pages;
 
-	m->buf = mem_alloc_pages(nr_pages, PGSIZE_2MB, NULL, MPOL_PREFERRED);
-	if (m->buf == MAP_FAILED)
+	m->buf = page_alloc_contig(nr_pages);
+	if (!m->buf)
 		return -ENOMEM;
 
-	mempool_init_buf_phys(m, elems_per_page, nr_pages, elem_len);
-
-	/* FIXME: is this NUMA safe? */
-	m->mach_addrs = malloc(sizeof(machaddr_t) * nr_pages);
-	if (!m->mach_addrs) {
-		ret = -ENOMEM;
-		goto fail;
-	}
-
-	ret = mem_lookup_page_machine_addrs(m->buf, nr_pages,
-					    PGSIZE_2MB, m->mach_addrs);
-	if (ret)
-		goto fail;
+	mempool_init_buf_with_pages(m, elems_per_page, nr_pages, elem_len);
 
 	return 0;
-
-fail:
-	mempool_destroy(m);
-	return ret;
 }
 
 /**
- * mempool_destroy - cleans up a memory pool and frees memory
- * @m: the memory pool
- */ 
-void mempool_destroy(struct mempool *m)
+ * mempool_pagemem_map_to_user - make the memory pool available to user memory
+ * @m: the memory pool.
+ *
+ * NOTE: we map the memory read-only.
+ *
+ * Returns 0 if successful, otherwise fail.
+ */
+int mempool_pagemem_map_to_user(struct mempool *m)
 {
-	mem_free_pages(m->buf, m->nr_pages, PGSIZE_2MB);
-	m->buf = NULL;
-	m->head = NULL;
+	m->iomap_addr = vm_map_to_user(m->buf, m->nr_pages,
+				       PGSIZE_2MB, VM_PERM_R);
+	if (!m->iomap_addr)
+		return -ENOMEM;
 
-	if (m->mach_addrs) {
-		free(m->mach_addrs);
-		m->mach_addrs = NULL;
+	return 0;
+}
+
+/**
+ * mempool_pagemem_destroy - destroys a memory pool allocated with page memory
+ * @m: the memory pool
+ */
+void mempool_pagemem_destroy(struct mempool *m)
+{
+	if (m->iomap_addr) {
+		vm_unmap(m->iomap_addr, m->nr_pages, PGSIZE_2MB);
+		m->iomap_addr = NULL;
 	}
+
+        page_free_contig(m->buf, m->nr_pages);
+        m->buf = NULL;
+        m->head = NULL;
 }
 

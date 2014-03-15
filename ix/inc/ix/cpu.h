@@ -27,8 +27,8 @@ extern void *percpu_offsets[NCPU];
  * Returns a percpu variable.
  */
 #define percpu_get_remote(var, cpu)				\
-	*((typeof(var) *) ((uintptr_t) &var +			\
-			   (uintptr_t) percpu_offsets[(cpu)]))
+	(*((typeof(var) *) ((uintptr_t) &var +			\
+			    (uintptr_t) percpu_offsets[(cpu)])))
 
 static inline void * __percpu_get(void *key)
 {
@@ -46,7 +46,7 @@ static inline void * __percpu_get(void *key)
  * Returns a percpu variable.
  */
 #define percpu_get(var)						\
-	*((typeof(var) *) (__percpu_get(&var)))
+	(*((typeof(var) *) (__percpu_get(&var))))
 
 DECLARE_PERCPU(unsigned int, cpu_numa_node);
 DECLARE_PERCPU(unsigned int, cpu_id);

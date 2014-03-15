@@ -13,8 +13,8 @@ struct mempool_hdr {
 
 struct mempool {
 	void *buf;
+	void *iomap_addr;
 	struct mempool_hdr *head;
-	machaddr_t *mach_addrs;
 	int nr_pages;
 };
 
@@ -49,25 +49,11 @@ static inline void mempool_free(struct mempool *m, void *ptr)
 	m->head = elem;
 }
 
-/**
- * mempool_get_mach - gets the machine address of an element
- * @m: the memory pool
- * @ptr: the element
- *
- * NOTE: This routine can only be used if the mempool was created
- * with mempool_create_mach(). Otherwise there will be unpredicable
- * results.
- *
- * Returns a machine address.
- */
-static inline physaddr_t mempool_get_mach(struct mempool *m, void *ptr)
-{
-	return m->mach_addrs[PGN_2MB((uintptr_t) ptr - (uintptr_t) m->buf)] +
-	       PGOFF_2MB(ptr);
-}
-
 extern int mempool_create(struct mempool *m, int nr_elems, size_t elem_len);
-extern int mempool_create_phys(struct mempool *m, int nr_elems,
-			       size_t elem_len);
 extern void mempool_destroy(struct mempool *m);
+
+extern int
+mempool_pagemem_create(struct mempool *m, int nr_elems, size_t elem_len);
+extern int mempool_pagemem_map_to_user(struct mempool *m);
+extern void mempool_pagemem_destroy(struct mempool *m);
 

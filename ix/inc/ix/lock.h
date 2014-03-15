@@ -8,8 +8,10 @@
 #include <ix/types.h>
 
 #define SPINLOCK_INITIALIZER {.locked = 0}
+#define DEFINE_SPINLOCK(name) \
+	spinlock_t name = SPINLOCK_INITIALIZER
 #define DECLARE_SPINLOCK(name) \
-	spinlock_t *name = SPINLOCK_INITIALIZER
+	extern spinlock_t name
 
 /**
  * spin_lock_init - prepares a spin lock for use
