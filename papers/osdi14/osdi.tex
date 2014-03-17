@@ -17,15 +17,18 @@
 \usepackage{fullpage}
 
 % added for our purpose
+\usepackage{xspace}
 \usepackage{url}
 \usepackage{upgreek}
-\newcommand{\microsecond}{$\upmu{}s$}
+\newcommand{\microsecond}{$\upmu{}s$\xspace}
+
 
 % debugging only
-\newcommand{\edb}[1]{\noindent{\color{Plum} {\bf \fbox{EdB}} {\it#1}}}
-\newcommand{\adam}[1]{\noindent{\color{Red} {\bf \fbox{AB}} {\it#1}}}
-\newcommand{\christos}[1]{\noindent{\color{Green} {\bf \fbox{CK}} {\it#1}}}
-\newcommand{\georgios}[1]{\noindent{\color{Blue} {\bf \fbox{GP}} {\it#1}}}
+\usepackage[usenames,dvipsnames]{xcolor}
+\newcommand{\edb}[1]{\noindent{\color{Plum} {\bf \fbox{EdB} {\it#1}}}}
+\newcommand{\adam}[1]{\noindent{\color{Red} {\bf \fbox{AB} {\it#1}}}}
+\newcommand{\christos}[1]{\noindent{\color{Green} {\bf \fbox{CK} {\it#1}}}}
+\newcommand{\georgios}[1]{\noindent{\color{Blue} {\bf \fbox{GP} {\it#1}}}}
 %\newcommand{\babak}[1]{\noindent{\color{Purple} {\bf \fbox{BF}} {\it#1}}}
 \newcommand{\todo}{\noindent $\triangleright $~}
 
@@ -33,15 +36,23 @@
 
 \begin{document}
 
-\title{\bf Title}
+%%%%%% TITLE OPTIONS
+
+\newcommand{\ix}[0]{\textsc{ix}\xspace}
+
+%\title{\bf Title}
+\title{ Scalability, Quality-of-service, and Energy Proportionality of the IX Domain-Specific Operating System}
+
+
 \author{Paper \# 123 XXX}
 \date{}
 \maketitle
 \thispagestyle{empty}
 
-%\input{abstract}
+\input{abstract}
+\input{intro}
 \input{outline}
-%\input{intro}
+
 %\input{related}
 
 \input{internal-notes}
