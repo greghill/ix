@@ -13,6 +13,7 @@
 enum {
 	SYS_BPOLL = 0,
 	SYS_BCALL,
+	SYS_BADDR,
 	SYS_NR,
 };
 
@@ -218,6 +219,7 @@ extern int bsys_udp_recv_done(uint64_t count);
 
 extern int sys_bpoll(struct bsys_desc __user *d[], unsigned int nr);
 extern int sys_bcall(struct bsys_desc __user *d[], unsigned int nr);
+extern void *sys_baddr(void);
 
 struct dune_tf *tf;
 extern void do_syscall(struct dune_tf *tf, uint64_t sysnr);

@@ -118,12 +118,23 @@ int sys_bcall(struct bsys_desc __user *d[], unsigned int nr)
 	return bsys_dispatch(d, nr);
 }
 
+/**
+ * sys_baddr - get the address of the batched syscall array
+ *
+ * Returns an IOMAP pointer.
+ */
+void *sys_baddr(void)
+{
+	return percpu_get(usys_iomap);
+}
+
 typedef uint64_t (*sysfn_t) (uint64_t, uint64_t, uint64_t,
 			     uint64_t, uint64_t, uint64_t);
 
 static sysfn_t sys_tbl[] = {
 	(sysfn_t) sys_bpoll,
 	(sysfn_t) sys_bcall,
+	(sysfn_t) sys_baddr,
 };
 
 /**
