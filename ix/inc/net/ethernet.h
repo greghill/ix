@@ -16,6 +16,7 @@
 #define ETH_MIN_LEN		64
 #define ETH_MAX_LEN		1518
 #define	ETH_MAX_LEN_JUMBO	9018	/* max jumbo frame len, including CRC */
+#define ETH_MTU			1500
 
 struct eth_addr {
 	uint8_t addr[ETH_ADDR_LEN];

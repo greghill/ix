@@ -14,6 +14,7 @@ struct mempool_hdr {
 struct mempool {
 	void *buf;
 	void *iomap_addr;
+	uintptr_t iomap_offset;
 	struct mempool_hdr *head;
 	int nr_pages;
 };

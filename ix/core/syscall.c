@@ -18,13 +18,13 @@
 
 #include <dune.h>
 
-#define UARR_CAPACITY	8192
+#define UARR_MIN_CAPACITY	8192
 
 DEFINE_PERCPU(struct bsys_arr *, usys_arr);
 DEFINE_PERCPU(void *, usys_iomap);
 
 static const int usys_nr = div_up(sizeof(struct bsys_arr) +
-				  UARR_CAPACITY * sizeof(struct bsys_desc),
+				  UARR_MIN_CAPACITY * sizeof(struct bsys_desc),
 				  PGSIZE_2MB);
 
 
@@ -96,6 +96,7 @@ int sys_bpoll(struct bsys_desc __user *d[], unsigned int nr)
 
 	timer_run();
 	eth_tx_reclaim(eth_tx);
+	usys_reset();
 	eth_rx_poll(eth_rx);
 
 	ret = bsys_dispatch(d, nr);
@@ -148,19 +149,20 @@ void do_syscall(struct dune_tf *tf, uint64_t sysnr)
  */
 int syscall_init_cpu(void)
 {
-	void *addr, *iomap;
+	struct bsys_arr *arr;
+	void *iomap;
 
-	addr = page_alloc_contig(usys_nr);
-	if (!addr)
+	arr = (struct bsys_arr *) page_alloc_contig(usys_nr);
+	if (!arr)
 		return -ENOMEM;
 
-	iomap = vm_map_to_user(addr, usys_nr, PGSIZE_2MB, VM_PERM_R);
+	iomap = vm_map_to_user((void *) arr, usys_nr, PGSIZE_2MB, VM_PERM_R);
 	if (!iomap) {
-		page_free_contig(addr, usys_nr);
+		page_free_contig((void *) arr, usys_nr);
 		return -ENOMEM;
 	}
 
-	percpu_get(usys_arr) = (struct bsys_arr *) addr;
+	percpu_get(usys_arr) = arr;
 	percpu_get(usys_iomap) = iomap;
 	return 0;
 }
@@ -172,5 +174,7 @@ void syscall_exit_cpu(void)
 {
 	vm_unmap(percpu_get(usys_iomap), usys_nr, PGSIZE_2MB);
 	page_free_contig((void *) percpu_get(usys_arr), usys_nr);
+	percpu_get(usys_arr) = NULL;
+	percpu_get(usys_iomap) = NULL;
 }
 

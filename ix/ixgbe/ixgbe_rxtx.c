@@ -315,7 +315,7 @@ static int ixgbe_tx_xmit_one(struct tx_queue *txq, struct mbuf *mbuf)
 		struct mbuf_iov iov = mbuf->iovs[i];
 		txdp = &txq->ring[(txq->tail + i + 1) & (txq->len - 1)];
 
-		txdp->read.buffer_addr = cpu_to_le64(iov.base);
+		txdp->read.buffer_addr = cpu_to_le64((uintptr_t) iov.base);
 		type_len = (IXGBE_ADVTXD_DTYP_DATA |
 			    IXGBE_ADVTXD_DCMD_IFCS |
 			    IXGBE_ADVTXD_DCMD_DEXT);

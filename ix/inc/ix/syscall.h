@@ -2,6 +2,8 @@
  * syscall.h - system call support (regular and batched)
  */
 
+#pragma once
+
 #include <ix/types.h>
 #include <ix/cpu.h>
 
@@ -27,7 +29,7 @@ struct ip_tuple {
 } __packed;
 
 struct sg_entry {
-	uintptr_t base;
+	void *base;
 	size_t len;
 } __packed;
 
@@ -66,25 +68,25 @@ struct bsys_arr {
  * bsys_arr_next - get the next free descriptor
  * @a: the syscall array
  *
- * Returns a descriptor.
+ * Returns a descriptor, or NULL if none are available.
  */
-static inline struct bsys_desc *bsys_arr_next(struct bsys_arr *a)
+static inline struct bsys_desc *__bsys_arr_next(struct bsys_arr *a)
 {
 	return &a->descs[a->len++];
 }
 
 /**
- * bsys_arr_next_safe - get the next free descriptor, checking for overflow
+ * bsys_arr_next - get the next free descriptor, checking for overflow
  * @a: the syscall array
  *
  * Returns a descriptor, or NULL if none are available.
  */
-static inline struct bsys_desc *bsys_arr_next_safe(struct bsys_arr *a)
+static inline struct bsys_desc *bsys_arr_next(struct bsys_arr *a)
 {
 	if (a->len >= a->max_len)
 		return NULL;
 
-	return bsys_arr_next(a);
+	return __bsys_arr_next(a);
 }
 
 
@@ -153,30 +155,51 @@ enum {
 
 #ifdef __KERNEL__
 
+DECLARE_PERCPU(struct bsys_arr *, usys_arr);
+
+/**
+ * usys_reset - reset the batched call array
+ *
+ * Call this before batching system calls.
+ */
+static inline void usys_reset(void)
+{
+	percpu_get(usys_arr)->len = 0;
+}
+
+/**
+ * usys_next - get the next batched syscall descriptor
+ *
+ * Returns a syscall descriptor.
+ */
+static inline struct bsys_desc *usys_next(void)
+{
+	return __bsys_arr_next(percpu_get(usys_arr));
+}
+
 /**
  * usys_udp_recv - receive a UDP packet
- * @d: the syscall descriptor to program
  * @addr: the address of the packet data
  * @len: the length of the packet data
  * @id: the UDP 4-tuple
  */
-static inline void usys_udp_recv(struct bsys_desc *d, void *addr,
-				 size_t len, struct ip_tuple *id)
+static inline void usys_udp_recv(void *addr, size_t len, struct ip_tuple *id)
 {
+	struct bsys_desc *d = usys_next();
 	BSYS_DESC_3ARG(d, USYS_UDP_RECV, addr, len, id);
 }
 
 /**
  * usys_udp_send_done - acknowledge the completion of UDP packet sends
- * @d: the syscall descriptor to program
  * @count: the number of packet sends that have completed
  *
  * NOTE: Calling this function allows the user application to unpin memory
  * that was locked for zero copy transfer. Acknowledgements are always in
  * FIFO order.
  */
-static inline void usys_udp_send_done(struct bsys_desc *d, uint64_t count)
+static inline void usys_udp_send_done(uint64_t count)
 {
+	struct bsys_desc *d = usys_next();
 	BSYS_DESC_1ARG(d, USYS_UDP_SEND_DONE, count);
 }
 
@@ -188,9 +211,9 @@ static inline void usys_udp_send_done(struct bsys_desc *d, uint64_t count)
 /* FIXME: could use Sparse to statically check */
 #define __user
 
-extern int bsys_udp_send(void __user *addr, size_t len, struct ip_tuple __user *id);
-extern int bsys_udp_sendv(struct sg_entry __user *ents[], unsigned int nrents,
-			  struct ip_tuple __user *id);
+extern ssize_t bsys_udp_send(void __user *addr, size_t len, struct ip_tuple __user *id);
+extern ssize_t bsys_udp_sendv(struct sg_entry __user *ents[], unsigned int nrents,
+			      struct ip_tuple __user *id);
 extern int bsys_udp_recv_done(uint64_t count);
 
 extern int sys_bpoll(struct bsys_desc __user *d[], unsigned int nr);
@@ -199,7 +222,6 @@ extern int sys_bcall(struct bsys_desc __user *d[], unsigned int nr);
 struct dune_tf *tf;
 extern void do_syscall(struct dune_tf *tf, uint64_t sysnr);
 
-DECLARE_PERCPU(struct bsys_arr *, usys_arr);
 extern int syscall_init_cpu(void);
 extern void syscall_exit_cpu(void);
 

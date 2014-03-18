@@ -41,6 +41,8 @@ int net_init(void)
 		return ret;
 	}
 
+	udp_init();
+
 	return 0;
 }
 

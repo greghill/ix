@@ -9,11 +9,40 @@
 #include <ix/mempool.h>
 #include <ix/cpu.h>
 #include <ix/page.h>
+#include <ix/syscall.h>
 
 struct mbuf_iov {
-	machaddr_t base;
+	void *base;
+	machaddr_t maddr;
 	size_t len;
 };
+
+/**
+ * mbuf_iov_create - creates an mbuf IOV and references the IOV memory
+ * @iov: the IOV to create
+ * @ent: the reference sg entry
+ */
+static inline void
+mbuf_iov_create(struct mbuf_iov *iov, struct sg_entry *ent)
+{
+	size_t len = min(ent->len, PGSIZE_2MB - PGOFF_2MB(ent->base));
+
+	iov->base = ent->base;
+	iov->maddr = page_get(ent->base);
+	iov->len = len;
+
+	ent->base = (char *) ent->base + len;
+	ent->len -= len;
+}
+
+/**
+ * mbuf_iov_free - unreferences the IOV memory
+ * @iov: the IOV
+ */
+static inline void mbuf_iov_free(struct mbuf_iov *iov)
+{
+	page_put(iov->base);
+}
 
 struct mbuf {
 	struct mempool *pool;	/* the pool the mbuf was allocated from */
@@ -21,7 +50,7 @@ struct mbuf {
 	struct mbuf *next;	/* the next buffer of the packet
 				 * (can happen with recieve-side coalescing) */
 	struct mbuf_iov *iovs;	/* transmit scatter-gather array */
-	int nr_iov;		/* the number of scatter-gather vectors */
+	unsigned int nr_iov;	/* the number of scatter-gather vectors */
 };
 
 #define MBUF_HEADER_LEN		64	/* one cache line */
@@ -77,6 +106,16 @@ struct mbuf {
 	 (mbuf)->len)
 
 /**
+ * mbuf_to_iomap - determines the address in the IOMAP region
+ * @mbuf: the mbuf
+ * @pos: a pointer within the mbuf
+ *
+ * Returns an address.
+ */
+#define mbuf_to_iomap(mbuf, pos) \
+	((void *) ((uintptr_t) (pos) + (mbuf)->pool->iomap_offset))
+
+/**
  * mbuf_alloc - allocate an mbuf from a memory pool
  * @pool: the memory pool
  *
@@ -112,19 +151,6 @@ static inline void mbuf_free(struct mbuf *m)
 static inline machaddr_t mbuf_get_data_machaddr(struct mbuf *m)
 {
 	return page_machaddr(mbuf_mtod(m, void *));
-}
-
-/**
- * mbuf_get_data_iomap - get the iomap (user-level) address of the mbuf data
- * @m: the mbuf
- *
- * Returns a pointer.
- */
-static inline void *mbuf_get_data_iomap(struct mbuf *m)
-{
-	return (void *) ((uintptr_t) m->pool->iomap_addr +
-			 mbuf_mtod(m, uintptr_t) -
-			 (uintptr_t) m->pool->buf);
 }
 
 /**

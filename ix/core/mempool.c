@@ -160,6 +160,8 @@ int mempool_pagemem_map_to_user(struct mempool *m)
 	if (!m->iomap_addr)
 		return -ENOMEM;
 
+	m->iomap_offset = (uintptr_t) m->iomap_addr - (uintptr_t) m->buf;
+
 	return 0;
 }
 
