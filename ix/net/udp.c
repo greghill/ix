@@ -74,6 +74,7 @@ static int udp_output(struct mbuf *pkt, struct ip_tuple *id, size_t len)
 	struct udp_hdr *udphdr = mbuf_nextd(iphdr, struct udp_hdr *);
 	size_t full_len = len + sizeof(struct udp_hdr);
 	struct ip_addr dst_addr;
+	struct mbuf *mbufs[1];
 
 	dst_addr.addr = id->dst_ip;
 	if (arp_lookup_mac(&dst_addr, &ethhdr->dhost))
@@ -82,14 +83,21 @@ static int udp_output(struct mbuf *pkt, struct ip_tuple *id, size_t len)
 	ethhdr->shost = cfg_mac;
 	ethhdr->type = hton16(ETHTYPE_IP);
 
-	ip_setup_header(iphdr, IPPROTO_UDP, id->src_ip, id->dst_ip, full_len);
+	ip_setup_header(iphdr, IPPROTO_UDP,
+			cfg_host_addr.addr, id->dst_ip, full_len);
 
 	udphdr->src_port = hton16(id->src_port);
 	udphdr->dst_port = hton16(id->dst_port);
 	udphdr->len = hton16(full_len);
 	udphdr->chksum = 0;
 
-	return eth_tx_xmit_one(eth_tx, pkt, UDP_PKT_SIZE);
+	pkt->len = UDP_PKT_SIZE;
+	mbufs[0] = pkt;
+
+	if (eth_tx_xmit(eth_tx, 1, mbufs) != 1)
+		return -EIO;
+
+	return 0;
 }
 
 /**
@@ -142,7 +150,7 @@ ssize_t bsys_udp_send(void __user *addr, size_t len,
 	}
 
 	ret = udp_output(pkt, &tmp, len);
-	if (ret) {
+	if (unlikely(ret)) {
 		mbuf_free(pkt);
 	}	return ret;
 
