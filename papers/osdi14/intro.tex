@@ -2,14 +2,104 @@
 \section{Introduction}
 \label{sec:intro}
 
+
 Web-scale applications are redefining the requirements of system
-software.  A single application, e.g., the Facebook homepage, can
-consist of hundreds of software components deployed on tens of
-thousands of machines per datacenter, and on multiple
-datacenters~\cite{missing}.  The scale creates challenges in multiple
-inter-related domains, including the underlying physical
-infrastructure, the network topology, hardware design, and application
-development and troubleshooting considerations.  
+software.  A single application can consist of hundreds of software
+components deployed on tens of thousands of machines per datacenter,
+and on multiple datacenters.  For example, Amazon routinely accesses
+150 distinct services to render a single
+page~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07}.  These interactions
+introduce significant latency overheads that constrain the algorithms
+in their ability to access large data sets.  For instance, latency
+considerations force Facebook to restrict the number of sequential
+data accesses to fewer than 150 per rendered web page~\cite{rumble2011s}.
+
+Google recently identified three main challenges for applications that
+must process large amounts of data in little time:
+energy-proportionality, tail-tolerance, and microsecond
+computing~\cite{luiz-isscc}.  Unfortunately, techniques that improve
+energy-proportionality~\cite{DBLP:journals/computer/BarrosoH07}, such
+as dynamic voltage scaling and increasing average utilization often
+negatively impact latency.  Tail
+tolerance~\cite{DBLP:journals/cacm/DeanB13} describes the emerging
+systems-building discipline that aims to deliver predictable response
+times in a distributed system built out of less less-predictable
+parts.  Finally, the microsecond computing challenge centers on intra
+datacenter communication: even though existing transmission and
+switching technologies allow for microsecond-level messaging between
+any two nodes in a datacenter, a combination of protocol processing,
+interrupt delivery, and operating system overheads generally increase
+the latency by two orders of magnitude.
+
+In addition, such applications must scale in terms of bandwidth and
+concurrent connection counts, and ideally solve the \emph{C10M
+  problem}~\cite{theC10Mproblem}: for a given server, scale to 10
+million concurrent TCP connections, saturate 10 GbE interfaces, and
+deliver 10~\microsecond latency (mean), with an additional latency
+jitter of not more than an extra 10~\microsecond.  Today, million+
+concurrent connections are desirable in Internet-facing notification
+servers~\cite{DBLP:conf/sosp/AdyaCMP11} or messaging
+servers~\cite{whatsapp-2mil}.  However, connection scalability is also
+a problem within the datacenter, for example to access key-value
+stores such as memcached.  The conventional wisdom is to avoid the
+problem altogether by using UDP datagrams instead of
+connections~\cite{nishtala2013scaling}, or to solve it at user-level
+without involving the operating system~\cite{jeong2014mtcp}.  stack
+with the highest known scalability for short-lived connections.
+
+
+In this paper, we propose an operating systems and networking stack
+foundation that embraces energy-proportionality without impacting
+latency, offers low-jitter messaging between applications using the
+standard TCP/IP protocol in a handful of microseconds, and meets the
+C10M challenge.  This system software foundation is specifically
+focused on the unique challenges of web-scale, event-driven
+applications: clients and servers that communicate with each other
+using latency-sentitive transactions.
+
+
+We introduce \ix, a domain-specific operating system optimized for the
+unique needs of web-scale, event-driven applications.  Unlike
+traditional commodity operating systems, which are resource-centric
+and operate at a fine granularity, \ix is application-centric and
+allocates coarse-grain resources.  Unlike kernel-bypass approaches,
+which ignore the operating system altogether, \ix provides memory
+protection to the networking stack.  Finally, \ix exposes to user-level
+applications an elastic, event-driven execution model.
+
+\edb{TODO: decide whether to position IX as an OS as a network stack}.  \edb{Add a summary of the design principles here....}
+
+
+The primary contributions of this paper are:
+
+\begin{itemize}
+
+\item the design and implementation of \ix, a domain-specific
+  operating system that meets the C10M challenge \emph{within the
+    operating system};
+
+\item XXX
+
+\item an evaluation of \ix on micro-benchmarks and with real-world
+  applications such as memcached and ngnx, which suggests that it
+  provides the most scalable TCP networking solution available to
+  date.  Specifically, it outperforms mTCP by XXX on short-lived
+  connection tests, and XXX;
+
+\item XXX
+
+\end{itemize}
+
+
+The rest of this paper is organized as follows: \edb{TODO}
+
+
+
+
+
+\begin{comment}
+
+%%% V1
 
 We focus here on three high-level challenges for web-scale
 applications that point to the need to address energy-proportionality,
@@ -57,40 +147,4 @@ wisdom is that such a solution must bypass the operating system
 entirely.  For example, mTCP~\cite{jeong2014mtcp} is a user-level TCP
 stack with the highest known scalability for short-lived connections.
 
-
-We introduce \ix, a domain-specific operating system that
-addresses the combined challenge of energy-efficiency, scalability,
-and quality-of-service for web-scale applications.  Unlike traditional
-commodity operating systems, which are resource-centric and operate at
-a fine granularity, \ix is application-centric and allocates
-coarse-grain resources.  Unlike kernel-bypass approaches, which ignore
-the operating system altogether, \ix provides memory protection to the
-networking stack, manages system resources with energy-efficiency
-in mind.
-
-The primary contributions of this paper are:
-
-\begin{itemize}
-
-\item the design and implementation of \ix, a domain-specific
-  operating system that meets the C10M challenge \emph{within the
-    operating system};
-
-\item a new CPU resource scheduling abstraction, \emph{dynamic
-  spinning core}, which spans both the kernel networking stack and the
-  user-level applications.  Coupled with the appropriate policy
-  module, the dynamic spinning core mechanism can deliver quality-of-service
-  guarantees in terms of processing latency in an energy-proportional
-  manner;
-
-\item an evaluation of \ix on micro-benchmarks and with real-world
-  applications such as memcached and ngnx, which suggests that it
-  provides the most scalable TCP networking solution available to
-  date.  Specifically, it outperforms mTCP by XXX on short-lived
-  connection tests, and XXX;
-
-\end{itemize}
-
-
-The rest of this paper is organized as follows: \edb{TODO}
-
+\end{comment}
