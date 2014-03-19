@@ -604,8 +604,8 @@ static void syscall_handler(struct dune_tf *tf)
 {
 //	printf("Syscall No. %d\n", tf->rax);
 
-	if (tf->rax & 0x8000000000000000)
-		return do_syscall(tf, tf->rax & 0x7FFFFFFFFFFFFFFF);
+	if ((long) tf->rax < 0)
+		return do_syscall(tf, -((long) tf->rax));
 
 	if (syscall_check_params(tf) == -1)
 		return;

@@ -283,13 +283,13 @@ int sandbox_init(int argc, char *argv[])
 	uintptr_t sp;
 	struct elf_data data;
 
-	if (argc < 2)
+	if (argc < 1)
 		return -EINVAL;
 
 	log_debug("sandbox: env = '%s'\n", environ[0]);
 
 
-	ret = load_elf(argv[1], &data);
+	ret = load_elf(argv[0], &data);
 	if (ret)
 		return ret;
 
