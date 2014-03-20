@@ -1,0 +1,32 @@
+Hi everybody, 
+
+again, thanks to Ed for starting this, although I give him yellow card for not committing a Makefile :)  More seriously, here are some comments in a FCFS order:
+
+INTRO
+- I would list the motivational requirements in roughly the reserve order: R0) high bandwidth (default one, everyone target this), R1) low tail latency, R2) high connection counts (C10M), R3) elasticity (or resource proportionality — not just energy proportionality).  We can easily discuss related work by mentioning which of the 4 they address . We can also mention that most people think that kernel bypass is the only way to get R0-R2. We go for all 4 through the kernel, which provide also R3 and protection. 
+
+- I am not sure if we should talk about this as an OS or a network stack for now. Long term it makes sense to talk about this as an OS, but if our direct comparisons are with mostly network stack work (mtcp, megapipes, etc), we may want to manage this issue. The compromise Ed and I discussed is the following: we position this an OS optimized for event-driven, network-heavy apps. Then we say that the most critical aspect here is how we approach networking. Some other issues of the OS (policies for this and that, programming model and other app implications) left for future work.  Once we agree on this, we can edit the title too. 
+
+- Btw, how was “IX” picked? Is there a story? 
+
+- We should add more info in the intro about the key techniques (design principles) and how they related to the requirements listed above. Here is an initial list to work with
+	* separate data from control plane and simplify abstraction layers (mostly R1 and R2)
+	* match SW to modern HW features such as multi-queue, offloads (classifiers, DCA, etc), HW support for virtualization etc (mostly R1)
+	* elasticity and load balancing through queues (R3)
+	* no copies and no sync on the data path, coarse-grain memory management (mostly R0 and R1)
+	And all that while still being in the kernel (protection)
+We need to polish this list of design principles and it will probably take a few iterations. For instance, I did not list the spinning core here because I think many people do polling. Queues + elasticity is the difference here imho, but this can be probably put much better.  Another example, I did not list asynchronous I/O because it seemed to obvious but maybe we should. 
+
+RELATED WORK
+- Related work is probably best early in this paper and that a table would be useful. I suggest we organize it around the requirements + user/kernel).  Then in the text we need a couple of sentences per related project, discussing which of their design principles disallows one of the requirements listed above. 
+- The table should probably focus on “networking oriented papers and projects”. We can have 1-2 paragraphs with references to broader OS papers that are related. 
+
+DESIGN PRINCIPLES
+- See comments above. 
+
+Thoughts on organizing the eval later on. 
+
+Christos
+
+
+
