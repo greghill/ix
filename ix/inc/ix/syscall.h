@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ix/compiler.h>
 #include <ix/types.h>
 #include <ix/cpu.h>
 
@@ -39,6 +40,8 @@ struct sg_entry {
  * Batched system calls
  */
 
+typedef uint64_t (*bsysfn_t) (uint64_t, uint64_t, uint64_t, uint64_t);
+
 struct bsys_desc {
 	uint64_t sysnr;
 	uint64_t arga, argb, argc, argd;
@@ -66,7 +69,7 @@ struct bsys_arr {
 };
 
 /**
- * bsys_arr_next - get the next free descriptor
+ * __bsys_arr_next - get the next free descriptor
  * @a: the syscall array
  *
  * Returns a descriptor, or NULL if none are available.

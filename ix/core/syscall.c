@@ -27,9 +27,6 @@ static const int usys_nr = div_up(sizeof(struct bsys_arr) +
 				  UARR_MIN_CAPACITY * sizeof(struct bsys_desc),
 				  PGSIZE_2MB);
 
-
-typedef uint64_t (*bsysfn_t) (uint64_t, uint64_t, uint64_t, uint64_t);
-
 static bsysfn_t bsys_tbl[] = {
 	(bsysfn_t) bsys_udp_send,
 	(bsysfn_t) bsys_udp_sendv,
