@@ -681,6 +681,8 @@ static inline void hlist_add_head(struct hlist_head *h, struct hlist_node *n)
 {
 	n->next = h->head;
 	n->prev = (struct hlist_node *) h;
+	if (n->next)
+		n->next->prev = n;
 	h->head = n;
 }
 
