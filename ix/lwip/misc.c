@@ -38,4 +38,5 @@ void tcp_input_tmp(struct mbuf *pkt, struct ip_hdr *iphdr, void *tcphdr)
 	ip_data.current_iphdr_dest.addr = iphdr->dst_addr.addr;
 	ip_data.current_iphdr_src.addr = iphdr->src_addr.addr;
 	tcp_input(pbuf, &netif);
+	mbuf_free(pkt);
 }
