@@ -108,7 +108,7 @@ static int udp_output(struct mbuf *pkt, struct ip_tuple *id, size_t len)
  *
  * Returns the number of bytes sent, or < 0 if fail.
  */
-ssize_t bsys_udp_send(void __user *addr, size_t len,
+void bsys_udp_send(void __user *addr, size_t len,
 		      struct ip_tuple __user *id)
 {
 	struct ip_tuple tmp;
@@ -118,16 +118,24 @@ ssize_t bsys_udp_send(void __user *addr, size_t len,
 	int ret;
 
 	/* validate user input */
-	if (unlikely(len > UDP_MAX_LEN))
-		return -EINVAL;
-	if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple))))
-		return -EINVAL;
-	if (unlikely(!uaccess_zc_okay(addr, len)))
-		return -EINVAL;
+	if (unlikely(len > UDP_MAX_LEN)) {}
+		usys_udp_send_ret(-EINVAL);
+		return;
+	}
+	if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple)))) {}
+		usys_udp_send_ret(-EFAULT);
+		return;
+	}
+	if (unlikely(!uaccess_zc_okay(addr, len))) {
+		usys_udp_send_ret(-EFAULT);
+		return;
+	}
 
 	pkt = mbuf_alloc_local();
-	if (unlikely(!pkt))
-		return -ENOMEM;
+	if (unlikely(!pkt)) {
+		usys_udp_send_ret(-ENOBUFS);
+		return;
+	}
 
 	iovs = mbuf_mtod_off(pkt, struct mbuf_iov *,
 			     align_up(UDP_PKT_SIZE, sizeof(uint64_t)));
@@ -152,24 +160,21 @@ ssize_t bsys_udp_send(void __user *addr, size_t len,
 	ret = udp_output(pkt, &tmp, len);
 	if (unlikely(ret)) {
 		mbuf_free(pkt);
-	}	return ret;
-
-	return len;
+		usys_udp_send_ret(ret);
+	}
 }
 
-ssize_t bsys_udp_sendv(struct sg_entry __user *ents[], unsigned int nrents,
-		       struct ip_tuple __user *id)
+void bsys_udp_sendv(struct sg_entry __user *ents[], unsigned int nrents,
+		    struct ip_tuple __user *id)
 {
-	return -ENOSYS;
+	usys_udp_send_ret(-ENOSYS);
 }
 
 /**
  * bsys_udp_recv_done - acknowledge received UDP packets
  * @count: the number of packets to acknowledge
- *
- * Returns 0.
  */
-int bsys_udp_recv_done(uint64_t count)
+void bsys_udp_recv_done(uint64_t count)
 {
 	struct mbuf *pos = percpu_get(udp_free_head);
 
@@ -183,8 +188,6 @@ int bsys_udp_recv_done(uint64_t count)
 	percpu_get(udp_free_head) = pos;
 	if (!pos)
 		percpu_get(udp_free_pos) = &percpu_get(udp_free_head);
-
-	return 0;
 }
 
 /**

@@ -40,7 +40,7 @@ struct sg_entry {
  * Batched system calls
  */
 
-typedef uint64_t (*bsysfn_t) (uint64_t, uint64_t, uint64_t, uint64_t);
+typedef void (*bsysfn_t) (uint64_t, uint64_t, uint64_t, uint64_t);
 
 struct bsys_desc {
 	uint64_t sysnr;
@@ -153,7 +153,7 @@ static inline void ksys_udp_recv_done(struct bsys_desc *d, uint64_t count)
 
 enum {
 	USYS_UDP_RECV = 0,
-	USYS_UDP_SEND_DONE,
+	USYS_UDP_SEND_RET,
 	USYS_NR,
 };
 
@@ -194,17 +194,17 @@ static inline void usys_udp_recv(void *addr, size_t len, struct ip_tuple *id)
 }
 
 /**
- * usys_udp_send_done - acknowledge the completion of UDP packet sends
- * @count: the number of packet sends that have completed
+ * usys_udp_send_done - Notifies the user that a UDP packet send completed
+ * @ret: zero if successful, otherwise fail.
  *
  * NOTE: Calling this function allows the user application to unpin memory
  * that was locked for zero copy transfer. Acknowledgements are always in
  * FIFO order.
  */
-static inline void usys_udp_send_done(uint64_t count)
+static inline void usys_udp_send_ret(ssize_t ret)
 {
 	struct bsys_desc *d = usys_next();
-	BSYS_DESC_1ARG(d, USYS_UDP_SEND_DONE, count);
+	BSYS_DESC_1ARG(d, USYS_UDP_SEND_RET, ret);
 }
 
 

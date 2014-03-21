@@ -45,18 +45,10 @@ static int bsys_dispatch_one(struct bsys_desc __user *d)
 
 	if (unlikely(uaccess_check_fault()))
 		return -EFAULT;
+	if (unlikely(sysnr >= KSYS_NR))
+		return -ENOSYS;
 
-	if (unlikely(sysnr >= KSYS_NR)) {
-		sysnr = (uint64_t) -ENOSYS;
-		goto out;
-	}
-
-	sysnr = bsys_tbl[sysnr](arga, argb, argc, argd);
-
-out:
-	uaccess_pokeq(&d->sysnr, sysnr);
-	if (unlikely(uaccess_check_fault()))
-		return -EFAULT;
+	bsys_tbl[sysnr](arga, argb, argc, argd);
 
 	return 0;
 }
@@ -68,12 +60,12 @@ static int bsys_dispatch(struct bsys_desc __user *d[], unsigned int nr)
 
 	if (!nr)
 		return 0;
-	if (!uaccess_okay(d, sizeof(struct bsys_desc) * nr))
+	if (unlikely(!uaccess_okay(d, sizeof(struct bsys_desc) * nr)))
 		return -EFAULT;
 
 	for (i = 0; i < nr; i++) {
 		ret = bsys_dispatch_one(d[i]);
-		if (ret)
+		if (unlikely(ret))
 			return ret;
 	}
 
