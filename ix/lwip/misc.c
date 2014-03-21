@@ -19,9 +19,9 @@ void tcp_input(struct pbuf *p, struct netif *inp);
 
 struct ip_globals ip_data;
 
+/* TODO: implement */
 void tcp_timer_needed(void)
 {
-	printf("TODO: implement tcp_timer_needed\n");
 }
 
 struct netif *ip_route(struct ip_addr *dest)
