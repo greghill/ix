@@ -52,6 +52,8 @@ struct mbuf {
 				 * (can happen with recieve-side coalescing) */
 	struct mbuf_iov *iovs;	/* transmit scatter-gather array */
 	unsigned int nr_iov;	/* the number of scatter-gather vectors */
+
+	void (*done) (struct mbuf *m);
 };
 
 #define MBUF_HEADER_LEN		64	/* one cache line */
@@ -116,6 +118,8 @@ struct mbuf {
 #define mbuf_to_iomap(mbuf, pos) \
 	((void *) ((uintptr_t) (pos) + (mbuf)->pool->iomap_offset))
 
+extern void mbuf_default_done(struct mbuf *m);
+
 /**
  * mbuf_alloc - allocate an mbuf from a memory pool
  * @pool: the memory pool
@@ -130,6 +134,7 @@ static inline struct mbuf *mbuf_alloc(struct mempool *pool)
 
 	m->pool = pool;
 	m->next = NULL;
+	m->done = &mbuf_default_done;
 
 	return m;
 }
@@ -160,8 +165,7 @@ static inline machaddr_t mbuf_get_data_machaddr(struct mbuf *m)
  */
 static inline void mbuf_xmit_done(struct mbuf *m)
 {
-	/* FIXME: will need to propogate up to user application */
-	mbuf_free(m);
+	m->done(m);
 }
 
 DECLARE_PERCPU(struct mempool, mbuf_mempool);

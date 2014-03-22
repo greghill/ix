@@ -16,6 +16,11 @@
 
 DEFINE_PERCPU(struct mempool, mbuf_mempool);
 
+void mbuf_default_done(struct mbuf *m)
+{
+	mbuf_free(m);
+}
+
 /**
  * mbuf_init_cpu - allocates the core-local mbuf region
  *
