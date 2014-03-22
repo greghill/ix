@@ -21,8 +21,10 @@ struct mbuf_iov {
  * mbuf_iov_create - creates an mbuf IOV and references the IOV memory
  * @iov: the IOV to create
  * @ent: the reference sg entry
+ *
+ * Returns the length of the mbuf IOV (could be less than the sg entry).
  */
-static inline void
+static inline size_t
 mbuf_iov_create(struct mbuf_iov *iov, struct sg_entry *ent)
 {
 	size_t len = min(ent->len, PGSIZE_2MB - PGOFF_2MB(ent->base));
@@ -31,8 +33,7 @@ mbuf_iov_create(struct mbuf_iov *iov, struct sg_entry *ent)
 	iov->maddr = page_get(ent->base);
 	iov->len = len;
 
-	ent->base = (char *) ent->base + len;
-	ent->len -= len;
+	return len;
 }
 
 /**

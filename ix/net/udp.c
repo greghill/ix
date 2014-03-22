@@ -142,7 +142,7 @@ void bsys_udp_send(void __user *addr, size_t len,
 	pkt->iovs = iovs;
 	ent.base = addr;
 	ent.len = len;
-	mbuf_iov_create(&iovs[0], &ent);
+	len = mbuf_iov_create(&iovs[0], &ent);
 	pkt->nr_iov = 1;
 
 	/*
@@ -150,7 +150,9 @@ void bsys_udp_send(void __user *addr, size_t len,
 	 * can only be one because of the MTU size.
 	 */
 	BUILD_ASSERT(UDP_MAX_LEN < PGSIZE_2MB);
-	if (ent.len) {
+	if (ent.len != len) {
+		ent.base = (void *) ((uintptr_t) ent.base + len);
+		ent.len -= len;
 		iovs[1].base = ent.base;
 		iovs[1].maddr = page_get(ent.base);
 		iovs[1].len = ent.len;
