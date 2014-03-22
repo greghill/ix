@@ -1,6 +1,7 @@
 #include <stddef.h>
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "syscall.h"
 #include "ix.h"
@@ -17,7 +18,7 @@ static bsysfn_t usys_tbl[USYS_NR];
 void ix_poll(void)
 {
 	int i;
-	sys_bpoll(&karr->descs[0], karr->len);
+	sys_bpoll(karr->descs, karr->len);
 	karr->len = 0;
 
 	for (i = 0; i < uarr->len; i++) {
@@ -31,7 +32,7 @@ void ix_poll(void)
  */
 void ix_flush(void)
 {
-	sys_bcall(&karr->descs[0], karr->len);
+	sys_bcall(karr->descs, karr->len);
 	karr->len = 0;
 }
 
@@ -69,3 +70,4 @@ int ix_init(struct ix_ops *ops)
 
 	return 0;
 }
+

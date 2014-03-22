@@ -215,13 +215,14 @@ static inline void usys_udp_send_ret(ssize_t ret)
 /* FIXME: could use Sparse to statically check */
 #define __user
 
-extern ssize_t bsys_udp_send(void __user *addr, size_t len, struct ip_tuple __user *id);
-extern ssize_t bsys_udp_sendv(struct sg_entry __user *ents[], unsigned int nrents,
-			      struct ip_tuple __user *id);
-extern int bsys_udp_recv_done(uint64_t count);
+extern void bsys_udp_send(void __user *addr, size_t len,
+			  struct ip_tuple __user *id);
+extern void bsys_udp_sendv(struct sg_entry __user *ents, unsigned int nrents,
+			   struct ip_tuple __user *id);
+extern void bsys_udp_recv_done(uint64_t count);
 
-extern int sys_bpoll(struct bsys_desc __user *d[], unsigned int nr);
-extern int sys_bcall(struct bsys_desc __user *d[], unsigned int nr);
+extern int sys_bpoll(struct bsys_desc __user *d, unsigned int nr);
+extern int sys_bcall(struct bsys_desc __user *d, unsigned int nr);
 extern void *sys_baddr(void);
 
 struct dune_tf *tf;

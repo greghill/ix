@@ -53,7 +53,7 @@ static int bsys_dispatch_one(struct bsys_desc __user *d)
 	return 0;
 }
 
-static int bsys_dispatch(struct bsys_desc __user *d[], unsigned int nr)
+static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
 {
 	unsigned long i;
 	int ret;
@@ -64,7 +64,7 @@ static int bsys_dispatch(struct bsys_desc __user *d[], unsigned int nr)
 		return -EFAULT;
 
 	for (i = 0; i < nr; i++) {
-		ret = bsys_dispatch_one(d[i]);
+		ret = bsys_dispatch_one(&d[i]);
 		if (unlikely(ret))
 			return ret;
 	}
@@ -79,7 +79,7 @@ static int bsys_dispatch(struct bsys_desc __user *d[], unsigned int nr)
  *
  * Returns 0 if successful, otherwise failure.
  */
-int sys_bpoll(struct bsys_desc __user *d[], unsigned int nr)
+int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 {
 	int ret;
 
@@ -102,7 +102,7 @@ int sys_bpoll(struct bsys_desc __user *d[], unsigned int nr)
  *
  * Returns 0 if successful, otherwise failure.
  */
-int sys_bcall(struct bsys_desc __user *d[], unsigned int nr)
+int sys_bcall(struct bsys_desc __user *d, unsigned int nr)
 {
 	return bsys_dispatch(d, nr);
 }

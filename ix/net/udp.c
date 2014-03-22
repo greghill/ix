@@ -118,11 +118,11 @@ void bsys_udp_send(void __user *addr, size_t len,
 	int ret;
 
 	/* validate user input */
-	if (unlikely(len > UDP_MAX_LEN)) {}
+	if (unlikely(len > UDP_MAX_LEN)) {
 		usys_udp_send_ret(-EINVAL);
 		return;
 	}
-	if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple)))) {}
+	if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple)))) {
 		usys_udp_send_ret(-EFAULT);
 		return;
 	}
@@ -164,7 +164,7 @@ void bsys_udp_send(void __user *addr, size_t len,
 	}
 }
 
-void bsys_udp_sendv(struct sg_entry __user *ents[], unsigned int nrents,
+void bsys_udp_sendv(struct sg_entry __user *ents, unsigned int nrents,
 		    struct ip_tuple __user *id)
 {
 	usys_udp_send_ret(-ENOSYS);

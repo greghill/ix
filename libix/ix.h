@@ -11,6 +11,7 @@ struct ix_ops {
 	void (*udp_send_ret)	(int64_t ret);
 };
 
+extern void ix_flush(void);
 extern struct bsys_arr *karr;
 
 static inline void ix_udp_send(void *addr, size_t len, struct ip_tuple *id)
@@ -39,5 +40,5 @@ static inline void ix_udp_recv_done(uint64_t count)
 }
 
 extern void ix_poll(void);
-extern void ix_flush(void);
 extern int ix_init(struct ix_ops *ops);
+
