@@ -54,6 +54,7 @@ struct mbuf {
 	unsigned int nr_iov;	/* the number of scatter-gather vectors */
 
 	void (*done) (struct mbuf *m);
+	unsigned long done_data;
 };
 
 #define MBUF_HEADER_LEN		64	/* one cache line */

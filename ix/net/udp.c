@@ -67,6 +67,17 @@ void udp_input(struct mbuf *pkt, struct ip_hdr *iphdr, struct udp_hdr *udphdr)
 	usys_udp_recv(mbuf_to_iomap(pkt, data), len, mbuf_to_iomap(pkt, id));
 }
 
+static void udp_mbuf_done(struct mbuf *pkt)
+{
+	int i;
+
+	for (i = 0; i < pkt->nr_iov; i++)
+		mbuf_iov_free(&pkt->iovs[i]);
+
+	usys_udp_send_ret(pkt->done_data, 0);
+	mbuf_free(pkt);
+}
+
 static int udp_output(struct mbuf *pkt, struct ip_tuple *id, size_t len)
 {
 	struct eth_hdr *ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
@@ -105,35 +116,38 @@ static int udp_output(struct mbuf *pkt, struct ip_tuple *id, size_t len)
  * @addr: the user-level payload address in memory
  * @len: the length of the payload
  * @id: the IP destination
+ * @cookie: a user-level tag for the request 
  *
  * Returns the number of bytes sent, or < 0 if fail.
  */
 void bsys_udp_send(void __user *addr, size_t len,
-		      struct ip_tuple __user *id)
+		   struct ip_tuple __user *id,
+		   unsigned long cookie)
 {
 	struct ip_tuple tmp;
 	struct mbuf *pkt;
 	struct mbuf_iov *iovs;
 	struct sg_entry ent;
 	int ret;
+	int i;
 
 	/* validate user input */
 	if (unlikely(len > UDP_MAX_LEN)) {
-		usys_udp_send_ret(-EINVAL);
+		usys_udp_send_ret(cookie, -EINVAL);
 		return;
 	}
 	if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple)))) {
-		usys_udp_send_ret(-EFAULT);
+		usys_udp_send_ret(cookie, -EFAULT);
 		return;
 	}
 	if (unlikely(!uaccess_zc_okay(addr, len))) {
-		usys_udp_send_ret(-EFAULT);
+		usys_udp_send_ret(cookie, -EFAULT);
 		return;
 	}
 
 	pkt = mbuf_alloc_local();
 	if (unlikely(!pkt)) {
-		usys_udp_send_ret(-ENOBUFS);
+		usys_udp_send_ret(cookie, -ENOBUFS);
 		return;
 	}
 
@@ -159,17 +173,22 @@ void bsys_udp_send(void __user *addr, size_t len,
 		pkt->nr_iov = 2;
 	}
 
+	pkt->done = &udp_mbuf_done;
+	pkt->done_data = cookie;
+
 	ret = udp_output(pkt, &tmp, len);
 	if (unlikely(ret)) {
+		for (i = 0; i < pkt->nr_iov; i++)
+			mbuf_iov_free(&pkt->iovs[i]);
 		mbuf_free(pkt);
-		usys_udp_send_ret(ret);
+		usys_udp_send_ret(cookie, ret);
 	}
 }
 
 void bsys_udp_sendv(struct sg_entry __user *ents, unsigned int nrents,
-		    struct ip_tuple __user *id)
+		    struct ip_tuple __user *id, unsigned long cookie)
 {
-	usys_udp_send_ret(-ENOSYS);
+	usys_udp_send_ret(cookie, -ENOSYS);
 }
 
 /**

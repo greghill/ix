@@ -6,8 +6,6 @@
 #include "syscall.h"
 #include "ix.h"
 
-#define NUM_KARR_DESCS	1024
-
 static struct bsys_arr *uarr;
 struct bsys_arr *karr;
 static bsysfn_t usys_tbl[USYS_NR];
@@ -39,10 +37,11 @@ void ix_flush(void)
 /**
  * ix_init - initializes libIX
  * @ops: user-provided event handlers
+ * @batch_depth: the maximum number of outstanding requests to the kernel
  *
  * Returns 0 if successful, otherwise fail.
  */
-int ix_init(struct ix_ops *ops)
+int ix_init(struct ix_ops *ops, int batch_depth)
 {
 	if (!ops)
 		return -EINVAL;
@@ -61,12 +60,12 @@ int ix_init(struct ix_ops *ops)
 		return -EFAULT;
 
 	karr = malloc(sizeof(struct bsys_arr) +
-		      sizeof(struct bsys_desc) * NUM_KARR_DESCS);
+		      sizeof(struct bsys_desc) * batch_depth);
 	if (!karr)
 		return -ENOMEM;
 	
 	karr->len = 0;
-	karr->max_len = NUM_KARR_DESCS;
+	karr->max_len = batch_depth;
 
 	return 0;
 }

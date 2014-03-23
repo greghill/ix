@@ -111,11 +111,13 @@ enum {
  * @addr: the address of the packet data
  * @len: the length of the packet data
  * @id: the UDP 4-tuple
+ * @cookie: a user-level tag for the request
  */
 static inline void ksys_udp_send(struct bsys_desc *d, void *addr,
-				 size_t len, struct ip_tuple *id)
+				 size_t len, struct ip_tuple *id,
+				 unsigned long cookie)
 {
-	BSYS_DESC_3ARG(d, KSYS_UDP_SEND, addr, len, id);
+	BSYS_DESC_4ARG(d, KSYS_UDP_SEND, addr, len, id, cookie);
 }
 
 /**
@@ -123,13 +125,16 @@ static inline void ksys_udp_send(struct bsys_desc *d, void *addr,
  * @d: the syscall descriptor to program
  * @ents: the scatter-gather vector array
  * @nrents: the number of scatter-gather vectors
+ * @cookie: a user-level tag for the request
  * @id: the UDP 4-tuple
  */
 static inline void ksys_udp_sendv(struct bsys_desc *d,
-				  struct sg_entry *ents[],
-				  unsigned int nrents, struct ip_tuple *id)
+				  struct sg_entry *ents,
+				  unsigned int nrents,
+				  struct ip_tuple *id,
+				  unsigned long cookie)
 {
-	BSYS_DESC_3ARG(d, KSYS_UDP_SENDV, ents, nrents, id);
+	BSYS_DESC_4ARG(d, KSYS_UDP_SENDV, ents, nrents, id, cookie);
 }
 
 /**
@@ -195,16 +200,17 @@ static inline void usys_udp_recv(void *addr, size_t len, struct ip_tuple *id)
 
 /**
  * usys_udp_send_done - Notifies the user that a UDP packet send completed
+ * @cookie: a user-level token for the request
  * @ret: zero if successful, otherwise fail.
  *
  * NOTE: Calling this function allows the user application to unpin memory
  * that was locked for zero copy transfer. Acknowledgements are always in
  * FIFO order.
  */
-static inline void usys_udp_send_ret(ssize_t ret)
+static inline void usys_udp_send_ret(unsigned long cookie, ssize_t ret)
 {
 	struct bsys_desc *d = usys_next();
-	BSYS_DESC_1ARG(d, USYS_UDP_SEND_RET, ret);
+	BSYS_DESC_2ARG(d, USYS_UDP_SEND_RET, cookie, ret);
 }
 
 
@@ -216,9 +222,12 @@ static inline void usys_udp_send_ret(ssize_t ret)
 #define __user
 
 extern void bsys_udp_send(void __user *addr, size_t len,
-			  struct ip_tuple __user *id);
-extern void bsys_udp_sendv(struct sg_entry __user *ents, unsigned int nrents,
-			   struct ip_tuple __user *id);
+			  struct ip_tuple __user *id,
+			  unsigned long cookie);
+extern void bsys_udp_sendv(struct sg_entry __user *ents,
+			   unsigned int nrents,
+			   struct ip_tuple __user *id,
+			   unsigned long cookie);
 extern void bsys_udp_recv_done(uint64_t count);
 
 extern int sys_bpoll(struct bsys_desc __user *d, unsigned int nr);
