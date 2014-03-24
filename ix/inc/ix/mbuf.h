@@ -119,6 +119,16 @@ struct mbuf {
 #define mbuf_to_iomap(mbuf, pos) \
 	((void *) ((uintptr_t) (pos) + (mbuf)->pool->iomap_offset))
 
+/**
+ * iomap_to_mbuf - determines the mbuf pointer based on the IOMAP address
+ * @pool: the containing memory pool
+ * @pos: the IOMAP pointer
+ *
+ * Returns an address.
+ */
+#define iomap_to_mbuf(pool, pos) \
+	((void *) ((uintptr_t) (pos) - (pool)->iomap_offset))
+
 extern void mbuf_default_done(struct mbuf *m);
 
 /**

@@ -23,9 +23,6 @@
 #define UDP_MAX_LEN \
 	(ETH_MTU - sizeof(struct ip_hdr) - sizeof(struct udp_hdr))
 
-static DEFINE_PERCPU(struct mbuf *, udp_free_head);
-static DEFINE_PERCPU(struct mbuf **, udp_free_pos);
-
 void udp_input(struct mbuf *pkt, struct ip_hdr *iphdr, struct udp_hdr *udphdr)
 {
 	void *data = mbuf_nextd(udphdr, void *);
@@ -60,10 +57,6 @@ void udp_input(struct mbuf *pkt, struct ip_hdr *iphdr, struct udp_hdr *udphdr)
 	id->src_port = ntoh16(udphdr->src_port);
 	id->dst_port = ntoh16(udphdr->dst_port);
 
-	pkt->next = NULL;
-	*percpu_get(udp_free_pos) = pkt;
-	percpu_get(udp_free_pos) = &pkt->next;
-
 	usys_udp_recv(mbuf_to_iomap(pkt, data), len, mbuf_to_iomap(pkt, id));
 }
 
@@ -78,7 +71,8 @@ static void udp_mbuf_done(struct mbuf *pkt)
 	mbuf_free(pkt);
 }
 
-static int udp_output(struct mbuf *pkt, struct ip_tuple *id, size_t len)
+static int udp_output(struct mbuf *__restrict pkt,
+		      struct ip_tuple *__restrict id, size_t len)
 {
 	struct eth_hdr *ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
 	struct ip_hdr *iphdr = mbuf_nextd(ethhdr, struct ip_hdr *);
@@ -120,8 +114,8 @@ static int udp_output(struct mbuf *pkt, struct ip_tuple *id, size_t len)
  *
  * Returns the number of bytes sent, or < 0 if fail.
  */
-void bsys_udp_send(void __user *addr, size_t len,
-		   struct ip_tuple __user *id,
+void bsys_udp_send(void __user *__restrict addr, size_t len,
+		   struct ip_tuple __user *__restrict id,
 		   unsigned long cookie)
 {
 	struct ip_tuple tmp;
@@ -191,31 +185,37 @@ void bsys_udp_sendv(struct sg_entry __user *ents, unsigned int nrents,
 	usys_udp_send_ret(cookie, -ENOSYS);
 }
 
-/**
- * bsys_udp_recv_done - acknowledge received UDP packets
- * @count: the number of packets to acknowledge
- */
-void bsys_udp_recv_done(uint64_t count)
-{
-	struct mbuf *pos = percpu_get(udp_free_head);
+#define MAX_MBUF_PAGE_OFF	(PGSIZE_2MB - (PGSIZE_2MB % MBUF_LEN))
 
-	while (count && pos) {
-		struct mbuf *tmp = pos;
-		pos = pos->next;
-		count--;
-		mbuf_free(tmp);
+/**
+ * bsys_udp_recv_done - inform the kernel done using a UDP packet buffer
+ * @iomap: a pointer anywhere inside the mbuf
+ */
+void bsys_udp_recv_done(void *iomap)
+{
+	struct mempool *pool = &percpu_get(mbuf_mempool);
+	struct mbuf *m;
+	void *addr = iomap_to_mbuf(pool, iomap);
+	size_t off = PGOFF_2MB(addr);
+	
+	/* validate the address */
+	if (unlikely((uintptr_t) addr < (uintptr_t) pool->buf ||
+		     (uintptr_t) addr >=
+			(uintptr_t) pool->buf + pool->nr_pages * PGSIZE_2MB ||
+		     off >= MAX_MBUF_PAGE_OFF)) {
+		log_err("udp: user tried to free an invalid mbuf"
+			"at address %p\n", addr);
+		return;
 	}
 
-	percpu_get(udp_free_head) = pos;
-	if (!pos)
-		percpu_get(udp_free_pos) = &percpu_get(udp_free_head);
-}
+	m = (struct mbuf *) (PGADDR_2MB(addr) + (off / MBUF_LEN) * MBUF_LEN);
 
-/**
- * udp_init - initialize UDP support
- */
-void udp_init(void)
-{
-	percpu_get(udp_free_pos) = &percpu_get(udp_free_head);
+	if (unlikely(m->done != &udp_mbuf_done)) {
+		log_err("udp: user tried to free an already free mbuf\n");
+		return;
+	}
+
+	m->done = NULL;
+	mbuf_free(m);
 }
 

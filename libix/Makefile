@@ -19,7 +19,7 @@ depend: .depend
 include .depend
 
 libix.a: $(OBJS)
-	$(AR) cru $(@) $(OBJ)
+	$(AR) cru $(@) $(OBJS)
 
 clean:
 	rm $(OBJS) libix.a .depend

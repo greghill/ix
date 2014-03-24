@@ -8,6 +8,8 @@
 #include <ix/types.h>
 #include <ix/cpu.h>
 
+#define SYSCALL_START	0x100000
+
 /*
  * System calls
  */
@@ -138,17 +140,16 @@ static inline void ksys_udp_sendv(struct bsys_desc *d,
 }
 
 /**
- * ksys_udp_recv_done - acknowledge the receipt of UDP packets
+ * ksys_udp_recv_done - inform the kernel done using a UDP packet buffer
  * @d: the syscall descriptor to program
- * @count: the number of packet recieves to acknowledge
+ * @iomap: an address anywhere inside the mbuf
  *
  * NOTE: Calling this function allows the kernel to free mbuf's when
- * the application has finished using them. Acknowledgements are always
- * in FIFO order.
+ * the application has finished using them.
  */
-static inline void ksys_udp_recv_done(struct bsys_desc *d, uint64_t count)
+static inline void ksys_udp_recv_done(struct bsys_desc *d, void *iomap)
 {
-	BSYS_DESC_1ARG(d, KSYS_UDP_RECV_DONE, count);
+	BSYS_DESC_1ARG(d, KSYS_UDP_RECV_DONE, iomap);
 }
 
 
@@ -228,7 +229,7 @@ extern void bsys_udp_sendv(struct sg_entry __user *ents,
 			   unsigned int nrents,
 			   struct ip_tuple __user *id,
 			   unsigned long cookie);
-extern void bsys_udp_recv_done(uint64_t count);
+extern void bsys_udp_recv_done(void *iomap);
 
 extern int sys_bpoll(struct bsys_desc __user *d, unsigned int nr);
 extern int sys_bcall(struct bsys_desc __user *d, unsigned int nr);

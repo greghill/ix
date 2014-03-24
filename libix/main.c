@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <errno.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -12,17 +13,28 @@ static bsysfn_t usys_tbl[USYS_NR];
 
 /**
  * ix_poll - flush pending commands and check for new commands
+ *
+ * Returns the number of new commands received.
  */
-void ix_poll(void)
+int ix_poll(void)
 {
 	int i;
-	sys_bpoll(karr->descs, karr->len);
+	int ret;
+
+	ret = sys_bpoll(karr->descs, karr->len);
+	if (ret) {
+		printf("libix: encountered a fatal memory fault\n");
+		exit(-1);
+	}
+
 	karr->len = 0;
 
 	for (i = 0; i < uarr->len; i++) {
 		struct bsys_desc d = uarr->descs[i];
 		usys_tbl[d.sysnr](d.arga, d.argb, d.argc, d.argd);
 	}
+
+	return uarr->len;
 }
 
 /**
@@ -30,7 +42,11 @@ void ix_poll(void)
  */
 void ix_flush(void)
 {
-	sys_bcall(karr->descs, karr->len);
+	if (sys_bcall(karr->descs, karr->len)) {
+		printf("libix: encountered a fatal memory fault\n");
+		exit(-1);
+	}
+
 	karr->len = 0;
 }
 

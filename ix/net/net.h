@@ -23,7 +23,6 @@ extern void icmp_input(struct mbuf *pkt, struct icmp_hdr *hdr, int len);
 /* Unreliable Datagram Protocol (UDP) definitions */
 extern void udp_input(struct mbuf *pkt, struct ip_hdr *iphdr,
 		      struct udp_hdr *udphdr);
-extern void udp_init(void);
 
 /* Transmission Control Protocol (TCP) definitions */
 /* FIXME: change when we integrate better with LWIP */
