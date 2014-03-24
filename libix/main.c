@@ -68,8 +68,8 @@ int ix_init(struct ix_ops *ops, int batch_depth)
 		return -EINVAL;
 
 	/* unpack the ops into a more efficient representation */
-	usys_tbl[USYS_UDP_RECV]		= (bsysfn_t) &ops->udp_recv;
-	usys_tbl[USYS_UDP_SEND_RET]	= (bsysfn_t) &ops->udp_send_ret;
+	usys_tbl[USYS_UDP_RECV]		= (bsysfn_t) ops->udp_recv;
+	usys_tbl[USYS_UDP_SEND_RET]	= (bsysfn_t) ops->udp_send_ret;
 
 	uarr = sys_baddr();
 	if (!uarr)
