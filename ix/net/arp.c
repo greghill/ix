@@ -281,6 +281,37 @@ int arp_lookup_mac(struct ip_addr *addr, struct eth_addr *mac)
 	return 0;
 }
 
+/**
+ * arp_insert - insert a static entry into the ARP table
+ * @addr: the IP address to insert
+ * @mac: the MAC address to insert
+ *
+ * Returns 0 if successful.
+ */
+int arp_insert(struct ip_addr *addr, struct eth_addr *mac)
+{
+	struct arp_entry *e;
+	struct hlist_head *h;
+
+	e = arp_lookup(addr, false);
+	if (!e) {
+		h = &arp_tbl[arp_ip_to_idx(addr)];
+		e = (struct arp_entry *)mempool_alloc(&arp_mempool);
+		if (unlikely(!e))
+			return -ENOMEM;
+		e->addr.addr = addr->addr;
+		e->flags = ARP_FLAG_VALID;
+		e->retries = 0;
+		timer_init_entry(&e->timer, NULL);
+		hlist_add_head(h, &e->link);
+	}
+
+	timer_del(&e->timer);
+	e->mac = *mac;
+
+	return 0;
+}
+
 static void arp_timer_handler(struct timer *t)
 {
 	struct arp_entry *e = container_of(t, struct arp_entry, timer);
