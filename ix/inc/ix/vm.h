@@ -7,9 +7,59 @@
 
 #pragma once
 
+#include <ix/mem.h>
 #include <ix/lock.h>
 
+/* FIXME: this should be defined in inc/asm */
+#include <mmu-x86.h>
+
 DECLARE_SPINLOCK(vm_lock);
+
+/* FIXME: a bunch of gross hacks until we can better integrate libdune */
+#define UINT64(x) ((uint64_t) x)
+#define CAST64(x) ((uint64_t) x)
+typedef uint64_t ptent_t;
+#define NPTBITS	9
+#ifndef pgroot
+extern ptent_t *pgroot;
+#endif
+
+/**
+ * vm_lookup_phys - determine a physical address from a virtual address
+ * @virt: the virtual address
+ * @pgsize: the size of the page at the address (must be correct).
+ *
+ * Returns a physical address.
+ */
+static inline physaddr_t vm_lookup_phys(void *virt, int pgsize)
+{
+	ptent_t *dir = pgroot;
+	ptent_t pte;
+
+	pte = dir[PDX(3, virt)];
+	if (!(PTE_FLAGS(pte) & PTE_P))
+		return 0;
+
+	dir = (ptent_t *) PTE_ADDR(pte);
+	pte = dir[PDX(2, virt)];
+	if (!(PTE_FLAGS(pte) & PTE_P))
+		return 0;
+	if (pgsize == PGSIZE_1GB)
+		return (physaddr_t) PTE_ADDR(pte);
+
+	dir = (ptent_t *) PTE_ADDR(pte);
+	pte = dir[PDX(1, virt)];
+	if (!(PTE_FLAGS(pte) & PTE_P))
+		return 0;
+	if (pgsize == PGSIZE_2MB)
+		return (physaddr_t) PTE_ADDR(pte);
+
+	dir = (ptent_t *) PTE_ADDR(pte);
+	pte = dir[PDX(0, virt)];
+	if (!(PTE_FLAGS(pte) & PTE_P))
+		return 0;
+	return (physaddr_t) PTE_ADDR(pte);
+}
 
 #define VM_PERM_R	0x1
 #define VM_PERM_W	0x2

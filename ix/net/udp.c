@@ -8,6 +8,7 @@
 #include <ix/log.h>
 #include <ix/syscall.h>
 #include <ix/uaccess.h>
+#include <ix/vm.h>
 
 #include <net/ip.h>
 #include <net/udp.h>
@@ -114,7 +115,7 @@ static int udp_output(struct mbuf *__restrict pkt,
  *
  * Returns the number of bytes sent, or < 0 if fail.
  */
-void bsys_udp_send(void __user *__restrict addr, size_t len,
+void bsys_udp_send(void __user *__restrict vaddr, size_t len,
 		   struct ip_tuple __user *__restrict id,
 		   unsigned long cookie)
 {
@@ -122,6 +123,7 @@ void bsys_udp_send(void __user *__restrict addr, size_t len,
 	struct mbuf *pkt;
 	struct mbuf_iov *iovs;
 	struct sg_entry ent;
+	void *addr;
 	int ret;
 	int i;
 
@@ -134,7 +136,13 @@ void bsys_udp_send(void __user *__restrict addr, size_t len,
 		usys_udp_send_ret(cookie, -EFAULT);
 		return;
 	}
-	if (unlikely(!uaccess_zc_okay(addr, len))) {
+	if (unlikely(!uaccess_zc_okay(vaddr, len))) {
+		usys_udp_send_ret(cookie, -EFAULT);
+		return;
+	}
+
+	addr = (void *) vm_lookup_phys(vaddr, PGSIZE_2MB);
+	if (unlikely(!addr)) {
 		usys_udp_send_ret(cookie, -EFAULT);
 		return;
 	}

@@ -1,11 +1,13 @@
 #include <stddef.h>
 #include <stdio.h>
+#include <string.h>
+#include <errno.h>
 
 #include <ix.h>
 
 #define BATCH_DEPTH	32
 
-struct ip_tuple ids[BATCH_DEPTH];
+struct ip_tuple *ids;
 
 static void udp_recv(void *addr, size_t len, struct ip_tuple *src)
 {
@@ -20,6 +22,10 @@ static void udp_recv(void *addr, size_t len, struct ip_tuple *src)
 
 static void udp_send_ret(unsigned long cookie, int64_t ret)
 {
+	if (ret) {
+		printf("packet %lx had error %ld\n", cookie, ret);
+	}
+
 	ix_udp_recv_done((void *) cookie);
 }
 
@@ -37,6 +43,10 @@ int main(int argc, char *argv[])
 		printf("unable to init IX\n");
 		return ret;
 	}
+
+	ids = malloc(sizeof(struct ip_tuple) * BATCH_DEPTH);
+	if (!ids)
+		return -ENOMEM;
 
 	while (1) {
 		ix_poll();
