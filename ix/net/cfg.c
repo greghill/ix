@@ -15,6 +15,8 @@
 #include <net/ip.h>
 #include <net/ethernet.h>
 
+#include "net.h"
+
 struct ip_addr cfg_host_addr;
 struct ip_addr cfg_broadcast_addr;
 struct ip_addr cfg_gateway_addr;
@@ -29,6 +31,20 @@ static int parse_ip_addr(FILE *fd, uint32_t *addr)
 		return -EINVAL;
 
 	*addr = MAKE_IP_ADDR(a, b, c, d);
+
+	return 0;
+}
+
+static int parse_eth_addr(FILE *fd, struct eth_addr *mac)
+{
+	struct eth_addr tmp;
+
+	if (fscanf(fd, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+	           &tmp.addr[0], &tmp.addr[1], &tmp.addr[2],
+		   &tmp.addr[3], &tmp.addr[4], &tmp.addr[5]) != 6)
+		return -EINVAL;
+
+	*mac = tmp;
 
 	return 0;
 }
@@ -63,6 +79,18 @@ int read_configuration(const char *path)
 		} else if (!strcmp(buffer, "mask")) {
 			if (parse_ip_addr(fd, &cfg_mask))
 				return -EINVAL;
+		} else if (!strcmp(buffer, "arp")) {
+			struct ip_addr addr;
+			struct eth_addr mac;
+
+			if (parse_ip_addr(fd, &addr.addr))
+				return -EINVAL;
+
+			if (parse_eth_addr(fd, &mac))
+				return -EINVAL;
+
+			if (arp_insert(&addr, &mac))
+				log_warn("cfg: failed to insert static ARP entry.\n");
 		} else {
 			log_err("cfg: unrecognized config keyword %s\n", buffer);
 			return -EINVAL;

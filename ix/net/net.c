@@ -31,6 +31,12 @@ int net_init(void)
 
 	log_info("net: starting networking\n");
 
+	ret = arp_init();
+	if (ret) {
+		log_err("net: failed to initialize arp\n");
+		return ret;
+	}
+
 	ret = read_configuration("ix.cfg");
 	if (ret) {
 		log_err("init: failed to read and parse configuration\n");
@@ -40,12 +46,6 @@ int net_init(void)
 	net_dump_cfg();
 
 	eth_dev_get_hw_mac(eth_dev, &cfg_mac);
-
-	ret = arp_init();
-	if (ret) {
-		log_err("net: failed to initialize arp\n");
-		return ret;
-	}
 
 	udp_init();
 

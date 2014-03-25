@@ -2,3 +2,4 @@ host_addr 10.79.6.113
 broadcast_addr 10.79.6.255
 gateway_addr 10.79.6.0
 mask 255.255.255.0
+arp 192.168.21.11 b8:ca:3a:6a:b9:18
