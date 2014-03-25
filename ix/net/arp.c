@@ -40,6 +40,7 @@ struct arp_entry {
 
 #define ARP_FLAG_RESOLVING	0x1
 #define ARP_FLAG_VALID		0x2
+#define ARP_FLAG_STATIC		0x4
 
 #define ARP_REFRESH_TIMEOUT	10 * ONE_SECOND
 #define ARP_RESOLVE_TIMEOUT	1 * ONE_SECOND
@@ -95,6 +96,9 @@ static int arp_update_mac(struct ip_addr *addr,
 	struct arp_entry *e = arp_lookup(addr, create_okay);
 	if (unlikely(!e))
 		return -ENOMEM;
+
+	if (e->flags & ARP_FLAG_STATIC)
+		return 0;
 
 #ifdef DEBUG
 	if (!(e->flags & ARP_FLAG_VALID)) {
@@ -300,7 +304,7 @@ int arp_insert(struct ip_addr *addr, struct eth_addr *mac)
 		if (unlikely(!e))
 			return -ENOMEM;
 		e->addr.addr = addr->addr;
-		e->flags = ARP_FLAG_VALID;
+		e->flags = ARP_FLAG_VALID | ARP_FLAG_STATIC;
 		e->retries = 0;
 		timer_init_entry(&e->timer, NULL);
 		hlist_add_head(h, &e->link);
