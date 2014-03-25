@@ -83,9 +83,10 @@ int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 {
 	int ret;
 
+	usys_reset();
+
 	timer_run();
 	eth_tx_reclaim(eth_tx);
-	usys_reset();
 	eth_rx_poll(eth_rx);
 
 	ret = bsys_dispatch(d, nr);
