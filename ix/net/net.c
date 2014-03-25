@@ -31,6 +31,12 @@ int net_init(void)
 
 	log_info("net: starting networking\n");
 
+	ret = read_configuration("ix.cfg");
+	if (ret) {
+		log_err("init: failed to read and parse configuration\n");
+		return ret;
+	}
+
 	net_dump_cfg();
 
 	eth_dev_get_hw_mac(eth_dev, &cfg_mac);
