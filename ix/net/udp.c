@@ -57,6 +57,7 @@ void udp_input(struct mbuf *pkt, struct ip_hdr *iphdr, struct udp_hdr *udphdr)
 	id->dst_ip = ntoh32(iphdr->dst_addr.addr);
 	id->src_port = ntoh16(udphdr->src_port);
 	id->dst_port = ntoh16(udphdr->dst_port);
+	pkt->done = (void *) 0xDEADBEEF;
 
 	usys_udp_recv(mbuf_to_iomap(pkt, data), len, mbuf_to_iomap(pkt, id));
 }
@@ -218,7 +219,7 @@ void bsys_udp_recv_done(void *iomap)
 
 	m = (struct mbuf *) (PGADDR_2MB(addr) + (off / MBUF_LEN) * MBUF_LEN);
 
-	if (unlikely(m->done != &udp_mbuf_done)) {
+	if (unlikely(m->done != (void *) 0xDEADBEEF)) {
 		log_err("udp: user tried to free an already free mbuf\n");
 		return;
 	}
