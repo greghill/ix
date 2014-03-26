@@ -169,6 +169,7 @@ enum tcp_state {
  */
 #define TCP_PCB_COMMON(type) \
   type *next; /* for the linked list */ \
+  type *hash_bucket_next; /* for the hash bucket linked list */ \
   void *callback_arg; \
   /* the accept callback for listen- and normal pcbs, if LWIP_CALLBACK_API */ \
   DEF_ACCEPT_CALLBACK \
