@@ -7,7 +7,7 @@
 
 #define BATCH_DEPTH	32
 
-struct ip_tuple *ids;
+static struct ip_tuple *ids;
 
 static void udp_recv(void *addr, size_t len, struct ip_tuple *src)
 {

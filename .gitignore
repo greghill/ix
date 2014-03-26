@@ -24,4 +24,8 @@ ix/ix.cfg
 *.ko
 *.symvers
 modules.order
+apps/udp/linux_server
+apps/udp/linux_client
+apps/udp/ix_server
+apps/udp/ix_client
 
