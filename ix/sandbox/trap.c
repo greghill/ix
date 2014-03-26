@@ -598,14 +598,15 @@ static void syscall_do(struct dune_tf *tf)
 		err(1, "pthread_mutex_unlock()");
 }
 
+#define SYSCALL_START	0x100000
 extern void do_syscall(struct dune_tf *tf, uint64_t sysnr);
 
 static void syscall_handler(struct dune_tf *tf)
 {
 //	printf("Syscall No. %d\n", tf->rax);
 
-	if ((long) tf->rax < 0)
-		return do_syscall(tf, -((long) tf->rax));
+	if (tf->rax >= SYSCALL_START)
+		return do_syscall(tf, tf->rax - SYSCALL_START);
 
 	if (syscall_check_params(tf) == -1)
 		return;

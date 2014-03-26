@@ -9,7 +9,7 @@ static inline long __syscall_0(long sysnr)
 	register long ret asm("rax");
 
 	asm volatile("syscall" : "=a" (ret) :
-		     "0" (-sysnr) :
+		     "0" (sysnr + SYSCALL_START) :
 		     "memory", "cx", "r11");
 
 	return ret;
@@ -21,7 +21,7 @@ static inline long __syscall_1(long sysnr, long arg0)
 	register long rdi asm("rdi") = arg0;
 
 	asm volatile("syscall" : "=a" (ret) :
-		     "0" (-sysnr), "r" (rdi) :
+		     "0" (sysnr + SYSCALL_START), "r" (rdi) :
 		     "memory", "cx", "r11");
 
 	return ret;
@@ -34,7 +34,7 @@ static inline long __syscall_2(long sysnr, long arg0, long arg1)
 	register long rsi asm("rsi") = arg1;
 
 	asm volatile("syscall" : "=a" (ret) :
-		     "0" (-sysnr), "r" (rdi), "r" (rsi) :
+		     "0" (sysnr + SYSCALL_START), "r" (rdi), "r" (rsi) :
 		     "memory", "cx", "r11");
 
 	return ret;
@@ -48,7 +48,8 @@ static inline long __syscall_3(long sysnr, long arg0, long arg1, long arg2)
 	register long rdx asm("rdx") = arg2;
 
 	asm volatile("syscall" : "=a" (ret) :
-		     "0" (-sysnr), "r" (rdi), "r" (rsi), "r" (rdx) :
+		     "0" (sysnr + SYSCALL_START), "r" (rdi), "r" (rsi),
+		     "r" (rdx) :
 		     "memory", "cx", "r11");
 
 	return ret;
@@ -64,8 +65,8 @@ static inline long __syscall_4(long sysnr, long arg0, long arg1, long arg2,
 	register long r10 asm("r10") = arg3;
 
 	asm volatile("syscall" : "=a" (ret) :
-		     "0" (-sysnr), "r" (rdi), "r" (rsi), "r" (rdx),
-		     "r" (r10) :
+		     "0" (sysnr + SYSCALL_START), "r" (rdi), "r" (rsi),
+		     "r" (rdx), "r" (r10) :
 		     "memory", "cx", "r11");
 
 	return ret;
@@ -82,8 +83,8 @@ static inline long __syscall_5(long sysnr, long arg0, long arg1, long arg2,
 	register long r8 asm("r8") = arg4;
 
 	asm volatile("syscall" : "=a" (ret) :
-		     "0" (-sysnr), "r" (rdi), "r" (rsi), "r" (rdx),
-		     "r" (r10), "r" (r8) :
+		     "0" (sysnr + SYSCALL_START), "r" (rdi), "r" (rsi),
+		     "r" (rdx), "r" (r10), "r" (r8) :
 		     "memory", "cx", "r11");
 
 	return ret;
@@ -101,8 +102,8 @@ static inline long __syscall_6(long sysnr, long arg0, long arg1, long arg2,
 	register long r9 asm("r9") = arg5;
 
 	asm volatile("syscall" : "=a" (ret) :
-		     "0" (-sysnr), "r" (rdi), "r" (rsi), "r" (rdx),
-		     "r" (r10), "r" (r8), "r" (r9) :
+		     "0" (sysnr + SYSCALL_START), "r" (rdi), "r" (rsi),
+		     "r" (rdx), "r" (r10), "r" (r8), "r" (r9) :
 		     "memory", "cx", "r11");
 
 	return ret;

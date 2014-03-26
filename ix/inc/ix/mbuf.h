@@ -21,8 +21,10 @@ struct mbuf_iov {
  * mbuf_iov_create - creates an mbuf IOV and references the IOV memory
  * @iov: the IOV to create
  * @ent: the reference sg entry
+ *
+ * Returns the length of the mbuf IOV (could be less than the sg entry).
  */
-static inline void
+static inline size_t
 mbuf_iov_create(struct mbuf_iov *iov, struct sg_entry *ent)
 {
 	size_t len = min(ent->len, PGSIZE_2MB - PGOFF_2MB(ent->base));
@@ -31,8 +33,7 @@ mbuf_iov_create(struct mbuf_iov *iov, struct sg_entry *ent)
 	iov->maddr = page_get(ent->base);
 	iov->len = len;
 
-	ent->base = (char *) ent->base + len;
-	ent->len -= len;
+	return len;
 }
 
 /**
@@ -51,6 +52,9 @@ struct mbuf {
 				 * (can happen with recieve-side coalescing) */
 	struct mbuf_iov *iovs;	/* transmit scatter-gather array */
 	unsigned int nr_iov;	/* the number of scatter-gather vectors */
+
+	void (*done) (struct mbuf *m);
+	unsigned long done_data;
 };
 
 #define MBUF_HEADER_LEN		64	/* one cache line */
@@ -116,6 +120,18 @@ struct mbuf {
 	((void *) ((uintptr_t) (pos) + (mbuf)->pool->iomap_offset))
 
 /**
+ * iomap_to_mbuf - determines the mbuf pointer based on the IOMAP address
+ * @pool: the containing memory pool
+ * @pos: the IOMAP pointer
+ *
+ * Returns an address.
+ */
+#define iomap_to_mbuf(pool, pos) \
+	((void *) ((uintptr_t) (pos) - (pool)->iomap_offset))
+
+extern void mbuf_default_done(struct mbuf *m);
+
+/**
  * mbuf_alloc - allocate an mbuf from a memory pool
  * @pool: the memory pool
  *
@@ -129,6 +145,7 @@ static inline struct mbuf *mbuf_alloc(struct mempool *pool)
 
 	m->pool = pool;
 	m->next = NULL;
+	m->done = &mbuf_default_done;
 
 	return m;
 }
@@ -159,8 +176,7 @@ static inline machaddr_t mbuf_get_data_machaddr(struct mbuf *m)
  */
 static inline void mbuf_xmit_done(struct mbuf *m)
 {
-	/* FIXME: will need to propogate up to user application */
-	mbuf_free(m);
+	m->done(m);
 }
 
 DECLARE_PERCPU(struct mempool, mbuf_mempool);

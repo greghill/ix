@@ -8,6 +8,7 @@
 #include <ix/log.h>
 #include <ix/syscall.h>
 #include <ix/uaccess.h>
+#include <ix/vm.h>
 
 #include <net/ip.h>
 #include <net/udp.h>
@@ -23,16 +24,13 @@
 #define UDP_MAX_LEN \
 	(ETH_MTU - sizeof(struct ip_hdr) - sizeof(struct udp_hdr))
 
-static DEFINE_PERCPU(struct mbuf *, udp_free_head);
-static DEFINE_PERCPU(struct mbuf **, udp_free_pos);
-
 void udp_input(struct mbuf *pkt, struct ip_hdr *iphdr, struct udp_hdr *udphdr)
 {
 	void *data = mbuf_nextd(udphdr, void *);
 	uint16_t len = ntoh16(udphdr->len);
 	struct ip_tuple *id;
 
-	if (unlikely(!mbuf_enough_space(pkt, data, len))) {
+	if (unlikely(!mbuf_enough_space(pkt, udphdr, len))) {
 		mbuf_free(pkt);
 		return;
 	}
@@ -59,15 +57,24 @@ void udp_input(struct mbuf *pkt, struct ip_hdr *iphdr, struct udp_hdr *udphdr)
 	id->dst_ip = ntoh32(iphdr->dst_addr.addr);
 	id->src_port = ntoh16(udphdr->src_port);
 	id->dst_port = ntoh16(udphdr->dst_port);
-
-	pkt->next = NULL;
-	*percpu_get(udp_free_pos) = pkt;
-	percpu_get(udp_free_pos) = &pkt->next;
+	pkt->done = (void *) 0xDEADBEEF;
 
 	usys_udp_recv(mbuf_to_iomap(pkt, data), len, mbuf_to_iomap(pkt, id));
 }
 
-static int udp_output(struct mbuf *pkt, struct ip_tuple *id, size_t len)
+static void udp_mbuf_done(struct mbuf *pkt)
+{
+	int i;
+
+	for (i = 0; i < pkt->nr_iov; i++)
+		mbuf_iov_free(&pkt->iovs[i]);
+
+	usys_udp_send_ret(pkt->done_data, 0);
+	mbuf_free(pkt);
+}
+
+static int udp_output(struct mbuf *__restrict pkt,
+		      struct ip_tuple *__restrict id, size_t len)
 {
 	struct eth_hdr *ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
 	struct ip_hdr *iphdr = mbuf_nextd(ethhdr, struct ip_hdr *);
@@ -105,36 +112,54 @@ static int udp_output(struct mbuf *pkt, struct ip_tuple *id, size_t len)
  * @addr: the user-level payload address in memory
  * @len: the length of the payload
  * @id: the IP destination
+ * @cookie: a user-level tag for the request 
  *
  * Returns the number of bytes sent, or < 0 if fail.
  */
-ssize_t bsys_udp_send(void __user *addr, size_t len,
-		      struct ip_tuple __user *id)
+void bsys_udp_send(void __user *__restrict vaddr, size_t len,
+		   struct ip_tuple __user *__restrict id,
+		   unsigned long cookie)
 {
 	struct ip_tuple tmp;
 	struct mbuf *pkt;
 	struct mbuf_iov *iovs;
 	struct sg_entry ent;
+	void *addr;
 	int ret;
+	int i;
 
 	/* validate user input */
-	if (unlikely(len > UDP_MAX_LEN))
-		return -EINVAL;
-	if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple))))
-		return -EINVAL;
-	if (unlikely(!uaccess_zc_okay(addr, len)))
-		return -EINVAL;
+	if (unlikely(len > UDP_MAX_LEN)) {
+		usys_udp_send_ret(cookie, -EINVAL);
+		return;
+	}
+	if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple)))) {
+		usys_udp_send_ret(cookie, -EFAULT);
+		return;
+	}
+	if (unlikely(!uaccess_zc_okay(vaddr, len))) {
+		usys_udp_send_ret(cookie, -EFAULT);
+		return;
+	}
+
+	addr = (void *) vm_lookup_phys(vaddr, PGSIZE_2MB);
+	if (unlikely(!addr)) {
+		usys_udp_send_ret(cookie, -EFAULT);
+		return;
+	}
 
 	pkt = mbuf_alloc_local();
-	if (unlikely(!pkt))
-		return -ENOMEM;
+	if (unlikely(!pkt)) {
+		usys_udp_send_ret(cookie, -ENOBUFS);
+		return;
+	}
 
 	iovs = mbuf_mtod_off(pkt, struct mbuf_iov *,
 			     align_up(UDP_PKT_SIZE, sizeof(uint64_t)));
 	pkt->iovs = iovs;
 	ent.base = addr;
 	ent.len = len;
-	mbuf_iov_create(&iovs[0], &ent);
+	len = mbuf_iov_create(&iovs[0], &ent);
 	pkt->nr_iov = 1;
 
 	/*
@@ -142,56 +167,64 @@ ssize_t bsys_udp_send(void __user *addr, size_t len,
 	 * can only be one because of the MTU size.
 	 */
 	BUILD_ASSERT(UDP_MAX_LEN < PGSIZE_2MB);
-	if (ent.len) {
+	if (ent.len != len) {
+		ent.base = (void *) ((uintptr_t) ent.base + len);
+		ent.len -= len;
 		iovs[1].base = ent.base;
 		iovs[1].maddr = page_get(ent.base);
 		iovs[1].len = ent.len;
 		pkt->nr_iov = 2;
 	}
 
+	pkt->done = &udp_mbuf_done;
+	pkt->done_data = cookie;
+
 	ret = udp_output(pkt, &tmp, len);
 	if (unlikely(ret)) {
+		for (i = 0; i < pkt->nr_iov; i++)
+			mbuf_iov_free(&pkt->iovs[i]);
 		mbuf_free(pkt);
-	}	return ret;
-
-	return len;
+		usys_udp_send_ret(cookie, ret);
+	}
 }
 
-ssize_t bsys_udp_sendv(struct sg_entry __user *ents[], unsigned int nrents,
-		       struct ip_tuple __user *id)
+void bsys_udp_sendv(struct sg_entry __user *ents, unsigned int nrents,
+		    struct ip_tuple __user *id, unsigned long cookie)
 {
-	return -ENOSYS;
+	usys_udp_send_ret(cookie, -ENOSYS);
 }
+
+#define MAX_MBUF_PAGE_OFF	(PGSIZE_2MB - (PGSIZE_2MB % MBUF_LEN))
 
 /**
- * bsys_udp_recv_done - acknowledge received UDP packets
- * @count: the number of packets to acknowledge
- *
- * Returns 0.
+ * bsys_udp_recv_done - inform the kernel done using a UDP packet buffer
+ * @iomap: a pointer anywhere inside the mbuf
  */
-int bsys_udp_recv_done(uint64_t count)
+void bsys_udp_recv_done(void *iomap)
 {
-	struct mbuf *pos = percpu_get(udp_free_head);
-
-	while (count && pos) {
-		struct mbuf *tmp = pos;
-		pos = pos->next;
-		count--;
-		mbuf_free(tmp);
+	struct mempool *pool = &percpu_get(mbuf_mempool);
+	struct mbuf *m;
+	void *addr = iomap_to_mbuf(pool, iomap);
+	size_t off = PGOFF_2MB(addr);
+	
+	/* validate the address */
+	if (unlikely((uintptr_t) addr < (uintptr_t) pool->buf ||
+		     (uintptr_t) addr >=
+			(uintptr_t) pool->buf + pool->nr_pages * PGSIZE_2MB ||
+		     off >= MAX_MBUF_PAGE_OFF)) {
+		log_err("udp: user tried to free an invalid mbuf"
+			"at address %p\n", addr);
+		return;
 	}
 
-	percpu_get(udp_free_head) = pos;
-	if (!pos)
-		percpu_get(udp_free_pos) = &percpu_get(udp_free_head);
+	m = (struct mbuf *) (PGADDR_2MB(addr) + (off / MBUF_LEN) * MBUF_LEN);
 
-	return 0;
-}
+	if (unlikely(m->done != (void *) 0xDEADBEEF)) {
+		log_err("udp: user tried to free an already free mbuf\n");
+		return;
+	}
 
-/**
- * udp_init - initialize UDP support
- */
-void udp_init(void)
-{
-	percpu_get(udp_free_pos) = &percpu_get(udp_free_head);
+	m->done = NULL;
+	mbuf_free(m);
 }
 

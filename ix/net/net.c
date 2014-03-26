@@ -47,8 +47,6 @@ int net_init(void)
 
 	eth_dev_get_hw_mac(eth_dev, &cfg_mac);
 
-	udp_init();
-
 	return 0;
 }
 

@@ -45,35 +45,27 @@ static int bsys_dispatch_one(struct bsys_desc __user *d)
 
 	if (unlikely(uaccess_check_fault()))
 		return -EFAULT;
+	if (unlikely(sysnr >= KSYS_NR))
+		return -ENOSYS;
 
-	if (unlikely(sysnr >= KSYS_NR)) {
-		sysnr = (uint64_t) -ENOSYS;
-		goto out;
-	}
-
-	sysnr = bsys_tbl[sysnr](arga, argb, argc, argd);
-
-out:
-	uaccess_pokeq(&d->sysnr, sysnr);
-	if (unlikely(uaccess_check_fault()))
-		return -EFAULT;
+	bsys_tbl[sysnr](arga, argb, argc, argd);
 
 	return 0;
 }
 
-static int bsys_dispatch(struct bsys_desc __user *d[], unsigned int nr)
+static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
 {
 	unsigned long i;
 	int ret;
 
 	if (!nr)
 		return 0;
-	if (!uaccess_okay(d, sizeof(struct bsys_desc) * nr))
+	if (unlikely(!uaccess_okay(d, sizeof(struct bsys_desc) * nr)))
 		return -EFAULT;
 
 	for (i = 0; i < nr; i++) {
-		ret = bsys_dispatch_one(d[i]);
-		if (ret)
+		ret = bsys_dispatch_one(&d[i]);
+		if (unlikely(ret))
 			return ret;
 	}
 
@@ -87,13 +79,14 @@ static int bsys_dispatch(struct bsys_desc __user *d[], unsigned int nr)
  *
  * Returns 0 if successful, otherwise failure.
  */
-int sys_bpoll(struct bsys_desc __user *d[], unsigned int nr)
+int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 {
 	int ret;
 
+	usys_reset();
+
 	timer_run();
 	eth_tx_reclaim(eth_tx);
-	usys_reset();
 	eth_rx_poll(eth_rx);
 
 	ret = bsys_dispatch(d, nr);
@@ -110,7 +103,7 @@ int sys_bpoll(struct bsys_desc __user *d[], unsigned int nr)
  *
  * Returns 0 if successful, otherwise failure.
  */
-int sys_bcall(struct bsys_desc __user *d[], unsigned int nr)
+int sys_bcall(struct bsys_desc __user *d, unsigned int nr)
 {
 	return bsys_dispatch(d, nr);
 }
