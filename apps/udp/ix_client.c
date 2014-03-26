@@ -7,6 +7,7 @@
 
 #include <net/ip.h>
 
+#define ECHO_PORT	10013
 #define BATCH_DEPTH	32
 
 static struct ip_tuple *id;
@@ -14,7 +15,9 @@ static int pipeline_cnt;
 
 static void udp_recv(void *addr, size_t len, struct ip_tuple *src)
 {
-	pipeline_cnt--;
+	if(src->dst_port == ECHO_PORT)
+		pipeline_cnt--;
+
 	ix_udp_recv_done(addr);
 }
 
@@ -65,7 +68,7 @@ int main(int argc, char *argv[])
 	if (sscanf(argv[2], "%hu", &id->dst_port) != 1)
 		return -EINVAL;
 
-	id->src_port = 10011;
+	id->src_port = ECHO_PORT;
 
 	while (1) {
 		ix_poll();

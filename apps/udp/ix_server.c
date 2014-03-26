@@ -6,12 +6,19 @@
 #include <ix.h>
 
 #define BATCH_DEPTH	32
+#define ECHO_PORT	10013
 
 static struct ip_tuple *ids;
 
 static void udp_recv(void *addr, size_t len, struct ip_tuple *src)
 {
 	struct ip_tuple *dst = &ids[ix_bsys_idx()];
+
+	if (src->dst_port != ECHO_PORT) {
+		ix_udp_recv_done(addr);
+		return;
+	}
+
 	dst->src_ip = src->dst_ip;
 	dst->dst_ip = src->src_ip;
 	dst->src_port = src->dst_port;
