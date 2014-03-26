@@ -30,7 +30,7 @@ void udp_input(struct mbuf *pkt, struct ip_hdr *iphdr, struct udp_hdr *udphdr)
 	uint16_t len = ntoh16(udphdr->len);
 	struct ip_tuple *id;
 
-	if (unlikely(!mbuf_enough_space(pkt, data, len))) {
+	if (unlikely(!mbuf_enough_space(pkt, udphdr, len))) {
 		mbuf_free(pkt);
 		return;
 	}
