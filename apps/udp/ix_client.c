@@ -65,9 +65,7 @@ int main(int argc, char *argv[])
 		return -EINVAL;
 	}
 
-	if (sscanf(argv[2], "%hu", &id->dst_port) != 1)
-		return -EINVAL;
-
+	id->dst_port = ECHO_PORT;
 	id->src_port = ECHO_PORT;
 
 	while (1) {
