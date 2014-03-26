@@ -20,8 +20,10 @@ static void udp_recv(void *addr, size_t len, struct ip_tuple *src)
 
 static void udp_send_ret(unsigned long cookie, int64_t ret)
 {
-	if (ret)
+	if (ret) {
+		pipeline_cnt--;
 		printf("packet %lx had error %ld\n", cookie, ret);
+	}
 }
 
 static struct ix_ops ops = {
@@ -69,7 +71,7 @@ int main(int argc, char *argv[])
 		ix_poll();
 
 		while (pipeline_cnt < 10) {
-			ix_udp_send((void *) karr, 64, id, 0);
+			ix_udp_send((void *) 0x100000000000, 64, id, 0);
 			pipeline_cnt++;
 		}
 
