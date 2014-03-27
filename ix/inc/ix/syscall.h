@@ -104,6 +104,13 @@ enum {
 	KSYS_UDP_SEND = 0,
 	KSYS_UDP_SENDV,
 	KSYS_UDP_RECV_DONE,
+	KSYS_TCP_CONNECT,
+	KSYS_TCP_ACCEPT,
+	KSYS_TCP_REJECT,
+	KSYS_TCP_SEND,
+	KSYS_TCP_SENDV,
+	KSYS_TCP_RECV_DONE,
+	KSYS_TCP_CLOSE,
 	KSYS_NR,
 };
 
@@ -152,6 +159,95 @@ static inline void ksys_udp_recv_done(struct bsys_desc *d, void *iomap)
 	BSYS_DESC_1ARG(d, KSYS_UDP_RECV_DONE, iomap);
 }
 
+/**
+ * ksys_tcp_connect - create a TCP connection
+ * @d: the syscall descriptor to program
+ * @id: the TCP 4-tuple
+ * @cookie: a user-level tag for the flow
+ */
+static inline void
+ksys_tcp_connect(struct bsys_desc *d, struct ip_tuple *id,
+		 unsigned long cookie)
+{
+	BSYS_DESC_2ARG(d, KSYS_TCP_OPEN, id, cookie);
+}
+
+/**
+ * ksys_tcp_accept - accept a TCP connection request
+ * @d: the syscall descriptor to program
+ * @handle: the TCP flow handle
+ * @cookie: a user-level tag for the flow
+ */
+static inline void
+ksys_tcp_accept(struct bsys_desc *d, int handle, unsigned long cookie)
+{
+	BSYS_DESC_3ARG(d, KSYS_TCP_ACCEPT, handle, cookie, allow);
+}
+
+/**
+ * ksys_tcp_reject - reject a TCP connection request
+ * @d: the syscall descriptor to program
+ * @handle: the TCP flow handle
+ */
+static inline void
+ksys_tcp_reject(struct bsys_desc *d, int handle)
+{
+	BSYS_DESC_1ARG(d, KSYS_TCP_REJECT, handle);
+}
+
+/**
+ * ksys_tcp_send - send data on a TCP flow
+ * @d: the syscall descriptor to program
+ * @handle: the TCP flow handle
+ * @addr: the address of the data
+ * @len: the length of the data
+ */
+static inline void
+ksys_tcp_send(struct bsys_desc *d, int handle,
+	      void *addr, size_t len)
+{
+	BSYS_DESC_3ARG(d, KSYS_TCP_SEND, handle, addr, len);
+}
+
+/**
+ * ksys_tcp_sendv - send scatter-gather data on a TCP flow
+ * @d: the syscall descriptor to program
+ * @handle: the TCP flow handle
+ * @ents: an array of scatter-gather vectors
+ * @nrents: the number of scatter-gather vectors
+ */
+static inline void
+ksys_tcp_sendv(struct bsys_desc *d, int handle,
+	       struct sg_entry *ents, unsigned int nrents)
+{
+	BSYS_DESC_3ARG(d, KSYS_TCP_SENDV, handle, ents, nrents);
+}
+
+/**
+ * ksys_tcp_recv_done - acknowledge the receipt of TCP data buffers
+ * @d: the syscall descriptor to program
+ * @handle: the TCP flow handle
+ * @nr: the number of buffers to acknowledge
+ *
+ * NOTE: buffers are acknowledged in FIFO order.
+ */
+static inline void
+ksys_tcp_recv_done(struct bsys_desc *d, int handle, int nr)
+{
+	BSYS_DESC_2ARG(d, KSYS_TCP_RECV_DONE, handle, nr);
+}
+
+/**
+ * ksys_tcp_close - closes a TCP connection
+ * @d: the syscall descriptor to program
+ * @handle: the TCP flow handle
+ */
+static inline void
+ksys_tcp_close(struct bsys_desc *d, int handle)
+{
+	BSYS_DESC_1ARG(d, KSYS_TCP_CLOSE, handle);
+}
+
 
 /*
  * Commands that can be sent from the kernel to the user-level application.
@@ -160,6 +256,11 @@ static inline void ksys_udp_recv_done(struct bsys_desc *d, void *iomap)
 enum {
 	USYS_UDP_RECV = 0,
 	USYS_UDP_SEND_RET,
+	USYS_TCP_KNOCK,
+	USYS_TCP_RECV,
+	USYS_TCP_CONNECT_RET,
+	USYS_TCP_SEND_RET,
+	USYS_TCP_CLOSE,
 	USYS_NR,
 };
 
@@ -212,6 +313,74 @@ static inline void usys_udp_send_ret(unsigned long cookie, ssize_t ret)
 {
 	struct bsys_desc *d = usys_next();
 	BSYS_DESC_2ARG(d, USYS_UDP_SEND_RET, cookie, ret);
+}
+
+/**
+ * usys_tcp_knock - Notifies the user that a remote host is
+ *                  trying to open a connection
+ * @handle: the TCP flow handle
+ * @id: the TCP 4-tuple
+ */
+static inline void
+usys_tcp_knock(int handle, struct ip_tuple *id)
+{
+	struct bsys_desc *d = usys_next();
+	BSYS_DESC_2ARG(d, USYS_TCP_KNOCK, handle, id);
+}
+
+/**
+ * usys_tcp_recv - receive TCP data
+ * @handle: the TCP flow handle
+ * @cookie: a user-level tag for the flow
+ * @addr: the address of the received data
+ * @len: the length of the received data
+ */
+static inline void
+usys_tcp_recv(int handle, unsigned long cookie, void *addr, size_t len)
+{
+	struct bsys_desc *d = usys_next();
+	BSYS_DESC_4ARG(d, USYS_TCP_RECV, handle, cookie, addr, len);
+}
+
+/**
+ * usys_tcp_connect_ret - indicates the outcome of a TCP connection request
+ * @handle: the TCP flow handle
+ * @cookie: a user-level tag for the flow
+ * @ret: the return code
+ */
+static inline void
+usys_tcp_connect_ret(int handle, unsigned long cookie, int ret)
+{
+	struct bsys_desc *d = usys_next();
+	BSYS_DESC_3ARG(d, USYS_TCP_CONNECT_RET, handle, cookie, ret);
+}
+
+/**
+ * usys_tcp_send_ret - indicates the outcome of a TCP transmit request
+ * @handle: the TCP flow handle
+ * @cookie: a user-level tag for the flow
+ * @ret: the return code
+ *
+ * @ret is the number of bytes transferred if successful (could be zero),
+ * otherwise a negative number if the request failed.
+ */
+static inline void
+usys_tcp_send_ret(int handle, unsigned long cookie, ssize_t ret)
+{
+	struct bsys_desc *d = usys_next();
+	BSYS_DESC_3ARG(d, USYS_TCP_SEND_RET, handle, cookie, ret);
+}
+
+/**
+ * usys_tcp_close - indicates that the remote host has closed the connection
+ * @handle: the TCP flow handle
+ * @cookie: a user-level tag for the flow
+ */
+static inline void
+usys_tcp_close(int handle, unsigned long cookie)
+{
+	struct bsys_desc *d = usys_next();
+	BSYS_DESC_2ARG(d, USYS_TCP_CLOSE, handle, cookie);
 }
 
 
