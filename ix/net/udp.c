@@ -101,7 +101,7 @@ static int udp_output(struct mbuf *__restrict pkt,
 	pkt->len = UDP_PKT_SIZE;
 	mbufs[0] = pkt;
 
-	if (eth_tx_xmit(eth_tx, 1, mbufs) != 1)
+	if (eth_tx_xmit_batched(eth_tx, pkt))
 		return -EIO;
 
 	return 0;

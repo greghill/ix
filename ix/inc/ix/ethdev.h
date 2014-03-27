@@ -36,8 +36,12 @@
 #include <ix/types.h>
 #include <ix/pci.h>
 #include <ix/mbuf.h>
+#include <ix/errno.h>
 
 #include <net/ethernet.h>
+
+#define ETH_DEV_RX_QUEUE_SZ     512
+#define ETH_DEV_TX_QUEUE_SZ     1024
 
 /* FIXME: figure out the right size for this */
 #define RTE_ETHDEV_QUEUE_STAT_CNTRS	16
@@ -1000,6 +1004,20 @@ static inline int eth_tx_xmit(struct eth_tx_queue *tx,
 			      int nr, struct mbuf **mbufs)
 {
 	return tx->xmit(tx, nr, mbufs);
+}
+
+DECLARE_PERCPU(int, tx_batch_cap);
+DECLARE_PERCPU(int, tx_batch_len);
+DECLARE_PERCPU(struct mbuf *, tx_batch[ETH_DEV_TX_QUEUE_SZ]);
+
+static inline int eth_tx_xmit_batched(struct eth_tx_queue *tx,
+				      struct mbuf *mbuf)
+{
+	if (percpu_get(tx_batch_len) >= percpu_get(tx_batch_cap))
+		return -ENOMEM;
+
+	percpu_get(tx_batch[percpu_get(tx_batch_len)++]) = mbuf;
+	return 0;
 }
 
 /**

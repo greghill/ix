@@ -15,6 +15,7 @@
 #include <ix/cpu.h>
 #include <ix/page.h>
 #include <ix/vm.h>
+#include <ix/log.h>
 
 #include <dune.h>
 
@@ -86,12 +87,13 @@ int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 	usys_reset();
 
 	timer_run();
-	eth_tx_reclaim(eth_tx);
+	percpu_get(tx_batch_cap) = eth_tx_reclaim(eth_tx);
 	eth_rx_poll(eth_rx);
 
 	ret = bsys_dispatch(d, nr);
 
-	/* FIXME: transmit waiting packets */
+	eth_tx_xmit(eth_tx, percpu_get(tx_batch_len), percpu_get(tx_batch));
+	percpu_get(tx_batch_len) = 0;
 
 	return ret;
 }
