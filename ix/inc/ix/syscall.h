@@ -169,7 +169,7 @@ static inline void
 ksys_tcp_connect(struct bsys_desc *d, struct ip_tuple *id,
 		 unsigned long cookie)
 {
-	BSYS_DESC_2ARG(d, KSYS_TCP_OPEN, id, cookie);
+	BSYS_DESC_2ARG(d, KSYS_TCP_CONNECT, id, cookie);
 }
 
 /**
@@ -181,7 +181,7 @@ ksys_tcp_connect(struct bsys_desc *d, struct ip_tuple *id,
 static inline void
 ksys_tcp_accept(struct bsys_desc *d, int handle, unsigned long cookie)
 {
-	BSYS_DESC_3ARG(d, KSYS_TCP_ACCEPT, handle, cookie, allow);
+	BSYS_DESC_2ARG(d, KSYS_TCP_ACCEPT, handle, cookie);
 }
 
 /**
