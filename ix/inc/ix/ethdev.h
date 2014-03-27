@@ -39,6 +39,10 @@
 
 #include <net/ethernet.h>
 
+#ifdef ENABLE_PCAP
+#include <net/pcap.h>
+#endif
+
 /* FIXME: figure out the right size for this */
 #define RTE_ETHDEV_QUEUE_STAT_CNTRS	16
 
@@ -999,6 +1003,12 @@ static inline int eth_tx_reclaim(struct eth_tx_queue *tx)
 static inline int eth_tx_xmit(struct eth_tx_queue *tx,
 			      int nr, struct mbuf **mbufs)
 {
+#ifdef ENABLE_PCAP
+	int i;
+
+	for (i = 0; i < nr; i++)
+		pcap_write(mbufs[i]);
+#endif
 	return tx->xmit(tx, nr, mbufs);
 }
 

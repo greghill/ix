@@ -98,6 +98,10 @@ void eth_input(struct mbuf *pkt)
 	log_debug("ip: got ethernet packet of len %ld, type %x\n",
 		  pkt->len, ntoh16(ethhdr->type));
 
+#ifdef ENABLE_PCAP
+	pcap_write(pkt);
+#endif
+
 	switch (ntoh16(ethhdr->type)) {
 	case ETHTYPE_IP:
 		ip_input(pkt, mbuf_nextd(ethhdr, struct ip_hdr *));
