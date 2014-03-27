@@ -3,6 +3,7 @@
 #define	NO_SYS		1
 
 #define MEMP_NUM_TCP_PCB 65535
+#define MEMP_NUM_TCP_SEG 65535
 
 #define	LWIP_DEBUG		LWIP_DBG_OFF
 #define	TCP_CWND_DEBUG		LWIP_DBG_OFF
