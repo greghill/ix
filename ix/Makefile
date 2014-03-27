@@ -13,6 +13,10 @@ ifneq ($(DEBUG),)
 CFLAGS += -DDEBUG
 endif
 
+ifneq ($(ENABLE_PCAP),)
+CFLAGS += -DENABLE_PCAP
+endif
+
 ifneq ($(DYNCORE_DEBUG),)
 CFLAGS += -DDYNCORE_DEBUG
 endif
