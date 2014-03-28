@@ -262,7 +262,7 @@ enum {
 	USYS_TCP_RECV,
 	USYS_TCP_CONNECT_RET,
 	USYS_TCP_SEND_RET,
-	USYS_TCP_CLOSE,
+	USYS_TCP_DEAD,
 	USYS_NR,
 };
 
@@ -374,15 +374,18 @@ usys_tcp_send_ret(int handle, unsigned long cookie, ssize_t ret)
 }
 
 /**
- * usys_tcp_close - indicates that the remote host has closed the connection
+ * usys_tcp_dead - indicates that the remote host has closed the connection
  * @handle: the TCP flow handle
  * @cookie: a user-level tag for the flow
+ *
+ * NOTE: the user must still close the connection on the local end
+ * using ksys_tcp_close().
  */
 static inline void
-usys_tcp_close(int handle, unsigned long cookie)
+usys_tcp_dead(int handle, unsigned long cookie)
 {
 	struct bsys_desc *d = usys_next();
-	BSYS_DESC_2ARG(d, USYS_TCP_CLOSE, handle, cookie);
+	BSYS_DESC_2ARG(d, USYS_TCP_DEAD, handle, cookie);
 }
 
 
