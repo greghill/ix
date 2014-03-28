@@ -82,12 +82,14 @@ static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
 int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 {
 	int ret;
+	unsigned int i;
 
 	usys_reset();
 
 	timer_run();
 	eth_tx_reclaim(eth_tx);
-	eth_rx_poll(eth_rx);
+	for (i = 0; i < eth_rx_count; i++)
+		eth_rx_poll(eth_rx[i]);
 
 	ret = bsys_dispatch(d, nr);
 

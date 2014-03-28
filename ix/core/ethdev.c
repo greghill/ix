@@ -12,7 +12,8 @@
 #include <net/ethernet.h>
 
 struct rte_eth_dev *eth_dev;
-struct eth_rx_queue *eth_rx;
+uint16_t eth_rx_count;
+struct eth_rx_queue **eth_rx;
 struct eth_tx_queue *eth_tx;
 
 static const struct rte_eth_conf default_conf = {
@@ -50,11 +51,15 @@ void eth_dev_get_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr)
  */
 int eth_dev_start(struct rte_eth_dev *dev)
 {
+	unsigned int rx_queue_idx;
 	int ret;
 	struct eth_addr macaddr;
 	struct rte_eth_link link;
 
-	dev->data->rx_queues = malloc(sizeof(struct eth_rx_queue *));
+	dev->data->nb_rx_queues = dev->dev_ops->get_num_of_rx_queues(dev);
+	dev->data->nb_tx_queues = 1;
+
+	dev->data->rx_queues = malloc(sizeof(struct eth_rx_queue *) * dev->data->nb_rx_queues);
 	if (!dev->data->rx_queues)
 		return -ENOMEM;
 
@@ -64,12 +69,11 @@ int eth_dev_start(struct rte_eth_dev *dev)
 		goto err;
 	}
 
-	dev->data->nb_rx_queues = 1;
-	dev->data->nb_tx_queues = 1;
-
-	ret = dev->dev_ops->rx_queue_setup(dev, 0, -1, ETH_DEV_RX_QUEUE_SZ);
-	if (ret)
-		goto err_rxsetup;
+	for (rx_queue_idx = 0; rx_queue_idx < dev->data->nb_rx_queues; rx_queue_idx++) {
+		ret = dev->dev_ops->rx_queue_setup(dev, rx_queue_idx, -1, ETH_DEV_RX_QUEUE_SZ);
+		if (ret)
+			goto err_rxsetup;
+	}
 
 	ret = dev->dev_ops->tx_queue_setup(dev, 0, -1, ETH_DEV_TX_QUEUE_SZ);
 	if (ret)
@@ -102,7 +106,8 @@ int eth_dev_start(struct rte_eth_dev *dev)
 	}
 
 	eth_dev = dev;
-	eth_rx = dev->data->rx_queues[0];
+	eth_rx_count = dev->data->nb_rx_queues;
+	eth_rx = dev->data->rx_queues;
 	eth_tx = dev->data->tx_queues[0];
 
 	return 0;
@@ -111,8 +116,9 @@ int eth_dev_start(struct rte_eth_dev *dev)
 err_start:
 	dev->dev_ops->tx_queue_release(dev->data->tx_queues[0]);
 err_txsetup:
-	dev->dev_ops->rx_queue_release(dev->data->rx_queues[0]);
 err_rxsetup:
+	while (rx_queue_idx--)
+		dev->dev_ops->rx_queue_release(dev->data->rx_queues[rx_queue_idx]);
 	free(dev->data->tx_queues);
 err:
 	free(dev->data->rx_queues);

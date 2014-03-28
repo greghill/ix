@@ -74,10 +74,13 @@ err:
 
 static void main_loop(void)
 {
+	unsigned int i;
+
 	while (1) {
 		timer_run();
 		eth_tx_reclaim(eth_tx);
-		eth_rx_poll(eth_rx);
+		for (i = 0; i < eth_rx_count; i++)
+			eth_rx_poll(eth_rx[i]);
 	}
 }
 
@@ -156,13 +159,15 @@ static int parse_eth_addr(const char *string, struct eth_addr *mac)
 
 static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
 {
+	unsigned int i;
 	uint64_t last_ping = 0;
 	uint64_t now;
 
 	while (1) {
 		timer_run();
 		eth_tx_reclaim(eth_tx);
-		eth_rx_poll(eth_rx);
+		for (i = 0; i < eth_rx_count; i++)
+			eth_rx_poll(eth_rx[i]);
 
 		now = rdtsc();
 		if (now - last_ping >= 1000000ull * cycles_per_us) {

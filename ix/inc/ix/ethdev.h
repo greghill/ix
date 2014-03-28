@@ -1088,6 +1088,7 @@ extern void eth_dev_destroy(struct rte_eth_dev *dev);
  * FIXME: make TX per-core.
  */
 extern struct rte_eth_dev *eth_dev;
-extern struct eth_rx_queue *eth_rx;
+extern uint16_t eth_rx_count;
+extern struct eth_rx_queue **eth_rx;
 extern struct eth_tx_queue *eth_tx;
 
