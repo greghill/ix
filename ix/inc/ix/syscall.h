@@ -17,6 +17,8 @@ enum {
 	SYS_BPOLL = 0,
 	SYS_BCALL,
 	SYS_BADDR,
+	SYS_MMAP,
+	SYS_MUNMAP,
 	SYS_NR,
 };
 
@@ -399,10 +401,6 @@ extern void bsys_udp_sendv(struct sg_entry __user *ents,
 			   struct ip_tuple __user *id,
 			   unsigned long cookie);
 extern void bsys_udp_recv_done(void *iomap);
-
-extern int sys_bpoll(struct bsys_desc __user *d, unsigned int nr);
-extern int sys_bcall(struct bsys_desc __user *d, unsigned int nr);
-extern void *sys_baddr(void);
 
 struct dune_tf *tf;
 extern void do_syscall(struct dune_tf *tf, uint64_t sysnr);

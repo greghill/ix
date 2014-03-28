@@ -22,6 +22,24 @@ struct vm_arg {
 	virtaddr_t va;
 };
 
+static void __vm_unmap(void *addr, int nr, int size)
+{
+	dune_vm_unmap(pgroot, addr, (size_t) nr * (size_t) size);
+}
+
+/**
+ * vm_unmap - unmaps virtual memory
+ * @addr: the starting address
+ * @nr: the number of pages
+ * @size: the size of each page
+ */
+void vm_unmap(void *addr, int nr, int size)
+{
+	spin_lock(&vm_lock);
+	__vm_unmap(addr, nr, size);
+	spin_unlock(&vm_lock);
+}
+
 static int __vm_map_phys_helper(const void *arg, ptent_t *pte, void *va)
 {
 	struct vm_arg *args = (struct vm_arg *)arg;
@@ -74,6 +92,11 @@ int __vm_map_phys(physaddr_t pa, virtaddr_t va,
 				  (void *) (va + len - 1),
                                   &__vm_map_phys_helper,
                                   (void *) &args, 3, create);
+
+	/* cleanup partial mappings */
+	if (ret)
+		__vm_unmap((void *) va, nr, len);
+
         return ret;
 }
 
@@ -149,18 +172,5 @@ bool __vm_is_mapped(void *addr, size_t len)
 	return  __dune_vm_page_walk(pgroot, pos, pos + len - 1,
 				   &__vm_is_mapped_helper,
 				   (void *) NULL, 3, CREATE_NONE) > 0;
-}
-
-/**
- * vm_unmap - unmaps virtual memory
- * @addr: the starting address
- * @nr: the number of pages
- * @size: the size of each page
- */
-void vm_unmap(void *addr, int nr, int size)
-{
-	spin_lock(&vm_lock);
-	dune_vm_unmap(pgroot, addr, (size_t) nr * (size_t) size);
-	spin_unlock(&vm_lock);
 }
 
