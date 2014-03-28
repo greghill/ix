@@ -118,6 +118,7 @@ static void ixgbe_add_rar(struct rte_eth_dev *dev, struct eth_addr *mac_addr,
 		uint32_t index, uint32_t pool);
 static void ixgbe_remove_rar(struct rte_eth_dev *dev, uint32_t index);
 static void ixgbe_dcb_init(struct ixgbe_hw *hw,struct ixgbe_dcb_config *dcb_config);
+static uint16_t ixgbe_dev_get_num_of_rx_queues(struct rte_eth_dev *dev);
 
 /* For Virtual Function support */
 #if 0
@@ -238,6 +239,7 @@ static struct eth_dev_ops ixgbe_eth_dev_ops = {
 	.fdir_set_masks               = ixgbe_fdir_set_masks,
 	.reta_update          = ixgbe_dev_rss_reta_update,
 	.reta_query           = ixgbe_dev_rss_reta_query,
+	.get_num_of_rx_queues = ixgbe_dev_get_num_of_rx_queues,
 };
 
 #if 0
@@ -2817,4 +2819,12 @@ ixgbe_mirror_rule_reset(struct rte_eth_dev *dev, uint8_t rule_id)
 	IXGBE_WRITE_REG(hw, IXGBE_VMRVLAN(rule_id + rule_mr_offset), msb_val);
 
 	return 0;
+}
+
+static uint16_t
+ixgbe_dev_get_num_of_rx_queues(struct rte_eth_dev *dev)
+{
+	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+
+	return ixgbe_get_num_of_rx_queues(hw);
 }
