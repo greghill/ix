@@ -865,6 +865,9 @@ typedef int (*eth_mirror_rule_reset_t)(struct rte_eth_dev *dev,
 				  uint8_t rule_id);
 /**< @internal Remove a traffic mirroring rule on an Ethernet device */
 
+typedef uint16_t (*get_num_of_rx_queues_t)(struct rte_eth_dev *dev);
+/**< @Get the number of receive queues. */
+
 /**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
@@ -926,6 +929,8 @@ struct eth_dev_ops {
 	reta_update_t reta_update;
 	/** Query redirection table. */
 	reta_query_t reta_query;
+	/** Get the number of receive queues. */
+	get_num_of_rx_queues_t get_num_of_rx_queues;
 };
 
 /**
