@@ -262,7 +262,11 @@ int main(int argc, char *argv[])
 
 	/* FIXME: remove when we replace LWIP memory management with ours */
 	mem_init();
-	memp_init();
+	ret = memp_init();
+	if (ret) {
+		log_err("init: failed to initialize lwip memp\n");
+		return ret;
+	}
 	pbuf_init();
 
 	tcp_echo_server_init(1234);
