@@ -406,7 +406,10 @@ extern struct tcp_pcb *tcp_tmp_pcb;      /* Only used for temporary storage. */
 
 #define TCP_REG(pcbs, npcb)                        \
   do {                                             \
+    if (*(pcbs))                                   \
+      (*(pcbs))->prev = (npcb);                    \
     (npcb)->next = *pcbs;                          \
+    (npcb)->prev = NULL;                           \
     *(pcbs) = (npcb);                              \
     tcp_timer_needed();                            \
   } while (0)
@@ -416,17 +419,10 @@ extern struct tcp_pcb *tcp_tmp_pcb;      /* Only used for temporary storage. */
     if(*(pcbs) == (npcb)) {                        \
       (*(pcbs)) = (*pcbs)->next;                   \
     }                                              \
-    else {                                         \
-      for(tcp_tmp_pcb = *pcbs;                     \
-          tcp_tmp_pcb != NULL;                     \
-          tcp_tmp_pcb = tcp_tmp_pcb->next) {       \
-        if(tcp_tmp_pcb->next == (npcb)) {          \
-          tcp_tmp_pcb->next = (npcb)->next;        \
-          break;                                   \
-        }                                          \
-      }                                            \
-    }                                              \
-    (npcb)->next = NULL;                           \
+    if ((npcb)->next)                              \
+      (npcb)->next->prev = (npcb)->prev;           \
+    if ((npcb)->prev)                              \
+      (npcb)->prev->next = (npcb)->next;           \
   } while(0)
 
 #define TCP_HASH_RMV(pcbs, npcb)                   \
