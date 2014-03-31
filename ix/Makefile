@@ -44,13 +44,15 @@ depend: .depend
 .depend: $(SRCS)
 	bash -c "cat $(foreach SRC,$(SRCS),<($(CC) $(INC) -MM -MT $(SRC:.c=.o) $(SRC))) > ./.depend"
 
+ifneq ($(MAKECMDGOALS),clean)
 include .depend
+endif
 
 ix: $(OBJS) ix.ld
 	$(LD) $(LDFLAGS) -o ix $(OBJS) $(LDLIBS)
 
 clean:
-	rm $(OBJS) ix .depend
+	rm -f $(OBJS) ix .depend
 
 dist-clean: clean
 	rm *~
