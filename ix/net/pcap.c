@@ -124,7 +124,7 @@ int pcap_open_write(const char *pathname)
 {
 	pcap_hdr_t hdr;
 
-	fd = open(pathname, O_WRONLY | O_CREAT, 0666);
+	fd = open(pathname, O_CREAT | O_WRONLY | O_TRUNC, 0666);
 	if (fd == -1)
 		return 1;
 
