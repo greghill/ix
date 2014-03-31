@@ -1,10 +1,6 @@
-#include "lwip/api.h"
-#include "lwip/ip_frag.h"
 #include "lwip/memp.h"
-#include "lwip/raw.h"
 #include "lwip/tcp_impl.h"
 #include "lwip/timers.h"
-#include "lwip/udp.h"
 
 #define MEMP_ALIGN_SIZE(x) (LWIP_MEM_ALIGN_SIZE(x))
 

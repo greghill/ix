@@ -3,6 +3,7 @@
 
 #include <net/ip.h>
 
+#include <lwip/memp.h>
 #include <lwip/pbuf.h>
 
 static struct netif {
@@ -69,4 +70,61 @@ void tcp_input_tmp(struct mbuf *pkt, struct ip_hdr *iphdr, void *tcphdr)
 	ip_data.current_iphdr_src.addr = iphdr->src_addr.addr;
 	tcp_input(pbuf, &netif);
 	mbuf_free(pkt);
+}
+
+DEFINE_PERCPU(struct mempool, pbuf_mempool);
+DEFINE_PERCPU(struct mempool, pbuf_with_payload_mempool);
+DEFINE_PERCPU(struct mempool, tcp_pcb_mempool);
+DEFINE_PERCPU(struct mempool, tcp_pcb_listen_mempool);
+DEFINE_PERCPU(struct mempool, tcp_seg_mempool);
+
+#define PBUF_WITH_PAYLOAD_SIZE 4096
+
+static int init_mempool(struct mempool *m, int nr_elems, size_t elem_len)
+{
+	int ret;
+
+	ret = mempool_pagemem_create(m, nr_elems, elem_len);
+	if (ret)
+		return ret;
+
+	ret = mempool_pagemem_map_to_user(m);
+        if (ret) {
+                mempool_pagemem_destroy(m);
+                return ret;
+        }
+
+        return 0;
+}
+
+int memp_init(void)
+{
+	if (init_mempool(&percpu_get(pbuf_mempool), 65536, memp_sizes[MEMP_PBUF]))
+		return 1;
+
+	if (init_mempool(&percpu_get(pbuf_with_payload_mempool), 65536, PBUF_WITH_PAYLOAD_SIZE))
+		return 1;
+
+	if (init_mempool(&percpu_get(tcp_pcb_mempool), 65536, memp_sizes[MEMP_TCP_PCB]))
+		return 1;
+
+	if (init_mempool(&percpu_get(tcp_pcb_listen_mempool), 4, memp_sizes[MEMP_TCP_PCB_LISTEN]))
+		return 1;
+
+	if (init_mempool(&percpu_get(tcp_seg_mempool), 65536, memp_sizes[MEMP_TCP_SEG]))
+		return 1;
+
+	return 0;
+}
+
+void *mem_malloc(size_t size)
+{
+	LWIP_ASSERT("mem_malloc", size <= PBUF_WITH_PAYLOAD_SIZE);
+
+	return mempool_alloc(&percpu_get(pbuf_with_payload_mempool));
+}
+
+void mem_free(void *ptr)
+{
+	mempool_free(&percpu_get(pbuf_with_payload_mempool), ptr);
 }
