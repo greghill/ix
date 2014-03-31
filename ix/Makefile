@@ -42,8 +42,7 @@ all: ix
 depend: .depend
 
 .depend: $(SRCS)
-	rm -f ./.depend
-	$(foreach SRC,$(SRCS),$(CC) $(INC) -MM -MT $(SRC:.c=.o) $(SRC) >> .depend;)
+	bash -c "cat $(foreach SRC,$(SRCS),<($(CC) $(INC) -MM -MT $(SRC:.c=.o) $(SRC))) > ./.depend"
 
 include .depend
 
