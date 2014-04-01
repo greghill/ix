@@ -49,6 +49,8 @@ void kstats_leave(kstats_accumulate *saved_accu)
     if (cur->count==0) {
       cur->min_lat = diff_lat;
       cur->max_lat = diff_lat;
+      cur->min_occ = diff_occ;
+      cur->max_occ = diff_occ;
     } else {
       if (cur->min_lat >diff_lat) cur->min_lat = diff_lat;
       if (cur->max_lat <diff_lat) cur->max_lat = diff_lat;
