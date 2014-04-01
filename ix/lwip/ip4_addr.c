@@ -250,21 +250,6 @@ ipaddr_aton(const char *cp, ip_addr_t *addr)
 }
 
 /**
- * Convert numeric IP address into decimal dotted ASCII representation.
- * returns ptr to static buffer; not reentrant!
- *
- * @param addr ip address in network order to convert
- * @return pointer to a global static (!) buffer that holds the ASCII
- *         represenation of addr
- */
-char *
-ipaddr_ntoa(const ip_addr_t *addr)
-{
-  static char str[16];
-  return ipaddr_ntoa_r(addr, str, 16);
-}
-
-/**
  * Same as ipaddr_ntoa, but reentrant since a user-supplied buffer is used.
  *
  * @param addr ip address in network order to convert
