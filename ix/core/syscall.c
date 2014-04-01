@@ -92,7 +92,7 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(tx_reclaim, NULL);
-	eth_tx_reclaim(eth_tx);
+	percpu_get(tx_batch_cap) = eth_tx_reclaim(eth_tx);
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(rx_poll, NULL);
@@ -104,7 +104,10 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 	ret = bsys_dispatch(d, nr);
 	KSTATS_POP(NULL);
 
-	/* FIXME: transmit waiting packets */
+	KSTATS_PUSH(tx_xmit, NULL);
+	eth_tx_xmit(eth_tx, percpu_get(tx_batch_len), percpu_get(tx_batch));
+	percpu_get(tx_batch_len) = 0;
+	KSTATS_POP(NULL);
 
 	return ret;
 }

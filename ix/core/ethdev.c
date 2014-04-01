@@ -8,6 +8,7 @@
 #include <ix/errno.h>
 #include <ix/ethdev.h>
 #include <ix/log.h>
+#include <ix/cpu.h>
 
 #include <net/ethernet.h>
 
@@ -16,11 +17,15 @@ uint16_t eth_rx_count;
 struct eth_rx_queue **eth_rx;
 struct eth_tx_queue *eth_tx;
 
+DEFINE_PERCPU(int, tx_batch_cap);
+DEFINE_PERCPU(int, tx_batch_len);
+DEFINE_PERCPU(struct mbuf *, tx_batch[ETH_DEV_TX_QUEUE_SZ]);
+
 static const struct rte_eth_conf default_conf = {
         .rxmode = {
                 .split_hdr_size = 0,
                 .header_split   = 0, /**< Header Split disabled */
-                .hw_ip_checksum = 1, /**< IP checksum offload disabled */
+                .hw_ip_checksum = 0, /**< IP checksum offload disabled */
                 .hw_vlan_filter = 0, /**< VLAN filtering disabled */
                 .jumbo_frame    = 0, /**< Jumbo Frame Support disabled */
                 .hw_strip_crc   = 1, /**< CRC stripped by hardware */
@@ -35,9 +40,6 @@ static const struct rte_eth_conf default_conf = {
                 .mq_mode = ETH_MQ_TX_NONE,
         },
 };
-
-#define ETH_DEV_RX_QUEUE_SZ	512
-#define ETH_DEV_TX_QUEUE_SZ	1024
 
 /**
  * eth_dev_get_hw_mac - retreives the default MAC address
