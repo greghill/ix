@@ -1,5 +1,6 @@
 #include <ix/mbuf.h>
 #include <ix/timer.h>
+#include <ix/queue.h>
 
 #include <net/ip.h>
 
@@ -19,39 +20,55 @@ struct ip_globals
 
 void tcp_input(struct pbuf *p, struct netif *inp);
 
-struct ip_globals ip_data;
+DEFINE_PERQUEUE(struct ip_globals, ip_data);
 
 extern void tcp_tmr(void);
-extern struct tcp_pcb *tcp_active_pcbs;
-extern struct tcp_pcb *tcp_tw_pcbs;
+DECLARE_PERQUEUE(struct tcp_pcb *, tcp_active_pcbs);
+DECLARE_PERQUEUE(struct tcp_pcb *, tcp_tw_pcbs);
 /* in us */
 #define TCP_TMR_INTERVAL 250000
 
-static struct timer tcp_timer;
-static int tcpip_tcp_timer_active;
+static DEFINE_PERCPU(struct timer, tcp_timer);
+static DEFINE_PERQUEUE(int, tcpip_tcp_timer_active);
 
 static void tcpip_tcp_timer(struct timer *t)
 {
-	/* call TCP timer handler */
-	tcp_tmr();
-	/* timer still needed? */
-	if (tcp_active_pcbs || tcp_tw_pcbs) {
-		/* restart timer */
-		timer_add(&tcp_timer, TCP_TMR_INTERVAL);
-	} else {
-		/* disable timer */
-		tcpip_tcp_timer_active = 0;
+	unsigned int queue;
+	int needed;
+
+	needed = 0;
+	for_each_queue(queue) {
+		if (!perqueue_get(tcpip_tcp_timer_active))
+			continue;
+
+		/* call TCP timer handler */
+		tcp_tmr();
+
+		/* timer still needed? */
+		if (perqueue_get(tcp_active_pcbs) || perqueue_get(tcp_tw_pcbs)) {
+			/* restart timer */
+			needed = 1;
+		} else {
+			/* disable timer */
+			perqueue_get(tcpip_tcp_timer_active) = 0;
+		}
 	}
+
+	if (needed)
+		timer_add(&percpu_get(tcp_timer), TCP_TMR_INTERVAL * 4);
 }
 
 void tcp_timer_needed(void)
 {
 	/* timer is off but needed again? */
-	if (!tcpip_tcp_timer_active && (tcp_active_pcbs || tcp_tw_pcbs)) {
+	if (!perqueue_get(tcpip_tcp_timer_active) && (perqueue_get(tcp_active_pcbs) || perqueue_get(tcp_tw_pcbs))) {
 		/* enable and start timer */
-		tcpip_tcp_timer_active = 1;
-		timer_init_entry(&tcp_timer, &tcpip_tcp_timer);
-		timer_add(&tcp_timer, TCP_TMR_INTERVAL);
+		perqueue_get(tcpip_tcp_timer_active) = 1;
+		if (!percpu_get(tcp_timer).handler)
+			timer_init_entry(&percpu_get(tcp_timer), &tcpip_tcp_timer);
+
+		if (!timer_pending(&percpu_get(tcp_timer)))
+			timer_add(&percpu_get(tcp_timer), TCP_TMR_INTERVAL * 4);
 	}
 }
 
@@ -66,8 +83,8 @@ void tcp_input_tmp(struct mbuf *pkt, struct ip_hdr *iphdr, void *tcphdr)
 
 	pbuf = pbuf_alloc(PBUF_RAW, ntoh16(iphdr->len) - iphdr->header_len * 4, PBUF_ROM);
 	pbuf->payload = tcphdr;
-	ip_data.current_iphdr_dest.addr = iphdr->dst_addr.addr;
-	ip_data.current_iphdr_src.addr = iphdr->src_addr.addr;
+	perqueue_get(ip_data).current_iphdr_dest.addr = iphdr->dst_addr.addr;
+	perqueue_get(ip_data).current_iphdr_src.addr = iphdr->src_addr.addr;
 	tcp_input(pbuf, &netif);
 	mbuf_free(pkt);
 }

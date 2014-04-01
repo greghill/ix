@@ -329,9 +329,9 @@ struct tcp_seg {
 #endif /* LWIP_WND_SCALE */
 
 /* Global variables: */
-extern struct tcp_pcb *tcp_input_pcb;
-extern u32_t tcp_ticks;
-extern u8_t tcp_active_pcbs_changed;
+DECLARE_PERQUEUE(struct tcp_pcb *, tcp_input_pcb);
+DECLARE_PERQUEUE(u32_t, tcp_ticks);
+DECLARE_PERQUEUE(u8_t, tcp_active_pcbs_changed);
 
 /* The TCP PCB lists. */
 union tcp_listen_pcbs_t { /* List of all TCP PCBs in LISTEN state. */
@@ -339,14 +339,14 @@ union tcp_listen_pcbs_t { /* List of all TCP PCBs in LISTEN state. */
   struct tcp_pcb *pcbs;
 };
 extern struct tcp_pcb *tcp_bound_pcbs;
-extern union tcp_listen_pcbs_t tcp_listen_pcbs;
-extern struct tcp_pcb *tcp_active_pcbs;  /* List of all TCP PCBs that are in a
+DECLARE_PERQUEUE(union tcp_listen_pcbs_t, tcp_listen_pcbs);
+DECLARE_PERQUEUE(struct tcp_pcb *, tcp_active_pcbs);  /* List of all TCP PCBs that are in a
               state in which they accept or send
               data. */
 #define TCP_ACTIVE_PCBS_MAX_BUCKETS 65536
 #define TCP_ACTIVE_PCBS_HASH_SEED 0xa36bdcbe
 
-extern struct tcp_pcb *tcp_active_pcbs_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS];
+DECLARE_PERQUEUE(struct tcp_pcb *, tcp_active_pcbs_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS]);
 
 static inline int tcp_to_idx(ipX_addr_t *local_ip, ipX_addr_t *remote_ip, uint16_t local_port, uint16_t remote_port)
 {
@@ -356,7 +356,7 @@ static inline int tcp_to_idx(ipX_addr_t *local_ip, ipX_addr_t *remote_ip, uint16
   return idx;
 }
 
-extern struct tcp_pcb *tcp_tw_pcbs;      /* List of all TCP PCBs in TIME-WAIT. */
+DECLARE_PERQUEUE(struct tcp_pcb *, tcp_tw_pcbs);      /* List of all TCP PCBs in TIME-WAIT. */
 
 /* Axioms about the above lists:   
    1) Every TCP PCB that is not CLOSED is in one of the lists.
@@ -448,24 +448,24 @@ extern struct tcp_pcb *tcp_tw_pcbs;      /* List of all TCP PCBs in TIME-WAIT. *
 #define TCP_REG_ACTIVE(npcb)                       \
   do {                                             \
     int idx = tcp_to_idx(&npcb->local_ip, &npcb->remote_ip, npcb->local_port, npcb->remote_port); \
-    TCP_REG(&tcp_active_pcbs, npcb);               \
-    npcb->hash_bucket_next = tcp_active_pcbs_tbl[idx]; \
-    tcp_active_pcbs_tbl[idx] = npcb;               \
-    tcp_active_pcbs_changed = 1;                   \
+    TCP_REG(&perqueue_get(tcp_active_pcbs), npcb);               \
+    npcb->hash_bucket_next = perqueue_get(tcp_active_pcbs_tbl)[idx]; \
+    perqueue_get(tcp_active_pcbs_tbl)[idx] = npcb;               \
+    perqueue_get(tcp_active_pcbs_changed) = 1;                   \
   } while (0)
 
 #define TCP_RMV_ACTIVE(npcb)                       \
   do {                                             \
-    TCP_HASH_RMV(tcp_active_pcbs_tbl, npcb);       \
-    TCP_RMV(&tcp_active_pcbs, npcb);               \
-    tcp_active_pcbs_changed = 1;                   \
+    TCP_HASH_RMV(perqueue_get(tcp_active_pcbs_tbl), npcb);       \
+    TCP_RMV(&perqueue_get(tcp_active_pcbs), npcb);               \
+    perqueue_get(tcp_active_pcbs_changed) = 1;                   \
   } while (0)
 
 #define TCP_PCB_REMOVE_ACTIVE(pcb)                 \
   do {                                             \
-    TCP_HASH_RMV(tcp_active_pcbs_tbl, pcb);        \
-    tcp_pcb_remove(&tcp_active_pcbs, pcb);         \
-    tcp_active_pcbs_changed = 1;                   \
+    TCP_HASH_RMV(perqueue_get(tcp_active_pcbs_tbl), pcb);        \
+    tcp_pcb_remove(&perqueue_get(tcp_active_pcbs), pcb);         \
+    perqueue_get(tcp_active_pcbs_changed) = 1;                   \
   } while (0)
 
 
