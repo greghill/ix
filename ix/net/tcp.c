@@ -56,7 +56,10 @@
 #include "lwip/ip6_addr.h"
 #include "lwip/nd6.h"
 
+#include <ix/kstats.h> // IX
+
 #include <string.h>
+
 
 #ifndef TCP_LOCAL_PORT_RANGE_START
 /* From http://www.iana.org/assignments/port-numbers:
@@ -145,11 +148,13 @@ void
 tcp_tmr(void)
 {
   /* Call tcp_fasttmr() every 250 ms */
+  KSTATS_VECTOR(tcp_fasttmr);
   tcp_fasttmr();
 
   if (++tcp_timer & 1) {
     /* Call tcp_tmr() every 500 ms, i.e., every other timer
        tcp_tmr() is called. */
+    KSTATS_VECTOR(tcp_slowtmr);
     tcp_slowtmr();
   }
 }
