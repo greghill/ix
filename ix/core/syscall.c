@@ -15,6 +15,7 @@
 #include <ix/cpu.h>
 #include <ix/page.h>
 #include <ix/vm.h>
+#include <ix/kstats.h>
 
 #include <dune.h>
 
@@ -86,12 +87,22 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 
 	usys_reset();
 
+	KSTATS_PUSH(timer, NULL);
 	timer_run();
+	KSTATS_POP(NULL);
+
+	KSTATS_PUSH(tx_reclaim, NULL);
 	eth_tx_reclaim(eth_tx);
+	KSTATS_POP(NULL);
+
+	KSTATS_PUSH(rx_poll, NULL);
 	for (i = 0; i < eth_rx_count; i++)
 		eth_rx_poll(eth_rx[i]);
+	KSTATS_POP(NULL);
 
+	KSTATS_PUSH(bsys, NULL);
 	ret = bsys_dispatch(d, nr);
+	KSTATS_POP(NULL);
 
 	/* FIXME: transmit waiting packets */
 

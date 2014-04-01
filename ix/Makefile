@@ -21,6 +21,10 @@ ifneq ($(DYNCORE_DEBUG),)
 CFLAGS += -DDYNCORE_DEBUG
 endif
 
+ifneq ($(ENABLE_KSTATS),)
+CFLAGS += -DENABLE_KSTATS
+endif
+
 SRCS =
 DIRS = core ixgbe libdune lwip net sandbox vnic
 

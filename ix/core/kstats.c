@@ -8,21 +8,16 @@
 
 
 #include <strings.h>
-#include <stdio.h>
 #include <ix/kstats.h>
+#include <ix/log.h>
+#include <ix/timer.h>
 
+#define KSTATS_INTERVAL 5 * ONE_SECOND
 
 DEFINE_PERCPU(kstats, _kstats);
 DEFINE_PERCPU(kstats_accumulate, _kstats_accumulate);
 
-
-void kstats_init(void)
-{
-  kstats *k = &(percpu_get(_kstats));
-  bzero(k,sizeof(*k));
-  kstats_accumulate *acc = &(percpu_get(_kstats_accumulate));
-  bzero(acc,sizeof(*acc));
-}
+static DEFINE_PERCPU(struct timer, _kstats_timer);
 
 void kstats_enter(kstats_distr *n, kstats_accumulate *saved_accu)
 {
@@ -35,15 +30,15 @@ void kstats_enter(kstats_distr *n, kstats_accumulate *saved_accu)
   }
 
   percpu_get(_kstats_accumulate).cur = n;
-  _kstats_accumulate.start_lat = now;
-  _kstats_accumulate.start_occ = now;
-  _kstats_accumulate.accum_time = 0;
+  percpu_get(_kstats_accumulate).start_lat = now;
+  percpu_get(_kstats_accumulate).start_occ = now;
+  percpu_get(_kstats_accumulate).accum_time = 0;
 }
 
 void kstats_leave(kstats_accumulate *saved_accu)
 {
-  kstats_accumulate *acc = &(percpu_get(_kstats_accumulate));
-  uint64_t now = rdtsc();
+  kstats_accumulate *acc = &percpu_get(_kstats_accumulate);
+  uint64_t now = rdtscp(NULL);
   uint64_t diff_lat = now - acc->start_lat;
   uint64_t diff_occ = now - acc->start_occ + acc->accum_time;
   kstats_distr *cur = acc->cur;
@@ -62,7 +57,7 @@ void kstats_leave(kstats_accumulate *saved_accu)
     }
     cur->count++;
     if (saved_accu) {
-      _kstats_accumulate = *saved_accu;
+      *acc = *saved_accu;
       acc->start_occ = now;
     }
   }
@@ -71,7 +66,8 @@ void kstats_leave(kstats_accumulate *saved_accu)
 static void kstats_printone(kstats_distr *d, const char *name)
 {
   if (d->count) { 
-    printf("%-15s %4lu latency %5lu | %5lu | %5lu occupancy %5lu | %5lu% | %5lu\n",
+    log_info("kstat: %-15s %4lu latency %5lu | %5lu | %5lu "
+	     "occupancy %5lu | %5lu | %5lu\n",
 	   name,
 	   d->count,
 	   d->min_lat,
@@ -86,7 +82,7 @@ static void kstats_printone(kstats_distr *d, const char *name)
 /*
  * print and reinitialize
  */
-void kstats_print(void)
+static void kstats_print(struct timer *t)
 {
   kstats *ks = &(percpu_get(_kstats));
 #undef DEF_KSTATS
@@ -94,4 +90,13 @@ void kstats_print(void)
 #include <ix/kstatvectors.h>
   
   bzero(ks,sizeof(*ks));
+
+  timer_add(&percpu_get(_kstats_timer), KSTATS_INTERVAL);
 }
+
+void kstats_init_cpu(void)
+{
+  timer_init_entry(&percpu_get(_kstats_timer), kstats_print);
+  timer_add(&percpu_get(_kstats_timer), KSTATS_INTERVAL);
+}
+

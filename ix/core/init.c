@@ -11,6 +11,7 @@
 #include <ix/cpu.h>
 #include <ix/mbuf.h>
 #include <ix/syscall.h>
+#include <ix/kstats.h>
 
 #include <net/ip.h>
 #include <net/icmp.h>
@@ -126,6 +127,8 @@ static int init_this_cpu(unsigned int cpu)
 	}
 
 	timer_init_cpu();
+	kstats_init_cpu();
+
 	return 0;
 }
 
