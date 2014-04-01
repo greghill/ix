@@ -1661,7 +1661,7 @@ void ixgbe_dev_rxtx_start(struct rte_eth_dev *dev)
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
 		txdctl = IXGBE_TXDCTL_ENABLE;
-		//txdctl |= (8 << 16); /* set WTHRESH = 8 */
+		txdctl |= (8 << 16); /* set WTHRESH = 8 */
 		txdctl |= (1 << 8);  /* set HTHRESH = 1 */
 		txdctl |= 32;	     /* set PTHRESH = 32 */
 		IXGBE_WRITE_REG(hw, IXGBE_TXDCTL(txq->reg_idx), txdctl);
