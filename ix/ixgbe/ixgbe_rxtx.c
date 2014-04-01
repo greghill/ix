@@ -305,9 +305,9 @@ static int ixgbe_tx_xmit_one(struct tx_queue *txq, struct mbuf *mbuf)
 	 * Make sure enough space is available in the descriptor ring
 	 * NOTE: This should work correctly even with overflow...
 	 */
-	if (unlikely((uint16_t) (txq->tail + nr_iov - txq->head) >= txq->len)) {
+	if (unlikely((uint16_t) (txq->tail + nr_iov + 1 - txq->head) >= txq->len)) {
 		ixgbe_tx_reclaim(&txq->etxq);
-		if ((uint16_t) (txq->tail + nr_iov - txq->head) >= txq->len)
+		if ((uint16_t) (txq->tail + nr_iov + 1 - txq->head) >= txq->len)
 			return -EAGAIN;
 	}
 
