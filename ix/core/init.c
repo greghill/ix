@@ -12,6 +12,7 @@
 #include <ix/mbuf.h>
 #include <ix/syscall.h>
 #include <ix/kstats.h>
+#include <ix/queue.h>
 
 #include <net/ip.h>
 #include <net/icmp.h>
@@ -32,6 +33,7 @@ extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
 extern int virtual_init(void);
 extern int tcp_echo_server_init(int port);
 extern int sandbox_init(int argc, char *argv[]);
+extern void tcp_init(void);
 
 volatile int uaccess_fault;
 
@@ -200,6 +202,7 @@ int main(int argc, char *argv[])
 #ifdef ENABLE_PCAP
 	int pcap_read_mode = 0;
 #endif
+	unsigned int queue;
 
 	log_info("init: starting IX\n");
 
@@ -285,6 +288,8 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 	pbuf_init();
+	for_each_queue(queue)
+		tcp_init();
 
 	tcp_echo_server_init(1234);
 
