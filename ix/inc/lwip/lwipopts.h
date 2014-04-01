@@ -1,6 +1,14 @@
 #define	LWIP_STATS	0
 #define	LWIP_TCP	1
 #define	NO_SYS		1
+#define LWIP_RAW	0
+#define LWIP_UDP	0
+#define IP_REASSEMBLY	0
+#define IP_FRAG		0
+#define LWIP_NETCONN	0
+
+#define MEM_LIBC_MALLOC 1
+#define MEMP_MEM_MALLOC 1
 
 #define	LWIP_DEBUG		LWIP_DBG_OFF
 #define	TCP_CWND_DEBUG		LWIP_DBG_OFF

@@ -148,6 +148,8 @@ void bsys_udp_send(void __user *__restrict vaddr, size_t len,
 		return;
 	}
 
+	addr = (void *) ((uintptr_t) addr + PGOFF_2MB(vaddr));
+
 	pkt = mbuf_alloc_local();
 	if (unlikely(!pkt)) {
 		usys_udp_send_ret(cookie, -ENOBUFS);

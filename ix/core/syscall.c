@@ -15,7 +15,11 @@
 #include <ix/cpu.h>
 #include <ix/page.h>
 #include <ix/vm.h>
+<<<<<<< HEAD
 #include <ix/log.h>
+=======
+#include <ix/kstats.h>
+>>>>>>> master
 
 #include <dune.h>
 
@@ -80,20 +84,34 @@ static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
  *
  * Returns 0 if successful, otherwise failure.
  */
-int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
+static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 {
 	int ret;
+	unsigned int i;
 
 	usys_reset();
 
+	KSTATS_PUSH(timer, NULL);
 	timer_run();
-	percpu_get(tx_batch_cap) = eth_tx_reclaim(eth_tx);
-	eth_rx_poll(eth_rx);
+	KSTATS_POP(NULL);
 
+	KSTATS_PUSH(tx_reclaim, NULL);
+	percpu_get(tx_batch_cap) = th_tx_reclaim(eth_tx);
+	KSTATS_POP(NULL);
+
+	KSTATS_PUSH(rx_poll, NULL);
+	for (i = 0; i < eth_rx_count; i++)
+		eth_rx_poll(eth_rx[i]);
+	KSTATS_POP(NULL);
+
+	KSTATS_PUSH(bsys, NULL);
 	ret = bsys_dispatch(d, nr);
+	KSTATS_POP(NULL);
 
+	KSTATS_PUSH(tx_xmit, NULL);
 	eth_tx_xmit(eth_tx, percpu_get(tx_batch_len), percpu_get(tx_batch));
 	percpu_get(tx_batch_len) = 0;
+	KSTATS_POP(NULL);
 
 	return ret;
 }
@@ -105,7 +123,7 @@ int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
  *
  * Returns 0 if successful, otherwise failure.
  */
-int sys_bcall(struct bsys_desc __user *d, unsigned int nr)
+static int sys_bcall(struct bsys_desc __user *d, unsigned int nr)
 {
 	return bsys_dispatch(d, nr);
 }
@@ -115,9 +133,81 @@ int sys_bcall(struct bsys_desc __user *d, unsigned int nr)
  *
  * Returns an IOMAP pointer.
  */
-void *sys_baddr(void)
+static void *sys_baddr(void)
 {
 	return percpu_get(usys_iomap);
+}
+
+/**
+ * sys_mmap - maps pages of memory into userspace
+ * @addr: the start address of the mapping
+ * @nr: the number of pages
+ * @size: the size of each page
+ * @perm: the permission of the mapping
+ *
+ * Returns 0 if successful, otherwise fail.
+ */
+static int sys_mmap(void *addr, int nr, int size, int perm)
+{
+	void *pages;
+	int ret;
+
+	/*
+	 * FIXME: so far we can only support 2MB pages, but we should
+	 * definitely add at least 1GB page support in the future.
+	 */
+	if (size != PGSIZE_2MB)
+		return -ENOTSUP;
+
+	/* make sure the address lies in the IOMAP region */
+	if ((uintptr_t) addr < MEM_USER_IOMAPM_BASE_ADDR ||
+	    (uintptr_t) addr + nr * size >= MEM_USER_IOMAPM_END_ADDR)
+		return -EINVAL;
+
+	pages = page_alloc_contig(nr);
+	if (!pages)
+		return -ENOMEM;
+
+	perm |= VM_PERM_U;
+
+	spin_lock(&vm_lock);
+	if (__vm_is_mapped(addr, nr * size)) {
+		spin_unlock(&vm_lock);
+		ret = -EBUSY;
+		goto fail;
+	}
+	if ((ret = __vm_map_phys((physaddr_t) pages, (virtaddr_t) addr,
+				 nr, size, perm))) {
+		spin_unlock(&vm_lock);
+		goto fail;
+	}
+	spin_unlock(&vm_lock);
+
+	return 0;
+
+fail:
+	page_free_contig(addr, nr);
+	return ret;
+}
+
+/**
+ * sys_unmap - unmaps pages of memory from userspace
+ * @addr: the start address of the mapping
+ * @nr: the number of pages
+ * @size: the size of each page
+ */
+static int sys_unmap(void *addr, int nr, int size)
+{
+	if (size != PGSIZE_2MB)
+		return -ENOTSUP;
+
+	/* make sure the address lies in the IOMAP region */
+	if ((uintptr_t) addr < MEM_USER_IOMAPM_BASE_ADDR ||
+	    (uintptr_t) addr + nr * size >= MEM_USER_IOMAPM_END_ADDR)
+		return -EINVAL;
+
+	vm_unmap(addr, nr, size);
+	return 0;
 }
 
 typedef uint64_t (*sysfn_t) (uint64_t, uint64_t, uint64_t,
@@ -127,6 +217,8 @@ static sysfn_t sys_tbl[] = {
 	(sysfn_t) sys_bpoll,
 	(sysfn_t) sys_bcall,
 	(sysfn_t) sys_baddr,
+	(sysfn_t) sys_mmap,
+	(sysfn_t) sys_unmap,
 };
 
 /**

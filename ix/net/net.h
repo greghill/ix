@@ -14,6 +14,7 @@
 
 /* Address Resolution Protocol (ARP) definitions */
 extern int arp_lookup_mac(struct ip_addr *addr, struct eth_addr *mac);
+extern int arp_insert(struct ip_addr *addr, struct eth_addr *mac);
 extern void arp_input(struct mbuf *pkt, struct arp_hdr *hdr);
 extern int arp_init(void);
 

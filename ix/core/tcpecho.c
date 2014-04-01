@@ -2,10 +2,7 @@
 
 static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 {
-	static char reply[] = "reply: ";
-
 	if (p != NULL) {
-		tcp_write(pcb, reply, sizeof(reply), 0);
 		tcp_write(pcb, p->payload, p->len, 0);
 		tcp_output(pcb);
 		tcp_recved(pcb, p->tot_len);

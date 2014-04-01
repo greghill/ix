@@ -11,9 +11,14 @@
 #include <ix/cpu.h>
 #include <ix/mbuf.h>
 #include <ix/syscall.h>
+#include <ix/kstats.h>
 
 #include <net/ip.h>
 #include <net/icmp.h>
+
+#ifdef ENABLE_PCAP
+#include <net/pcap.h>
+#endif
 
 #include <dune.h>
 
@@ -25,7 +30,6 @@
 extern int net_init(void);
 extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
 extern int virtual_init(void);
-extern int read_configuration(const char *path);
 extern int tcp_echo_server_init(int port);
 extern int sandbox_init(int argc, char *argv[]);
 
@@ -71,10 +75,13 @@ err:
 
 static void main_loop(void)
 {
+	unsigned int i;
+
 	while (1) {
 		timer_run();
 		eth_tx_reclaim(eth_tx);
-		eth_rx_poll(eth_rx);
+		for (i = 0; i < eth_rx_count; i++)
+			eth_rx_poll(eth_rx[i]);
 	}
 }
 
@@ -120,6 +127,8 @@ static int init_this_cpu(unsigned int cpu)
 	}
 
 	timer_init_cpu();
+	kstats_init_cpu();
+
 	return 0;
 }
 
@@ -135,15 +144,33 @@ static int parse_ip_addr(const char *string, uint32_t *addr)
         return 0;
 }
 
+#ifdef ENABLE_PCAP
+static int parse_eth_addr(const char *string, struct eth_addr *mac)
+{
+	struct eth_addr tmp;
+
+	if (sscanf(string, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+	           &tmp.addr[0], &tmp.addr[1], &tmp.addr[2],
+		   &tmp.addr[3], &tmp.addr[4], &tmp.addr[5]) != 6)
+		return -EINVAL;
+
+	*mac = tmp;
+
+	return 0;
+}
+#endif
+
 static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
 {
+	unsigned int i;
 	uint64_t last_ping = 0;
 	uint64_t now;
 
 	while (1) {
 		timer_run();
 		eth_tx_reclaim(eth_tx);
-		eth_rx_poll(eth_rx);
+		for (i = 0; i < eth_rx_count; i++)
+			eth_rx_poll(eth_rx[i]);
 
 		now = rdtsc();
 		if (now - last_ping >= 1000000ull * cycles_per_us) {
@@ -156,6 +183,9 @@ static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
 int main(int argc, char *argv[])
 {
 	int ret;
+#ifdef ENABLE_PCAP
+	int pcap_read_mode = 0;
+#endif
 
 	log_info("init: starting IX\n");
 
@@ -163,12 +193,6 @@ int main(int argc, char *argv[])
 		log_err("init: invalid arguments\n");
 		log_err("init: format -> ix [ETH_PCI_ADDR]\n");
 		return -EINVAL;
-	}
-
-	ret = read_configuration("ix.cfg");
-	if (ret) {
-		log_err("init: failed to read and parse configuration\n");
-		return ret;
 	}
 
 	ret = cpu_init();
@@ -203,6 +227,28 @@ int main(int argc, char *argv[])
 			log_err("init: failed to initialize ethernet device\n");
 			return ret;
 		}
+#ifdef ENABLE_PCAP
+	} else if (!strcmp(argv[1], "--pcap-read")) {
+		struct eth_addr mac;
+
+		if (argc < 4) {
+			log_err("Usage: %s %s PCAP_FILE MAC_ADDRESS\n", argv[0], argv[1]);
+			return 1;
+		}
+
+		ret = parse_eth_addr(argv[3], &mac);
+		if (ret) {
+			log_err("init: failed to parse MAC address '%s'\n", argv[3]);
+			return ret;
+		}
+
+		ret = pcap_open_read(argv[2], &mac);
+		if (ret) {
+			log_err("init: failed to open pcap file '%s'\n", argv[2]);
+			return ret;
+		}
+		pcap_read_mode = 1;
+#endif
 	} else {
 		ret = hw_init_one(argv[1]);
 		if (ret) {
@@ -219,10 +265,34 @@ int main(int argc, char *argv[])
 
 	/* FIXME: remove when we replace LWIP memory management with ours */
 	mem_init();
-	memp_init();
+	ret = memp_init();
+	if (ret) {
+		log_err("init: failed to initialize lwip memp\n");
+		return ret;
+	}
 	pbuf_init();
 
 	tcp_echo_server_init(1234);
+
+#ifdef ENABLE_PCAP
+	if (pcap_read_mode) {
+		log_info("init: entering pcap replay mode\n");
+		pcap_replay();
+		return 0;
+	} else if (argc > 2 && !strcmp(argv[2], "--pcap-write")) {
+		if (argc < 4) {
+			log_err("Usage: %s ETH_PCI_ADDR %s PCAP_FILE\n", argv[0], argv[2]);
+			return 1;
+		}
+
+		ret = pcap_open_write(argv[3]);
+		if (ret) {
+			log_err("init: failed to open pcap file\n");
+			return ret;
+		}
+		log_info("init: dumping traffic to pcap file '%s'\n", argv[3]);
+	}
+#endif
 
 #if 0
 	ret = sandbox_init(argc - 2, &argv[2]);

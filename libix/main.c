@@ -50,6 +50,18 @@ void ix_flush(void)
 	karr->len = 0;
 }
 
+static void
+ix_default_udp_recv(void *addr, size_t len, struct ip_tuple *id)
+{
+	ix_udp_recv_done(addr);
+}
+
+static void
+ix_default_tcp_knock(int handle, struct ip_tuple *id)
+{
+	ix_tcp_reject(handle);
+}
+
 /**
  * ix_init - initializes libIX
  * @ops: user-provided event handlers
@@ -62,14 +74,20 @@ int ix_init(struct ix_ops *ops, int batch_depth)
 	if (!ops)
 		return -EINVAL;
 
-	if (!ops->udp_recv)
-		return -EINVAL;
-	if (!ops->udp_send_ret)
-		return -EINVAL;
-
 	/* unpack the ops into a more efficient representation */
 	usys_tbl[USYS_UDP_RECV]		= (bsysfn_t) ops->udp_recv;
 	usys_tbl[USYS_UDP_SEND_RET]	= (bsysfn_t) ops->udp_send_ret;
+	usys_tbl[USYS_TCP_KNOCK]	= (bsysfn_t) ops->tcp_knock;
+	usys_tbl[USYS_TCP_RECV]		= (bsysfn_t) ops->tcp_recv;
+	usys_tbl[USYS_TCP_CONNECT_RET]	= (bsysfn_t) ops->tcp_connect_ret;
+	usys_tbl[USYS_TCP_SEND_RET]	= (bsysfn_t) ops->tcp_send_ret;
+	usys_tbl[USYS_TCP_DEAD]		= (bsysfn_t) ops->tcp_dead;
+
+	/* provide sane defaults so we don't leak memory */
+	if (!ops->udp_recv)
+		usys_tbl[USYS_UDP_RECV] = (bsysfn_t) ix_default_udp_recv;
+	if (!ops->tcp_knock)
+		usys_tbl[USYS_TCP_KNOCK] = (bsysfn_t) ix_default_tcp_knock;
 
 	uarr = sys_baddr();
 	if (!uarr)

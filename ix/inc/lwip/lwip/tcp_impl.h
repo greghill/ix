@@ -45,6 +45,8 @@
 #include "lwip/ip6.h"
 #include "lwip/ip6_addr.h"
 
+#include <ix/hash.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -341,6 +343,19 @@ extern union tcp_listen_pcbs_t tcp_listen_pcbs;
 extern struct tcp_pcb *tcp_active_pcbs;  /* List of all TCP PCBs that are in a
               state in which they accept or send
               data. */
+#define TCP_ACTIVE_PCBS_MAX_BUCKETS 65536
+#define TCP_ACTIVE_PCBS_HASH_SEED 0xa36bdcbe
+
+extern struct tcp_pcb *tcp_active_pcbs_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS];
+
+static inline int tcp_to_idx(ipX_addr_t *local_ip, ipX_addr_t *remote_ip, uint16_t local_port, uint16_t remote_port)
+{
+  int idx = hash_crc32c_two(TCP_ACTIVE_PCBS_HASH_SEED, local_ip->addr, remote_ip->addr);
+  idx = hash_crc32c_one(idx, (local_port << 16) | remote_port);
+  idx &= TCP_ACTIVE_PCBS_MAX_BUCKETS - 1;
+  return idx;
+}
+
 extern struct tcp_pcb *tcp_tw_pcbs;      /* List of all TCP PCBs in TIME-WAIT. */
 
 extern struct tcp_pcb *tcp_tmp_pcb;      /* Only used for temporary storage. */
@@ -391,7 +406,10 @@ extern struct tcp_pcb *tcp_tmp_pcb;      /* Only used for temporary storage. */
 
 #define TCP_REG(pcbs, npcb)                        \
   do {                                             \
+    if (*(pcbs))                                   \
+      (*(pcbs))->prev = (npcb);                    \
     (npcb)->next = *pcbs;                          \
+    (npcb)->prev = NULL;                           \
     *(pcbs) = (npcb);                              \
     tcp_timer_needed();                            \
   } while (0)
@@ -401,35 +419,52 @@ extern struct tcp_pcb *tcp_tmp_pcb;      /* Only used for temporary storage. */
     if(*(pcbs) == (npcb)) {                        \
       (*(pcbs)) = (*pcbs)->next;                   \
     }                                              \
+    if ((npcb)->next)                              \
+      (npcb)->next->prev = (npcb)->prev;           \
+    if ((npcb)->prev)                              \
+      (npcb)->prev->next = (npcb)->next;           \
+  } while(0)
+
+#define TCP_HASH_RMV(pcbs, npcb)                   \
+  do {                                             \
+    int idx = tcp_to_idx(&npcb->local_ip, &npcb->remote_ip, npcb->local_port, npcb->remote_port); \
+    if((pcbs)[idx] == (npcb)) {                    \
+      (pcbs)[idx] = (pcbs)[idx]->hash_bucket_next; \
+    }                                              \
     else {                                         \
-      for(tcp_tmp_pcb = *pcbs;                     \
+      for(tcp_tmp_pcb = (pcbs)[idx];               \
           tcp_tmp_pcb != NULL;                     \
-          tcp_tmp_pcb = tcp_tmp_pcb->next) {       \
-        if(tcp_tmp_pcb->next == (npcb)) {          \
-          tcp_tmp_pcb->next = (npcb)->next;        \
+          tcp_tmp_pcb = tcp_tmp_pcb->hash_bucket_next) { \
+        if(tcp_tmp_pcb->hash_bucket_next == (npcb)) { \
+          tcp_tmp_pcb->hash_bucket_next = (npcb)->hash_bucket_next; \
           break;                                   \
         }                                          \
       }                                            \
     }                                              \
-    (npcb)->next = NULL;                           \
+    (npcb)->hash_bucket_next = NULL;               \
   } while(0)
 
 #endif /* LWIP_DEBUG */
 
 #define TCP_REG_ACTIVE(npcb)                       \
   do {                                             \
+    int idx = tcp_to_idx(&npcb->local_ip, &npcb->remote_ip, npcb->local_port, npcb->remote_port); \
     TCP_REG(&tcp_active_pcbs, npcb);               \
+    npcb->hash_bucket_next = tcp_active_pcbs_tbl[idx]; \
+    tcp_active_pcbs_tbl[idx] = npcb;               \
     tcp_active_pcbs_changed = 1;                   \
   } while (0)
 
 #define TCP_RMV_ACTIVE(npcb)                       \
   do {                                             \
+    TCP_HASH_RMV(tcp_active_pcbs_tbl, npcb);       \
     TCP_RMV(&tcp_active_pcbs, npcb);               \
     tcp_active_pcbs_changed = 1;                   \
   } while (0)
 
 #define TCP_PCB_REMOVE_ACTIVE(pcb)                 \
   do {                                             \
+    TCP_HASH_RMV(tcp_active_pcbs_tbl, pcb);        \
     tcp_pcb_remove(&tcp_active_pcbs, pcb);         \
     tcp_active_pcbs_changed = 1;                   \
   } while (0)

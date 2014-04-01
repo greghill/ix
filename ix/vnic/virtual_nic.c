@@ -182,6 +182,10 @@ static struct eth_rx_queue virtual_eth_rx = {
 	.poll    = virtual_poll,
 };
 
+static struct eth_rx_queue *virtual_eth_rx_queues[] = {
+	&virtual_eth_rx,
+};
+
 static struct eth_tx_queue virtual_eth_tx = {
 	.reclaim = virtual_reclaim,
 	.xmit    = virtual_xmit,
@@ -273,7 +277,8 @@ int virtual_init(void)
 	virtual_eth_dev_data.mac_addrs = &virtual_eth_addr;
 
 	eth_dev = &virtual_eth_dev;
-	eth_rx = &virtual_eth_rx;
+	eth_rx_count = sizeof(virtual_eth_rx_queues) / sizeof(virtual_eth_rx_queues[0]);
+	eth_rx = virtual_eth_rx_queues;
 	eth_tx = &virtual_eth_tx;
 
 	return 0;

@@ -127,12 +127,12 @@ void timer_add_for_next_tick(struct timer *t)
 
 static void timer_run_bucket(struct hlist_head *h)
 {
-	struct hlist_node *n;
+	struct hlist_node *n, *tmp;
 	struct timer *t;
 
-	hlist_for_each(h, n) {
+	hlist_for_each_safe(h, n, tmp) {
 		t = hlist_entry(n, struct timer, link);
-		n->prev = NULL;
+		__timer_del(t);
 		t->handler(t);
 	}
 	h->head = NULL;

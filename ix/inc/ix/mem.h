@@ -70,6 +70,8 @@ typedef unsigned long virtaddr_t; /* guest virtual addresses */
 #define MAP_FAILED	((void *) -1)
 #endif
 
+#ifdef __KERNEL__
+
 extern void *
 __mem_alloc_pages(void *base, int nr, int size, struct bitmask *mask, int numa_policy);
 extern void *__mem_alloc_pages_onnode(void *base, int nr, int size, int node);
@@ -133,4 +135,6 @@ mem_lookup_page_machine_addr(void *addr, int size, machaddr_t *maddr)
 {
 	return mem_lookup_page_machine_addrs(addr, 1, size, maddr);
 }
+
+#endif /* __KERNEL__ */
 

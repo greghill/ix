@@ -107,6 +107,7 @@ union tcp_listen_pcbs_t tcp_listen_pcbs;
 /** List of all TCP PCBs that are in a state in which
  * they accept or send data. */
 struct tcp_pcb *tcp_active_pcbs;
+struct tcp_pcb *tcp_active_pcbs_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS];
 /** List of all TCP PCBs in TIME-WAIT state */
 struct tcp_pcb *tcp_tw_pcbs;
 
@@ -988,6 +989,7 @@ tcp_slowtmr_start:
       void *err_arg;
       tcp_pcb_purge(pcb);
       /* Remove PCB from tcp_active_pcbs list. */
+      TCP_HASH_RMV(tcp_active_pcbs_tbl, pcb);
       if (prev != NULL) {
         LWIP_ASSERT("tcp_slowtmr: middle tcp != tcp_active_pcbs", pcb != tcp_active_pcbs);
         prev->next = pcb->next;

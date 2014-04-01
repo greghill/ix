@@ -171,8 +171,8 @@ tcp_input(struct pbuf *p, struct netif *inp)
      for an active connection. */
   prev = NULL;
 
-
-  for(pcb = tcp_active_pcbs; pcb != NULL; pcb = pcb->next) {
+  pcb = tcp_active_pcbs_tbl[tcp_to_idx(ipX_current_dest_addr(), ipX_current_src_addr(), tcphdr->dest, tcphdr->src)];
+  for(; pcb != NULL; pcb = pcb->hash_bucket_next) {
     LWIP_ASSERT("tcp_input: active pcb->state != CLOSED", pcb->state != CLOSED);
     LWIP_ASSERT("tcp_input: active pcb->state != TIME-WAIT", pcb->state != TIME_WAIT);
     LWIP_ASSERT("tcp_input: active pcb->state != LISTEN", pcb->state != LISTEN);
@@ -181,16 +181,6 @@ tcp_input(struct pbuf *p, struct netif *inp)
         IP_PCB_IPVER_INPUT_MATCH(pcb) &&
         ipX_addr_cmp(ip_current_is_v6(), &pcb->remote_ip, ipX_current_src_addr()) &&
         ipX_addr_cmp(ip_current_is_v6(),&pcb->local_ip, ipX_current_dest_addr())) {
-      /* Move this PCB to the front of the list so that subsequent
-         lookups will be faster (we exploit locality in TCP segment
-         arrivals). */
-      LWIP_ASSERT("tcp_input: pcb->next != pcb (before cache)", pcb->next != pcb);
-      if (prev != NULL) {
-        prev->next = pcb->next;
-        pcb->next = tcp_active_pcbs;
-        tcp_active_pcbs = pcb;
-      }
-      LWIP_ASSERT("tcp_input: pcb->next != pcb (after cache)", pcb->next != pcb);
       break;
     }
     prev = pcb;
@@ -326,6 +316,7 @@ tcp_input(struct pbuf *p, struct netif *inp)
            application that the connection is dead before we
            deallocate the PCB. */
         TCP_EVENT_ERR(pcb->errf, pcb->callback_arg, ERR_RST);
+        TCP_HASH_RMV(tcp_active_pcbs_tbl, pcb);
         tcp_pcb_remove(&tcp_active_pcbs, pcb);
         memp_free(MEMP_TCP_PCB, pcb);
       } else if (recv_flags & TF_CLOSED) {
@@ -337,6 +328,7 @@ tcp_input(struct pbuf *p, struct netif *inp)
              ensure the application doesn't continue using the PCB. */
           TCP_EVENT_ERR(pcb->errf, pcb->callback_arg, ERR_CLSD);
         }
+        TCP_HASH_RMV(tcp_active_pcbs_tbl, pcb);
         tcp_pcb_remove(&tcp_active_pcbs, pcb);
         memp_free(MEMP_TCP_PCB, pcb);
       } else {

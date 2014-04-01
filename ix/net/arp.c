@@ -40,6 +40,7 @@ struct arp_entry {
 
 #define ARP_FLAG_RESOLVING	0x1
 #define ARP_FLAG_VALID		0x2
+#define ARP_FLAG_STATIC		0x4
 
 #define ARP_REFRESH_TIMEOUT	10 * ONE_SECOND
 #define ARP_RESOLVE_TIMEOUT	1 * ONE_SECOND
@@ -95,6 +96,9 @@ static int arp_update_mac(struct ip_addr *addr,
 	struct arp_entry *e = arp_lookup(addr, create_okay);
 	if (unlikely(!e))
 		return -ENOMEM;
+
+	if (e->flags & ARP_FLAG_STATIC)
+		return 0;
 
 #ifdef DEBUG
 	if (!(e->flags & ARP_FLAG_VALID)) {
@@ -278,6 +282,37 @@ int arp_lookup_mac(struct ip_addr *addr, struct eth_addr *mac)
 	}
 
 	*mac = e->mac;
+	return 0;
+}
+
+/**
+ * arp_insert - insert a static entry into the ARP table
+ * @addr: the IP address to insert
+ * @mac: the MAC address to insert
+ *
+ * Returns 0 if successful.
+ */
+int arp_insert(struct ip_addr *addr, struct eth_addr *mac)
+{
+	struct arp_entry *e;
+	struct hlist_head *h;
+
+	e = arp_lookup(addr, false);
+	if (!e) {
+		h = &arp_tbl[arp_ip_to_idx(addr)];
+		e = (struct arp_entry *)mempool_alloc(&arp_mempool);
+		if (unlikely(!e))
+			return -ENOMEM;
+		e->addr.addr = addr->addr;
+		e->flags = ARP_FLAG_VALID | ARP_FLAG_STATIC;
+		e->retries = 0;
+		timer_init_entry(&e->timer, NULL);
+		hlist_add_head(h, &e->link);
+	}
+
+	timer_del(&e->timer);
+	e->mac = *mac;
+
 	return 0;
 }
 

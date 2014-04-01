@@ -98,6 +98,10 @@ void eth_input(struct mbuf *pkt)
 	log_debug("ip: got ethernet packet of len %ld, type %x\n",
 		  pkt->len, ntoh16(ethhdr->type));
 
+#ifdef ENABLE_PCAP
+	pcap_write(pkt);
+#endif
+
 	switch (ntoh16(ethhdr->type)) {
 	case ETHTYPE_IP:
 		ip_input(pkt, mbuf_nextd(ethhdr, struct ip_hdr *));
@@ -119,6 +123,7 @@ int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest, uint8_t
 	struct ip_hdr *iphdr;
 	unsigned char *payload;
 	struct pbuf *curp;
+	struct ip_addr dst_addr;
 
 	pkt = mbuf_alloc_local();
 	if (unlikely(!pkt))
@@ -128,13 +133,12 @@ int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest, uint8_t
 	iphdr = mbuf_nextd(ethhdr, struct ip_hdr *);
 	payload = mbuf_nextd(iphdr, unsigned char *);
 
-	dest->addr = ntoh32(dest->addr);
-	if (arp_lookup_mac(dest, &ethhdr->dhost)) {
+	dst_addr.addr = ntoh32(dest->addr);
+	if (arp_lookup_mac(&dst_addr, &ethhdr->dhost)) {
 		log_err("ARP lookup failed.\n");
 		mbuf_free(pkt);
 		return -EIO;
 	}
-	dest->addr = hton32(dest->addr);
 
 	ethhdr->shost = cfg_mac;
 	ethhdr->type = hton16(ETHTYPE_IP);

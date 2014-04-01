@@ -9,10 +9,9 @@
 #include <ix/mempool.h>
 #include <ix/mbuf.h>
 #include <ix/cpu.h>
-#include <ix/vm.h>
-#include <ix/errno.h>
 
-#define MBUF_CAPACITY	4096
+/* Capacity should be at least RX queues per CPU * ETH_DEV_RX_QUEUE_SZ */
+#define MBUF_CAPACITY	131072
 
 DEFINE_PERCPU(struct mempool, mbuf_mempool);
 

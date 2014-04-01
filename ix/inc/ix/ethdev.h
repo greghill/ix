@@ -40,6 +40,10 @@
 
 #include <net/ethernet.h>
 
+#ifdef ENABLE_PCAP
+#include <net/pcap.h>
+#endif
+
 #define ETH_DEV_RX_QUEUE_SZ     512
 #define ETH_DEV_TX_QUEUE_SZ     1024
 
@@ -865,6 +869,9 @@ typedef int (*eth_mirror_rule_reset_t)(struct rte_eth_dev *dev,
 				  uint8_t rule_id);
 /**< @internal Remove a traffic mirroring rule on an Ethernet device */
 
+typedef uint16_t (*get_num_of_rx_queues_t)(struct rte_eth_dev *dev);
+/**< @Get the number of receive queues. */
+
 /**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
@@ -926,6 +933,8 @@ struct eth_dev_ops {
 	reta_update_t reta_update;
 	/** Query redirection table. */
 	reta_query_t reta_query;
+	/** Get the number of receive queues. */
+	get_num_of_rx_queues_t get_num_of_rx_queues;
 };
 
 /**
@@ -1003,6 +1012,12 @@ static inline int eth_tx_reclaim(struct eth_tx_queue *tx)
 static inline int eth_tx_xmit(struct eth_tx_queue *tx,
 			      int nr, struct mbuf **mbufs)
 {
+#ifdef ENABLE_PCAP
+	int i;
+
+	for (i = 0; i < nr; i++)
+		pcap_write(mbufs[i]);
+#endif
 	return tx->xmit(tx, nr, mbufs);
 }
 
@@ -1091,6 +1106,7 @@ extern void eth_dev_destroy(struct rte_eth_dev *dev);
  * FIXME: make TX per-core.
  */
 extern struct rte_eth_dev *eth_dev;
-extern struct eth_rx_queue *eth_rx;
+extern uint16_t eth_rx_count;
+extern struct eth_rx_queue **eth_rx;
 extern struct eth_tx_queue *eth_tx;
 

@@ -13,8 +13,16 @@ ifneq ($(DEBUG),)
 CFLAGS += -DDEBUG
 endif
 
+ifneq ($(ENABLE_PCAP),)
+CFLAGS += -DENABLE_PCAP
+endif
+
 ifneq ($(DYNCORE_DEBUG),)
 CFLAGS += -DDYNCORE_DEBUG
+endif
+
+ifneq ($(ENABLE_KSTATS),)
+CFLAGS += -DENABLE_KSTATS
 endif
 
 SRCS =
@@ -38,16 +46,17 @@ all: ix
 depend: .depend
 
 .depend: $(SRCS)
-	rm -f ./.depend
-	$(foreach SRC,$(SRCS),$(CC) $(INC) -MM -MT $(SRC:.c=.o) $(SRC) >> .depend;)
+	bash -c "cat $(foreach SRC,$(SRCS),<($(CC) $(INC) -MM -MT $(SRC:.c=.o) $(SRC))) > ./.depend"
 
+ifneq ($(MAKECMDGOALS),clean)
 include .depend
+endif
 
 ix: $(OBJS) ix.ld
 	$(LD) $(LDFLAGS) -o ix $(OBJS) $(LDLIBS)
 
 clean:
-	rm $(OBJS) ix .depend
+	rm -f $(OBJS) ix .depend
 
 dist-clean: clean
 	rm *~
