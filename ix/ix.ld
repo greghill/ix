@@ -187,6 +187,16 @@ SECTIONS
   }
   . = __percpu_load + SIZEOF(.percpu);
 
+  . = ALIGN(64);
+  __perqueue_load = .;
+  .perqueue 0 : AT(__perqueue_load)
+  {
+    PROVIDE(__perqueue_start = .);
+    *(.perqueue)
+    PROVIDE(__perqueue_end = .);
+  }
+  . = __perqueue_load + SIZEOF(.perqueue);
+
   . = ALIGN(16);
   __fixup_tbl :
   {
