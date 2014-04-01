@@ -81,7 +81,6 @@ static int udp_output(struct mbuf *__restrict pkt,
 	struct udp_hdr *udphdr = mbuf_nextd(iphdr, struct udp_hdr *);
 	size_t full_len = len + sizeof(struct udp_hdr);
 	struct ip_addr dst_addr;
-	struct mbuf *mbufs[1];
 
 	dst_addr.addr = id->dst_ip;
 	if (arp_lookup_mac(&dst_addr, &ethhdr->dhost))
@@ -99,7 +98,6 @@ static int udp_output(struct mbuf *__restrict pkt,
 	udphdr->chksum = 0;
 
 	pkt->len = UDP_PKT_SIZE;
-	mbufs[0] = pkt;
 
 	if (eth_tx_xmit_batched(eth_tx, pkt))
 		return -EIO;

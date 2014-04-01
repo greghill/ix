@@ -15,11 +15,7 @@
 #include <ix/cpu.h>
 #include <ix/page.h>
 #include <ix/vm.h>
-<<<<<<< HEAD
-#include <ix/log.h>
-=======
 #include <ix/kstats.h>
->>>>>>> master
 
 #include <dune.h>
 
@@ -96,7 +92,7 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(tx_reclaim, NULL);
-	percpu_get(tx_batch_cap) = th_tx_reclaim(eth_tx);
+	percpu_get(tx_batch_cap) = eth_tx_reclaim(eth_tx);
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(rx_poll, NULL);
