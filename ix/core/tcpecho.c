@@ -1,3 +1,5 @@
+#include <ix/queue.h>
+
 #include <lwip/tcp.h>
 
 static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
@@ -23,12 +25,15 @@ int tcp_echo_server_init(int port)
 {
 	struct tcp_pcb *listen_pcb;
 	struct ip_addr ipaddr;
+	unsigned int queue;
 
-	listen_pcb = tcp_new();
-	ipaddr.addr = 0;
-	tcp_bind(listen_pcb, &ipaddr, port);
-	listen_pcb = tcp_listen(listen_pcb);
-	tcp_accept(listen_pcb, on_accept);
+	for_each_queue(queue) {
+		listen_pcb = tcp_new();
+		ipaddr.addr = 0;
+		tcp_bind(listen_pcb, &ipaddr, port);
+		listen_pcb = tcp_listen(listen_pcb);
+		tcp_accept(listen_pcb, on_accept);
+	}
 
 	return 0;
 }
