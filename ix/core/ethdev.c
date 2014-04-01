@@ -64,7 +64,7 @@ int eth_dev_start(struct rte_eth_dev *dev)
 	struct eth_addr macaddr;
 	struct rte_eth_link link;
 
-	dev->data->nb_rx_queues = dev->dev_ops->get_num_of_rx_queues(dev);
+	dev->data->nb_rx_queues = min(dev->dev_ops->get_num_of_rx_queues(dev), ETH_RSS_RETA_MAX_QUEUE);
 	dev->data->nb_tx_queues = 1;
 
 	dev->data->rx_queues = malloc(sizeof(struct eth_rx_queue *) * dev->data->nb_rx_queues);
