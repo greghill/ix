@@ -405,7 +405,7 @@ extern void bsys_udp_sendv(struct sg_entry __user *ents,
 			   unsigned long cookie);
 extern void bsys_udp_recv_done(void *iomap);
 
-struct dune_tf *tf;
+struct dune_tf;
 extern void do_syscall(struct dune_tf *tf, uint64_t sysnr);
 
 extern int syscall_init_cpu(void);
