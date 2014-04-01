@@ -358,8 +358,6 @@ static inline int tcp_to_idx(ipX_addr_t *local_ip, ipX_addr_t *remote_ip, uint16
 
 extern struct tcp_pcb *tcp_tw_pcbs;      /* List of all TCP PCBs in TIME-WAIT. */
 
-extern struct tcp_pcb *tcp_tmp_pcb;      /* Only used for temporary storage. */
-
 /* Axioms about the above lists:   
    1) Every TCP PCB that is not CLOSED is in one of the lists.
    2) A PCB is only in one of the lists.
@@ -391,7 +389,7 @@ extern struct tcp_pcb *tcp_tmp_pcb;      /* Only used for temporary storage. */
                             LWIP_DEBUGF(TCP_DEBUG, ("TCP_RMV: removing %p from %p\n", (npcb), *(pcbs))); \
                             if(*(pcbs) == (npcb)) { \
                                *(pcbs) = (*pcbs)->next; \
-                            } else for(tcp_tmp_pcb = *(pcbs); tcp_tmp_pcb != NULL; tcp_tmp_pcb = tcp_tmp_pcb->next) { \
+                            } else for(struct tcp_pcb *tcp_tmp_pcb = *(pcbs); tcp_tmp_pcb != NULL; tcp_tmp_pcb = tcp_tmp_pcb->next) { \
                                if(tcp_tmp_pcb->next == (npcb)) { \
                                   tcp_tmp_pcb->next = (npcb)->next; \
                                   break; \
@@ -432,6 +430,7 @@ extern struct tcp_pcb *tcp_tmp_pcb;      /* Only used for temporary storage. */
       (pcbs)[idx] = (pcbs)[idx]->hash_bucket_next; \
     }                                              \
     else {                                         \
+      struct tcp_pcb *tcp_tmp_pcb;                 \
       for(tcp_tmp_pcb = (pcbs)[idx];               \
           tcp_tmp_pcb != NULL;                     \
           tcp_tmp_pcb = tcp_tmp_pcb->hash_bucket_next) { \
