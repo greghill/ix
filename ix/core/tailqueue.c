@@ -41,8 +41,7 @@ void tailqueue_addsample(struct tailqueue *tq,
 
   x = t_us / gran;
   if (x >= NUM_BUCKETS) {
-    printf("OVERFLOW add %lu\n",t_us);
-
+  
     tq->overflow++;
   } else {
     for (i=NUM_LEVELS-1;i>=0;i--) {
@@ -114,8 +113,8 @@ void tailqueue_calcnines(struct tailqueue *tq,
       above += tq->gran[cur_level][cur_bucket];
       if (above >= threshold) { 
 	td->nines[nines] = GRANULARITY_0 * (pow(10,cur_level)+cur_bucket) ;
-	printf("nines=%d above = %lu threshold=%lu level=%d bucket=%d val=%lu\n",
-	       nines,above,threshold,cur_level,cur_bucket,td->nines[nines]);
+	//printf("nines=%d above = %lu threshold=%lu level=%d bucket=%d val=%lu\n",
+	//       nines,above,threshold,cur_level,cur_bucket,td->nines[nines]);
 	break;
       }
       cur_bucket--;
