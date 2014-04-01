@@ -10,9 +10,8 @@
 for i in $@
 do
     case $i in
-        # Agent maverick-16 will create 1 thread but otherwise standard options, to ensure consistency with other profiles
-        # Total number of connections from maverick-16 is equal to the experiment's "-c" option
-        maverick-16-10g) echo "$i:${MUTILATE_EXPERIMENT_PREFIX}/mutilate -T 1 -A -l 1" ;;
+        # Supply standard options to the maverick-16 agent machine
+        maverick-16-10g) echo "$i:${MUTILATE_EXPERIMENT_PREFIX}/mutilate -T 24 -A -l 1" ;;
         
         # Supply standard options to all agent hotbox machines
         hotbox-*) echo "$i:${MUTILATE_EXPERIMENT_PREFIX}/mutilate -T 8 -A -l 1" ;;

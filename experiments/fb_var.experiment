@@ -12,8 +12,8 @@ AGENTS:standard
 -Q 1000
 -C 4
 
-# 16 connections per agent thread
--c 16
+# 12 connections per agent thread
+-c 12
 
 # 20 seconds per test
 -t 20

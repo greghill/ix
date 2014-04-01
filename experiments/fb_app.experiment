@@ -12,8 +12,8 @@ AGENTS:standard
 -Q 1000
 -C 4
 
-# 16 connections per agent thread
--c 16
+# 12 connections per agent thread
+-c 12
 
 # 20 seconds per test
 -t 20
@@ -22,7 +22,7 @@ AGENTS:standard
 -r 1000000
 
 # Scan QPS from 1% to peak, step size of 1%
---scan=18000:1800000:18000
+--scan=20000:2000000:20000
 
 # Key size, value size, and update ratio
 # These are taken from the Facebook paper

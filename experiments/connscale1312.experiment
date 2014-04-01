@@ -1,21 +1,21 @@
-############################
-# Mutilate Experiment: Basic
-############################
+#############################################
+# Mutilate Experiment: Connection Scalability
+#############################################
 #  - Default inter-arrival distribution, key size, and value size
 #  - Constant, balanced connections from clients
-#  - Intended for machines fully tuned for thread-pinning and network
+#  - Used for scaling the number of active connections
 ###
 
-# Specify the standard set of agents for this experiment
-AGENTS:standard
+# Specify the connscale set of agents for this experiment
+AGENTS:connscale
 
 # Set the parameters for the master, which does latency measurements
 -T 24
 -Q 1000
 -C 4
 
-# 12 connections per agent thread
--c 12
+# Vary the number of connections per agent thread
+-c 4
 
 # 20 seconds per test
 -t 20
