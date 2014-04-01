@@ -41,6 +41,8 @@
  *
  */
 
+#include <ix/kstats.h>
+
 #include "lwip/opt.h"
 
 #if LWIP_TCP /* don't build if not configured for use in lwipopts.h */
@@ -181,6 +183,7 @@ tcp_input(struct pbuf *p, struct netif *inp)
         IP_PCB_IPVER_INPUT_MATCH(pcb) &&
         ipX_addr_cmp(ip_current_is_v6(), &pcb->remote_ip, ipX_current_src_addr()) &&
         ipX_addr_cmp(ip_current_is_v6(),&pcb->local_ip, ipX_current_dest_addr())) {
+      KSTATS_VECTOR(tcp_input_fast_path);
       break;
     }
     prev = pcb;

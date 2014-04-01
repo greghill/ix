@@ -8,6 +8,7 @@
 #include <ix/delay.h>
 #include <ix/atomic.h>
 #include <ix/ethdev.h>
+#include <ix/kstats.h>
 #include <ix/log.h>
 #include <ix/mem.h>
 #include <ix/mbuf.h>
@@ -131,6 +132,9 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 	machaddr_t maddr;
 	uint32_t status;
 	int nb_descs = 0;
+#ifdef ENABLE_KSTATS
+	kstats_accumulate save;
+#endif
 
 	while (1) {
 		rxdp = &rxq->ring[rxq->pos & (rxq->len - 1)];
@@ -138,6 +142,9 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 
 		if (!(status & IXGBE_RXDADV_STAT_DD))
 			break;
+
+		KSTATS_PUSH(eth_input, &save);
+
 		rxd = *rxdp;
 
 		rxqe = &rxq->ring_entries[rxq->pos & (rxq->len -1)];
@@ -159,6 +166,8 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 
 		rxq->pos++;
 		nb_descs++;
+
+		KSTATS_POP(&save);
 	}
 
 	if (nb_descs) {

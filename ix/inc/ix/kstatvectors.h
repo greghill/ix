@@ -13,3 +13,5 @@ DEF_KSTATS(rx_poll);
 DEF_KSTATS(bsys);
 DEF_KSTATS(tcp_fasttmr);
 DEF_KSTATS(tcp_slowtmr);
+DEF_KSTATS(eth_input);
+DEF_KSTATS(tcp_input_fast_path);
