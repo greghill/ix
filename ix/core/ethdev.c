@@ -9,6 +9,7 @@
 #include <ix/ethdev.h>
 #include <ix/log.h>
 #include <ix/cpu.h>
+#include <ix/queue.h>
 
 #include <net/ethernet.h>
 
@@ -61,6 +62,7 @@ int eth_dev_start(struct rte_eth_dev *dev)
 {
 	unsigned int rx_queue_idx;
 	int ret;
+	int i;
 	struct eth_addr macaddr;
 	struct rte_eth_link link;
 
@@ -117,6 +119,12 @@ int eth_dev_start(struct rte_eth_dev *dev)
 	eth_rx_count = dev->data->nb_rx_queues;
 	eth_rx = dev->data->rx_queues;
 	eth_tx = dev->data->tx_queues[0];
+
+	for (i = 0; i < eth_rx_count; i++) {
+		ret = queue_init_one(i);
+		if (ret)
+			goto err_start;
+	}
 
 	return 0;
 
