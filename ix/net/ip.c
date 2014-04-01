@@ -8,6 +8,7 @@
 #include <ix/byteorder.h>
 #include <ix/errno.h>
 #include <ix/log.h>
+#include <ix/queue.h>
 
 #include <asm/chksum.h>
 
@@ -91,9 +92,11 @@ out:
  * eth_input - process an ethernet packet
  * @pkt: the mbuf containing the packet
  */
-void eth_input(struct mbuf *pkt)
+void eth_input(uint16_t queue_id, struct mbuf *pkt)
 {
 	struct eth_hdr *ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
+
+	set_current_queue(queue_id);
 
 	log_debug("ip: got ethernet packet of len %ld, type %x\n",
 		  pkt->len, ntoh16(ethhdr->type));
@@ -112,6 +115,8 @@ void eth_input(struct mbuf *pkt)
 	default:
 		mbuf_free(pkt);
 	}
+
+	unset_current_queue();
 }
 
 /* FIXME: change when we integrate better with LWIP */

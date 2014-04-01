@@ -198,5 +198,5 @@ extern void mbuf_exit_cpu(void);
  * direct dispatches into network stack
  * FIXME: add a function for each entry point (e.g. udp and tcp)
  */
-extern void eth_input(struct mbuf *pkt);
+extern void eth_input(uint16_t queue_id, struct mbuf *pkt);
 

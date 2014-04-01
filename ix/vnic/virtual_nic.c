@@ -99,7 +99,7 @@ static int virtual_poll(struct eth_rx_queue *rx)
 		rxdp->addr = virtual_mbuf_machaddr(new_b);
 		rxdp->done = 0;
 
-		eth_input(b);
+		eth_input(0, b);
 
 		rxq->pos++;
 		nb_descs++;

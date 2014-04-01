@@ -162,7 +162,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		rxdp->read.hdr_addr = cpu_to_le32(maddr);
 		rxdp->read.pkt_addr = cpu_to_le32(maddr);
 
-		eth_input(b);
+		eth_input(rxq->queue_id, b);
 
 		rxq->pos++;
 		nb_descs++;
