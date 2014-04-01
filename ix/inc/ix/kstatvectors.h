@@ -6,6 +6,7 @@
 
 DEF_KSTATS(none);
 DEF_KSTATS(timer);
+DEF_KSTATS(print_kstats);
 DEF_KSTATS(tx_reclaim);
 DEF_KSTATS(tx_xmit);
 DEF_KSTATS(rx_poll);

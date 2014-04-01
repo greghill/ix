@@ -90,7 +90,8 @@ static void kstats_print(struct timer *t)
 #undef DEF_KSTATS
 #define DEF_KSTATS(_c)  kstats_printone(&ks->_c, # _c);
 #include <ix/kstatvectors.h>
-  
+
+  KSTATS_VECTOR(print_kstats);
   bzero(ks,sizeof(*ks));
 
   timer_add(&percpu_get(_kstats_timer), KSTATS_INTERVAL);
