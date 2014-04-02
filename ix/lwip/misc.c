@@ -125,7 +125,7 @@ int memp_init(void)
 	if (init_mempool(&percpu_get(tcp_pcb_mempool), 65536, memp_sizes[MEMP_TCP_PCB]))
 		return 1;
 
-	if (init_mempool(&percpu_get(tcp_pcb_listen_mempool), 4, memp_sizes[MEMP_TCP_PCB_LISTEN]))
+	if (init_mempool(&percpu_get(tcp_pcb_listen_mempool), 65536, memp_sizes[MEMP_TCP_PCB_LISTEN]))
 		return 1;
 
 	if (init_mempool(&percpu_get(tcp_seg_mempool), 65536, memp_sizes[MEMP_TCP_SEG]))
