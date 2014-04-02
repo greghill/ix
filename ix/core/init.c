@@ -23,10 +23,7 @@
 
 #include <dune.h>
 
-/* FIXME: remove when we replace LWIP memory management with ours */
-#include <lwip/mem.h>
 #include <lwip/memp.h>
-#include <lwip/pbuf.h>
 
 extern int net_init(void);
 extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
@@ -280,14 +277,12 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-	/* FIXME: remove when we replace LWIP memory management with ours */
-	mem_init();
 	ret = memp_init();
 	if (ret) {
 		log_err("init: failed to initialize lwip memp\n");
 		return ret;
 	}
-	pbuf_init();
+
 	for_each_queue(queue)
 		tcp_init();
 
