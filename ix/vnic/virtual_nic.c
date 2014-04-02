@@ -279,7 +279,7 @@ int virtual_init(void)
 	eth_dev = &virtual_eth_dev;
 	eth_rx_count = sizeof(virtual_eth_rx_queues) / sizeof(virtual_eth_rx_queues[0]);
 	eth_rx = virtual_eth_rx_queues;
-	eth_tx = &virtual_eth_tx;
+	percpu_get(eth_tx) = &virtual_eth_tx;
 
 	return 0;
 }

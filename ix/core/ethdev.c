@@ -16,7 +16,7 @@
 struct rte_eth_dev *eth_dev;
 uint16_t eth_rx_count;
 struct eth_rx_queue **eth_rx;
-struct eth_tx_queue *eth_tx;
+DEFINE_PERCPU(struct eth_tx_queue *, eth_tx);
 
 DEFINE_PERCPU(int, tx_batch_cap);
 DEFINE_PERCPU(int, tx_batch_len);
@@ -125,7 +125,7 @@ int eth_dev_start(struct rte_eth_dev *dev, unsigned int tx_queues)
 	eth_dev = dev;
 	eth_rx_count = dev->data->nb_rx_queues;
 	eth_rx = dev->data->rx_queues;
-	eth_tx = dev->data->tx_queues[0];
+	percpu_get(eth_tx) = dev->data->tx_queues[0];
 
 	percpu_get(assigned_queues) = (1 << eth_rx_count) - 1;
 

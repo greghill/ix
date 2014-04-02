@@ -85,7 +85,7 @@ static void main_loop(void)
 		KSTATS_POP(NULL);
 
 		KSTATS_PUSH(tx_reclaim, NULL);
-		percpu_get(tx_batch_cap) = eth_tx_reclaim(eth_tx);
+		percpu_get(tx_batch_cap) = eth_tx_reclaim(percpu_get(eth_tx));
 		KSTATS_POP(NULL);
 
 		KSTATS_PUSH(rx_poll, NULL);
@@ -94,7 +94,7 @@ static void main_loop(void)
 		KSTATS_POP(NULL);
 
 		KSTATS_PUSH(tx_xmit, NULL);
-		eth_tx_xmit(eth_tx, percpu_get(tx_batch_len),
+		eth_tx_xmit(percpu_get(eth_tx), percpu_get(tx_batch_len),
 			    percpu_get(tx_batch));
 		percpu_get(tx_batch_len) = 0;
 		KSTATS_POP(NULL);
@@ -184,7 +184,7 @@ static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
 
 	while (1) {
 		timer_run();
-		eth_tx_reclaim(eth_tx);
+		eth_tx_reclaim(percpu_get(eth_tx));
 		for_each_queue(i)
 			eth_rx_poll(eth_rx[i]);
 

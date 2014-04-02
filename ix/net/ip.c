@@ -166,7 +166,7 @@ int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest, uint8_t
 		payload += curp->len;
 	}
 
-	ret = eth_tx_xmit_one(eth_tx, pkt, sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + p->tot_len);
+	ret = eth_tx_xmit_one(percpu_get(eth_tx), pkt, sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + p->tot_len);
 
 	if (unlikely(ret != 1)) {
 		mbuf_free(pkt);

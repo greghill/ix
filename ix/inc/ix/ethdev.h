@@ -1103,10 +1103,9 @@ extern void eth_dev_destroy(struct rte_eth_dev *dev);
 /*
  * globals
  * FIXME: make RX per-core or more than one per-core.
- * FIXME: make TX per-core.
  */
 extern struct rte_eth_dev *eth_dev;
 extern uint16_t eth_rx_count;
 extern struct eth_rx_queue **eth_rx;
-extern struct eth_tx_queue *eth_tx;
+DECLARE_PERCPU(struct eth_tx_queue *, eth_tx);
 
