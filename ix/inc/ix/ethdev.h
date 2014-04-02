@@ -1096,7 +1096,7 @@ struct rte_eth_dev_data {
 extern void
 eth_dev_get_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr);
 extern struct rte_eth_dev *eth_dev_alloc(size_t private_len);
-extern int eth_dev_start(struct rte_eth_dev *dev);
+extern int eth_dev_start(struct rte_eth_dev *dev, unsigned int tx_queues);
 extern void eth_dev_stop(struct rte_eth_dev *dev);
 extern void eth_dev_destroy(struct rte_eth_dev *dev);
 

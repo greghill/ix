@@ -37,7 +37,7 @@ extern void tcp_init(void);
 
 volatile int uaccess_fault;
 
-static int hw_init_one(const char *pci_addr)
+static int hw_init_one(const char *pci_addr, unsigned int tx_queues)
 {
 	struct pci_addr addr;
 	struct pci_dev *dev;
@@ -60,7 +60,7 @@ static int hw_init_one(const char *pci_addr)
 		goto err;
 	}
 
-	ret = eth_dev_start(eth);
+	ret = eth_dev_start(eth, tx_queues);
 	if (ret) {
 		log_err("init: unable to start ethernet device\n");
 		goto err_start;
@@ -267,7 +267,7 @@ int main(int argc, char *argv[])
 		pcap_read_mode = 1;
 #endif
 	} else {
-		ret = hw_init_one(argv[1]);
+		ret = hw_init_one(argv[1], 1);
 		if (ret) {
 			log_err("init: failed to initialize ethernet device\n");
 			return ret;
