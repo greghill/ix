@@ -120,6 +120,8 @@ int eth_dev_start(struct rte_eth_dev *dev)
 	eth_rx = dev->data->rx_queues;
 	eth_tx = dev->data->tx_queues[0];
 
+	percpu_get(assigned_queues) = (1 << eth_rx_count) - 1;
+
 	for (i = 0; i < eth_rx_count; i++) {
 		ret = queue_init_one(i);
 		if (ret)

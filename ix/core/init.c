@@ -89,7 +89,7 @@ static void main_loop(void)
 		KSTATS_POP(NULL);
 
 		KSTATS_PUSH(rx_poll, NULL);
-		for (i = 0; i < eth_rx_count; i++)
+		for_each_queue(i)
 			eth_rx_poll(eth_rx[i]);
 		KSTATS_POP(NULL);
 
@@ -185,7 +185,7 @@ static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
 	while (1) {
 		timer_run();
 		eth_tx_reclaim(eth_tx);
-		for (i = 0; i < eth_rx_count; i++)
+		for_each_queue(i)
 			eth_rx_poll(eth_rx[i]);
 
 		now = rdtsc();

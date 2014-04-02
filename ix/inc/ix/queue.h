@@ -18,6 +18,7 @@
 	extern DEFINE_PERQUEUE(type, name)
 
 DECLARE_PERCPU(void *, current_perqueue);
+DECLARE_PERCPU(long, assigned_queues);
 
 static inline void * __perqueue_get(void *key)
 {
@@ -37,6 +38,18 @@ static inline void * __perqueue_get(void *key)
 #define perqueue_get(var)						\
 	(*((typeof(perqueue_##var) *) (__perqueue_get(&perqueue_##var))))
 
+static inline unsigned int queue_next(int n)
+{
+	long q = percpu_get(assigned_queues);
+	q >>= ++n;
+	while (q && !(q & 1)) {
+		q >>= 1;
+		n++;
+	}
+	if (!q)
+		return NQUEUE;
+	return n;
+}
 
 /**
  * for_each_queue - iterate over every queue
@@ -44,7 +57,10 @@ static inline void * __perqueue_get(void *key)
  *
  * After the loop, queue is >= NQUEUE or the index of the first unitialized queue.
  */
-#define for_each_queue(queue) for ((queue) = -1; !set_current_queue(++(queue));)
+#define for_each_queue(queue) \
+	for ((queue) = -1; \
+	(queue) = queue_next((queue)), \
+	!set_current_queue((queue));)
 
 int queue_init_one(unsigned int queue);
 

@@ -16,6 +16,7 @@
 #include <ix/page.h>
 #include <ix/vm.h>
 #include <ix/kstats.h>
+#include <ix/queue.h>
 
 #include <dune.h>
 
@@ -96,7 +97,7 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(rx_poll, NULL);
-	for (i = 0; i < eth_rx_count; i++)
+	for_each_queue(i)
 		eth_rx_poll(eth_rx[i]);
 	KSTATS_POP(NULL);
 

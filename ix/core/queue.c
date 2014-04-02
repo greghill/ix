@@ -12,6 +12,7 @@ extern const char __perqueue_start[];
 extern const char __perqueue_end[];
 
 DEFINE_PERCPU(void *, current_perqueue);
+DEFINE_PERCPU(long, assigned_queues);
 
 static void * queue_init_perqueue(unsigned int queue, unsigned int numa_node)
 {
