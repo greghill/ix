@@ -25,6 +25,7 @@
 
 #include <lwip/memp.h>
 
+#define MAX_QUEUES 16
 #define MAX_QUEUES_PER_CORE 16
 
 extern int net_init(void);
@@ -195,11 +196,14 @@ static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
 	}
 }
 
-static int cpu_networking_init()
+static int cpu_networking_init(int nb_rx_queues)
 {
 	int ret;
 	unsigned int queue;
 	int i;
+
+	if (nb_rx_queues > MAX_QUEUES_PER_CORE)
+		return -EINVAL;
 
 	percpu_get(eth_rx_count) = 0;
 	percpu_get(eth_rx) = malloc(sizeof(struct eth_rx_queue *) * MAX_QUEUES_PER_CORE);
@@ -208,7 +212,7 @@ static int cpu_networking_init()
 		return -ENOMEM;
 	}
 
-	for (i = 0; i < MAX_QUEUES_PER_CORE; i++) {
+	for (i = 0; i < nb_rx_queues; i++) {
 		ret = eth_dev_get_rx_queue(eth_dev, &percpu_get(eth_rx)[i]);
 		if (ret) {
 			log_err("init: failed to get an RX queue\n");
@@ -233,6 +237,8 @@ static int cpu_networking_init()
 		tcp_init();
 
 	tcp_echo_server_init(1234);
+
+	log_info("init: cpu %d handles %d queues\n", percpu_get(cpu_id), percpu_get(eth_rx_count));
 
 	return 0;
 }
@@ -320,7 +326,7 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-	ret = cpu_networking_init();
+	ret = cpu_networking_init(MAX_QUEUES);
 	if (ret) {
 		log_err("init: failed to initialize networking for cpu\n");
 		return ret;
