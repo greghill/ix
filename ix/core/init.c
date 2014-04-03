@@ -25,6 +25,8 @@
 
 #include <lwip/memp.h>
 
+#define MAX_QUEUES_PER_CORE 16
+
 extern int net_init(void);
 extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
 extern int virtual_init(void);
@@ -197,6 +199,23 @@ static int cpu_networking_init()
 {
 	int ret;
 	unsigned int queue;
+	int i;
+
+	percpu_get(eth_rx_count) = 0;
+	percpu_get(eth_rx) = malloc(sizeof(struct eth_rx_queue *) * MAX_QUEUES_PER_CORE);
+	if (!percpu_get(eth_rx)) {
+		log_err("init: failed to allocate memory for RX queues\n");
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < MAX_QUEUES_PER_CORE; i++) {
+		ret = eth_dev_get_rx_queue(eth_dev, &percpu_get(eth_rx)[i]);
+		if (ret) {
+			log_err("init: failed to get an RX queue\n");
+			return ret;
+		}
+	}
+	percpu_get(eth_rx_count) = i;
 
 	ret = eth_dev_get_tx_queue(eth_dev, &percpu_get(eth_tx));
 	if (ret) {

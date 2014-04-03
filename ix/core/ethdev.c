@@ -60,19 +60,19 @@ void eth_dev_get_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr)
  */
 int eth_dev_start(struct rte_eth_dev *dev)
 {
-	unsigned int rx_queue_idx;
 	int ret;
-	int i;
+	int max_rx_queues;
 	struct eth_addr macaddr;
 	struct rte_eth_link link;
 	struct rte_eth_dev_info dev_info;
 
 	dev->dev_ops->dev_infos_get(dev, &dev_info);
 
-	dev->data->nb_rx_queues = min(dev_info.max_rx_queues, ETH_RSS_RETA_MAX_QUEUE);
+	dev->data->nb_rx_queues = 0;
 	dev->data->nb_tx_queues = 0;
 
-	dev->data->rx_queues = malloc(sizeof(struct eth_rx_queue *) * dev->data->nb_rx_queues);
+	max_rx_queues = min(dev_info.max_rx_queues, ETH_RSS_RETA_MAX_QUEUE);
+	dev->data->rx_queues = malloc(sizeof(struct eth_rx_queue *) * max_rx_queues);
 	if (!dev->data->rx_queues)
 		return -ENOMEM;
 
@@ -80,12 +80,6 @@ int eth_dev_start(struct rte_eth_dev *dev)
 	if (!dev->data->tx_queues) {
 		ret = -ENOMEM;
 		goto err;
-	}
-
-	for (rx_queue_idx = 0; rx_queue_idx < dev->data->nb_rx_queues; rx_queue_idx++) {
-		ret = dev->dev_ops->rx_queue_setup(dev, rx_queue_idx, -1, ETH_DEV_RX_QUEUE_SZ);
-		if (ret)
-			goto err_start;
 	}
 
 	ret = dev->dev_ops->dev_start(dev);
@@ -115,24 +109,61 @@ int eth_dev_start(struct rte_eth_dev *dev)
 	}
 
 	eth_dev = dev;
-	percpu_get(eth_rx_count) = dev->data->nb_rx_queues;
-	percpu_get(eth_rx) = dev->data->rx_queues;
-
-	for (i = 0; i < percpu_get(eth_rx_count); i++) {
-		ret = queue_init_one(percpu_get(eth_rx)[i]);
-		if (ret)
-			goto err_start;
-	}
 
 	return 0;
 
 
 err_start:
-	while (rx_queue_idx--)
-		dev->dev_ops->rx_queue_release(dev->data->rx_queues[rx_queue_idx]);
 	free(dev->data->tx_queues);
 err:
 	free(dev->data->rx_queues);
+	return ret;
+}
+
+/**
+ * eth_dev_get_rx_queue - get the next available rx queue
+ * @dev: the ethernet device
+ * @rx_queue: pointer to store a pointer to struct eth_rx_queue
+ *
+ * Returns 0 if successful, otherwise failure.
+ */
+int eth_dev_get_rx_queue(struct rte_eth_dev *dev, struct eth_rx_queue **rx_queue)
+{
+	int rx_queue_id;
+	int ret;
+	int max_rx_queues;
+	struct rte_eth_dev_info dev_info;
+
+	rx_queue_id = dev->data->nb_rx_queues;
+
+	dev->dev_ops->dev_infos_get(dev, &dev_info);
+	max_rx_queues = min(dev_info.max_rx_queues, ETH_RSS_RETA_MAX_QUEUE);
+
+	if (rx_queue_id >= max_rx_queues)
+		return -EMFILE;
+
+	ret = dev->dev_ops->rx_queue_setup(dev, rx_queue_id, -1, ETH_DEV_RX_QUEUE_SZ);
+	if (ret)
+		return ret;
+
+	ret = queue_init_one(dev->data->rx_queues[rx_queue_id]);
+	if (ret)
+		goto err;
+
+	/* Needed here in order to correctly fill in the redirection table. */
+	dev->data->nb_rx_queues++;
+
+	ret = dev->dev_ops->rx_queue_init(dev, rx_queue_id);
+	if (ret)
+		goto err;
+
+	*rx_queue = dev->data->rx_queues[rx_queue_id];
+
+	return 0;
+
+err:
+	dev->data->nb_rx_queues--;
+	dev->dev_ops->rx_queue_release(dev->data->rx_queues[rx_queue_id]);
 	return ret;
 }
 

@@ -1337,7 +1337,7 @@ ixgbe_dev_mq_rx_configure(struct rte_eth_dev *dev)
 }
 
 /**
- * ixgbe_dev_rx_init - initializes each of the RX queues
+ * ixgbe_dev_rx_init - initializes the RX subsystem
  * @dev: the ethernet device
  *
  * Returns 0 if successful, otherwise failure.
@@ -1345,7 +1345,6 @@ ixgbe_dev_mq_rx_configure(struct rte_eth_dev *dev)
 int ixgbe_dev_rx_init(struct rte_eth_dev *dev)
 {
 	struct ixgbe_hw *hw;
-	int i;
 	uint32_t rxctrl, fctrl, hlreg0, maxfrs, rxcsum, rdrxctl;
 
 	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
@@ -1387,53 +1386,6 @@ int ixgbe_dev_rx_init(struct rte_eth_dev *dev)
 		hlreg0 |= IXGBE_HLREG0_LPBK;
 
 	IXGBE_WRITE_REG(hw, IXGBE_HLREG0, hlreg0);
-
-	/* Configure the RX queues */
-	for (i = 0; i < dev->data->nb_rx_queues; i++) {
-		struct rx_queue *rxq = eth_rx_queue_to_drv(dev->data->rx_queues[i]);
-		physaddr_t bus_addr = rxq->ring_physaddr;
-		uint32_t srrctl;
-
-		/* Configure descriptor ring base and length */
-		IXGBE_WRITE_REG(hw, IXGBE_RDBAL(rxq->reg_idx),
-				(uint32_t)(bus_addr & 0x00000000ffffffffULL));
-		IXGBE_WRITE_REG(hw, IXGBE_RDBAH(rxq->reg_idx),
-				(uint32_t)(bus_addr >> 32));
-		IXGBE_WRITE_REG(hw, IXGBE_RDLEN(rxq->reg_idx),
-				rxq->len * sizeof(union ixgbe_adv_rx_desc));
-		IXGBE_WRITE_REG(hw, IXGBE_RDH(rxq->reg_idx), 0);
-		IXGBE_WRITE_REG(hw, IXGBE_RDT(rxq->reg_idx), 0);
-
-		/* Configure the SRRCTL register */
-#ifdef RTE_HEADER_SPLIT_ENABLE
-		 /* Configure Header Split */
-		if (dev->data->dev_conf.rxmode.header_split) {
-			if (hw->mac.type == ixgbe_mac_82599EB) {
-				/* Must setup the PSRTYPE register */
-				uint32_t psrtype;
-				psrtype = IXGBE_PSRTYPE_TCPHDR |
-					IXGBE_PSRTYPE_UDPHDR   |
-					IXGBE_PSRTYPE_IPV4HDR  |
-					IXGBE_PSRTYPE_IPV6HDR;
-				IXGBE_WRITE_REG(hw, IXGBE_PSRTYPE(rxq->reg_idx), psrtype);
-			}
-			srrctl = ((dev->data->dev_conf.rxmode.split_hdr_size <<
-				   IXGBE_SRRCTL_BSIZEHDRSIZE_SHIFT) &
-				  IXGBE_SRRCTL_BSIZEHDR_MASK);
-			srrctl |= E1000_SRRCTL_DESCTYPE_HDR_SPLIT_ALWAYS;
-		} else
-#endif
-			srrctl = IXGBE_SRRCTL_DESCTYPE_ADV_ONEBUF;
-
-		/* Drop packets when no room is left in the descriptor ring */
-		srrctl |= IXGBE_SRRCTL_DROP_EN;
-
-		/* Configure the buffer size (increments of KB) */
-		srrctl |= ((MBUF_DATA_LEN >> IXGBE_SRRCTL_BSIZEPKT_SHIFT) &
-			   IXGBE_SRRCTL_BSIZEPKT_MASK);
-		IXGBE_WRITE_REG(hw, IXGBE_SRRCTL(rxq->reg_idx), srrctl);
-
-	}
 
 	/*
 	 * Device configured with multiple RX queues.
@@ -1756,12 +1708,8 @@ static void ixgbe_setup_loopback_link_82599(struct ixgbe_hw *hw)
 void ixgbe_dev_rxtx_start(struct rte_eth_dev *dev)
 {
 	struct ixgbe_hw *hw;
-	struct rx_queue *rxq;
 	uint32_t dmatxctl;
-	uint32_t rxdctl;
 	uint32_t rxctrl;
-	uint16_t i;
-	int poll_ms;
 
 	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
@@ -1769,25 +1717,6 @@ void ixgbe_dev_rxtx_start(struct rte_eth_dev *dev)
 		dmatxctl = IXGBE_READ_REG(hw, IXGBE_DMATXCTL);
 		dmatxctl |= IXGBE_DMATXCTL_TE;
 		IXGBE_WRITE_REG(hw, IXGBE_DMATXCTL, dmatxctl);
-	}
-
-	for (i = 0; i < dev->data->nb_rx_queues; i++) {
-		rxq = eth_rx_queue_to_drv(dev->data->rx_queues[i]);
-		rxdctl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(rxq->reg_idx));
-		rxdctl |= IXGBE_RXDCTL_ENABLE;
-		IXGBE_WRITE_REG(hw, IXGBE_RXDCTL(rxq->reg_idx), rxdctl);
-
-		/* Wait until RX Enable ready */
-		poll_ms = 10;
-		do {
-			delay_ms(1);
-			rxdctl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(rxq->reg_idx));
-		} while (--poll_ms && !(rxdctl & IXGBE_RXDCTL_ENABLE));
-		if (!poll_ms)
-			log_err("ixgbe: Could not enable "
-				"Rx Queue %d\n", i);
-		wmb();
-		IXGBE_WRITE_REG(hw, IXGBE_RDT(rxq->reg_idx), rxq->len - 1);
 	}
 
 	/* Enable Receive engine */
