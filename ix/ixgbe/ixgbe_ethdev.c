@@ -627,6 +627,7 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 
 	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
+	dev->pci_dev = pci_dev;
 	dev->dev_ops = &ixgbe_eth_dev_ops;
 	hw->device_id = pci_dev->device_id;
 	hw->vendor_id = pci_dev->vendor_id;
