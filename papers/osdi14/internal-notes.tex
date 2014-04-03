@@ -174,5 +174,14 @@ Scaling memcached at Facebook~\cite{nishtala2013scaling} required
 unnatural tricks such as relying on UDP and on in-network connection
 proxies to compensate for the lack of scoket scalability of Linux.
 
+Memcached is so important that folks are prototyping it in
+FPGA~\cite{chalamalasetti2013fpga}.  The authors's main evaluation is
+that they can get comparable performance to an industry server with
+10x the Performance/Watt, measured in KOPS/S/Watt (Table 3. memcached
+``gets'' with 128B size data). To beat their numbers, we need to beat
+30 Kops/sec/W to win.  Can we?  The comparison is a case of hardware
+specialization vs. software specialization (of the OS).
+
+
 
 \paragraph*{ngnx}
