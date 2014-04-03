@@ -730,6 +730,10 @@ typedef int (*eth_rx_queue_setup_t)(struct rte_eth_dev *dev,
 				    uint16_t nb_rx_desc);
 /**< @internal Set up a receive queue of an Ethernet device. */
 
+typedef int (*eth_rx_queue_init_t)(struct rte_eth_dev *dev,
+				    int rx_queue_id);
+/**< @internal Initialize a receive queue of an Ethernet device. */
+
 typedef int (*eth_tx_queue_setup_t)(struct rte_eth_dev *dev,
 				    int tx_queue_id,
 				    int numa_node,
@@ -896,6 +900,7 @@ struct eth_dev_ops {
 	vlan_strip_queue_set_t     vlan_strip_queue_set; /**< VLAN Stripping on queue. */
 	vlan_offload_set_t         vlan_offload_set; /**< Set VLAN Offload. */
 	eth_rx_queue_setup_t       rx_queue_setup;/**< Set up device RX queue.*/
+	eth_rx_queue_init_t        rx_queue_init;/**< Initialize a receive queue of an Ethernet device.*/
 	eth_rx_queue_release_t     rx_queue_release;/**< Release RX queue.*/
 	eth_tx_queue_setup_t       tx_queue_setup;/**< Set up device TX queue.*/
 	eth_tx_queue_init_t        tx_queue_init;/**< Initialize a transmit queue of an Ethernet device.*/

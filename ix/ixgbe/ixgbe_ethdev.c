@@ -211,6 +211,7 @@ static struct eth_dev_ops ixgbe_eth_dev_ops = {
 	.vlan_offload_set     = ixgbe_vlan_offload_set,
 	.vlan_strip_queue_set = ixgbe_vlan_strip_queue_set,
 	.rx_queue_setup       = ixgbe_dev_rx_queue_setup,
+	.rx_queue_init        = ixgbe_dev_rx_queue_init,
 	.rx_queue_release     = ixgbe_dev_rx_queue_release,
 	.tx_queue_setup       = ixgbe_dev_tx_queue_setup,
 	.tx_queue_init        = ixgbe_dev_tx_queue_init,
