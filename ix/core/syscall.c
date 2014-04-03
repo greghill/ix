@@ -98,7 +98,7 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 
 	KSTATS_PUSH(rx_poll, NULL);
 	for_each_queue(i)
-		eth_rx_poll(eth_rx[i]);
+		eth_rx_poll(percpu_get(eth_rx)[i]);
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(bsys, NULL);

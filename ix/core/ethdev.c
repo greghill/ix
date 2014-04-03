@@ -14,8 +14,8 @@
 #include <net/ethernet.h>
 
 struct rte_eth_dev *eth_dev;
-uint16_t eth_rx_count;
-struct eth_rx_queue **eth_rx;
+DEFINE_PERCPU(uint16_t, eth_rx_count);
+DEFINE_PERCPU(struct eth_rx_queue **, eth_rx);
 DEFINE_PERCPU(struct eth_tx_queue *, eth_tx);
 
 DEFINE_PERCPU(int, tx_batch_cap);
@@ -115,13 +115,11 @@ int eth_dev_start(struct rte_eth_dev *dev)
 	}
 
 	eth_dev = dev;
-	eth_rx_count = dev->data->nb_rx_queues;
-	eth_rx = dev->data->rx_queues;
+	percpu_get(eth_rx_count) = dev->data->nb_rx_queues;
+	percpu_get(eth_rx) = dev->data->rx_queues;
 
-	percpu_get(assigned_queues) = (1 << eth_rx_count) - 1;
-
-	for (i = 0; i < eth_rx_count; i++) {
-		ret = queue_init_one(i);
+	for (i = 0; i < percpu_get(eth_rx_count); i++) {
+		ret = queue_init_one(percpu_get(eth_rx)[i]);
 		if (ret)
 			goto err_start;
 	}

@@ -87,7 +87,7 @@ static void main_loop(void)
 
 		KSTATS_PUSH(rx_poll, NULL);
 		for_each_queue(i)
-			eth_rx_poll(eth_rx[i]);
+			eth_rx_poll(percpu_get(eth_rx)[i]);
 		KSTATS_POP(NULL);
 
 		KSTATS_PUSH(tx_xmit, NULL);
@@ -183,7 +183,7 @@ static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
 		timer_run();
 		eth_tx_reclaim(percpu_get(eth_tx));
 		for_each_queue(i)
-			eth_rx_poll(eth_rx[i]);
+			eth_rx_poll(percpu_get(eth_rx)[i]);
 
 		now = rdtsc();
 		if (now - last_ping >= 1000000ull * cycles_per_us) {

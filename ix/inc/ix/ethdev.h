@@ -968,6 +968,7 @@ struct rte_eth_dev_sriov {
 
 struct eth_rx_queue {
 	int (*poll) (struct eth_rx_queue *rx);
+	void *perqueue_offset;
 };
 
 /**
@@ -1103,10 +1104,9 @@ extern void eth_dev_destroy(struct rte_eth_dev *dev);
 
 /*
  * globals
- * FIXME: make RX per-core or more than one per-core.
  */
 extern struct rte_eth_dev *eth_dev;
-extern uint16_t eth_rx_count;
-extern struct eth_rx_queue **eth_rx;
+DECLARE_PERCPU(uint16_t, eth_rx_count);
+DECLARE_PERCPU(struct eth_rx_queue **, eth_rx);
 DECLARE_PERCPU(struct eth_tx_queue *, eth_tx);
 
