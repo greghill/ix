@@ -34,7 +34,7 @@ extern void tcp_init(void);
 
 volatile int uaccess_fault;
 
-static int hw_init_one(const char *pci_addr, unsigned int tx_queues)
+static int hw_init_one(const char *pci_addr)
 {
 	struct pci_addr addr;
 	struct pci_dev *dev;
@@ -57,7 +57,7 @@ static int hw_init_one(const char *pci_addr, unsigned int tx_queues)
 		goto err;
 	}
 
-	ret = eth_dev_start(eth, tx_queues);
+	ret = eth_dev_start(eth);
 	if (ret) {
 		log_err("init: unable to start ethernet device\n");
 		goto err_start;
@@ -198,6 +198,12 @@ static int cpu_networking_init()
 	int ret;
 	unsigned int queue;
 
+	ret = eth_dev_get_tx_queue(eth_dev, &percpu_get(eth_tx));
+	if (ret) {
+		log_err("init: failed to get a TX queue\n");
+		return ret;
+	}
+
 	ret = memp_init();
 	if (ret) {
 		log_err("init: failed to initialize lwip memp\n");
@@ -282,7 +288,7 @@ int main(int argc, char *argv[])
 		pcap_read_mode = 1;
 #endif
 	} else {
-		ret = hw_init_one(argv[1], 1);
+		ret = hw_init_one(argv[1]);
 		if (ret) {
 			log_err("init: failed to initialize ethernet device\n");
 			return ret;

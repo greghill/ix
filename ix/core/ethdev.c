@@ -55,33 +55,28 @@ void eth_dev_get_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr)
 /**
  * eth_dev_start - starts an ethernet device
  * @dev: the ethernet device
- * @tx_queues: number of requested tx queues
  *
  * Returns 0 if successful, otherwise failure.
  */
-int eth_dev_start(struct rte_eth_dev *dev, unsigned int tx_queues)
+int eth_dev_start(struct rte_eth_dev *dev)
 {
 	unsigned int rx_queue_idx;
-	unsigned int tx_queue_idx;
 	int ret;
 	int i;
 	struct eth_addr macaddr;
 	struct rte_eth_link link;
 	struct rte_eth_dev_info dev_info;
 
-	if (tx_queues == 0)
-		return -EINVAL;
-
 	dev->dev_ops->dev_infos_get(dev, &dev_info);
 
 	dev->data->nb_rx_queues = min(dev_info.max_rx_queues, ETH_RSS_RETA_MAX_QUEUE);
-	dev->data->nb_tx_queues = tx_queues;
+	dev->data->nb_tx_queues = 0;
 
 	dev->data->rx_queues = malloc(sizeof(struct eth_rx_queue *) * dev->data->nb_rx_queues);
 	if (!dev->data->rx_queues)
 		return -ENOMEM;
 
-	dev->data->tx_queues = malloc(sizeof(struct eth_tx_queue *) * dev->data->nb_tx_queues);
+	dev->data->tx_queues = malloc(sizeof(struct eth_tx_queue *) * dev_info.max_tx_queues);
 	if (!dev->data->tx_queues) {
 		ret = -ENOMEM;
 		goto err;
@@ -90,13 +85,7 @@ int eth_dev_start(struct rte_eth_dev *dev, unsigned int tx_queues)
 	for (rx_queue_idx = 0; rx_queue_idx < dev->data->nb_rx_queues; rx_queue_idx++) {
 		ret = dev->dev_ops->rx_queue_setup(dev, rx_queue_idx, -1, ETH_DEV_RX_QUEUE_SZ);
 		if (ret)
-			goto err_rxsetup;
-	}
-
-	for (tx_queue_idx = 0; tx_queue_idx < dev->data->nb_tx_queues; tx_queue_idx++) {
-		ret = dev->dev_ops->tx_queue_setup(dev, tx_queue_idx, -1, ETH_DEV_TX_QUEUE_SZ);
-		if (ret)
-			goto err_txsetup;
+			goto err_start;
 	}
 
 	ret = dev->dev_ops->dev_start(dev);
@@ -128,7 +117,6 @@ int eth_dev_start(struct rte_eth_dev *dev, unsigned int tx_queues)
 	eth_dev = dev;
 	eth_rx_count = dev->data->nb_rx_queues;
 	eth_rx = dev->data->rx_queues;
-	percpu_get(eth_tx) = dev->data->tx_queues[0];
 
 	percpu_get(assigned_queues) = (1 << eth_rx_count) - 1;
 
@@ -142,16 +130,48 @@ int eth_dev_start(struct rte_eth_dev *dev, unsigned int tx_queues)
 
 
 err_start:
-	dev->dev_ops->tx_queue_release(dev->data->tx_queues[0]);
-err_txsetup:
-	while (tx_queue_idx--)
-		dev->dev_ops->tx_queue_release(dev->data->tx_queues[tx_queue_idx]);
-err_rxsetup:
 	while (rx_queue_idx--)
 		dev->dev_ops->rx_queue_release(dev->data->rx_queues[rx_queue_idx]);
 	free(dev->data->tx_queues);
 err:
 	free(dev->data->rx_queues);
+	return ret;
+}
+
+/**
+ * eth_dev_get_tx_queue - get the next available tx queue
+ * @dev: the ethernet device
+ * @tx_queue: pointer to store a pointer to struct eth_tx_queue
+ *
+ * Returns 0 if successful, otherwise failure.
+ */
+int eth_dev_get_tx_queue(struct rte_eth_dev *dev, struct eth_tx_queue **tx_queue)
+{
+	int tx_queue_id;
+	int ret;
+	struct rte_eth_dev_info dev_info;
+
+	dev->dev_ops->dev_infos_get(dev, &dev_info);
+
+	tx_queue_id = dev->data->nb_tx_queues;
+	if (tx_queue_id >= dev_info.max_tx_queues)
+		return -EMFILE;
+
+	ret = dev->dev_ops->tx_queue_setup(dev, tx_queue_id, -1, ETH_DEV_TX_QUEUE_SZ);
+	if (ret)
+		return ret;
+
+	ret = dev->dev_ops->tx_queue_init(dev, tx_queue_id);
+	if (ret)
+		goto err;
+
+	*tx_queue = dev->data->tx_queues[tx_queue_id];
+	dev->data->nb_tx_queues++;
+
+	return 0;
+
+err:
+	dev->dev_ops->tx_queue_release(dev->data->tx_queues[tx_queue_id]);
 	return ret;
 }
 
