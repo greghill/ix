@@ -33,6 +33,8 @@
 struct cpu_thread_params {
 	int cpu;
 	int nb_rx_queues;
+	pthread_mutex_t start_init_mutex;
+	pthread_mutex_t init_done_mutex;
 };
 
 extern int net_init(void);
@@ -43,8 +45,6 @@ extern int sandbox_init(int argc, char *argv[]);
 extern void tcp_init(void);
 
 volatile int uaccess_fault;
-
-static pthread_barrier_t barrier;
 
 static int hw_init_one(const char *pci_addr)
 {
@@ -257,9 +257,9 @@ void *start_cpu(void *arg)
 	int ret;
 	struct cpu_thread_params *params;
 
-	pthread_barrier_wait(&barrier);
-
 	params = arg;
+
+	pthread_mutex_lock(&params->start_init_mutex);
 
 	ret = init_this_cpu(params->cpu);
 	if (ret) {
@@ -273,7 +273,7 @@ void *start_cpu(void *arg)
 		exit(ret);
 	}
 
-	free(params);
+	pthread_mutex_unlock(&params->init_done_mutex);
 
 	main_loop();
 
@@ -322,7 +322,7 @@ int main(int argc, char *argv[])
 	int cpu_list_count;
 	int cpu[MAX_QUEUES];
 	int i;
-	struct cpu_thread_params *cpu_thread_params;
+	struct cpu_thread_params cpu_thread_params[MAX_QUEUES];
 
 	log_info("init: starting IX\n");
 
@@ -361,19 +361,16 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-	ret = pthread_barrier_init(&barrier, NULL, cpu_list_count);
-	if (ret) {
-		log_err("init: failed to init barrier\n");
-		return ret;
-	}
-
 	for (i = 1; i < cpu_list_count; i++) {
-		cpu_thread_params = malloc(sizeof(*cpu_thread_params));
-		cpu_thread_params->cpu = cpu[i];
-		cpu_thread_params->nb_rx_queues = MAX_QUEUES / cpu_list_count;
+		cpu_thread_params[i].cpu = cpu[i];
+		cpu_thread_params[i].nb_rx_queues = MAX_QUEUES / cpu_list_count;
 		if (i >= cpu_list_count - MAX_QUEUES % cpu_list_count)
-			cpu_thread_params->nb_rx_queues++;
-		ret = pthread_create(&thread, NULL, start_cpu, cpu_thread_params);
+			cpu_thread_params[i].nb_rx_queues++;
+		pthread_mutex_init(&cpu_thread_params[i].start_init_mutex, NULL);
+		pthread_mutex_init(&cpu_thread_params[i].init_done_mutex, NULL);
+		pthread_mutex_lock(&cpu_thread_params[i].start_init_mutex);
+		pthread_mutex_lock(&cpu_thread_params[i].init_done_mutex);
+		ret = pthread_create(&thread, NULL, start_cpu, &cpu_thread_params[i]);
 		if (ret) {
 			log_err("init: failed to spawn thread\n");
 			return ret;
@@ -420,8 +417,6 @@ int main(int argc, char *argv[])
 			log_err("init: failed to initialize ethernet device\n");
 			return ret;
 		}
-
-		pthread_barrier_wait(&barrier);
 	}
 
 	ret = net_init();
@@ -434,6 +429,14 @@ int main(int argc, char *argv[])
 	if (ret) {
 		log_err("init: failed to initialize networking for cpu\n");
 		return ret;
+	}
+
+	for (i = 1; i < cpu_list_count; i++) {
+		pthread_mutex_unlock(&cpu_thread_params[i].start_init_mutex);
+		pthread_mutex_lock(&cpu_thread_params[i].init_done_mutex);
+		pthread_mutex_unlock(&cpu_thread_params[i].init_done_mutex);
+		pthread_mutex_destroy(&cpu_thread_params[i].start_init_mutex);
+		pthread_mutex_destroy(&cpu_thread_params[i].init_done_mutex);
 	}
 
 #ifdef ENABLE_PCAP
