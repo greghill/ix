@@ -193,13 +193,31 @@ static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
 	}
 }
 
+static int cpu_networking_init()
+{
+	int ret;
+	unsigned int queue;
+
+	ret = memp_init();
+	if (ret) {
+		log_err("init: failed to initialize lwip memp\n");
+		return ret;
+	}
+
+	for_each_queue(queue)
+		tcp_init();
+
+	tcp_echo_server_init(1234);
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
 #ifdef ENABLE_PCAP
 	int pcap_read_mode = 0;
 #endif
-	unsigned int queue;
 
 	log_info("init: starting IX\n");
 
@@ -277,16 +295,11 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-	ret = memp_init();
+	ret = cpu_networking_init();
 	if (ret) {
-		log_err("init: failed to initialize lwip memp\n");
+		log_err("init: failed to initialize networking for cpu\n");
 		return ret;
 	}
-
-	for_each_queue(queue)
-		tcp_init();
-
-	tcp_echo_server_init(1234);
 
 #ifdef ENABLE_PCAP
 	if (pcap_read_mode) {
