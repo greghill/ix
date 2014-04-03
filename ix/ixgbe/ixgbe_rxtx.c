@@ -1619,6 +1619,73 @@ void ixgbe_dev_tx_init(struct rte_eth_dev *dev)
 	ixgbe_dev_mq_tx_configure(dev);
 }
 
+int ixgbe_dev_tx_queue_init(struct rte_eth_dev *dev, int tx_queue_id)
+{
+	struct ixgbe_hw *hw;
+	uint32_t txctrl;
+	uint32_t txdctl;
+	int poll_ms;
+
+        hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+
+	/* Setup the Base and Length of the Tx Descriptor Ring */
+	struct tx_queue *txq = eth_tx_queue_to_drv(dev->data->tx_queues[tx_queue_id]);
+	uint64_t bus_addr = txq->ring_physaddr;
+
+	IXGBE_WRITE_REG(hw, IXGBE_TDBAL(txq->reg_idx),
+			(uint32_t)(bus_addr & 0x00000000ffffffffULL));
+	IXGBE_WRITE_REG(hw, IXGBE_TDBAH(txq->reg_idx),
+			(uint32_t)(bus_addr >> 32));
+	IXGBE_WRITE_REG(hw, IXGBE_TDLEN(txq->reg_idx),
+			txq->len * sizeof(union ixgbe_adv_tx_desc));
+	/* Setup the HW Tx Head and TX Tail descriptor pointers */
+	IXGBE_WRITE_REG(hw, IXGBE_TDH(txq->reg_idx), 0);
+	IXGBE_WRITE_REG(hw, IXGBE_TDT(txq->reg_idx), 0);
+
+	/*
+	 * Disable Tx Head Writeback RO bit, since this hoses
+	 * bookkeeping if things aren't delivered in order.
+	 */
+	switch (hw->mac.type) {
+	case ixgbe_mac_82598EB:
+		txctrl = IXGBE_READ_REG(hw, IXGBE_DCA_TXCTRL(txq->reg_idx));
+		txctrl &= ~IXGBE_DCA_TXCTRL_DESC_WRO_EN;
+		IXGBE_WRITE_REG(hw, IXGBE_DCA_TXCTRL(txq->reg_idx), txctrl);
+		break;
+
+	case ixgbe_mac_82599EB:
+	case ixgbe_mac_X540:
+	default:
+		txctrl = IXGBE_READ_REG(hw,
+					IXGBE_DCA_TXCTRL_82599(txq->reg_idx));
+		txctrl &= ~IXGBE_DCA_TXCTRL_DESC_WRO_EN;
+		IXGBE_WRITE_REG(hw, IXGBE_DCA_TXCTRL_82599(txq->reg_idx),
+				txctrl);
+		break;
+	}
+
+	/* Enable queue */
+	txdctl = IXGBE_TXDCTL_ENABLE;
+	txdctl |= (8 << 16); /* set WTHRESH = 8 */
+	txdctl |= (1 << 8);  /* set HTHRESH = 1 */
+	txdctl |= 32;	     /* set PTHRESH = 32 */
+	IXGBE_WRITE_REG(hw, IXGBE_TXDCTL(txq->reg_idx), txdctl);
+
+	/* Wait until TX Enable ready */
+	if (hw->mac.type == ixgbe_mac_82599EB) {
+		poll_ms = 10;
+		do {
+			delay_ms(1);
+			txdctl = IXGBE_READ_REG(hw, IXGBE_TXDCTL(txq->reg_idx));
+		} while (--poll_ms && !(txdctl & IXGBE_TXDCTL_ENABLE));
+		if (!poll_ms)
+			log_err("ixgbe: Could not enable "
+				"Tx Queue %d\n", tx_queue_id);
+	}
+
+	return 0;
+}
+
 /*
  * Set up link for 82599 loopback mode Tx->Rx.
  */

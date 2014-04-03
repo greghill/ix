@@ -735,6 +735,10 @@ typedef int (*eth_tx_queue_setup_t)(struct rte_eth_dev *dev,
 				    int numa_node,
 				    uint16_t nb_tx_desc);
 /**< @internal Setup a transmit queue of an Ethernet device. */
+
+typedef int (*eth_tx_queue_init_t)(struct rte_eth_dev *dev,
+				    int tx_queue_id);
+/**< @internal Initialize a transmit queue of an Ethernet device. */
 struct eth_rx_queue;
 struct eth_tx_queue;
 typedef void (*eth_rx_queue_release_t)(struct eth_rx_queue *queue);
@@ -894,6 +898,7 @@ struct eth_dev_ops {
 	eth_rx_queue_setup_t       rx_queue_setup;/**< Set up device RX queue.*/
 	eth_rx_queue_release_t     rx_queue_release;/**< Release RX queue.*/
 	eth_tx_queue_setup_t       tx_queue_setup;/**< Set up device TX queue.*/
+	eth_tx_queue_init_t        tx_queue_init;/**< Initialize a transmit queue of an Ethernet device.*/
 	eth_tx_queue_release_t     tx_queue_release;/**< Release TX queue.*/
 	eth_dev_led_on_t           dev_led_on;    /**< Turn on LED. */
 	eth_dev_led_off_t          dev_led_off;   /**< Turn off LED. */
