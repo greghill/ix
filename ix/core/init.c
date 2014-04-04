@@ -30,6 +30,12 @@
 #define MAX_QUEUES 16
 #define MAX_QUEUES_PER_CORE 16
 
+struct cpu_spec {
+	int count;
+	int cpu[MAX_QUEUES];
+	int nb_rx_queues[MAX_QUEUES];
+};
+
 struct cpu_thread_params {
 	int cpu;
 	int nb_rx_queues;
@@ -280,33 +286,72 @@ void *start_cpu(void *arg)
 	return NULL;
 }
 
-int parse_cpu_list(char *list, int *cpu, int max_cpus, int *cpu_list_count)
+int parse_cpu_list(char *list, struct cpu_spec *cpu_spec)
 {
 	int i;
 	int val;
 	char *tok;
+	char *tok2;
+	char *saveptr1, *saveptr2;
+	int total_rx_queues, count_unspec_queues;
+	int max_cpus;
+	int count;
 
-	*cpu_list_count = 0;
-	tok = strtok(list, ",");
+	max_cpus = sizeof(cpu_spec->cpu) / sizeof(cpu_spec->cpu[0]);
+	count_unspec_queues = 0;
+	total_rx_queues = 0;
+	cpu_spec->count = 0;
+	tok = strtok_r(list, ",", &saveptr1);
 	while (tok) {
-		if (*cpu_list_count >= max_cpus) {
+		if (cpu_spec->count >= max_cpus) {
 			log_err("init: a maximum number of %d cpus are supported.\n", max_cpus);
 			return 1;
 		}
-		val = atoi(tok);
+		tok2 = strtok_r(tok, ":", &saveptr2);
+		val = atoi(tok2);
 		if (val < 0 || val >= cpu_count) {
-			log_err("init: invalid cpu specified '%s'\n", tok);
+			log_err("init: invalid cpu specified '%s'\n", tok2);
 			return 1;
 		}
-		for (i = 0; i < *cpu_list_count; i++) {
-			if (cpu[i] == val) {
+		for (i = 0; i < cpu_spec->count; i++) {
+			if (cpu_spec->cpu[i] == val) {
 				log_err("init: cpu specified multiple times '%d'\n", val);
 				return 1;
 			}
 		}
-		cpu[*cpu_list_count] = val;
-		(*cpu_list_count)++;
-		tok = strtok(NULL, ",");
+		cpu_spec->cpu[cpu_spec->count] = val;
+
+		tok2 = strtok_r(NULL, ":", &saveptr2);
+		if (tok2) {
+			val = atoi(tok2);
+			if (val < 0 || val > MAX_QUEUES) {
+				log_err("init: invalid rx queue count specified '%s'\n", tok2);
+				return 1;
+			}
+			total_rx_queues += val;
+			if (total_rx_queues > MAX_QUEUES) {
+				log_err("init: total rx queues cannot exceed %d\n", MAX_QUEUES);
+				return 1;
+			}
+		} else {
+			count_unspec_queues++;
+			val = -1;
+		}
+		cpu_spec->nb_rx_queues[cpu_spec->count] = val;
+
+		cpu_spec->count++;
+		tok = strtok_r(NULL, ",", &saveptr1);
+	}
+
+	count = (MAX_QUEUES - total_rx_queues) % count_unspec_queues;
+	for (i = 0; i < cpu_spec->count; i++) {
+		if (cpu_spec->nb_rx_queues[i] != -1)
+			continue;
+		cpu_spec->nb_rx_queues[i] = (MAX_QUEUES - total_rx_queues) / count_unspec_queues;
+		if (count) {
+			cpu_spec->nb_rx_queues[i]++;
+			count--;
+		}
 	}
 
 	return 0;
@@ -319,8 +364,7 @@ int main(int argc, char *argv[])
 	int pcap_read_mode = 0;
 #endif
 	pthread_t thread;
-	int cpu_list_count;
-	int cpu[MAX_QUEUES];
+	struct cpu_spec cpu_spec;
 	int i;
 	struct cpu_thread_params cpu_thread_params[MAX_QUEUES];
 
@@ -328,7 +372,7 @@ int main(int argc, char *argv[])
 
 	if (argc < 2) {
 		log_err("init: invalid arguments\n");
-		log_err("init: format -> ix ETH_PCI_ADDR [CPU,...]\n");
+		log_err("init: format -> ix ETH_PCI_ADDR [CPU[:QUEUE_COUNT],...]\n");
 		return -EINVAL;
 	}
 
@@ -339,12 +383,13 @@ int main(int argc, char *argv[])
 	}
 
 	if (argc >= 3) {
-		ret = parse_cpu_list(argv[2], cpu, sizeof(cpu) / sizeof(cpu[0]), &cpu_list_count);
+		ret = parse_cpu_list(argv[2], &cpu_spec);
 		if (ret)
 			return ret;
 	} else {
-		cpu[0] = 1;
-		cpu_list_count = 1;
+		cpu_spec.count = 1;
+		cpu_spec.cpu[0] = 1;
+		cpu_spec.nb_rx_queues[0] = -1;
 	}
 
 	ret = dune_init(false);
@@ -361,11 +406,9 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-	for (i = 1; i < cpu_list_count; i++) {
-		cpu_thread_params[i].cpu = cpu[i];
-		cpu_thread_params[i].nb_rx_queues = MAX_QUEUES / cpu_list_count;
-		if (i >= cpu_list_count - MAX_QUEUES % cpu_list_count)
-			cpu_thread_params[i].nb_rx_queues++;
+	for (i = 1; i < cpu_spec.count; i++) {
+		cpu_thread_params[i].cpu = cpu_spec.cpu[i];
+		cpu_thread_params[i].nb_rx_queues = cpu_spec.nb_rx_queues[i];
 		pthread_mutex_init(&cpu_thread_params[i].start_init_mutex, NULL);
 		pthread_mutex_init(&cpu_thread_params[i].init_done_mutex, NULL);
 		pthread_mutex_lock(&cpu_thread_params[i].start_init_mutex);
@@ -377,7 +420,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	ret = init_this_cpu(cpu[0]);
+	ret = init_this_cpu(cpu_spec.cpu[0]);
 	if (ret) {
 		log_err("init: failed to initialize the local CPU\n");
 		return ret;
@@ -425,13 +468,13 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-	ret = cpu_networking_init(MAX_QUEUES / cpu_list_count);
+	ret = cpu_networking_init(cpu_spec.nb_rx_queues[0]);
 	if (ret) {
 		log_err("init: failed to initialize networking for cpu\n");
 		return ret;
 	}
 
-	for (i = 1; i < cpu_list_count; i++) {
+	for (i = 1; i < cpu_spec.count; i++) {
 		pthread_mutex_unlock(&cpu_thread_params[i].start_init_mutex);
 		pthread_mutex_lock(&cpu_thread_params[i].init_done_mutex);
 		pthread_mutex_unlock(&cpu_thread_params[i].init_done_mutex);
