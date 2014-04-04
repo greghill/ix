@@ -20,7 +20,12 @@
 
 \input{figs/float-queues-cores}
 
-\todo Separation of control and data planes
+\todo Separation of control and data planes.  We use Linux with
+real-time priority processes; ensure that interrupts are not directed
+to the DP cores (or at least not that much).  Communication mechanism
+between control plane and data plane using shared memory (for data)
+and sockets (to signal and sleep/wakeup).
+
 
 \todo Coherency-free operations  (ala multikernel~\cite{DBLP:conf/sosp/BaumannBDHIPRSS09})
 
@@ -33,6 +38,7 @@
 
 \section{Implementation}
 
+\input{figs/float-cp-dp}
 \input{figs/float-queue-takeover}
 
 \todo System Archictecture (Dune~\cite{belay2012dune})
