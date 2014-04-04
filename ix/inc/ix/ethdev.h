@@ -1101,6 +1101,7 @@ struct rte_eth_dev_data {
 
 extern void
 eth_dev_get_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr);
+extern void eth_dev_set_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr);
 extern struct rte_eth_dev *eth_dev_alloc(size_t private_len);
 extern int eth_dev_start(struct rte_eth_dev *dev);
 extern int eth_dev_get_rx_queue(struct rte_eth_dev *dev, struct eth_rx_queue **rx_queue);
@@ -1111,7 +1112,8 @@ extern void eth_dev_destroy(struct rte_eth_dev *dev);
 /*
  * globals
  */
-extern struct rte_eth_dev *eth_dev;
+extern int eth_dev_count;
+extern struct rte_eth_dev *eth_dev[];
 DECLARE_PERCPU(uint16_t, eth_rx_count);
 DECLARE_PERCPU(struct eth_rx_queue **, eth_rx);
 DECLARE_PERCPU(struct eth_tx_queue *, eth_tx);

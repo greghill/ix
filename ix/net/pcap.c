@@ -115,10 +115,11 @@ int pcap_open_read(const char *pathname, struct eth_addr *mac)
 
 	filter_mac = *mac;
 
-	eth_dev = malloc(sizeof(struct rte_eth_dev));
-	eth_dev->data = malloc(sizeof(struct rte_eth_dev_data));
-	eth_dev->data->mac_addrs = malloc(ETH_ADDR_LEN);
-	eth_dev->data->mac_addrs[0] = *mac;
+	eth_dev_count = 1;
+	eth_dev[0] = malloc(sizeof(struct rte_eth_dev));
+	eth_dev[0]->data = malloc(sizeof(struct rte_eth_dev_data));
+	eth_dev[0]->data->mac_addrs = malloc(ETH_ADDR_LEN);
+	eth_dev[0]->data->mac_addrs[0] = *mac;
 
 	percpu_get(eth_tx) = malloc(sizeof(struct eth_tx_queue));
 	percpu_get(eth_tx)->xmit = fake_xmit;

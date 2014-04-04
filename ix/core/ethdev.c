@@ -13,7 +13,10 @@
 
 #include <net/ethernet.h>
 
-struct rte_eth_dev *eth_dev;
+#define MAX_ETH_DEVICES 16
+
+int eth_dev_count;
+struct rte_eth_dev *eth_dev[MAX_ETH_DEVICES];
 DEFINE_PERCPU(uint16_t, eth_rx_count);
 DEFINE_PERCPU(struct eth_rx_queue **, eth_rx);
 DEFINE_PERCPU(struct eth_tx_queue *, eth_tx);
@@ -50,6 +53,16 @@ static const struct rte_eth_conf default_conf = {
 void eth_dev_get_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr)
 {
 	memcpy(&mac_addr->addr[0], &dev->data->mac_addrs[0], ETH_ADDR_LEN);
+}
+
+/**
+ * eth_dev_set_hw_mac - sets the default MAC address
+ * @dev: the ethernet device
+ * @mac_addr: pointer of mac
+ */
+void eth_dev_set_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr)
+{
+	dev->dev_ops->mac_addr_add(dev, mac_addr, 0, 0);
 }
 
 /**
@@ -108,7 +121,7 @@ int eth_dev_start(struct rte_eth_dev *dev)
 			 ("full-duplex") : ("half-duplex\n"));
 	}
 
-	eth_dev = dev;
+	eth_dev[eth_dev_count++] = dev;
 
 	return 0;
 
@@ -218,7 +231,8 @@ void eth_dev_stop(struct rte_eth_dev *dev)
 	free(dev->data->tx_queues);
 	free(dev->data->rx_queues);
 
-	eth_dev = NULL;
+	/* FIXME: we do not have a way to gracefully stop an ethernet device */
+	eth_dev[0] = NULL;
 	eth_rx = NULL;
 	eth_tx = NULL;
 } 

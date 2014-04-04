@@ -28,8 +28,10 @@
 
 #include <lwip/memp.h>
 
-#define MAX_QUEUES 16
-#define MAX_QUEUES_PER_CORE 16
+#define MAX_QUEUES 256
+
+static int max_queues;
+static int max_queues_per_core;
 
 struct cpu_spec {
 	int count;
@@ -228,24 +230,42 @@ static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
 	}
 }
 
+static int get_rx_queue(struct eth_rx_queue **rx_queue)
+{
+	static int eth_dev_idx = 0;
+
+	if (eth_dev_idx >= eth_dev_count)
+		eth_dev_idx = 0;
+	return eth_dev_get_rx_queue(eth_dev[eth_dev_idx++], rx_queue);
+}
+
+static int get_tx_queue(struct eth_tx_queue **tx_queue)
+{
+	static int eth_dev_idx = 0;
+
+	if (eth_dev_idx >= eth_dev_count)
+		eth_dev_idx = 0;
+	return eth_dev_get_tx_queue(eth_dev[eth_dev_idx++], tx_queue);
+}
+
 static int cpu_networking_init(int nb_rx_queues)
 {
 	int ret;
 	unsigned int queue;
 	int i;
 
-	if (nb_rx_queues > MAX_QUEUES_PER_CORE)
+	if (nb_rx_queues > max_queues_per_core)
 		return -EINVAL;
 
 	percpu_get(eth_rx_count) = 0;
-	percpu_get(eth_rx) = malloc(sizeof(struct eth_rx_queue *) * MAX_QUEUES_PER_CORE);
+	percpu_get(eth_rx) = malloc(sizeof(struct eth_rx_queue *) * max_queues_per_core);
 	if (!percpu_get(eth_rx)) {
 		log_err("init: failed to allocate memory for RX queues\n");
 		return -ENOMEM;
 	}
 
 	for (i = 0; i < nb_rx_queues; i++) {
-		ret = eth_dev_get_rx_queue(eth_dev, &percpu_get(eth_rx)[i]);
+		ret = get_rx_queue(&percpu_get(eth_rx)[i]);
 		if (ret) {
 			log_err("init: failed to get an RX queue\n");
 			return ret;
@@ -253,7 +273,7 @@ static int cpu_networking_init(int nb_rx_queues)
 	}
 	percpu_get(eth_rx_count) = i;
 
-	ret = eth_dev_get_tx_queue(eth_dev, &percpu_get(eth_tx));
+	ret = get_tx_queue(&percpu_get(eth_tx));
 	if (ret) {
 		log_err("init: failed to get a TX queue\n");
 		return ret;
@@ -339,13 +359,13 @@ int parse_cpu_list(char *list, struct cpu_spec *cpu_spec)
 		tok2 = strtok_r(NULL, ":", &saveptr2);
 		if (tok2) {
 			val = atoi(tok2);
-			if (val < 0 || val > MAX_QUEUES) {
+			if (val < 0 || val > max_queues) {
 				log_err("init: invalid rx queue count specified '%s'\n", tok2);
 				return 1;
 			}
 			total_rx_queues += val;
-			if (total_rx_queues > MAX_QUEUES) {
-				log_err("init: total rx queues cannot exceed %d\n", MAX_QUEUES);
+			if (total_rx_queues > max_queues) {
+				log_err("init: total rx queues cannot exceed %d\n", max_queues);
 				return 1;
 			}
 		} else {
@@ -375,11 +395,11 @@ void balance_queues_to_cores(struct cpu_spec *cpu_spec)
 		else
 			count_unspec_queues++;
 
-	count = (MAX_QUEUES - total_rx_queues) % count_unspec_queues;
+	count = (max_queues - total_rx_queues) % count_unspec_queues;
 	for (i = 0; i < cpu_spec->count; i++) {
 		if (cpu_spec->nb_rx_queues[i] != -1)
 			continue;
-		cpu_spec->nb_rx_queues[i] = (MAX_QUEUES - total_rx_queues) / count_unspec_queues;
+		cpu_spec->nb_rx_queues[i] = (max_queues - total_rx_queues) / count_unspec_queues;
 		if (count) {
 			cpu_spec->nb_rx_queues[i]++;
 			count--;
@@ -468,6 +488,7 @@ int main(int argc, char *argv[])
 	struct cpu_spec cpu_spec;
 	int i;
 	struct cpu_thread_params cpu_thread_params[MAX_QUEUES];
+	char *eth_pci_addr;
 
 	log_info("init: starting IX\n");
 
@@ -482,18 +503,6 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-	if (arguments.cpu) {
-		ret = parse_cpu_list(arguments.cpu, &cpu_spec);
-		if (ret)
-			return ret;
-	} else {
-		cpu_spec.count = 1;
-		cpu_spec.cpu[0] = 1;
-		cpu_spec.nb_rx_queues[0] = -1;
-	}
-
-	balance_queues_to_cores(&cpu_spec);
-
 	ret = dune_init(false);
 	if (ret) {
 		log_err("init: failed to initialize dune\n");
@@ -505,26 +514,6 @@ int main(int argc, char *argv[])
 	ret = timer_init();
 	if (ret) {
 		log_err("init: failed to initialize timers\n");
-		return ret;
-	}
-
-	for (i = 1; i < cpu_spec.count; i++) {
-		cpu_thread_params[i].cpu = cpu_spec.cpu[i];
-		cpu_thread_params[i].nb_rx_queues = cpu_spec.nb_rx_queues[i];
-		pthread_mutex_init(&cpu_thread_params[i].start_init_mutex, NULL);
-		pthread_mutex_init(&cpu_thread_params[i].init_done_mutex, NULL);
-		pthread_mutex_lock(&cpu_thread_params[i].start_init_mutex);
-		pthread_mutex_lock(&cpu_thread_params[i].init_done_mutex);
-		ret = pthread_create(&thread, NULL, start_cpu, &cpu_thread_params[i]);
-		if (ret) {
-			log_err("init: failed to spawn thread\n");
-			return ret;
-		}
-	}
-
-	ret = init_this_cpu(cpu_spec.cpu[0]);
-	if (ret) {
-		log_err("init: failed to initialize the local CPU\n");
 		return ret;
 	}
 
@@ -551,9 +540,53 @@ int main(int argc, char *argv[])
 		}
 #endif
 	} else {
-		ret = hw_init_one(arguments.dev);
+		eth_pci_addr = strtok(arguments.dev, ",");
+		while (eth_pci_addr) {
+			ret = hw_init_one(eth_pci_addr);
+			if (ret) {
+				log_err("init: failed to initialize ethernet device\n");
+				return ret;
+			}
+			/* FIXME: query the device for the number of RX queues supported */
+			max_queues += ETH_RSS_RETA_MAX_QUEUE;
+			max_queues_per_core += ETH_RSS_RETA_MAX_QUEUE;
+			eth_pci_addr = strtok(NULL, ",");
+		}
+
+		if (max_queues > MAX_QUEUES) {
+			log_err("init: unsupported number of RX queues '%d'\n", max_queues);
+			return -EINVAL;
+		}
+
+		if (arguments.cpu) {
+			ret = parse_cpu_list(arguments.cpu, &cpu_spec);
+			if (ret)
+				return ret;
+		} else {
+			cpu_spec.count = 1;
+			cpu_spec.cpu[0] = 1;
+			cpu_spec.nb_rx_queues[0] = -1;
+		}
+
+		balance_queues_to_cores(&cpu_spec);
+
+		for (i = 1; i < cpu_spec.count; i++) {
+			cpu_thread_params[i].cpu = cpu_spec.cpu[i];
+			cpu_thread_params[i].nb_rx_queues = cpu_spec.nb_rx_queues[i];
+			pthread_mutex_init(&cpu_thread_params[i].start_init_mutex, NULL);
+			pthread_mutex_init(&cpu_thread_params[i].init_done_mutex, NULL);
+			pthread_mutex_lock(&cpu_thread_params[i].start_init_mutex);
+			pthread_mutex_lock(&cpu_thread_params[i].init_done_mutex);
+			ret = pthread_create(&thread, NULL, start_cpu, &cpu_thread_params[i]);
+			if (ret) {
+				log_err("init: failed to spawn thread\n");
+				return ret;
+			}
+		}
+
+		ret = init_this_cpu(cpu_spec.cpu[0]);
 		if (ret) {
-			log_err("init: failed to initialize ethernet device\n");
+			log_err("init: failed to initialize the local CPU\n");
 			return ret;
 		}
 
