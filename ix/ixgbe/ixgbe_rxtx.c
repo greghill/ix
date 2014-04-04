@@ -374,7 +374,8 @@ static int ixgbe_tx_xmit(struct eth_tx_queue *tx, int nr, struct mbuf **mbufs)
 		nb_pkts++;	
 	}
 
-	IXGBE_PCI_REG_WRITE(txq->tdt_reg_addr, (txq->tail & (txq->len - 1)));
+	if (nb_pkts)
+		IXGBE_PCI_REG_WRITE(txq->tdt_reg_addr, (txq->tail & (txq->len - 1)));
 
 	return nb_pkts;
 }
