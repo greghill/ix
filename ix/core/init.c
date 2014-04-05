@@ -293,12 +293,10 @@ int parse_cpu_list(char *list, struct cpu_spec *cpu_spec)
 	char *tok;
 	char *tok2;
 	char *saveptr1, *saveptr2;
-	int total_rx_queues, count_unspec_queues;
+	int total_rx_queues;
 	int max_cpus;
-	int count;
 
 	max_cpus = sizeof(cpu_spec->cpu) / sizeof(cpu_spec->cpu[0]);
-	count_unspec_queues = 0;
 	total_rx_queues = 0;
 	cpu_spec->count = 0;
 	tok = strtok_r(list, ",", &saveptr1);
@@ -334,7 +332,6 @@ int parse_cpu_list(char *list, struct cpu_spec *cpu_spec)
 				return 1;
 			}
 		} else {
-			count_unspec_queues++;
 			val = -1;
 		}
 		cpu_spec->nb_rx_queues[cpu_spec->count] = val;
@@ -342,6 +339,24 @@ int parse_cpu_list(char *list, struct cpu_spec *cpu_spec)
 		cpu_spec->count++;
 		tok = strtok_r(NULL, ",", &saveptr1);
 	}
+
+	return 0;
+}
+
+void balance_queues_to_cores(struct cpu_spec *cpu_spec)
+{
+	int i;
+	int count;
+	int total_rx_queues;
+	int count_unspec_queues;
+
+	total_rx_queues = 0;
+	count_unspec_queues = 0;
+	for (i = 0; i < cpu_spec->count; i++)
+		if (cpu_spec->nb_rx_queues[i] != -1)
+			total_rx_queues += cpu_spec->nb_rx_queues[i];
+		else
+			count_unspec_queues++;
 
 	count = (MAX_QUEUES - total_rx_queues) % count_unspec_queues;
 	for (i = 0; i < cpu_spec->count; i++) {
@@ -353,8 +368,6 @@ int parse_cpu_list(char *list, struct cpu_spec *cpu_spec)
 			count--;
 		}
 	}
-
-	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -391,6 +404,8 @@ int main(int argc, char *argv[])
 		cpu_spec.cpu[0] = 1;
 		cpu_spec.nb_rx_queues[0] = -1;
 	}
+
+	balance_queues_to_cores(&cpu_spec);
 
 	ret = dune_init(false);
 	if (ret) {
