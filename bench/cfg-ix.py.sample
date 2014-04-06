@@ -1,0 +1,12 @@
+LATENCIES = [50, 90, 99]
+SSH_USER = 'prekas'
+SERVER_HOST = 'sciicebpc1.epfl.ch'
+SERVER_IP = '192.168.21.1'
+
+SERVER = ExecSpec(SSH_USER, SERVER_HOST, ['../ix/ix', '../ix/ix.cfg', 'rexec'], 'sudo ./rexec ./ix %(params)s')
+ENERGY = ExecSpec(SSH_USER, SERVER_HOST, ['energy.py', 'rexec'], 'sudo ./rexec python energy.py')
+LATENCY = ExecSpec(SSH_USER, 'icnals19.epfl.ch', ['latency', 'rexec'], './rexec ./latency %s 1234 100 10 %s' % (SERVER_IP, ' '.join(str(x) for x in LATENCIES)))
+
+CLIENTS = []
+for i in xrange(1, 19):
+  CLIENTS.append(ExecSpec(SSH_USER, 'icnals%d.epfl.ch' % i , ['client', 'rexec'], 'sh -c \'sleep %d ; exec ./rexec ./client %s 1234 %%(params)s\'' % (i+2, SERVER_IP)))
