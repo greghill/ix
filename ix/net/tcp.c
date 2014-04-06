@@ -141,7 +141,11 @@ tcp_init(void)
   perqueue_get(tcp_pcb_lists)[1] = &perqueue_get(tcp_bound_pcbs);
   perqueue_get(tcp_pcb_lists)[2] = &perqueue_get(tcp_active_pcbs);
   perqueue_get(tcp_pcb_lists)[3] = &perqueue_get(tcp_tw_pcbs);
+#ifdef ENABLE_PCAP
+  perqueue_get(iss) = 42;
+#else
   perqueue_get(iss) = rand();
+#endif
 }
 
 /**

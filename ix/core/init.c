@@ -556,17 +556,17 @@ int main(int argc, char *argv[])
 			log_err("init: failed to initialize ethernet device\n");
 			return ret;
 		}
+
+		ret = cpu_networking_init(cpu_spec.nb_rx_queues[0]);
+		if (ret) {
+			log_err("init: failed to initialize networking for cpu\n");
+			return ret;
+		}
 	}
 
 	ret = net_init();
 	if (ret) {
 		log_err("init: failed to initialize net\n");
-		return ret;
-	}
-
-	ret = cpu_networking_init(cpu_spec.nb_rx_queues[0]);
-	if (ret) {
-		log_err("init: failed to initialize networking for cpu\n");
 		return ret;
 	}
 
