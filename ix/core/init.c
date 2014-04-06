@@ -2,6 +2,7 @@
  * init.c - main system and CPU core initialization
  */
 
+#include <getopt.h>
 #include <pthread.h>
 
 #include <ix/stddef.h>
@@ -42,6 +43,22 @@ struct cpu_thread_params {
 	pthread_mutex_t start_init_mutex;
 	pthread_mutex_t init_done_mutex;
 };
+
+static struct {
+	char *dev;
+	char *cpu;
+	char *mac;
+#ifdef ENABLE_PCAP
+	char *pcap_file;
+	enum {
+		PCAP_MODE_NONE,
+		PCAP_MODE_READ,
+		PCAP_MODE_WRITE,
+	} pcap_mode;
+#endif
+	char **restv;
+	int restc;
+} arguments;
 
 extern int net_init(void);
 extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
@@ -370,12 +387,83 @@ void balance_queues_to_cores(struct cpu_spec *cpu_spec)
 	}
 }
 
+static int parse_arguments(int argc, char *argv[])
+{
+	int c;
+	int required_dev;
+
+	static struct option long_options[] = {
+		{"dev", required_argument, 0, 'd'},
+		{"cpu", required_argument, 0, 'c'},
+		{"mac", required_argument, 0, 'm'},
+#ifdef ENABLE_PCAP
+		{"pcap-read", required_argument, 0, 'r'},
+		{"pcap-write", required_argument, 0, 'w'},
+#endif
+		{NULL, 0, NULL, 0}
+	};
+#ifdef ENABLE_PCAP
+	static const char *optstring = "d:c:m:r:w:";
+#else
+	static const char *optstring = "d:c:m:";
+#endif
+
+	while ((c = getopt_long(argc, argv, optstring, long_options, NULL)) != -1) {
+		switch (c) {
+		case 'd':
+			arguments.dev = optarg;
+			break;
+		case 'c':
+			arguments.cpu = optarg;
+			break;
+		case 'm':
+			arguments.mac = optarg;
+			break;
+#ifdef ENABLE_PCAP
+		case 'r':
+			arguments.pcap_file = optarg;
+			arguments.pcap_mode = PCAP_MODE_READ;
+			break;
+		case 'w':
+			arguments.pcap_file = optarg;
+			arguments.pcap_mode = PCAP_MODE_WRITE;
+			break;
+#endif
+		default:
+			return 1;
+		}
+	}
+
+	required_dev = 1;
+
+#ifdef ENABLE_PCAP
+	if (arguments.pcap_mode == PCAP_MODE_READ) {
+		required_dev = 0;
+		if (arguments.dev || arguments.cpu) {
+			log_err("init: you cannot specify device or cpu for --pcap-read.\n");
+			return 1;
+		}
+		if (!arguments.mac) {
+			log_err("init: you must specify MAC address for --pcap-read.\n");
+			return 1;
+		}
+	}
+#endif
+
+	if (required_dev && !arguments.dev) {
+		log_err("init: you must specify device.\n");
+		return 1;
+	}
+
+	arguments.restv = &argv[optind];
+	arguments.restc = argc - optind;
+
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
-#ifdef ENABLE_PCAP
-	int pcap_read_mode = 0;
-#endif
 	pthread_t thread;
 	struct cpu_spec cpu_spec;
 	int i;
@@ -383,9 +471,8 @@ int main(int argc, char *argv[])
 
 	log_info("init: starting IX\n");
 
-	if (argc < 2) {
+	if (parse_arguments(argc, argv)) {
 		log_err("init: invalid arguments\n");
-		log_err("init: format -> ix ETH_PCI_ADDR [CPU[:QUEUE_COUNT],...]\n");
 		return -EINVAL;
 	}
 
@@ -395,8 +482,8 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-	if (argc >= 3) {
-		ret = parse_cpu_list(argv[2], &cpu_spec);
+	if (arguments.cpu) {
+		ret = parse_cpu_list(arguments.cpu, &cpu_spec);
 		if (ret)
 			return ret;
 	} else {
@@ -441,36 +528,30 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
-	if (!strcmp(argv[1], "virtual")) {
+	if (arguments.dev && !strcmp(arguments.dev, "virtual")) {
 		ret = virtual_init();
 		if (ret) {
 			log_err("init: failed to initialize ethernet device\n");
 			return ret;
 		}
 #ifdef ENABLE_PCAP
-	} else if (!strcmp(argv[1], "--pcap-read")) {
+	} else if (arguments.pcap_mode == PCAP_MODE_READ) {
 		struct eth_addr mac;
 
-		if (argc < 4) {
-			log_err("Usage: %s %s PCAP_FILE MAC_ADDRESS\n", argv[0], argv[1]);
-			return 1;
-		}
-
-		ret = parse_eth_addr(argv[3], &mac);
+		ret = parse_eth_addr(arguments.mac, &mac);
 		if (ret) {
-			log_err("init: failed to parse MAC address '%s'\n", argv[3]);
+			log_err("init: failed to parse MAC address '%s'\n", arguments.mac);
 			return ret;
 		}
 
-		ret = pcap_open_read(argv[2], &mac);
+		ret = pcap_open_read(arguments.pcap_file, &mac);
 		if (ret) {
-			log_err("init: failed to open pcap file '%s'\n", argv[2]);
+			log_err("init: failed to open pcap file '%s'\n", arguments.pcap_file);
 			return ret;
 		}
-		pcap_read_mode = 1;
 #endif
 	} else {
-		ret = hw_init_one(argv[1]);
+		ret = hw_init_one(arguments.dev);
 		if (ret) {
 			log_err("init: failed to initialize ethernet device\n");
 			return ret;
@@ -498,36 +579,31 @@ int main(int argc, char *argv[])
 	}
 
 #ifdef ENABLE_PCAP
-	if (pcap_read_mode) {
+	if (arguments.pcap_mode == PCAP_MODE_READ) {
 		log_info("init: entering pcap replay mode\n");
 		pcap_replay();
 		return 0;
-	} else if (argc > 2 && !strcmp(argv[2], "--pcap-write")) {
-		if (argc < 4) {
-			log_err("Usage: %s ETH_PCI_ADDR %s PCAP_FILE\n", argv[0], argv[2]);
-			return 1;
-		}
-
-		ret = pcap_open_write(argv[3]);
+	} else if (arguments.pcap_mode == PCAP_MODE_WRITE) {
+		ret = pcap_open_write(arguments.pcap_file);
 		if (ret) {
 			log_err("init: failed to open pcap file\n");
 			return ret;
 		}
-		log_info("init: dumping traffic to pcap file '%s'\n", argv[3]);
+		log_info("init: dumping traffic to pcap file '%s'\n", arguments.pcap_file);
 	}
 #endif
 
 #if 0
-	ret = sandbox_init(argc - 2, &argv[2]);
+	ret = sandbox_init(arguments.restc, arguments.restv);
 	if (ret) {
 		log_err("init: failed to start sandbox\n");
 		return ret;
 	}
 #else
-	if (argc >= 4 && strcmp(argv[2], "ping") == 0) {
+	if (arguments.restc >= 2 && strcmp(arguments.restv[0], "ping") == 0) {
 		struct ip_addr dst;
 
-		ret = parse_ip_addr(argv[3], &dst.addr);
+		ret = parse_ip_addr(arguments.restv[1], &dst.addr);
 		if (ret) {
 			log_err("init: ping: invalid destination IP address\n");
 			return ret;
