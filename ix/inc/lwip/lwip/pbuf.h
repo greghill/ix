@@ -36,6 +36,8 @@
 #include "lwip/opt.h"
 #include "lwip/err.h"
 
+#include <ix/mbuf.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -89,6 +91,9 @@ struct pbuf {
 
   /** pointer to the actual data in the buffer */
   void *payload;
+
+  /** pointer to the IX mbuf */
+  struct mbuf *mbuf;
 
   /**
    * total length of this buffer and all next buffers in chain

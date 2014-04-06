@@ -1,6 +1,7 @@
 # Makefile for network module
 
-SRC = arp.c cfg.c dump.c icmp.c ip.c net.c tcp.c tcp_in.c tcp_out.c udp.c
+SRC = arp.c cfg.c dump.c icmp.c ip.c net.c tcp.c tcp_in.c tcp_out.c \
+      tcp_api.c udp.c
 ifneq ($(ENABLE_PCAP),)
 SRC += pcap.c
 endif

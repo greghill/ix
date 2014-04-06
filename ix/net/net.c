@@ -47,6 +47,12 @@ int net_init(void)
 
 	eth_dev_get_hw_mac(eth_dev, &cfg_mac);
 
+	ret = tcp_api_init();
+	if (ret) {
+		log_err("net: failed to initialize TCP API\n");
+		return ret;
+	}
+
 	return 0;
 }
 

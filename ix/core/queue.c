@@ -14,6 +14,8 @@ extern const char __perqueue_end[];
 DEFINE_PERCPU(void *, current_perqueue);
 DEFINE_PERCPU(long, assigned_queues);
 
+DEFINE_PERQUEUE(int, queue_id);
+
 static void * queue_init_perqueue(unsigned int queue, unsigned int numa_node)
 {
 	size_t len = __perqueue_end - __perqueue_start;
@@ -28,6 +30,8 @@ static void * queue_init_perqueue(unsigned int queue, unsigned int numa_node)
 
 	*((char **) addr) = addr;
 	perqueue_offsets[queue] = addr;
+
+	perqueue_get_remote(queue_id, queue) = queue;
 
 	return addr;
 }

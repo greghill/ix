@@ -33,6 +33,13 @@ static bsysfn_t bsys_tbl[] = {
 	(bsysfn_t) bsys_udp_send,
 	(bsysfn_t) bsys_udp_sendv,
 	(bsysfn_t) bsys_udp_recv_done,
+	(bsysfn_t) bsys_tcp_connect,
+	(bsysfn_t) bsys_tcp_accept,
+	(bsysfn_t) bsys_tcp_reject,
+	(bsysfn_t) bsys_tcp_send,
+	(bsysfn_t) bsys_tcp_sendv,
+	(bsysfn_t) bsys_tcp_recv_done,
+	(bsysfn_t) bsys_tcp_close,
 };
 
 static int bsys_dispatch_one(struct bsys_desc __user *d)

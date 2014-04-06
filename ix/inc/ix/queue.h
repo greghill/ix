@@ -20,6 +20,21 @@
 DECLARE_PERCPU(void *, current_perqueue);
 DECLARE_PERCPU(long, assigned_queues);
 
+DECLARE_PERQUEUE(int, queue_id);
+
+extern void *perqueue_offsets[NQUEUE];
+
+/**
+ * perqueue_get_remote - get a perqueue variable for a specific queue
+ * @var: the perqueue variable
+ * @queue: the queue number
+ *
+ * Returns a perqueue variable.
+ */
+#define perqueue_get_remote(var, queue)						\
+	(*(typeof(perqueue_##var) *) ((uintptr_t) perqueue_offsets[queue] +	\
+				      (uintptr_t) &perqueue_##var))
+
 static inline void * __perqueue_get(void *key)
 {
 	void *offset;

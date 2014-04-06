@@ -10,18 +10,6 @@
 
 #define SYSCALL_START	0x100000
 
-/*
- * System calls
- */
-enum {
-	SYS_BPOLL = 0,
-	SYS_BCALL,
-	SYS_BADDR,
-	SYS_MMAP,
-	SYS_MUNMAP,
-	SYS_NR,
-};
-
 
 /*
  * Data structures used as arguments.
@@ -38,6 +26,34 @@ struct sg_entry {
 	void *base;
 	size_t len;
 } __packed;
+
+#define MAX_SG_ENTRIES	30
+
+typedef unsigned long hid_t;
+
+enum {
+	RET_OK		= 0, /* Successful                 */
+	RET_NOMEM	= 1, /* Out of memory              */
+	RET_NOBUFS	= 2, /* Out of buffer space        */
+	RET_INVAL	= 3, /* Invalid parameter          */
+	RET_AGAIN	= 4, /* Try again later            */
+	RET_FAULT	= 5, /* Bad memory address         */
+	RET_NOSYS	= 6, /* System call does not exist */
+	RET_NOTSUP	= 7, /* Operation is not supported */
+};
+
+
+/*
+ * System calls
+ */
+enum {
+	SYS_BPOLL = 0,
+	SYS_BCALL,
+	SYS_BADDR,
+	SYS_MMAP,
+	SYS_MUNMAP,
+	SYS_NR,
+};
 
 
 /*
@@ -181,7 +197,7 @@ ksys_tcp_connect(struct bsys_desc *d, struct ip_tuple *id,
  * @cookie: a user-level tag for the flow
  */
 static inline void
-ksys_tcp_accept(struct bsys_desc *d, int handle, unsigned long cookie)
+ksys_tcp_accept(struct bsys_desc *d, hid_t handle, unsigned long cookie)
 {
 	BSYS_DESC_2ARG(d, KSYS_TCP_ACCEPT, handle, cookie);
 }
@@ -192,7 +208,7 @@ ksys_tcp_accept(struct bsys_desc *d, int handle, unsigned long cookie)
  * @handle: the TCP flow handle
  */
 static inline void
-ksys_tcp_reject(struct bsys_desc *d, int handle)
+ksys_tcp_reject(struct bsys_desc *d, hid_t handle)
 {
 	BSYS_DESC_1ARG(d, KSYS_TCP_REJECT, handle);
 }
@@ -205,7 +221,7 @@ ksys_tcp_reject(struct bsys_desc *d, int handle)
  * @len: the length of the data
  */
 static inline void
-ksys_tcp_send(struct bsys_desc *d, int handle,
+ksys_tcp_send(struct bsys_desc *d, hid_t handle,
 	      void *addr, size_t len)
 {
 	BSYS_DESC_3ARG(d, KSYS_TCP_SEND, handle, addr, len);
@@ -219,7 +235,7 @@ ksys_tcp_send(struct bsys_desc *d, int handle,
  * @nrents: the number of scatter-gather vectors
  */
 static inline void
-ksys_tcp_sendv(struct bsys_desc *d, int handle,
+ksys_tcp_sendv(struct bsys_desc *d, hid_t handle,
 	       struct sg_entry *ents, unsigned int nrents)
 {
 	BSYS_DESC_3ARG(d, KSYS_TCP_SENDV, handle, ents, nrents);
@@ -229,14 +245,15 @@ ksys_tcp_sendv(struct bsys_desc *d, int handle,
  * ksys_tcp_recv_done - acknowledge the receipt of TCP data buffers
  * @d: the syscall descriptor to program
  * @handle: the TCP flow handle
- * @nr: the number of buffers to acknowledge
+ * @len: the number of bytes to acknowledge
  *
- * NOTE: buffers are acknowledged in FIFO order.
+ * NOTE: This function is used to free memory and to adjust
+ * the receive window.
  */
 static inline void
-ksys_tcp_recv_done(struct bsys_desc *d, int handle, int nr)
+ksys_tcp_recv_done(struct bsys_desc *d, hid_t handle, size_t len)
 {
-	BSYS_DESC_2ARG(d, KSYS_TCP_RECV_DONE, handle, nr);
+	BSYS_DESC_2ARG(d, KSYS_TCP_RECV_DONE, handle, len);
 }
 
 /**
@@ -245,7 +262,7 @@ ksys_tcp_recv_done(struct bsys_desc *d, int handle, int nr)
  * @handle: the TCP flow handle
  */
 static inline void
-ksys_tcp_close(struct bsys_desc *d, int handle)
+ksys_tcp_close(struct bsys_desc *d, hid_t handle)
 {
 	BSYS_DESC_1ARG(d, KSYS_TCP_CLOSE, handle);
 }
@@ -262,6 +279,7 @@ enum {
 	USYS_TCP_RECV,
 	USYS_TCP_CONNECT_RET,
 	USYS_TCP_SEND_RET,
+	USYS_TCP_XMIT_WIN,
 	USYS_TCP_DEAD,
 	USYS_NR,
 };
@@ -324,7 +342,7 @@ static inline void usys_udp_send_ret(unsigned long cookie, ssize_t ret)
  * @id: the TCP 4-tuple
  */
 static inline void
-usys_tcp_knock(int handle, struct ip_tuple *id)
+usys_tcp_knock(hid_t handle, struct ip_tuple *id)
 {
 	struct bsys_desc *d = usys_next();
 	BSYS_DESC_2ARG(d, USYS_TCP_KNOCK, handle, id);
@@ -338,7 +356,7 @@ usys_tcp_knock(int handle, struct ip_tuple *id)
  * @len: the length of the received data
  */
 static inline void
-usys_tcp_recv(int handle, unsigned long cookie, void *addr, size_t len)
+usys_tcp_recv(hid_t handle, unsigned long cookie, void *addr, size_t len)
 {
 	struct bsys_desc *d = usys_next();
 	BSYS_DESC_4ARG(d, USYS_TCP_RECV, handle, cookie, addr, len);
@@ -351,7 +369,7 @@ usys_tcp_recv(int handle, unsigned long cookie, void *addr, size_t len)
  * @ret: the return code
  */
 static inline void
-usys_tcp_connect_ret(int handle, unsigned long cookie, int ret)
+usys_tcp_connect_ret(hid_t handle, unsigned long cookie, int ret)
 {
 	struct bsys_desc *d = usys_next();
 	BSYS_DESC_3ARG(d, USYS_TCP_CONNECT_RET, handle, cookie, ret);
@@ -367,10 +385,26 @@ usys_tcp_connect_ret(int handle, unsigned long cookie, int ret)
  * otherwise a negative number if the request failed.
  */
 static inline void
-usys_tcp_send_ret(int handle, unsigned long cookie, ssize_t ret)
+usys_tcp_send_ret(hid_t handle, unsigned long cookie, ssize_t ret)
 {
 	struct bsys_desc *d = usys_next();
 	BSYS_DESC_3ARG(d, USYS_TCP_SEND_RET, handle, cookie, ret);
+}
+
+/**
+ * usys_tcp_xmit_win - indicates the size of the transmit window has changed
+ * @handle: the TCP flow handle
+ * @cookie: a user-level tag for the flow
+ * @win_size: the new size of the window
+ *
+ * Typically, an application will use this notifier to know it is time to
+ * send more pending data.
+ */
+static inline void
+usys_tcp_xmit_win(hid_t handle, unsigned long cookie, size_t win_size)
+{
+	struct bsys_desc *d = usys_next();
+	BSYS_DESC_3ARG(d, USYS_TCP_XMIT_WIN, handle, cookie, win_size);
 }
 
 /**
@@ -382,7 +416,7 @@ usys_tcp_send_ret(int handle, unsigned long cookie, ssize_t ret)
  * using ksys_tcp_close().
  */
 static inline void
-usys_tcp_dead(int handle, unsigned long cookie)
+usys_tcp_dead(hid_t handle, unsigned long cookie)
 {
 	struct bsys_desc *d = usys_next();
 	BSYS_DESC_2ARG(d, USYS_TCP_DEAD, handle, cookie);
@@ -404,6 +438,16 @@ extern void bsys_udp_sendv(struct sg_entry __user *ents,
 			   struct ip_tuple __user *id,
 			   unsigned long cookie);
 extern void bsys_udp_recv_done(void *iomap);
+
+extern void bsys_tcp_connect(struct ip_tuple __user *id,
+			     unsigned long cookie);
+extern void bsys_tcp_accept(hid_t handle, unsigned long cookie);
+extern void bsys_tcp_reject(hid_t handle);
+extern void bsys_tcp_send(hid_t handle, void *addr, size_t len);
+extern void bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
+			   unsigned int nrents);
+extern void bsys_tcp_recv_done(hid_t handle, size_t len);
+extern void bsys_tcp_close(hid_t handle);
 
 struct dune_tf;
 extern void do_syscall(struct dune_tf *tf, uint64_t sysnr);

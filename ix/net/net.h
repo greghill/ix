@@ -28,6 +28,7 @@ extern void udp_input(struct mbuf *pkt, struct ip_hdr *iphdr,
 /* Transmission Control Protocol (TCP) definitions */
 /* FIXME: change when we integrate better with LWIP */
 extern void tcp_input_tmp(struct mbuf *pkt, struct ip_hdr *iphdr, void *tcphdr);
+extern int tcp_api_init(void);
 
 /**
  * ip_setup_header - outputs a typical IP header

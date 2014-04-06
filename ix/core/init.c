@@ -271,12 +271,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	ret = net_init();
-	if (ret) {
-		log_err("init: failed to initialize net\n");
-		return ret;
-	}
-
 	ret = memp_init();
 	if (ret) {
 		log_err("init: failed to initialize lwip memp\n");
@@ -286,7 +280,13 @@ int main(int argc, char *argv[])
 	for_each_queue(queue)
 		tcp_init();
 
-	tcp_echo_server_init(1234);
+	ret = net_init();
+	if (ret) {
+		log_err("init: failed to initialize net\n");
+		return ret;
+	}
+
+	//tcp_echo_server_init(1234);
 
 #ifdef ENABLE_PCAP
 	if (pcap_read_mode) {
