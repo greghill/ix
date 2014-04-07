@@ -27,11 +27,14 @@ fig1 = "< awk -e '//{if ($2==64&&$3==1)print $0 }' ".infile.'| sort -nk1'
 fig2 = "< awk -e '//{if ($1==16&&$2==64)print $0}' ".infile.'| sort -nk3'
 fig3 = "< awk -e '//{if ($1==16&&$3==1)print $0 }' ".infile.'| sort -nk2'
 set ylabel 'Messages/sec (x 10^6)' offset 1
-set yrange [0:*]
+set yrange [0:5]
 plot fig1 using ($6/10**6):xticlabel(1)
 unset ylabel
+set yrange [0:16]
 plot fig2 using ($6/10**6):xticlabel(3)
-plot fig3 using ($6/10**6):xticlabel(2)
+set yrange [0:40]
+set ylabel 'Throughput (Gbps)' offset 1
+plot fig3 using ($2*$6*8/10**9):xticlabel(2)
 set yrange [*:*]
 set logscale y
 set ylabel '99% latency (ms)' offset 2
@@ -42,7 +45,7 @@ plot fig3 using ($12/1000):xticlabel(2)
 set nologscale y
 set ylabel 'Average power (W)' offset 1
 set xlabel 'Number of CPU threads'
-set yrange [0:*]
+set yrange [0:120]
 plot fig1 using (column(14+cpu)/60):xticlabel(1)
 unset ylabel
 set xlabel 'Number of Messages per Connection'
