@@ -133,7 +133,8 @@ static void main_loop(void)
 				     percpu_get(tx_batch_pos),
 				     percpu_get(tx_batch));
 		if (tx_len != percpu_get(tx_batch_pos))
-			panic("transmit failed\n");
+			panic("transmit failed, expected %d, got %d\n",
+			      percpu_get(tx_batch_pos), tx_len);
 		percpu_get(tx_batch_len) = 0;
 		percpu_get(tx_batch_pos) = 0;
 		KSTATS_POP(NULL);
