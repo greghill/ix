@@ -57,10 +57,10 @@ elif [ $1 = 'bond' ]; then
   ifup bond0
 elif [ $1 = 'single' ]; then
   common_linux
-  ifconfig $NIC 192.168.21.2
+  ifconfig $NIC 192.168.21.1
 elif [ $1 = 'single-onecore' ]; then
   common_linux
-  ifconfig $NIC 192.168.21.2
+  ifconfig $NIC 192.168.21.1
 elif [ $1 = 'ix-numa0' ]; then
   common_ix
   echo 10000 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages
