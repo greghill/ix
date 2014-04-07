@@ -54,6 +54,7 @@ def main():
   parser.add_argument('--deploy', action='store_true')
   parser.add_argument('--server-params', default='')
   parser.add_argument('--client-params', default='')
+  parser.add_argument('--live', action='store_true')
   args = parser.parse_args()
 
   CONF = {'ExecSpec': ExecSpec}
@@ -124,7 +125,11 @@ def main():
         sys.stdout.flush()
         fds.remove(fd)
 
-  print '# remaining_time connections conn_sec msg_sec timeouts_connect timeouts_recv max_active_conn %s latency_count energy0 energy1 errors' % ' '.join(('latency_%d' % x for x in CONF.LATENCIES))
+  if args.live:
+    print '# connections conn_sec msg_sec timeouts_connect timeouts_recv max_active_conn %s latency_count energy0 energy1 errors' % ' '.join(('latency_%d' % x for x in CONF.LATENCIES))
+
+  def print_data():
+    print '%4d %6d %8d %5d %5d %6d %s %d %d %d %r %s\r' % (connections, conn_per_sec, msg_per_sec, timeouts_connect, timeouts_recv, max_active_conn, latencies_str, latencies_count, energy[0], energy[1], errors, ' '*10),
 
   connections = args.clients * int(args.client_params.split()[1])
   max_active_conn = 0
@@ -202,8 +207,11 @@ def main():
         errors[key] += data[k+2]
     latencies_str = ' '.join(('%d' % x for x in latencies))
     max_active_conn = max(max_active_conn, active_conn)
-    print '%3d %4d %6d %8d %5d %5d %6d %s %d %d %d %r %s\r' % (60 - time.time() + start, connections, conn_per_sec, msg_per_sec, timeouts_connect, timeouts_recv, max_active_conn, latencies_str, latencies_count, energy[0], energy[1], errors, ' '*10),
+    if args.live:
+      print '%3d ' % (60 - time.time() + start,),
+      print_data()
 
+  print_data()
   print
 
   if server is not None:
