@@ -2,6 +2,22 @@
 \section{Internal notes}
 
 
+\subsection{ CUT from Intro}
+
+
+
+In addition, such applications must scale in terms of bandwidth and
+concurrent connection counts, and ideally solve the \emph{C10M
+  problem}~\cite{theC10Mproblem}: for a given server, scale to 10
+million concurrent TCP connections, saturate 10 GbE interfaces, and
+deliver 10~\microsecond latency (mean), with an additional latency
+jitter of not more than an extra 10~\microsecond.  Today, million+
+concurrent connections are desirable in Internet-facing notification
+servers~\cite{DBLP:conf/sosp/AdyaCMP11} or messaging
+servers~\cite{whatsapp-2mil}. 
+
+
+
 \subsection{Stuff to cite somehow}
 \begin{itemize}
 
@@ -180,7 +196,7 @@ unnatural tricks such as relying on UDP and on in-network connection
 proxies to compensate for the lack of scoket scalability of Linux.
 
 Memcached is so important that folks are prototyping it in
-FPGA~\cite{chalamalasetti2013fpga}.  The authors's main evaluation is
+FPGA~\cite{DBLP:conf/fpga/ChalamalasettiLWARM13}.  The authors's main evaluation is
 that they can get comparable performance to an industry server with
 10x the Performance/Watt, measured in KOPS/S/Watt (Table 3. memcached
 ``gets'' with 128B size data). To beat their numbers, we need to beat
