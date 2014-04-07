@@ -1035,7 +1035,7 @@ DECLARE_PERCPU(struct mbuf *, tx_batch[ETH_DEV_TX_QUEUE_SZ]);
 static inline int eth_tx_xmit_batched(struct eth_tx_queue *tx,
 				      struct mbuf *mbuf)
 {
-	if (percpu_get(tx_batch_len) + mbuf->nr_iov >=
+	if (percpu_get(tx_batch_len) + 1 + mbuf->nr_iov >=
 	    percpu_get(tx_batch_cap))
 		return -ENOMEM;
 
