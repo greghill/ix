@@ -1,0 +1,6 @@
+*.pyc
+server
+client
+latency
+rexec
+cfg-*.py
