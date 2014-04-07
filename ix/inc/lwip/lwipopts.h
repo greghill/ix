@@ -29,3 +29,6 @@
 #define LWIP_PLATFORM_NTOHS(x) ntoh16(x)
 #define LWIP_PLATFORM_HTONL(x) hton32(x)
 #define LWIP_PLATFORM_NTOHL(x) ntoh32(x)
+
+#define LWIP_WND_SCALE 1
+#define TCP_RCV_SCALE 6
