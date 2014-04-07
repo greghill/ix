@@ -1061,6 +1061,8 @@ static inline int eth_tx_xmit_one(struct eth_tx_queue *tx,
 	return eth_tx_xmit(tx, 1, mbufs);
 }
 
+extern bool eth_rx_idle_wait(uint64_t usecs);
+
 
 /**
  * @internal

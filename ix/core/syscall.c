@@ -88,6 +88,7 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 
 	usys_reset();
 
+again:
 	KSTATS_PUSH(timer, NULL);
 	timer_run();
 	KSTATS_POP(NULL);
@@ -109,6 +110,15 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 	eth_tx_xmit(percpu_get(eth_tx), percpu_get(tx_batch_len), percpu_get(tx_batch));
 	percpu_get(tx_batch_len) = 0;
 	KSTATS_POP(NULL);
+
+	if (!percpu_get(usys_arr)->len) {
+		nr = 0;
+		KSTATS_PUSH(idle, NULL);
+		/* FIXME: need to modify timer code to get the next event */
+		eth_rx_idle_wait(10 * ONE_MS);
+		KSTATS_POP(NULL);
+		goto again;
+	}
 
 	return ret;
 }

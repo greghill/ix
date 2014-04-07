@@ -111,7 +111,7 @@ err:
 
 static void main_loop(void)
 {
-	unsigned int i;
+	unsigned int i, pkts;
 
 	while (1) {
 		KSTATS_PUSH(timer, NULL);
@@ -123,8 +123,9 @@ static void main_loop(void)
 		KSTATS_POP(NULL);
 
 		KSTATS_PUSH(rx_poll, NULL);
+		pkts = 0;
 		for_each_queue(i)
-			eth_rx_poll(percpu_get(eth_rx)[i]);
+			pkts += eth_rx_poll(percpu_get(eth_rx)[i]);
 		KSTATS_POP(NULL);
 
 		KSTATS_PUSH(tx_xmit, NULL);
@@ -132,6 +133,12 @@ static void main_loop(void)
 			    percpu_get(tx_batch));
 		percpu_get(tx_batch_len) = 0;
 		KSTATS_POP(NULL);
+
+		if (!pkts) {
+			KSTATS_PUSH(idle, NULL);
+			eth_rx_idle_wait(10 * ONE_MS);
+			KSTATS_POP(NULL);
+		}
 	}
 }
 

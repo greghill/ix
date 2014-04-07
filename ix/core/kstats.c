@@ -88,6 +88,9 @@ static void kstats_printone(kstats_distr *d, const char *name)
 static void kstats_print(struct timer *t)
 {
   kstats *ks = &(percpu_get(_kstats));
+  log_info("--- BEGIN KSTATS --- %ld%% idle\n",
+	   (ks->idle.tot_lat * 100 /
+	    ((uint64_t) cycles_per_us * KSTATS_INTERVAL)));
 #undef DEF_KSTATS
 #define DEF_KSTATS(_c)  kstats_printone(&ks->_c, # _c);
 #include <ix/kstatvectors.h>

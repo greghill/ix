@@ -5,6 +5,7 @@
 #include <ix/stddef.h>
 #include <ix/errno.h>
 #include <ix/byteorder.h>
+#include <ix/timer.h>
 #include <ix/delay.h>
 #include <ix/atomic.h>
 #include <ix/ethdev.h>
@@ -12,6 +13,8 @@
 #include <ix/log.h>
 #include <ix/mem.h>
 #include <ix/mbuf.h>
+#include <ix/cpu.h>
+#include <ix/queue.h>
 
 #include "ixgbe_api.h"
 #include "ixgbe_vf.h"
@@ -177,6 +180,37 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 	}
 
 	return nb_descs;
+}
+
+/* FIXME: make this driver independent */
+bool eth_rx_idle_wait(uint64_t usecs)
+{
+	volatile union ixgbe_adv_rx_desc **addrs;
+	unsigned int i;
+	unsigned long start, cycles = usecs * cycles_per_us;
+
+	addrs = alloca(sizeof(union ixgbe_adv_rx_desc *) *
+		       percpu_get(eth_rx_count));
+
+	for_each_queue(i) {
+		struct eth_rx_queue *rx = percpu_get(eth_rx)[i];
+		struct rx_queue *rxq = eth_rx_queue_to_drv(rx);
+		addrs[i] = &rxq->ring[rxq->pos & (rxq->len - 1)];
+	}
+
+	start = rdtsc();
+
+	do {
+		for (i = 0; i < percpu_get(eth_rx_count); i++) {
+			if (addrs[i]->wb.upper.status_error &
+			    cpu_to_le32(IXGBE_RXDADV_STAT_DD))
+				return true;
+		}
+
+		cpu_relax();
+	} while (rdtsc() - start < cycles);
+
+	return false;
 }
 
 /**
@@ -375,7 +409,8 @@ static int ixgbe_tx_xmit(struct eth_tx_queue *tx, int nr, struct mbuf **mbufs)
 	}
 
 	if (nb_pkts)
-		IXGBE_PCI_REG_WRITE(txq->tdt_reg_addr, (txq->tail & (txq->len - 1)));
+		IXGBE_PCI_REG_WRITE(txq->tdt_reg_addr,
+				    (txq->tail & (txq->len - 1)));
 
 	return nb_pkts;
 }
