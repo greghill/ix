@@ -1029,15 +1029,19 @@ static inline int eth_tx_xmit(struct eth_tx_queue *tx,
 
 DECLARE_PERCPU(int, tx_batch_cap);
 DECLARE_PERCPU(int, tx_batch_len);
+DECLARE_PERCPU(int, tx_batch_pos);
 DECLARE_PERCPU(struct mbuf *, tx_batch[ETH_DEV_TX_QUEUE_SZ]);
 
 static inline int eth_tx_xmit_batched(struct eth_tx_queue *tx,
 				      struct mbuf *mbuf)
 {
-	if (percpu_get(tx_batch_len) >= percpu_get(tx_batch_cap))
+	if (percpu_get(tx_batch_len) + mbuf->nr_iov >=
+	    percpu_get(tx_batch_cap))
 		return -ENOMEM;
 
-	percpu_get(tx_batch[percpu_get(tx_batch_len)++]) = mbuf;
+	percpu_get(tx_batch[percpu_get(tx_batch_pos)++]) = mbuf;
+	percpu_get(tx_batch_len) += 1 + mbuf->nr_iov;
+
 	return 0;
 }
 
@@ -1052,13 +1056,10 @@ static inline int eth_tx_xmit_batched(struct eth_tx_queue *tx,
 static inline int eth_tx_xmit_one(struct eth_tx_queue *tx,
 				  struct mbuf *mbuf, size_t len)
 {
-	struct mbuf *mbufs[1];
-
-	mbufs[0] = mbuf;
 	mbuf->len = len;
 	mbuf->nr_iov = 0;
 
-	return eth_tx_xmit(tx, 1, mbufs);
+	return !eth_tx_xmit_batched(tx, mbuf);
 }
 
 extern bool eth_rx_idle_wait(uint64_t usecs);

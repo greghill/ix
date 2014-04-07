@@ -17,6 +17,7 @@
 #include <ix/vm.h>
 #include <ix/kstats.h>
 #include <ix/queue.h>
+#include <ix/log.h>
 
 #include <dune.h>
 
@@ -107,8 +108,12 @@ again:
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(tx_xmit, NULL);
-	eth_tx_xmit(percpu_get(eth_tx), percpu_get(tx_batch_len), percpu_get(tx_batch));
+	i = eth_tx_xmit(percpu_get(eth_tx), percpu_get(tx_batch_pos),
+		        percpu_get(tx_batch));
+	if (i != percpu_get(tx_batch_pos))
+		panic("transmit failed\n");
 	percpu_get(tx_batch_len) = 0;
+	percpu_get(tx_batch_pos) = 0;
 	KSTATS_POP(NULL);
 
 	if (!percpu_get(usys_arr)->len) {

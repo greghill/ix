@@ -23,6 +23,7 @@ DEFINE_PERCPU(struct eth_tx_queue *, eth_tx);
 
 DEFINE_PERCPU(int, tx_batch_cap);
 DEFINE_PERCPU(int, tx_batch_len);
+DEFINE_PERCPU(int, tx_batch_pos);
 DEFINE_PERCPU(struct mbuf *, tx_batch[ETH_DEV_TX_QUEUE_SZ]);
 
 static const struct rte_eth_conf default_conf = {
