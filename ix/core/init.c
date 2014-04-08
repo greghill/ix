@@ -475,6 +475,9 @@ void balance_queues_to_cores(struct cpu_spec *cpu_spec)
 		else
 			count_unspec_queues++;
 
+	if (!count_unspec_queues)
+		return;
+
 	count = (max_queues - total_rx_queues) % count_unspec_queues;
 	for (i = 0; i < cpu_spec->count; i++) {
 		if (cpu_spec->nb_rx_queues[i] != -1)
