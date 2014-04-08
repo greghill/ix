@@ -17,6 +17,58 @@ servers~\cite{DBLP:conf/sosp/AdyaCMP11} or messaging
 servers~\cite{whatsapp-2mil}. 
 
 
+\begin{comment}
+
+%%% V1
+
+We focus here on three high-level challenges for web-scale
+applications that point to the need to address energy-proportionality,
+connection scalability, and quality-of-service for web-scale
+applications.
+
+First, at the highest level, web-scale applications ideally deliver
+the highest possible quality of service in the most
+energy-proportional manner~\cite{DBLP:journals/computer/BarrosoH07}.
+In practice, these two goals are often at odds with each other:
+techniques that can improve quality-of-service, and in particular
+reduce end-to-end latency, often consume much more energy.  For
+example, low-power states save substantial amounts of energy, at the
+cost of an increased latency measured in XXX when transitioning back
+into a normal operating system.
+
+Second, the nodes of web-scale applications are often characterized by
+extremely high fan-out and high fan-in requirements.  An application
+server may rely on tens of thousands of downstream services, and a
+downstream service may serve hundreds of thousands of
+clients~\cite{missing}.  At the extreme end of the spectrum,
+notification and communication services must scale to the hundreds of
+millions of Internet clients~\cite{DBLP:conf/sosp/AdyaCMP11}.
+Unfortunately, existing implementations of the TCP/IP networking stack
+in current systems were never designed to scale to such sizes.  As a
+consequence, Facebook pragmatically chose to forgo the TCP protocol in
+favor of connection-less UDP datagrams~\cite{nishtala2013scaling} for
+its memcached implementation.  WhatsApp put significant engineering
+efforts to tun FreeBSD to scale to 2 million concurrent
+connections~\cite{whatsapp-2mil}.
+
+Third, these high fan-in and fan-out applications suffer from the
+\emph{long tail} problem, with the latency of the application
+determined by the latency of slowest-responding
+node~\cite{DBLP:journals/cacm/DeanB13}.  To lessen the impact of the
+long tail, datacenter operators often overprovision servers to ensure
+that they can operate at low utilization.
+
+Collectively, the second and third challenge have been proposed as the
+\emph{C10M problem}~\cite{theC10Mproblem}: for a given server, scale
+to 10 million concurrent TCP connections, saturate 10 GbE interfaces,
+and deliver 10~\microsecond latency (mean), with an additional latency
+jitter of not more than an extra 10~\microsecond.  The conventional
+wisdom is that such a solution must bypass the operating system
+entirely.  For example, mTCP~\cite{jeong2014mtcp} is a user-level TCP
+stack with the highest known scalability for short-lived connections.
+
+\end{comment}
+
 
 \subsection{Stuff to cite somehow}
 \begin{itemize}

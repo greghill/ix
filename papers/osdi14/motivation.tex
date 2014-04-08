@@ -37,7 +37,7 @@ learning~\cite{missing}.  Because of this diversity, different
 services are routinely implemented using different programming
 languages, framework and paradigms.
 
-The event-driven paradigm is the most commonly used for services taht
+The event-driven paradigm is the most commonly used for services that
 are directly involved in serving interactive applications.  In this
 paradigm, each application node is primarily responding to external
 events such as a new incoming connections, a request from an incoming
@@ -50,29 +50,90 @@ For each category, the most efficient implementations today are
 implemented using event-driven frameworks in which application logic
 interacts with the framework exclusively via non-blocking calls.  This
 is in contrast with the classic thread-oriented programming paradigm,
-in which a sessions are divided among a large pool of (kernel)
+in which sessions are divided among a large pool of (kernel)
 threads, which block while waiting for incoming traffic or outstanding
-replies.  For example, the event-oriented ngnx~\cite{missing} HTTP
-server and proxy outperforms the thread-oriented Apache~\cite{missing}
-server.
+replies.  For example, the event-oriented nginx HTTP
+server and proxy~\cite{reese2008nginx} outperforms the thread-oriented Apache server~\cite{misc:apache}.
 
 Libraries simplify the development of event-driven applications.  For
-example, the popular \texttt{libevent} library provides a level of
+example, the popular \texttt{libevent} library~\cite{misc:libevent} provides a level of
 abstraction that exposes the paradigm to applications running on top
 of Linux, *BSD, and Windows~\cite{missing}.  Many web-scale
-applications, including memcached~\cite{missing}, XXX are built on top
-of libevent.  Others such as ngnx are built using a similar approach.
+applications, including memcached~\cite{missing}, XXX~\cite{missing} are built on top
+of libevent.  Others such as Nginx are built using a similar approach.
 
 
 \subsection{Main Challenges}
 \label{sec:motivation:challenges}
 
+Web-scale application pose unique challenges to system software.
+Although the use of an event-oriented paradigm has system-level
+benefits, in particular with respect to context switching rates, many
+challenges remain that are intrinsic to system software:
 
-\paragraph{Connection Scalability}
+\paragraph{Multicore scalability.}
 
-\paragraph{Energy-efficiency and multicore}
+Using today's technology, commodity Xeon processors support 8-10
+cores, each consisting of two hyperthreads.  Even when the application
+logic is designed to scale and is embarrassingly parallel, the
+operating system's networking stack does often become a scalability
+bottleneck.
+
+Operating system CPU schedulers were originally designed to
+maximize the utilization of the CPU resource among competing
+resources.  With the evolution of computer architecture, current
+schedulers additionally take cache and memory affinity into
+consideration.  Affinity-Accept~\cite{DBLP:conf/eurosys/PesterevSZM12}
+improves the affinity of incoming and outgoing network processing by
+considering the affinity of flows to core and controlling the NIC
+hardware.
+
+Such approaches minimize communication between core but do not
+eliminate them.  The lack of
+commutativity~\cite{DBLP:conf/sosp/ClementsKZMK13} in the POSIX socket
+API implies that cross-core communication is necessary whenever a
+connection is accepted or closed.  This poses a significant bottleneck
+for workloads that consists of high rates of small, ad-hoc, TCP
+connections between servers.  Even with recent kernel improvments that
+allow multiple threads to listen to the same socket, (Linux
+\texttt{SO\_REUSE)} or ensure flow
+affinity~\cite{DBLP:conf/eurosys/PesterevSZM12}, micro-benchmarks
+consisting of short TCP-based connections expose first-order
+bottlenecks in the operating system.  mTCP~\cite{jeong2014mtcp} does
+scale to the maximum number of cores in a socket by running the entire
+network stack in userspace in a lock-free manner.
+
+
+\paragraph{Connection Scalability.}
+
+Connection scalability is the desirable property to support an
+increasing number of concurrent connections with no significant impact
+on application throughput or latency, up to the memory resource
+limitations of the machine.  This has been a historical challenge for
+commodity operating systems.  A decade ago, the scalability challenge
+was known as the \emph{C10 problem}~\cite{} and ended up requiring changes to
+the kernel and to applications.   
+
+Connection scalability remains a challenge today.  For example, the
+nature of all-to-all communication between Facebook's application and
+memcache servers made it impractical to use TCP sockets between these
+two tiers~\cite{nishtala2013scaling}; resulting deployments use a
+UDP-based protocol for \texttt{get} operations, and an aggregation
+proxy for \texttt{put} operations.
+
+Connection scalability is also a challenge for Internet-facing servers
+such as notification services~\cite{DBLP:conf/sosp/AdyaCMP11} and
+instant-messaging services.  Indeed, such servers should ideally
+support much larger connection counts that for intra-datacenter
+communication, as connection capacity becomes the primary metric, and
+low-latency and even throughput become secondary.  For example,
+WhatsApp supports up to 2 million concurrent connections on FreeBSD, as
+of 2012~\cite{whatsapp-2mil}.  To the best of our knowledge, the
+\emph{C10M problem}~\cite{theC10mproblem} remains open to date,
+despite sufficient memory in current-generation commodity servers.
 
 \paragraph{Tail-latency tolerance}
+
 
 \paragraph{Micro-second computing}
 
