@@ -71,7 +71,7 @@ struct ctx {
 	struct ctx *next;
 	struct worker *worker;
 	unsigned int state;
-	unsigned int messages_left;
+	unsigned long messages_left;
 	unsigned int bytes_left;
 	unsigned long timestamp;
 	struct bufferevent *bev;
@@ -79,7 +79,7 @@ struct ctx {
 
 static struct sockaddr_in server_addr;
 static int msg_size;
-static int messages_per_connection;
+static long messages_per_connection;
 
 static void new_connection(struct event_base *base, struct ctx *ctx);
 
@@ -307,7 +307,7 @@ int main(int argc, char **argv)
 	cores = atoi(argv[3]);
 	connections = atoi(argv[4]);
 	msg_size = atoi(argv[5]);
-	messages_per_connection = atoi(argv[6]);
+	messages_per_connection = strtol(argv[6], NULL, 10);
 
 	if (msg_size > BUFFER_SIZE) {
 		fprintf(stderr, "Error: MSG_SIZE (%d) is larger than maximum allowed (%d).\n", msg_size, BUFFER_SIZE);
