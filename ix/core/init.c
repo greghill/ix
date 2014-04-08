@@ -618,6 +618,12 @@ int main(int argc, char *argv[])
 			return ret;
 		}
 
+		ret = init_this_cpu(1);
+		if (ret) {
+			log_err("init: failed to initialize the local CPU\n");
+			return ret;
+		}
+
 		ret = pcap_open_read(arguments.pcap_file, &mac);
 		if (ret) {
 			log_err("init: failed to open pcap file '%s'\n", arguments.pcap_file);
