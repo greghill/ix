@@ -2,7 +2,7 @@
  * init.c - main system and CPU core initialization
  */
 
-#define SANDBOX_ENABLED 1
+#define SANDBOX_ENABLED 0
 
 #include <getopt.h>
 #include <pthread.h>
