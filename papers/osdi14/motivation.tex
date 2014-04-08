@@ -6,9 +6,11 @@ The research project focuses on identifying the mismatch and
 opportunities for improvement between commodity operating systems and
 a large, but well-defined, class of relevant applications.  In this
 section, we first define the class of applications in our focus
-(\S\ref{sec:motivation:web}), and then describe the system software
+(\S\ref{sec:motivation:web}), then describe the system software
 challenges associated with that class of applications
-(\S\ref{sec:motivation:challenges}).
+(\S\ref{sec:motivation:challenges}), and identify an alternative model --
+the dataplane -- which addresses these challenges
+(\S\ref{sec:motivation:dp}.
 
 \subsection{Event-driven, web-scale applications}
 \label{sec:motivation:web}
@@ -66,7 +68,7 @@ of libevent.  Others such as Nginx are built using a similar approach.
 \subsection{Main Challenges}
 \label{sec:motivation:challenges}
 
-Web-scale application pose unique challenges to system software.
+Web-scale applications pose unique challenges to system software.
 Although the use of an event-oriented paradigm has system-level
 benefits, in particular with respect to context switching rates, many
 challenges remain that are intrinsic to system software:
@@ -94,7 +96,7 @@ commutativity~\cite{DBLP:conf/sosp/ClementsKZMK13} in the POSIX socket
 API implies that cross-core communication is necessary whenever a
 connection is accepted or closed.  This poses a significant bottleneck
 for workloads that consists of high rates of small, ad-hoc, TCP
-connections between servers.  Even with recent kernel improvments that
+connections between servers.  Even with recent kernel improvements that
 allow multiple threads to listen to the same socket, (Linux
 \texttt{SO\_REUSE)} or ensure flow
 affinity~\cite{DBLP:conf/eurosys/PesterevSZM12}, micro-benchmarks
@@ -110,9 +112,10 @@ Connection scalability is the desirable property to support an
 increasing number of concurrent connections with no significant impact
 on application throughput or latency, up to the memory resource
 limitations of the machine.  This has been a historical challenge for
-commodity operating systems.  A decade ago, the scalability challenge
-was known as the \emph{C10 problem}~\cite{} and ended up requiring changes to
-the kernel and to applications.   
+commodity operating systems.  A decade ago, connection scalability
+challenges started with as less than 10,000 concurrent
+connections~\cite{theC10Kproblem}, which ended up requiring changes to
+the kernel and to applications.
 
 Connection scalability remains a challenge today.  For example, the
 nature of all-to-all communication between Facebook's application and
@@ -127,17 +130,98 @@ instant-messaging services.  Indeed, such servers should ideally
 support much larger connection counts that for intra-datacenter
 communication, as connection capacity becomes the primary metric, and
 low-latency and even throughput become secondary.  For example,
-WhatsApp supports up to 2 million concurrent connections on FreeBSD, as
-of 2012~\cite{whatsapp-2mil}.  To the best of our knowledge, the
-\emph{C10M problem}~\cite{theC10mproblem} remains open to date,
-despite sufficient memory in current-generation commodity servers.
-
-\paragraph{Tail-latency tolerance}
-
+WhatsApp Inc. (now part of Facebook) supports up to 2 million concurrent connections on FreeBSD, as
+of 2012~\cite{whatsapp-2mil}.  
 
 \paragraph{Micro-second computing}
 
-\subsection{The mismatch}
+The notion behind \emph{micro-second computing}~\cite{luiz-isscc} is
+that it is essential to minimize the latency of interactions within a
+datacenter, and in particular of the remote procedure calls issued by
+interactive applications that must access and aggregate massive
+amounts of data.  Using today's networking technologies, the typical
+communication delay between two servers in a datacenter involves a
+pair of 10GE NICs (with a one-way latency as low as
+3~\microsecond~\cite{cisco-sereno}), one, three or five cut-through
+switches organized in a fat-tree topology (a few hundred $ns$ each, in
+the absence of contention, and rapidly shrinking) and propagation
+delays (500 $ns$ for 100 meters, with little recent improvements).
+Put together, technology enables intrinsic one-way communication
+latency of a handful of \microsecond.  
+
+And yet, software ---and in particular system software--- is designed
+to operate at a totally different timescale: interrupt coalescing
+improve throughput but can delay packets by milliseconds; Queues build
+up during device driver processing intervals, introducing noticeable
+queuing delays; protocol processing of incoming packets terminates in
+the socket layer without directly (or synchronously notifying
+applications).  As a result, the remote procedure call latency
+observed by application software is one to two orders of magnitude
+greater than the intrinsic latency.
+
+These issues compound when considering the long tail of the latency
+distributions~\cite{DBLP:journals/cacm/DeanB13}. Although
+tail-tolerance itself is actually an end-to-end problem, the
+protocol-processing stacks play a significant role in exacerbating the
+problem.  In particular, protocol processing techniques that reduce
+latency to microseconds in the common case, but don't improve the 95\%
+or 99\% latency are unlikely to result into end-to-end application
+gains.
+
+\subsection{The Dataplane Alternative}
+\label{sec:motivation:dp}
+
+The main challenges describe above ---multi-core scalability,
+connection scalability, and microsecond computing--- are not limited
+to event-driven applications operating at large scale.  In fact, such
+challenges have been addressed and are reasonably well understood in
+others domains.  In particular, middleboxes such as
+firewalls~\cite{missing}, load-balancers~\cite{missing}, and software
+routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09};
+have addresses the problem long ago by integrating the networking
+stack and the application into a single \emph{dataplane}.
+
+The solution involves potential tradeoffs in both hardware and
+software.  On the hardware side, middlebox services can be deployed
+either on commodity Xeon-class servers or virtual machines, or on
+processors specifically designed for the networking market.  For
+example, Cavium's OCTEON III family of processors offers multiple
+100Gbps of external connectivity and 48 64-bit MIPS cores into a
+single System-on-Chip~\cite{cavium-octeon}.  This provides increases
+energy-efficiencies and densities, at the expense of generality and
+volume of the solution.  
+
+On the software side, the typical architecture of a middlebox solution
+is designed around the following principles: 
+
+\paragaph{Run to completion.}.  Packets are processed ``to
+completion'' by the dataplane, eliminating most or all forms of
+internal queuing.  In contrast, the classic POSIX model divides the
+roles of the protocol processing stack (which pulls packets from the
+driver, de-multiplex them into socket queues, and implements the L3/L4
+protocols) and the applications, which asynchronously pull the socket
+payload from these queues.  Processing is similar on the transmission
+side; in fact, both directions typically require a memory copy. 
+
+\paragraph{Coherence-free execution.} 
+Different cores operate totally independently
+of each other.  In particular common case operations should execute in
+a coherence-free manner, i.e., without any cache misses due to the
+cache-coherency protocol or any atomic operations that require a
+similar access to the cache-coherency layered. This is a much stronger
+form of decoupling that the use of locks or of wait-free
+synchronization techniques, which have an inherent cache-coherency
+traffic cost; 
+
+\paragraph{Embeded deployment model.} 
+
+The software stack is designed to run a single
+application, which is directly embedded within the dataplane.  Like
+most embedded systems, the application controls all resources, and the
+software stack is deployed and operated as a single blob with no
+externally-visible distinction between the components.
+
+
 
 
 
