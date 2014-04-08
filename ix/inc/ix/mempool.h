@@ -19,6 +19,7 @@ struct mempool {
 	int nr_pages;
 };
 
+
 /**
  * mempool_alloc - allocates an element from a memory pool
  * @m: the memory pool
@@ -52,6 +53,19 @@ static inline void mempool_free(struct mempool *m, void *ptr)
 
 extern int mempool_create(struct mempool *m, int nr_elems, size_t elem_len);
 extern void mempool_destroy(struct mempool *m);
+
+
+/**
+ * mempool_pagemem_to_iomap - get the IOMAP address of a mempool entry
+ * @m: the mempool
+ * @ptr: a pointer to the target entry
+ *
+ * Returns an IOMAP address.
+ */
+static inline void *mempool_pagemem_to_iomap(struct mempool *m, void *ptr)
+{
+	return (void *) ((uintptr_t) ptr + m->iomap_offset);
+}
 
 extern int
 mempool_pagemem_create(struct mempool *m, int nr_elems, size_t elem_len);

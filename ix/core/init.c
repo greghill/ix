@@ -2,7 +2,7 @@
  * init.c - main system and CPU core initialization
  */
 
-#define SANDBOX_ENABLED 1
+#define SANDBOX_ENABLED 0
 
 #include <getopt.h>
 #include <pthread.h>
@@ -65,6 +65,7 @@ static struct {
 } arguments;
 
 extern int net_init(void);
+extern int tcp_api_init(void);
 extern int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp);
 extern int virtual_init(void);
 extern int tcp_echo_server_init(int port);
@@ -284,6 +285,9 @@ static int cpu_networking_init(int nb_rx_queues)
 			log_err("init: failed to get an RX queue\n");
 			return ret;
 		}
+
+		set_current_queue(percpu_get(eth_rx)[i]);
+		perqueue_get(queue_id) = i;
 	}
 	percpu_get(eth_rx_count) = i;
 
@@ -302,7 +306,15 @@ static int cpu_networking_init(int nb_rx_queues)
 	for_each_queue(queue)
 		tcp_init();
 
+#if SANDBOX_ENABLED
+	ret = tcp_api_init();
+	if (ret) {
+		log_err("init: failed to initialize TCP API\n");
+		return ret;
+	}
+#else
 	tcp_echo_server_init(1234);
+#endif
 
 	log_info("init: cpu %d handles %d queues\n", percpu_get(cpu_id), percpu_get(eth_rx_count));
 

@@ -84,7 +84,7 @@ static int udp_output(struct mbuf *__restrict pkt,
 
 	dst_addr.addr = id->dst_ip;
 	if (arp_lookup_mac(&dst_addr, &ethhdr->dhost))
-		return -EAGAIN;
+		return -RET_AGAIN;
 
 	ethhdr->shost = cfg_mac;
 	ethhdr->type = hton16(ETHTYPE_IP);
@@ -100,7 +100,7 @@ static int udp_output(struct mbuf *__restrict pkt,
 	pkt->len = UDP_PKT_SIZE;
 
 	if (eth_tx_xmit_batched(percpu_get(eth_tx), pkt))
-		return -EIO;
+		return -RET_NOBUFS;
 
 	return 0;
 }
@@ -128,21 +128,21 @@ void bsys_udp_send(void __user *__restrict vaddr, size_t len,
 
 	/* validate user input */
 	if (unlikely(len > UDP_MAX_LEN)) {
-		usys_udp_send_ret(cookie, -EINVAL);
+		usys_udp_send_ret(cookie, -RET_INVAL);
 		return;
 	}
 	if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple)))) {
-		usys_udp_send_ret(cookie, -EFAULT);
+		usys_udp_send_ret(cookie, -RET_FAULT);
 		return;
 	}
 	if (unlikely(!uaccess_zc_okay(vaddr, len))) {
-		usys_udp_send_ret(cookie, -EFAULT);
+		usys_udp_send_ret(cookie, -RET_FAULT);
 		return;
 	}
 
 	addr = (void *) vm_lookup_phys(vaddr, PGSIZE_2MB);
 	if (unlikely(!addr)) {
-		usys_udp_send_ret(cookie, -EFAULT);
+		usys_udp_send_ret(cookie, -RET_FAULT);
 		return;
 	}
 
@@ -150,7 +150,7 @@ void bsys_udp_send(void __user *__restrict vaddr, size_t len,
 
 	pkt = mbuf_alloc_local();
 	if (unlikely(!pkt)) {
-		usys_udp_send_ret(cookie, -ENOBUFS);
+		usys_udp_send_ret(cookie, -RET_NOBUFS);
 		return;
 	}
 
@@ -191,7 +191,7 @@ void bsys_udp_send(void __user *__restrict vaddr, size_t len,
 void bsys_udp_sendv(struct sg_entry __user *ents, unsigned int nrents,
 		    struct ip_tuple __user *id, unsigned long cookie)
 {
-	usys_udp_send_ret(cookie, -ENOSYS);
+	usys_udp_send_ret(cookie, -RET_NOSYS);
 }
 
 #define MAX_MBUF_PAGE_OFF	(PGSIZE_2MB - (PGSIZE_2MB % MBUF_LEN))

@@ -83,10 +83,15 @@ void tcp_input_tmp(struct mbuf *pkt, struct ip_hdr *iphdr, void *tcphdr)
 
 	pbuf = pbuf_alloc(PBUF_RAW, ntoh16(iphdr->len) - iphdr->header_len * 4, PBUF_ROM);
 	pbuf->payload = tcphdr;
+	pbuf->mbuf = pkt;
 	perqueue_get(ip_data).current_iphdr_dest.addr = iphdr->dst_addr.addr;
 	perqueue_get(ip_data).current_iphdr_src.addr = iphdr->src_addr.addr;
+	pkt->done_data = 0xCAFEBABE;
 	tcp_input(pbuf, &netif);
-	mbuf_free(pkt);
+
+	/* FIXME: so terrible :( */
+	if (pkt->done_data == 0xCAFEBABE)
+		mbuf_free(pkt);
 }
 
 DEFINE_PERCPU(struct mempool, pbuf_mempool);
@@ -99,19 +104,7 @@ DEFINE_PERCPU(struct mempool, tcp_seg_mempool);
 
 static int init_mempool(struct mempool *m, int nr_elems, size_t elem_len)
 {
-	int ret;
-
-	ret = mempool_pagemem_create(m, nr_elems, elem_len);
-	if (ret)
-		return ret;
-
-	ret = mempool_pagemem_map_to_user(m);
-        if (ret) {
-                mempool_pagemem_destroy(m);
-                return ret;
-        }
-
-        return 0;
+	return mempool_create(m, nr_elems, elem_len);
 }
 
 int memp_init(void)
