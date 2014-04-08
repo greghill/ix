@@ -39,3 +39,8 @@ static inline int sys_spawnmode(bool spawn_cores)
 	return (int) SYSCALL(SYS_SPAWNMODE, spawn_cores);
 }
 
+static inline int sys_nrcpus(void)
+{
+	return (int) SYSCALL(SYS_NRCPUS);
+}
+

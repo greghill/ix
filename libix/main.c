@@ -7,9 +7,10 @@
 #include "syscall.h"
 #include "ix.h"
 
-static struct bsys_arr *uarr;
-struct bsys_arr *karr;
-static bsysfn_t usys_tbl[USYS_NR];
+static __thread bsysfn_t usys_tbl[USYS_NR];
+static __thread struct bsys_arr *uarr;
+
+__thread struct bsys_arr *karr;
 
 /**
  * ix_poll - flush pending commands and check for new commands

@@ -32,6 +32,7 @@ common() {
 
 common_linux() {
   common
+  service irqbalance start
   modprobe ixgbe
   ifdown $BOND2 $BOND3 $BOND4 $REST1 $REST2 $REST3 $NIC
   ifdown bond0
@@ -54,20 +55,12 @@ elif [ $1 = 'bond' ]; then
   common_linux
   ifup $BOND1 $BOND2 $BOND3 $BOND4
   ifup bond0
-  bash $SCRIPTPATH/set_irq_affinity.sh $BOND1
-  bash $SCRIPTPATH/set_irq_affinity.sh $BOND2
-  bash $SCRIPTPATH/set_irq_affinity.sh $BOND3
-  bash $SCRIPTPATH/set_irq_affinity.sh $BOND4
 elif [ $1 = 'single' ]; then
   common_linux
-  ifconfig $NIC 192.168.21.2
-  echo 1 > /proc/irq/`cat /proc/interrupts | grep -i "$NIC$"  | cut  -d:  -f1 | sed "s/ //g"`/smp_affinity
-  echo 3 > /proc/irq/`cat /proc/interrupts | grep -i "$NIC-TxRx-0$"  | cut  -d:  -f1 | sed "s/ //g"`/smp_affinity
-  bash $SCRIPTPATH/set_irq_affinity.sh $NIC
+  ifconfig $NIC 192.168.21.1
 elif [ $1 = 'single-onecore' ]; then
   common_linux
-  ifconfig $NIC 192.168.21.2
-  for i in `cat /proc/interrupts | grep -i "$NIC" | cut  -d:  -f1 | sed "s/ //g"`; do echo 2 > /proc/irq/$i/smp_affinity; done
+  ifconfig $NIC 192.168.21.1
 elif [ $1 = 'ix-numa0' ]; then
   common_ix
   echo 10000 > /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages
