@@ -10,6 +10,7 @@
 #include <ix/queue.h>
 #include <ix/log.h>
 #include <ix/uaccess.h>
+#include <ix/ethdev.h>
 
 #include <lwip/tcp.h>
 
@@ -56,7 +57,7 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 	if (unlikely(idx >= MAX_PCBS))
 		return NULL;
 
-	set_current_queue(queue);
+	set_current_queue(percpu_get(eth_rx)[queue]);
 	p = &perqueue_get(pcb_mempool);
 
 	api = (struct tcpapi_pcb *) ((uintptr_t) p->buf +
@@ -147,6 +148,11 @@ void bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
 		return;
 	}
 
+	if (unlikely(!api->alive)) {
+		usys_tcp_send_ret(handle, api->cookie, 0);
+		return;
+	}
+
 	if (unlikely(!uaccess_okay(ents, nrents * sizeof(struct sg_entry)))) {
 		usys_tcp_send_ret(handle, api->cookie, -RET_FAULT);
 		return;
@@ -195,7 +201,8 @@ void bsys_tcp_recv_done(hid_t handle, size_t len)
 
 	recvd = api->recvd;
 
-	tcp_recved(api->pcb, len);
+	if (api->pcb)
+		tcp_recved(api->pcb, len);
 	while (recvd) {
 		if (len < recvd->len) {
 			recvd->len -= len;
