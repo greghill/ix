@@ -40,6 +40,7 @@ struct thread_arg {
 	pthread_mutex_t	ta_mtx;
 	pid_t		ta_tid;
 	struct dune_tf	*ta_tf;
+	bool		dune_started;
 };
 
 int exec_execev(const char *filename, char *const argv[], char *const envp[]);
@@ -91,7 +92,7 @@ void do_enter_thread(struct dune_tf *tf)
 	syscall(SYS_exit, rc);
 }
 
-static void *pthread_entry(void *arg)
+void *pthread_entry(void *arg)
 {
 	struct thread_arg *a = arg;
 	struct dune_tf *tf = a->ta_tf;
@@ -100,7 +101,8 @@ static void *pthread_entry(void *arg)
 	pid_t tid;
 	int flags = ARG0(tf);
 
-	dune_enter();
+	if (!a->dune_started)
+		dune_enter();
 
 	tid = syscall(SYS_gettid);
 
@@ -136,6 +138,9 @@ static void *pthread_entry(void *arg)
 	return NULL;
 }
 
+extern bool sys_spawn_cores;
+extern int init_do_spawn(void *arg);
+
 static long dune_pthread_create(struct dune_tf *tf)
 {
 	pthread_t pt;
@@ -150,8 +155,15 @@ static long dune_pthread_create(struct dune_tf *tf)
 	if (pthread_mutex_init(&arg.ta_mtx, NULL))
 		return -1;
 
-	if (pthread_create(&pt, NULL, pthread_entry, &arg))
-		return -1;
+	if (sys_spawn_cores) {
+		arg.dune_started = true;
+		if (init_do_spawn(&arg))
+			return -1;
+	} else {
+		arg.dune_started = false;
+		if (pthread_create(&pt, NULL, pthread_entry, &arg))
+			return -1;
+	}
 
 	pthread_mutex_lock(&arg.ta_mtx);
 	if (arg.ta_tid == 0)

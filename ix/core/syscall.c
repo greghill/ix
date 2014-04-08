@@ -222,6 +222,22 @@ static int sys_unmap(void *addr, int nr, int size)
 	return 0;
 }
 
+bool sys_spawn_cores;
+
+/**
+ * sys_spawnmode - sets the spawn mode
+ * @spawn_cores: the spawn mode. If true, calls to clone will bind
+ * to IX cores. If false, calls to clone will spawn a regular linux
+ * thread.
+ *
+ * Returns 0.
+ */
+static int sys_spawnmode(bool spawn_cores)
+{
+	sys_spawn_cores = spawn_cores;
+	return 0;
+}
+
 typedef uint64_t (*sysfn_t) (uint64_t, uint64_t, uint64_t,
 			     uint64_t, uint64_t, uint64_t);
 
@@ -231,6 +247,7 @@ static sysfn_t sys_tbl[] = {
 	(sysfn_t) sys_baddr,
 	(sysfn_t) sys_mmap,
 	(sysfn_t) sys_unmap,
+	(sysfn_t) sys_spawnmode,
 };
 
 /**

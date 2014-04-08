@@ -2,6 +2,8 @@
  * init.c - main system and CPU core initialization
  */
 
+#define SANDBOX_ENABLED 1
+
 #include <getopt.h>
 #include <pthread.h>
 
@@ -307,6 +309,56 @@ static int cpu_networking_init(int nb_rx_queues)
 	return 0;
 }
 
+static pthread_mutex_t spawn_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t spawn_cond = PTHREAD_COND_INITIALIZER;
+
+struct spawn_req {
+	void *arg;
+	struct spawn_req *next;
+};
+
+static struct spawn_req *spawn_reqs;
+extern void *pthread_entry(void *arg);
+
+static void wait_for_spawn(void)
+{
+	struct spawn_req *req;
+	void *arg;
+
+	pthread_mutex_lock(&spawn_mutex);
+	while (!spawn_reqs)
+		pthread_cond_wait(&spawn_cond, &spawn_mutex);
+	req = spawn_reqs;
+	spawn_reqs = spawn_reqs->next;
+	pthread_mutex_unlock(&spawn_mutex);
+
+	arg = req->arg;
+	free(req);
+
+	log_info("init: user spawned cpu %d\n", percpu_get(cpu_id));
+	pthread_entry(arg);
+}
+
+int init_do_spawn(void *arg)
+{
+	struct spawn_req *req;
+
+	pthread_mutex_lock(&spawn_mutex);
+	req = malloc(sizeof(struct spawn_req));
+	if (!req) {
+		pthread_mutex_unlock(&spawn_mutex);
+		return -ENOMEM;
+	}
+
+	req->next = spawn_reqs;
+	req->arg = arg;
+	spawn_reqs = req;
+	pthread_cond_broadcast(&spawn_cond);
+	pthread_mutex_unlock(&spawn_mutex);
+
+	return 0;
+}
+
 void *start_cpu(void *arg)
 {
 	int ret;
@@ -330,7 +382,11 @@ void *start_cpu(void *arg)
 
 	pthread_mutex_unlock(&params->init_done_mutex);
 
+#if SANDBOX_ENABLED
+	wait_for_spawn();
+#else
 	main_loop();
+#endif
 
 	return NULL;
 }
@@ -638,7 +694,7 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-#if 0
+#if SANDBOX_ENABLED
 	ret = sandbox_init(arguments.restc, arguments.restv);
 	if (ret) {
 		log_err("init: failed to start sandbox\n");

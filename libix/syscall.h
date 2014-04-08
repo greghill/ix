@@ -34,3 +34,8 @@ static inline int sys_unmap(void *addr, int nr, int size)
 	return (int) SYSCALL(SYS_MUNMAP, addr, nr, size);
 }
 
+static inline int sys_spawnmode(bool spawn_cores)
+{
+	return (int) SYSCALL(SYS_SPAWNMODE, spawn_cores);
+}
+
