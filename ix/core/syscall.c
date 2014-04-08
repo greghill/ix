@@ -245,6 +245,14 @@ static int sys_spawnmode(bool spawn_cores)
 	return 0;
 }
 
+/**
+ * sys_nrcpus - returns the number of active CPUs
+ */
+static int sys_nrcpus(void)
+{
+	return cpus_active;
+}
+
 typedef uint64_t (*sysfn_t) (uint64_t, uint64_t, uint64_t,
 			     uint64_t, uint64_t, uint64_t);
 
@@ -255,6 +263,7 @@ static sysfn_t sys_tbl[] = {
 	(sysfn_t) sys_mmap,
 	(sysfn_t) sys_unmap,
 	(sysfn_t) sys_spawnmode,
+	(sysfn_t) sys_nrcpus,
 };
 
 /**

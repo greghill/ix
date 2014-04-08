@@ -15,6 +15,8 @@
 #include <ix/mem.h>
 
 int cpu_count;
+int cpus_active;
+
 DEFINE_PERCPU(unsigned int, cpu_numa_node);
 DEFINE_PERCPU(unsigned int, cpu_id);
 

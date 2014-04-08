@@ -457,6 +457,8 @@ int parse_cpu_list(char *list, struct cpu_spec *cpu_spec)
 		tok = strtok_r(NULL, ",", &saveptr1);
 	}
 
+	cpus_active = cpu_spec->count;
+
 	return 0;
 }
 

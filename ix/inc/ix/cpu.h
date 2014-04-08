@@ -8,6 +8,7 @@
 
 #define NCPU	128
 extern int cpu_count; /* the number of available CPUs */
+extern int cpus_active; /* the number of in-use CPUs */
 
 /* used to define percpu variables */
 #define DEFINE_PERCPU(type, name) \

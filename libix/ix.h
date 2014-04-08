@@ -22,7 +22,7 @@ struct ix_ops {
 };
 
 extern void ix_flush(void);
-extern struct bsys_arr *karr;
+extern __thread struct bsys_arr *karr;
 
 static inline int ix_bsys_idx(void)
 {

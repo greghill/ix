@@ -53,6 +53,7 @@ enum {
 	SYS_MMAP,
 	SYS_MUNMAP,
 	SYS_SPAWNMODE,
+	SYS_NRCPUS,
 	SYS_NR,
 };
 
