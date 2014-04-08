@@ -276,9 +276,10 @@ int virtual_init(void)
 	virtual_eth_dev.data = &virtual_eth_dev_data;
 	virtual_eth_dev_data.mac_addrs = &virtual_eth_addr;
 
-	eth_dev = &virtual_eth_dev;
-	eth_rx_count = sizeof(virtual_eth_rx_queues) / sizeof(virtual_eth_rx_queues[0]);
-	eth_rx = virtual_eth_rx_queues;
+	eth_dev_count = 1;
+	eth_dev[0] = &virtual_eth_dev;
+	percpu_get(eth_rx_count) = sizeof(virtual_eth_rx_queues) / sizeof(virtual_eth_rx_queues[0]);
+	percpu_get(eth_rx) = virtual_eth_rx_queues;
 	percpu_get(eth_tx) = &virtual_eth_tx;
 
 	return 0;

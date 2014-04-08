@@ -6,9 +6,15 @@
 
 #include <ix/errno.h>
 #include <ix/ethdev.h>
+#include <ix/queue.h>
 #include <ix/types.h>
 #include <net/ethernet.h>
 #include <net/pcap.h>
+
+#include <lwip/memp.h>
+
+extern int tcp_echo_server_init(int port);
+extern void tcp_init(void);
 
 typedef struct pcap_hdr_s {
         uint32_t magic_number;   /* magic number */
@@ -109,13 +115,14 @@ int pcap_open_read(const char *pathname, struct eth_addr *mac)
 
 	filter_mac = *mac;
 
-	eth_dev = malloc(sizeof(struct rte_eth_dev));
-	eth_dev->data = malloc(sizeof(struct rte_eth_dev_data));
-	eth_dev->data->mac_addrs = malloc(ETH_ADDR_LEN);
-	eth_dev->data->mac_addrs[0] = *mac;
+	eth_dev_count = 1;
+	eth_dev[0] = malloc(sizeof(struct rte_eth_dev));
+	eth_dev[0]->data = malloc(sizeof(struct rte_eth_dev_data));
+	eth_dev[0]->data->mac_addrs = malloc(ETH_ADDR_LEN);
+	eth_dev[0]->data->mac_addrs[0] = *mac;
 
-	eth_tx = malloc(sizeof(struct eth_tx_queue));
-	eth_tx->xmit = fake_xmit;
+	percpu_get(eth_tx) = malloc(sizeof(struct eth_tx_queue));
+	percpu_get(eth_tx)->xmit = fake_xmit;
 
 	return 0;
 }
@@ -183,6 +190,27 @@ int pcap_replay()
 {
 	int ret;
 	struct mbuf *pkt;
+	struct eth_rx_queue rx_queue;
+	struct eth_rx_queue *rx_queues[] = {
+		&rx_queue,
+	};
+	unsigned int queue;
+
+	ret = queue_init_one(&rx_queue);
+	if (ret)
+		return ret;
+
+	percpu_get(eth_rx_count) = sizeof(rx_queues) / sizeof(rx_queues[0]);
+	percpu_get(eth_rx) = rx_queues;
+
+	ret = memp_init();
+	if (ret)
+		return ret;
+
+	for_each_queue(queue)
+		tcp_init();
+
+	tcp_echo_server_init(1234);
 
 	while (1) {
 		pkt = mbuf_alloc_local();
@@ -200,7 +228,7 @@ int pcap_replay()
 			continue;
 		}
 
-		eth_input(pkt);
+		eth_input(&rx_queue, pkt);
 	}
 
 	return 0;

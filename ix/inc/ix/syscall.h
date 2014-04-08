@@ -52,6 +52,7 @@ enum {
 	SYS_BADDR,
 	SYS_MMAP,
 	SYS_MUNMAP,
+	SYS_SPAWNMODE,
 	SYS_NR,
 };
 

@@ -2,21 +2,18 @@
 #include <sys/syscall.h>
 
 #include <ix/errno.h>
+#include <ix/ethdev.h>
 #include <ix/mem.h>
 #include <ix/queue.h>
 #include <ix/stddef.h>
-
-void *perqueue_offsets[NQUEUE];
 
 extern const char __perqueue_start[];
 extern const char __perqueue_end[];
 
 DEFINE_PERCPU(void *, current_perqueue);
-DEFINE_PERCPU(long, assigned_queues);
-
 DEFINE_PERQUEUE(int, queue_id);
 
-static void * queue_init_perqueue(unsigned int queue, unsigned int numa_node)
+static void * queue_init_perqueue(unsigned int numa_node)
 {
 	size_t len = __perqueue_end - __perqueue_start;
 	char *addr;
@@ -28,11 +25,6 @@ static void * queue_init_perqueue(unsigned int queue, unsigned int numa_node)
 
 	memset(addr, 0, len);
 
-	*((char **) addr) = addr;
-	perqueue_offsets[queue] = addr;
-
-	perqueue_get_remote(queue_id, queue) = queue;
-
 	return addr;
 }
 
@@ -42,7 +34,7 @@ static void * queue_init_perqueue(unsigned int queue, unsigned int numa_node)
  *
  * Returns 0 if successful, otherwise fail.
  */
-int queue_init_one(unsigned int queue)
+int queue_init_one(struct eth_rx_queue *rx_queue)
 {
 	int ret;
 	unsigned int tmp, numa_node;
@@ -52,23 +44,30 @@ int queue_init_one(unsigned int queue)
 	if (ret)
 		return -ENOSYS;
 
-	pqueue = queue_init_perqueue(queue, numa_node);
+	pqueue = queue_init_perqueue(numa_node);
 	if (!pqueue)
 		return -ENOMEM;
+
+	rx_queue->perqueue_offset = pqueue;
 
 	return 0;
 }
 
-int set_current_queue(unsigned int queue)
+void set_current_queue(struct eth_rx_queue *rx_queue)
 {
-	if (queue >= NQUEUE || !perqueue_offsets[queue]) {
-		unset_current_queue();
-		return 1;
-	}
+	percpu_get(current_perqueue) = rx_queue->perqueue_offset;
+}
 
-	percpu_get(current_perqueue) = perqueue_offsets[queue];
+int set_current_queue_by_index(unsigned int index)
+{
+       if (index >= percpu_get(eth_rx_count)) {
+               unset_current_queue();
+               return 1;
+       }
 
-	return 0;
+       set_current_queue(percpu_get(eth_rx)[index]);
+
+       return 0;
 }
 
 void unset_current_queue()

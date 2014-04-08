@@ -17,6 +17,7 @@
 #include <ix/vm.h>
 #include <ix/kstats.h>
 #include <ix/queue.h>
+#include <ix/log.h>
 
 #include <dune.h>
 
@@ -95,6 +96,7 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 
 	usys_reset();
 
+again:
 	KSTATS_PUSH(timer, NULL);
 	timer_run();
 	KSTATS_POP(NULL);
@@ -105,7 +107,7 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 
 	KSTATS_PUSH(rx_poll, NULL);
 	for_each_queue(i)
-		eth_rx_poll(eth_rx[i]);
+		eth_rx_poll(percpu_get(eth_rx)[i]);
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(bsys, NULL);
@@ -113,9 +115,22 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(tx_xmit, NULL);
-	eth_tx_xmit(percpu_get(eth_tx), percpu_get(tx_batch_len), percpu_get(tx_batch));
+	i = eth_tx_xmit(percpu_get(eth_tx), percpu_get(tx_batch_pos),
+		        percpu_get(tx_batch));
+	if (i != percpu_get(tx_batch_pos))
+		panic("transmit failed\n");
 	percpu_get(tx_batch_len) = 0;
+	percpu_get(tx_batch_pos) = 0;
 	KSTATS_POP(NULL);
+
+	if (!percpu_get(usys_arr)->len) {
+		nr = 0;
+		KSTATS_PUSH(idle, NULL);
+		/* FIXME: need to modify timer code to get the next event */
+		eth_rx_idle_wait(10 * ONE_MS);
+		KSTATS_POP(NULL);
+		goto again;
+	}
 
 	return ret;
 }
@@ -214,6 +229,22 @@ static int sys_unmap(void *addr, int nr, int size)
 	return 0;
 }
 
+bool sys_spawn_cores;
+
+/**
+ * sys_spawnmode - sets the spawn mode
+ * @spawn_cores: the spawn mode. If true, calls to clone will bind
+ * to IX cores. If false, calls to clone will spawn a regular linux
+ * thread.
+ *
+ * Returns 0.
+ */
+static int sys_spawnmode(bool spawn_cores)
+{
+	sys_spawn_cores = spawn_cores;
+	return 0;
+}
+
 typedef uint64_t (*sysfn_t) (uint64_t, uint64_t, uint64_t,
 			     uint64_t, uint64_t, uint64_t);
 
@@ -223,6 +254,7 @@ static sysfn_t sys_tbl[] = {
 	(sysfn_t) sys_baddr,
 	(sysfn_t) sys_mmap,
 	(sysfn_t) sys_unmap,
+	(sysfn_t) sys_spawnmode,
 };
 
 /**

@@ -68,8 +68,9 @@ void kstats_leave(kstats_accumulate *saved_accu)
 static void kstats_printone(kstats_distr *d, const char *name)
 {
   if (d->count) { 
-    log_info("kstat: %-15s %4lu latency %5lu | %5lu | %5lu "
-	     "occupancy %5lu | %5lu | %5lu\n",
+    log_info("kstat: %2d %-19s %7lu latency %7lu | %7lu | %7lu "
+	     "occupancy %6lu | %6lu | %6lu\n",
+	   percpu_get(cpu_id),
 	   name,
 	   d->count,
 	   d->min_lat,
@@ -87,9 +88,13 @@ static void kstats_printone(kstats_distr *d, const char *name)
 static void kstats_print(struct timer *t)
 {
   kstats *ks = &(percpu_get(_kstats));
+  log_info("--- BEGIN KSTATS --- %ld%% idle\n",
+	   (ks->idle.tot_lat * 100 /
+	    ((uint64_t) cycles_per_us * KSTATS_INTERVAL)));
 #undef DEF_KSTATS
 #define DEF_KSTATS(_c)  kstats_printone(&ks->_c, # _c);
 #include <ix/kstatvectors.h>
+  log_info("\n");
 
   KSTATS_VECTOR(print_kstats);
   bzero(ks,sizeof(*ks));

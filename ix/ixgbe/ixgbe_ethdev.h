@@ -191,8 +191,12 @@ void ixgbe_dev_tx_queue_release(struct eth_tx_queue *txq);
 int  ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, int rx_queue_id,
 		int numa_node, uint16_t nb_rx_desc);
 
+int  ixgbe_dev_rx_queue_init(struct rte_eth_dev *dev, int rx_queue_id);
+
 int  ixgbe_dev_tx_queue_setup(struct rte_eth_dev *dev, int tx_queue_id,
 		int numa_node, uint16_t nb_tx_desc);
+
+int  ixgbe_dev_tx_queue_init(struct rte_eth_dev *dev, int tx_queue_id);
 
 int ixgbe_dev_rx_init(struct rte_eth_dev *dev);
 

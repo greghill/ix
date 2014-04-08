@@ -1665,7 +1665,7 @@ tcp_parseopt(struct tcp_pcb *pcb)
         }
         /* If syn was received with wnd scale option,
            activate wnd scale opt */
-        if (flags & TCP_SYN) {
+        if (perqueue_get(flags) & TCP_SYN) {
           /* An WND_SCALE option with the right option length. */
           pcb->snd_scale = opts[c + 2];
           if (pcb->snd_scale > 14U) {

@@ -730,11 +730,19 @@ typedef int (*eth_rx_queue_setup_t)(struct rte_eth_dev *dev,
 				    uint16_t nb_rx_desc);
 /**< @internal Set up a receive queue of an Ethernet device. */
 
+typedef int (*eth_rx_queue_init_t)(struct rte_eth_dev *dev,
+				    int rx_queue_id);
+/**< @internal Initialize a receive queue of an Ethernet device. */
+
 typedef int (*eth_tx_queue_setup_t)(struct rte_eth_dev *dev,
 				    int tx_queue_id,
 				    int numa_node,
 				    uint16_t nb_tx_desc);
 /**< @internal Setup a transmit queue of an Ethernet device. */
+
+typedef int (*eth_tx_queue_init_t)(struct rte_eth_dev *dev,
+				    int tx_queue_id);
+/**< @internal Initialize a transmit queue of an Ethernet device. */
 struct eth_rx_queue;
 struct eth_tx_queue;
 typedef void (*eth_rx_queue_release_t)(struct eth_rx_queue *queue);
@@ -869,9 +877,6 @@ typedef int (*eth_mirror_rule_reset_t)(struct rte_eth_dev *dev,
 				  uint8_t rule_id);
 /**< @internal Remove a traffic mirroring rule on an Ethernet device */
 
-typedef uint16_t (*get_num_of_rx_queues_t)(struct rte_eth_dev *dev);
-/**< @Get the number of receive queues. */
-
 /**
  * @internal A structure containing the functions exported by an Ethernet driver.
  */
@@ -895,8 +900,10 @@ struct eth_dev_ops {
 	vlan_strip_queue_set_t     vlan_strip_queue_set; /**< VLAN Stripping on queue. */
 	vlan_offload_set_t         vlan_offload_set; /**< Set VLAN Offload. */
 	eth_rx_queue_setup_t       rx_queue_setup;/**< Set up device RX queue.*/
+	eth_rx_queue_init_t        rx_queue_init;/**< Initialize a receive queue of an Ethernet device.*/
 	eth_rx_queue_release_t     rx_queue_release;/**< Release RX queue.*/
 	eth_tx_queue_setup_t       tx_queue_setup;/**< Set up device TX queue.*/
+	eth_tx_queue_init_t        tx_queue_init;/**< Initialize a transmit queue of an Ethernet device.*/
 	eth_tx_queue_release_t     tx_queue_release;/**< Release TX queue.*/
 	eth_dev_led_on_t           dev_led_on;    /**< Turn on LED. */
 	eth_dev_led_off_t          dev_led_off;   /**< Turn off LED. */
@@ -933,8 +940,6 @@ struct eth_dev_ops {
 	reta_update_t reta_update;
 	/** Query redirection table. */
 	reta_query_t reta_query;
-	/** Get the number of receive queues. */
-	get_num_of_rx_queues_t get_num_of_rx_queues;
 };
 
 /**
@@ -968,6 +973,7 @@ struct rte_eth_dev_sriov {
 
 struct eth_rx_queue {
 	int (*poll) (struct eth_rx_queue *rx);
+	void *perqueue_offset;
 };
 
 /**
@@ -1023,15 +1029,19 @@ static inline int eth_tx_xmit(struct eth_tx_queue *tx,
 
 DECLARE_PERCPU(int, tx_batch_cap);
 DECLARE_PERCPU(int, tx_batch_len);
+DECLARE_PERCPU(int, tx_batch_pos);
 DECLARE_PERCPU(struct mbuf *, tx_batch[ETH_DEV_TX_QUEUE_SZ]);
 
 static inline int eth_tx_xmit_batched(struct eth_tx_queue *tx,
 				      struct mbuf *mbuf)
 {
-	if (percpu_get(tx_batch_len) >= percpu_get(tx_batch_cap))
+	if (percpu_get(tx_batch_len) + 1 + mbuf->nr_iov >=
+	    percpu_get(tx_batch_cap))
 		return -ENOMEM;
 
-	percpu_get(tx_batch[percpu_get(tx_batch_len)++]) = mbuf;
+	percpu_get(tx_batch[percpu_get(tx_batch_pos)++]) = mbuf;
+	percpu_get(tx_batch_len) += 1 + mbuf->nr_iov;
+
 	return 0;
 }
 
@@ -1046,14 +1056,13 @@ static inline int eth_tx_xmit_batched(struct eth_tx_queue *tx,
 static inline int eth_tx_xmit_one(struct eth_tx_queue *tx,
 				  struct mbuf *mbuf, size_t len)
 {
-	struct mbuf *mbufs[1];
-
-	mbufs[0] = mbuf;
 	mbuf->len = len;
 	mbuf->nr_iov = 0;
 
-	return eth_tx_xmit(tx, 1, mbufs);
+	return !eth_tx_xmit_batched(tx, mbuf);
 }
+
+extern bool eth_rx_idle_wait(uint64_t usecs);
 
 
 /**
@@ -1095,17 +1104,20 @@ struct rte_eth_dev_data {
 
 extern void
 eth_dev_get_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr);
+extern void eth_dev_set_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr);
 extern struct rte_eth_dev *eth_dev_alloc(size_t private_len);
-extern int eth_dev_start(struct rte_eth_dev *dev, unsigned int tx_queues);
+extern int eth_dev_start(struct rte_eth_dev *dev);
+extern int eth_dev_get_rx_queue(struct rte_eth_dev *dev, struct eth_rx_queue **rx_queue);
+extern int eth_dev_get_tx_queue(struct rte_eth_dev *dev, struct eth_tx_queue **tx_queue);
 extern void eth_dev_stop(struct rte_eth_dev *dev);
 extern void eth_dev_destroy(struct rte_eth_dev *dev);
 
 /*
  * globals
- * FIXME: make RX per-core or more than one per-core.
  */
-extern struct rte_eth_dev *eth_dev;
-extern uint16_t eth_rx_count;
-extern struct eth_rx_queue **eth_rx;
+extern int eth_dev_count;
+extern struct rte_eth_dev *eth_dev[];
+DECLARE_PERCPU(uint16_t, eth_rx_count);
+DECLARE_PERCPU(struct eth_rx_queue **, eth_rx);
 DECLARE_PERCPU(struct eth_tx_queue *, eth_tx);
 

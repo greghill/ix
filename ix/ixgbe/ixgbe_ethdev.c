@@ -118,7 +118,6 @@ static void ixgbe_add_rar(struct rte_eth_dev *dev, struct eth_addr *mac_addr,
 		uint32_t index, uint32_t pool);
 static void ixgbe_remove_rar(struct rte_eth_dev *dev, uint32_t index);
 static void ixgbe_dcb_init(struct ixgbe_hw *hw,struct ixgbe_dcb_config *dcb_config);
-static uint16_t ixgbe_dev_get_num_of_rx_queues(struct rte_eth_dev *dev);
 
 /* For Virtual Function support */
 #if 0
@@ -212,8 +211,10 @@ static struct eth_dev_ops ixgbe_eth_dev_ops = {
 	.vlan_offload_set     = ixgbe_vlan_offload_set,
 	.vlan_strip_queue_set = ixgbe_vlan_strip_queue_set,
 	.rx_queue_setup       = ixgbe_dev_rx_queue_setup,
+	.rx_queue_init        = ixgbe_dev_rx_queue_init,
 	.rx_queue_release     = ixgbe_dev_rx_queue_release,
 	.tx_queue_setup       = ixgbe_dev_tx_queue_setup,
+	.tx_queue_init        = ixgbe_dev_tx_queue_init,
 	.tx_queue_release     = ixgbe_dev_tx_queue_release,
 	.dev_led_on           = ixgbe_dev_led_on,
 	.dev_led_off          = ixgbe_dev_led_off,
@@ -239,7 +240,6 @@ static struct eth_dev_ops ixgbe_eth_dev_ops = {
 	.fdir_set_masks               = ixgbe_fdir_set_masks,
 	.reta_update          = ixgbe_dev_rss_reta_update,
 	.reta_query           = ixgbe_dev_rss_reta_query,
-	.get_num_of_rx_queues = ixgbe_dev_get_num_of_rx_queues,
 };
 
 #if 0
@@ -627,6 +627,7 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 
 	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
+	dev->pci_dev = pci_dev;
 	dev->dev_ops = &ixgbe_eth_dev_ops;
 	hw->device_id = pci_dev->device_id;
 	hw->vendor_id = pci_dev->vendor_id;
@@ -2819,12 +2820,4 @@ ixgbe_mirror_rule_reset(struct rte_eth_dev *dev, uint8_t rule_id)
 	IXGBE_WRITE_REG(hw, IXGBE_VMRVLAN(rule_id + rule_mr_offset), msb_val);
 
 	return 0;
-}
-
-static uint16_t
-ixgbe_dev_get_num_of_rx_queues(struct rte_eth_dev *dev)
-{
-	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	return ixgbe_get_num_of_rx_queues(hw);
 }

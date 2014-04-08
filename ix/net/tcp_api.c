@@ -56,7 +56,8 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 	if (unlikely(idx >= MAX_PCBS))
 		return NULL;
 
-	p = &perqueue_get_remote(pcb_mempool, queue);
+	set_current_queue(queue);
+	p = &perqueue_get(pcb_mempool);
 
 	api = (struct tcpapi_pcb *) ((uintptr_t) p->buf +
 				     idx * sizeof(struct tcpapi_pcb));
@@ -64,8 +65,6 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 	/* check if the handle is actually allocated */
 	if (unlikely(api->alive > 1))
 		return NULL;
-
-	set_current_queue(api->queue);
 
 	return api;
 }
@@ -111,8 +110,7 @@ void bsys_tcp_accept(hid_t handle, unsigned long cookie)
 	}
 
 	if (api->id) {
-		mempool_free(&perqueue_get_remote(id_mempool, api->queue),
-			     api->id);
+		mempool_free(&perqueue_get(id_mempool), api->id);
 		api->id = NULL;
 	}
 }
@@ -239,11 +237,10 @@ void bsys_tcp_close(hid_t handle)
 	}
 
 	if (api->id) {
-		mempool_free(&perqueue_get_remote(id_mempool, api->queue),
-			     api->id);
+		mempool_free(&perqueue_get(id_mempool), api->id);
 	}
 
-	mempool_free(&perqueue_get_remote(pcb_mempool, api->queue), api);
+	mempool_free(&perqueue_get(pcb_mempool), api);
 }
 
 static void mark_dead(struct tcpapi_pcb *api)
@@ -337,7 +334,6 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	api->cookie = 0;
 	api->recvd = NULL;
 	api->recvd_tail = NULL;
-	api->queue = perqueue_get(queue_id);
 
 	tcp_arg(pcb, api);
 	tcp_recv(pcb, on_recv);

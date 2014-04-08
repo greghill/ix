@@ -28,6 +28,7 @@ static void net_dump_cfg(void)
 int net_init(void)
 {
 	int ret;
+	int i;
 
 	log_info("net: starting networking\n");
 
@@ -45,13 +46,10 @@ int net_init(void)
 
 	net_dump_cfg();
 
-	eth_dev_get_hw_mac(eth_dev, &cfg_mac);
+	eth_dev_get_hw_mac(eth_dev[0], &cfg_mac);
 
-	ret = tcp_api_init();
-	if (ret) {
-		log_err("net: failed to initialize TCP API\n");
-		return ret;
-	}
+	for (i = 1; i < eth_dev_count; i++)
+		eth_dev_set_hw_mac(eth_dev[i], &cfg_mac);
 
 	return 0;
 }
