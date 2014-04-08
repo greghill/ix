@@ -17,6 +17,7 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 
 static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 {
+	tcp_nagle_disable(pcb);
 	tcp_recv(pcb, on_recv);
 	return ERR_OK;
 }
