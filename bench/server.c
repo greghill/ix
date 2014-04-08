@@ -6,6 +6,8 @@
 
 #include <arpa/inet.h>
 
+#include <netinet/tcp.h>
+
 #include <sys/prctl.h>
 
 #include <string.h>
@@ -58,6 +60,13 @@ static void accept_conn_cb(struct evconnlistener *listener, evutil_socket_t fd, 
 	struct bufferevent *bev;
 	struct ctx *ctx;
 	struct worker *worker = arg;
+	int flag;
+
+	flag = 1;
+	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (void *) &flag, sizeof(flag))) {
+		perror("setsockopt(TCP_NODELAY)");
+		exit(1);
+	}
 
 	worker->total_connections++;
 	bev = bufferevent_socket_new(worker->base, fd, BEV_OPT_CLOSE_ON_FREE);
