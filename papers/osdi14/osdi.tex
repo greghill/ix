@@ -1,6 +1,6 @@
 
 %%
-%% Submission requirements
+%% OSDI 2014 Submission requirements
 %% 12 pages + plus as many pages as needed for references.
 %%
 %% Blind reviewing of full papers will be done by the program committee
@@ -11,7 +11,7 @@
 %% acknowledgments). Submissions violating the detailed formatting and
 %% anonymization rules will not be considered for publication.
 
-
+% Usenix/OSDI requirements 
 \documentclass[10pt,twocolumn]{article}
 \usepackage{times}
 \usepackage{fullpage}
@@ -24,12 +24,15 @@
 \usepackage{comment}
 \usepackage{graphicx}
 
+% name of the product in a funky font
+\newcommand{\ix}[0]{\textsc{ix}\xspace}
+
 % debugging only
 \usepackage[usenames,dvipsnames]{xcolor}
 \newcommand{\edb}[1]{\noindent{\color{Plum} {\bf \fbox{EdB} {\it#1}}}}
 \newcommand{\adam}[1]{\noindent{\color{Red} {\bf \fbox{AB} {\it#1}}}}
 \newcommand{\christos}[1]{\noindent{\color{Green} {\bf \fbox{CK} {\it#1}}}}
-\newcommand{\georgios}[1]{\noindent{\color{Blue} {\bf \fbox{GP} {\it#1}}}}
+\newcommand{\george}[1]{\noindent{\color{Blue} {\bf \fbox{GP} {\it#1}}}}
 %\newcommand{\babak}[1]{\noindent{\color{Purple} {\bf \fbox{BF}} {\it#1}}}
 \newcommand{\todo}{\noindent $\triangleright $~}
 
@@ -38,12 +41,9 @@
 \begin{document}
 
 %%%%%% TITLE OPTIONS
-
-\newcommand{\ix}[0]{\textsc{ix}\xspace}
-
 %\title{\bf Title}
 %\title{ Scalability, Quality-of-service, and Energy Proportionality of the IX Domain-Specific Operating System}
-\title{IX: A dataplane architecture for event-driven, web-scale applications}
+\title{\bf IX: A Dataplane Architecture for \break Event-driven, Web-scale applications}
 
 % author list to be finalized at camera-ready time. 
 % placeholder for now. -EdB
@@ -56,7 +56,7 @@
 
 \input{abstract}
 \input{intro}
-%\input{motivation}
+\input{motivation}
 
 \input{outline}
 

@@ -1,0 +1,85 @@
+
+\section{Motivation}
+\label{sec:motivation}
+
+The research project focuses on identifying the mismatch and
+opportunities for improvement between commodity operating systems and
+a large, but well-defined, class of relevant applications.  In this
+section, we first define the class of applications in our focus
+(\S\ref{sec:motivation:web}), and then describe the system software
+challenges associated with that class of applications
+(\S\ref{sec:motivation:challenges}).
+
+\subsection{Event-driven, web-scale applications}
+\label{sec:motivation:web}
+
+Today's web-scale applications, which our lives have grown accustomed
+to to retrieve information (search), communicate (email, instant
+message), share (social networking) or buy (e-tailers) simultaneously
+offer quick response times to millions of concurrent users, while
+accessing massive data sets spread out over thousands of servers.
+Today's interactive web-scale applications have further redefined
+expectations of responsiveness. For example, the Google search engine
+updates query results interactively as the user types, predicting the
+most likely query based on the prefix typed so far, performing the
+search and showing the results within a few tens of
+milliseconds~\cite{DBLP:journals/cacm/DeanB13}.
+
+Internally, such applications are deployed on thousands of servers
+operating distinct, well-defined services, such as load-balancing,
+application serving, content distribution and streaming, memory
+caching, relational databases and object storage~\cite{missing}.  In
+addition, web-scale applications also rely on massive, batch-oriented
+services that prepare the data for interactive serving (e.g., the
+search engine crawlers), identify patterns and behavior from the
+massive data sets and the users' behaviors via machine
+learning~\cite{missing}.  Because of this diversity, different
+services are routinely implemented using different programming
+languages, framework and paradigms.
+
+The event-driven paradigm is the most commonly used for services taht
+are directly involved in serving interactive applications.  In this
+paradigm, each application node is primarily responding to external
+events such as a new incoming connections, a request from an incoming
+connection, or a reply to a request made to a downstream service.
+This category includes stateless load balancers, HTTP proxies, web
+servers, application severs, key-value stores, queuing services,
+caching servers, and many others.  
+
+For each category, the most efficient implementations today are
+implemented using event-driven frameworks in which application logic
+interacts with the framework exclusively via non-blocking calls.  This
+is in contrast with the classic thread-oriented programming paradigm,
+in which a sessions are divided among a large pool of (kernel)
+threads, which block while waiting for incoming traffic or outstanding
+replies.  For example, the event-oriented ngnx~\cite{missing} HTTP
+server and proxy outperforms the thread-oriented Apache~\cite{missing}
+server.
+
+Libraries simplify the development of event-driven applications.  For
+example, the popular \texttt{libevent} library provides a level of
+abstraction that exposes the paradigm to applications running on top
+of Linux, *BSD, and Windows~\cite{missing}.  Many web-scale
+applications, including memcached~\cite{missing}, XXX are built on top
+of libevent.  Others such as ngnx are built using a similar approach.
+
+
+\subsection{Main Challenges}
+\label{sec:motivation:challenges}
+
+
+\paragraph{Connection Scalability}
+
+\paragraph{Energy-efficiency and multicore}
+
+\paragraph{Tail-latency tolerance}
+
+\paragraph{Micro-second computing}
+
+\subsection{The mismatch}
+
+
+
+
+
+

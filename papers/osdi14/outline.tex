@@ -1,28 +1,7 @@
 
 
-
-\section{Motivation}
-
-\subsection{Web-scale applications}
-
-\paragraph{Event-oriented programming}
-
-\subsection{Main Challenges}
-
-\paragraph{Connection Scalabilty}
-
-\paragraph{Energy-efficiency and multicore}
-
-\paragraph{Tail-latency tolerance}
-
-\paragraph{Micro-second computing}
-
-\subsection{Data Plane architectures}
-
-\subsection{Current approaches}
-
-
 \section{Design Principles}
+
 
 \input{figs/float-queues-cores}
 
@@ -32,6 +11,7 @@ to the DP cores (or at least not that much).  Communication mechanism
 between control plane and data plane using shared memory (for data)
 and sockets (to signal and sleep/wakeup).
 
+\todo Data plane principles
 
 \todo Coherency-free operations  (ala multikernel~\cite{DBLP:conf/sosp/BaumannBDHIPRSS09})
 
