@@ -96,6 +96,7 @@ int cpu_init_one(unsigned int cpu)
 
 	percpu_get(cpu_id) = cpu;
 	percpu_get(cpu_numa_node) = numa_node;
+	log_is_early_boot = false;
 
 	log_info("cpu: started core %d, numa node %d\n", cpu, numa_node);
 
