@@ -5,6 +5,45 @@
 \subsection{Experimental setup}
 \label{sec:eval:setup}
 
+\edb{TO FIXUP once we decide final location.   Current values are for EPFL} 
+
+Our experimental setup consists of a cluster of 19 clients and one
+server connected by an XXX low-latency 10GbE switch.  The client
+machines are dual Xenon XXX running at XXX Ghz with a single, Intel
+XXX 10GbE NIC connecting to the switch.  The server is a dual-Xeon XXX
+running at XXX Ghz with XXX GB of DRAM with four Intel XXX NICs.  Each
+socket (client or server) has 8 cores and 16 hyperthreads.  When
+reporting multi-core scalability, we report results with
+hyperthreading enabled, and both hyperthreads of the cores are used.
+
+The server is connected to
+the switch via a 4x10GbE bond configured in as a L2+L3
+hash~\cite{missing} in the switch via LACP~\cite{ieee802.3ad}.  Jumbo
+frames are never enabled.  Our baseline configuration in each machine
+is the Ubuntu XXX distribution running the XXX Linux kernel.  Although
+the server has two sockets, our experiments pin IRQs, processes, and
+the IX dataplane onto a single socket and use memory from that socket;
+all NICs are attached to that socket via the PCIe root complex.
+
+\subsection{Handling short TCP transactions}
+
+\input{figs/float-short}
+
+We first evaluate \ix's scalability with a benchmark that stresses
+connection churn in server, as used to evaluate
+Megapipe~\cite{han2012megapipe} and mTCP~\cite{jeong2014mtcp}:
+multiple clients connect to a single server listeningo on a single
+port, send a request of size $s$ and wait for an echo of a message of
+the same size.  As with netpipe, while accepting the message, the server holds off its
+echo response until the message has been entirely received.
+Each client performs this synchronous remote procedure
+call $n$ times, and then close the connection using a reset
+(\texttt{TCP RST}).
+
+Fig.~\ref{fig:short} shows the results. XXX
+
+
+\subsection{TODO}
 
 \todo Compare apples-to-apples with Megapipe, and mTCP in terms of microbenchmarks.
 
