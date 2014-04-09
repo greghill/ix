@@ -2,8 +2,6 @@
  * tcp_api.c - plumbing between the TCP and userspace
  */
 
-#define DEBUG 1
-
 #include <ix/stddef.h>
 #include <ix/errno.h>
 #include <ix/syscall.h>
@@ -301,14 +299,21 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 
 static void on_err(void *arg, err_t err)
 {
-	log_debug("tcpapi: on_err - arg %p\n", arg, err);
+	struct tcpapi_pcb *api;
+
+	log_debug("tcpapi: on_err - arg %p err %d\n", arg, err);
+
+	api = (struct tcpapi_pcb *) arg;
+
+	if (err == ERR_ABRT || err == ERR_RST || err == ERR_CLSD)
+		mark_dead(api);
 }
 
 static err_t on_sent(void *arg, struct tcp_pcb *pcb, u16_t len)
 {
 	struct tcpapi_pcb *api;
 
-	log_debug("tcpapi: on_sent - arg %p, pcb %p, len %wd\n",
+	log_debug("tcpapi: on_sent - arg %p, pcb %p, len %hd\n",
 		  arg, pcb, len);
 
 	api = (struct tcpapi_pcb *) arg;
