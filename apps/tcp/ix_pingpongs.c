@@ -93,8 +93,8 @@ static void tcp_recv(hid_t handle, unsigned long cookie,
 	if (!ctx->bytes_left) {
 		struct sg_entry *ent = &ents[ix_bsys_idx()];
 
-		ents[0].base = ctx->buffer;
-		ents[0].len = msg_size;
+		ent->base = ctx->buffer;
+		ent->len = msg_size;
 
 		ctx->bytes_left = msg_size;
 
