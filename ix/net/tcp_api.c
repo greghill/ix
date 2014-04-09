@@ -347,6 +347,7 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	api->recvd = NULL;
 	api->recvd_tail = NULL;
 
+	tcp_nagle_disable(pcb);
 	tcp_arg(pcb, api);
 	tcp_recv(pcb, on_recv);
 	tcp_err(pcb, on_err);
