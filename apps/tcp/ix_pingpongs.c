@@ -64,6 +64,12 @@ static inline void ctx_put(hid_t handle, struct ctx *ctx)
 	hlist_add_head(h, &ctx->link);
 }
 
+static inline void ctx_del(struct ctx *ctx)
+{
+	if (ctx)
+		hlist_del(&ctx->link);
+}
+
 static void tcp_knock(hid_t handle, struct ip_tuple *id)
 {
 	struct ctx *ctx;
@@ -109,6 +115,7 @@ static void tcp_recv(hid_t handle, unsigned long cookie,
 
 static void tcp_dead(hid_t handle, unsigned long cookie)
 {
+	ctx_del(ctx_get(handle));
 	ix_tcp_close(handle);
 }
 
