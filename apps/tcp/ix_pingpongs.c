@@ -3,6 +3,8 @@
 #include <string.h>
 #include <errno.h>
 #include <pthread.h>
+#include <unistd.h>
+#include <sys/syscall.h>
 
 #include <ix.h>
 #include <ix/hash.h>
@@ -12,6 +14,7 @@
 #define BATCH_DEPTH	512
 
 #define BUFFER_POOL_2MB_PAGES	1
+#define BUFFER_POOL_SIZE	(BUFFER_POOL_2MB_PAGES * PGSIZE_2MB)
 #define CTX_MAX_ENTRIES		65536
 #define CTX_HASH_SEED		0xa36bdcbe
 
@@ -65,7 +68,7 @@ static void tcp_knock(hid_t handle, struct ip_tuple *id)
 {
 	struct ctx *ctx;
 
-	if (buffer_pool_ofs >= BUFFER_POOL_2MB_PAGES * PGSIZE_2MB)
+	if (buffer_pool_ofs >= BUFFER_POOL_SIZE)
 		return;
 
 	ctx = malloc(sizeof(*ctx));
@@ -132,6 +135,7 @@ static struct ix_ops ops = {
 static void *thread_main(void *arg)
 {
 	int ret;
+	int cpu, tmp;
 
 	ret = ix_init(&ops, BATCH_DEPTH);
 	if (ret) {
@@ -143,7 +147,13 @@ static void *thread_main(void *arg)
 	if (!ents)
 		return NULL;
 
-	buffer_pool = (char *) MEM_USER_IOMAPM_BASE_ADDR;
+	ret = syscall(SYS_getcpu, &cpu, &tmp, NULL);
+	if (ret) {
+		printf("unable to get current CPU\n");
+		return NULL;
+	}
+
+	buffer_pool = (char *) MEM_USER_IOMAPM_BASE_ADDR + cpu * BUFFER_POOL_SIZE;
 	ret = sys_mmap(buffer_pool, BUFFER_POOL_2MB_PAGES, PGSIZE_2MB, VM_PERM_R | VM_PERM_W);
 	if (ret) {
 		printf("unable to allocate memory for zero-copy\n");
@@ -168,8 +178,8 @@ int main(int argc, char *argv[])
 	}
 
 	msg_size = atoi(argv[1]);
-	if (msg_size > BUFFER_POOL_2MB_PAGES * PGSIZE_2MB) {
-		fprintf(stderr, "Error: MSG_SIZE (%ld) is larger than maximum allowed (%d).\n", msg_size, BUFFER_POOL_2MB_PAGES * PGSIZE_2MB);
+	if (msg_size > BUFFER_POOL_SIZE) {
+		fprintf(stderr, "Error: MSG_SIZE (%ld) is larger than maximum allowed (%d).\n", msg_size, BUFFER_POOL_SIZE);
 		return 1;
 	}
 
