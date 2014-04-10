@@ -1,8 +1,9 @@
-############################
-# Mutilate Experiment: Basic
-############################
+##########################################
+# Mutilate Experiment: Connection Creation
+##########################################
 #  - Default inter-arrival distribution, key size, and value size
-#  - Constant, balanced connections from clients
+#  - Constant, balanced requests from clients
+#  - Connections from clients are randomly created, destroyed, and reset
 #  - Intended for machines fully tuned for thread-pinning and network
 ###
 
@@ -26,6 +27,9 @@ AGENTS:standard
 
 # Update ratio of 3.3%, from the Facebook paper
 -u 0.033
+
+# Specify the threshold for connection creation and destruction
+-n 1000
 
 # Scan QPS from 0.5% to peak, step size of 0.5%
 --scan=10000:2000000:10000

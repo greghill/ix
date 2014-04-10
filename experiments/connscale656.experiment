@@ -16,7 +16,7 @@ AGENTS:connscale
 -C 4
 
 # Vary the number of connections per agent thread
--c 1
+-c 2
 
 # 60 seconds per test
 -t 60
@@ -28,7 +28,7 @@ AGENTS:connscale
 -u 0.033
 
 # Use a pipeline for adequate load generation
--d 32
+-d 16
 
 # Scan QPS from 0.5% to peak, step size of 0.5%
 --scan=10000:2000000:10000

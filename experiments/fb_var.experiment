@@ -9,20 +9,21 @@ AGENTS:standard
 
 # Set the parameters for the master, which does latency measurements
 -T 24
--Q 1000
+-Q 2000
+-D 4
 -C 4
 
 # 12 connections per agent thread
 -c 12
 
-# 20 seconds per test
--t 20
+# 60 seconds per test
+-t 60
 
 # Use 1M records
 -r 1000000
 
-# Scan QPS from 1% to peak, step size of 1%
---scan=6000:600000:6000
+# Scan QPS from 0.5% to peak, step size of 0.5%
+--scan=3000:600000:3000
 
 # Key size, value size, and update ratio
 # These are taken from the Facebook paper

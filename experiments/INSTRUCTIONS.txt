@@ -1,0 +1,166 @@
+Running Experiments with Mutilate
+=================================
+
+0. Contents
+-----------
+
+1. Framework Description
+2. Running an Experiment
+3. Experiment Definition Files
+4. Agent Profiles
+5. Helper Scripts
+
+
+1. Framework Description
+------------------------
+
+The experiment framework consists of these basic parts:
+ - Experiment definitions (*.experiment)
+ - Agent profiles (*_agentlist.sh, *_agentrun.sh)
+ - Helper scripts (swarm.sh, clean_agents.sh)
+ - Experiment runner script (run_experiment.sh)
+
+Experiment definition files define a single named experiment. They contain
+a list of all the mutilate parameters needed to run the experiment, specify
+which agent profile should be used, and include comments. These are described
+further in Section 3.
+
+Agent profiles define a set of machines that can be used as mutilate agents.
+They are referenced from experiment definition files by name and instruct the
+experiment runner to run mutilate in agent mode on all of the specified
+machines, with parameters as defined by the profile. Note that agent profiles
+reference specific machines and are therefore cluster-specific. Agent profiles
+are described further in Section 4.
+
+Helper scripts generally would not need to be touched by a user of the
+experiment framework. The "swarm.sh" script is used internally by the
+experiment runner script to spawn SSH sessions on remote machines and run
+mutilate in agent mode on those machines. The "clean_agents.sh" is meant to fix
+agent spawning issues that might occur. These are described further in Section 5.
+
+The experiment runner script is what users of the experiment framework will
+execute to launch an experiment. It reads experiment definition files and agent
+profiles to launch an experiment per the specification. It can spawn mutilate
+agents via SSH and launch an instance of mutilate on its own machine in
+"master" mode to gather latency samples. The procedure for running an experiment
+are described further in Section 2.
+
+
+2. Running an Experiment
+------------------------
+
+Some experiments rely on custom features of mutilate not included in the
+mainline repository. As a result, use a forked repository:
+
+    https://github.com/samuelgr/mutilate
+
+Launching an experiment is as simple as executing this command:
+
+    "./run_experiment.sh memcached_server experiment_name"
+
+For example, this command uses "basic.experiment" and targets a memcached
+server running on a machine named "maverick-17-10g":
+
+    "./run_experiment.sh maverick-17-10g basic"
+
+Before running an experiment, ensure that memcached is running on the target
+machine and that the database has already been loaded (using mutilate's
+--loadonly parameter). Currently the framework does not support prepping
+experiments using --loadonly, though this will hopefully be fixed at some point
+soon. One way to do this at present is to make a temporary change to
+"run_experiment.sh" to switch "--noload" to "--loadonly".
+
+An additional step that is currently required is to set the environment
+variable MUTILATE_EXPERIMENT_PREFIX to the absolute path of the directory where
+mutilate resides, as accessed by all the machines that need to run it (agents
+and master). In future versions this will hopefully be optional, but for now it
+is required. Furthermore, the path must be the same for all machines, so likely
+this means the mutilate binary will reside on a shared network file server, but
+it can also be in the same place locally on all machines.
+
+What happens when an experiment is launched:
+ - The agent profile is read from the experiment definition file
+ - The agent profile is accessed and agents are spawned
+ - A mutilate command is generated from the experiment definition file
+ - Mutilate is executed in verbose mode
+ - Info messages target stderr, and experiment results target stdout
+ - Mutilate typically runs in --scan mode and its output is converted to csv
+
+To save experiment results to a file, simply redirect stdout. The result will
+be a well-formed csv (comma-separated values) file that can be imported into
+most spreadsheet applications.
+
+
+3. Experiment Definition Files
+------------------------------
+
+An experiment definition file has the extension ".experiment". Its purpose is
+to document the mutilate parameters that are used to run a particular
+experiment as well as specify the agent profile.
+
+Each line consists of either a comment (first character is #) or a mutilate
+parameter (per mutilate command-line usage documentation). To-end-of-line
+comments are currently not supported.
+
+One exception to this rule is a single line of the form "AGENT:[profilename]".
+This line specifies the agent profile. For example, "AGENT:standard" means to
+use the agent profile named "standard" for the experiment.
+
+
+4. Agent Profiles
+-----------------
+
+An agent profile defines a set of machines to act as agents and specifies any
+arguments with which they should be run (for instance, threads, lambda
+multiplier, pipeline depth, and so on). Agent profiles specify specific machine
+names and thus are cluster-specific; they cannot freely be moved from one
+location to another without adjusting the machine names.
+
+An agent profile consists of two files: "[profilename]_agentlist.sh" and
+"[profilename]_agentrun.sh". These are both executable shell scripts that are
+invoked by the experiment runner script when it is time to spawn agents. For
+example, the "standard" agent profile consists of the files
+"standard_agentlist.sh" and "standard_agentrun.sh".
+
+The "agentlist" files simply print to stdout a list of all the machines that
+are included in the agent profile, one per line. It is sufficient to write a
+script where on each line is a statement like "echo [machinename]", though
+other things are possible based on the organization of the specific cluster.
+These scripts take no arguments and simply print to stdout before terminating.
+
+The "agentrun" files accept as arguments a list of machine names in the profile
+and transform each to a proper command line of the form:
+
+    [machine_name]:${MUTILATE_EXPERIMENT_PREFIX}/mutilate [options]
+
+Since it may be desirable to specify different options to different machines or
+groups of machines, often these files are set up to recognize patterns using a
+"case" block. Refer to some examples for more information on how to construct
+an "agentrun" script file. While technically "agentrun" files are able to
+accept multiple machine names at once as command-line arguments, in practice
+they are generally only invoked with one machine name at a time. This may
+change in the future, however, so this behaviour should not be relied upon.
+
+Finally, "agentrun" scripts should exit with a nonzero return code if any
+machine name supplied at the command line is not recognized as being part of
+the agent profile. The non-zero return code will cause the experiment runner
+script to bail and indicate an error with the agent profile.
+
+
+5. Helper Scripts
+-----------------
+
+Currently the experiment framework comes with two helper scripts: "swarm" and
+"clean_agents.sh". The former should be placed somewhere in PATH (perhaps by
+symbolic link) and is only ever to be invoked by the experiment runner script
+itself.
+
+The "clean_agents.sh" script is designed to assist in case something goes
+wrong. Typically an experiment run cleans up after itself, meaning that all
+spawned agents are killed when the experiment framework terminates (either due
+to experiment completion or experiment interruptions, such as SIGINT). However,
+if for some reason an experiment terminates abnormally and there are still
+agent processes running on remote machines, this script can help kill them.
+Simply invoke the script and supply an experiment name as an argument; the
+script reads the agent profile specified in the experiment definition and kills
+all mutilate processes running on the machines specified in the agent profile.

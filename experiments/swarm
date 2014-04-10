@@ -1,0 +1,68 @@
+#!/bin/bash
+
+## Run commands on a set of hosts
+
+WAIT="%%"
+
+while getopts 'w' OPTION; do
+    case $OPTION in
+        w) WAIT="" ;;
+        ?) usage; exit ;;
+    esac
+done
+shift $[OPTIND - 1]
+
+declare -A tags
+declare -a cmds
+declare -a hosts
+declare -a local_cmds
+
+
+# Parse host args: [user@]hostname[=tag]:cmd
+for i in "$@"; do
+    prefix=${i%%:*}
+    cmd=${i#$prefix:}
+
+    if [ "$cmd" = "$i" ]; then
+        echo "Failed to parse $i"
+        exit -1
+    fi
+
+    userhost=${prefix%=*}
+    hostname=${userhost#*@}
+    tag=${prefix#*=}
+
+    if [ "$hostname" = "local" ]; then
+        local_cmds+=("$cmd")
+    else
+        if [ "$tag" != "$prefix" ]; then
+            tags[$tag]=$hostname
+        fi
+
+        cmds+=("$userhost $cmd")
+    fi
+done
+
+# Munch cmds and replace %tag% with its expansion.
+for h in "${!cmds[@]}"; do
+    for t in "${!tags[@]}"; do
+        r=${tags[$t]}
+        cmds[$h]=${cmds[$h]//%$t%/$r}
+    done
+done
+
+#trap 'kill -- -`ps -o pgid= $$ | tr -d " "`' EXIT
+trap 'kill `jobs -p` &> /dev/null' EXIT
+
+for c in "${cmds[@]}"; do
+    ssh -tt \
+        -o ForwardX11=no -o ForwardX11Trusted=no \
+        -o StrictHostKeyChecking=no -o BatchMode=yes \
+        $c </dev/null &
+done
+
+for c in "${local_cmds[@]}"; do
+    $c &
+done
+
+wait $WAIT
