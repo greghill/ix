@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
 	int nr_cpu, i;
 	pthread_t tid;
 
-	if (argc < 1) {
+	if (argc < 2) {
 		fprintf(stderr, "Usage: %s MSG_SIZE\n", argv[0]);
 		return 1;
 	}
