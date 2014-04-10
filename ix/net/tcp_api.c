@@ -82,14 +82,6 @@ static inline hid_t tcpapi_to_handle(struct tcpapi_pcb *pcb)
 	       ((uintptr_t) (perqueue_get(queue_id)) << 48);
 }
 
-
-void bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
-{
-	log_debug("tcpapi: bsys_tcp_connect() - id %p, cookie %lx\n",
-		  id, cookie);
-	usys_tcp_connect_ret(0, cookie, -ENOTSUP);
-}
-
 void bsys_tcp_accept(hid_t handle, unsigned long cookie)
 {
 	/*
@@ -367,6 +359,72 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	usys_tcp_knock(handle, id);
 
 	return ERR_OK;
+}
+
+static err_t on_connected(void *arg, struct tcp_pcb *pcb, err_t err)
+{
+	struct tcpapi_pcb *api;
+
+	if (err != ERR_OK) {
+		/* FIXME: free memory */
+		return err;
+	}
+
+	api = mempool_alloc(&perqueue_get(pcb_mempool));
+	if (unlikely(!api)) {
+		usys_tcp_connect_ret(0, (unsigned long) arg, -RET_FAULT);
+		return ERR_MEM;
+	}
+
+	api->pcb = pcb;
+	api->alive = true;
+	api->cookie = (unsigned long) arg;
+	api->recvd = NULL;
+	api->recvd_tail = NULL;
+
+	tcp_arg(pcb, api);
+
+	api->handle = tcpapi_to_handle(api);
+	usys_tcp_connect_ret(api->handle, api->cookie, RET_OK);
+
+	return ERR_OK;
+}
+
+void bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
+{
+	err_t err;
+	struct ip_tuple tmp;
+	struct ip_addr addr;
+	struct tcp_pcb *pcb;
+
+	log_debug("tcpapi: bsys_tcp_connect() - id %p, cookie %lx\n",
+		  id, cookie);
+
+        if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple)))) {
+                usys_tcp_connect_ret(0, cookie, -RET_FAULT);
+                return;
+        }
+
+	addr.addr = tmp.dst_ip;
+
+	pcb = tcp_new();
+	if (unlikely(!pcb))
+		goto pcb_fail;
+	tcp_nagle_disable(pcb);
+
+	tcp_arg(pcb, (void *) cookie);
+	tcp_recv(pcb, on_recv);
+	tcp_err(pcb, on_err);
+	tcp_sent(pcb, on_sent);
+
+	err = tcp_connect(pcb, &addr, tmp.dst_port, on_connected);
+	if (unlikely(err != ERR_OK))
+		goto connect_fail;
+
+connect_fail:
+	tcp_abort(pcb);
+pcb_fail:
+	usys_tcp_connect_ret(0, cookie, -RET_NOMEM);
 }
 
 int tcp_api_init(void)
