@@ -1,0 +1,57 @@
+server
+--
+`Usage: ./server CPUS`
+* `CPUS` = A comma separated list of the CPUs to use for handling traffic.
+
+Listens to TCP socket 9876. It accepts all incoming connections. It sends back data unchanged as soon as they are received. Uses libevent.
+
+pingpongs
+--
+`Usage: ./pingpongs MSG_SIZE CPUS`
+* `MSG_SIZE` = The message size to expect and send.
+* `CPUS` = A comma separated list of the CPUs to use for handling traffic.
+
+Listens to TCP socket 9876. It accepts all incoming connections. It waits for `MSG_SIZE` bytes of data that are kept in a buffer. When it has received `MSG_SIZE` bytes of data, it writes them back.
+
+client
+--
+`Usage: ./client IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION`
+* `IP` = Server IP address.
+* `PORT` = Server TCP port.
+* `CORES` = Number of threads to use. Each thread is tied to a CPU core by a `sched_setaffinity`.
+* `CONNECTIONS` = Total number of target concurrent connections. The connections are balanced between threads/cores. This is a target value. Connections are opened and closed.
+* `MSG_SIZE` = The size of the message to send. After sending the message, the client waits for receiving the same message before sending the next one.
+* `MESSAGES_PER_CONNECTION` = The number of messages to send before closing and reopening the TCP connection.
+
+The utility uses libevent to coordinate sockets. If a connection stalls for more than TIMEOUT_US (1 second), it is closed and reopened and the event is counted as a timeout. Every 1 second it reports the following data on stdout:
+
+`total_connections total_messages active_connections timeouts_connect timeouts_recv error_summary`
+
+* `total_connections` = the number of connections performed from the beginning of execution across all threads/cores.
+* `total_messages` = the number of messages sent and received.
+* `active_connections` = the instantaneous number of active connections.
+* `timeouts_connect` = the number of timeouts that occurred while waiting to connect.
+* `timeouts_recv` = the number of timeouts that occurred while waiting for data.
+* `error_summary` = triplets <source, errno, count>
+
+latency
+--
+`Usage: ./latency IP PORT PROBES_PER_CONNECTION INTERVAL_MS PERCENTILE...`
+* `IP` = Server IP address.
+* `PORT` = Server TCP port.
+* `PROBES_PER_CONNECTION` = The number of probes before closing and reopening the TCP connection.
+* `INTERVAL_MS` = The delay in ms between receiving a reply and sending the next probe.
+* `PERCENTILE` = A space separated list of percentiles for which to report latency.`
+
+Every 1 second it reports the following data on stdout:
+
+`count_of_probes latency_us...`
+
+* `count_of_probes` = the number of probes sent and received
+* `latency_us` = a space separated list of latencies in us in correspondence with the PERCENTILE command line option
+
+energy
+--
+`Usage: sudo ./energy.py`
+
+Assumes a system with two physical CPUs/sockets. Reports every second the energy consumption in Joules for each socket. The numbers wrap and special consideration has been taken to avoid the wrap within a single utility execution.
