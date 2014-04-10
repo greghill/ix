@@ -1,0 +1,237 @@
+
+@misc{luiz-isscc,
+ author = {Luiz Andre Barroso},
+ title = {{Three things to save the datacenter (ISSCC 2014 Keynote)}},
+ howpublished={\url{http://www.theregister.co.uk/Print/2014/02/11/google_research_three_things_that_must_be_done_to_save_the_data_center_of_the_future/}},
+ year=2014
+}
+
+
+
+
+Google Research: Three things that MUST BE DONE to save the data center of the future
+Think data-center design is tough now? Just you wait
+By Rik Myslewski
+
+Posted in Data Centre, 11th February 2014 02:18 GMT
+
+ISSCC One prominent member of Google Research is more concerned with
+the challenges of speedily answering queries from vast stores of data
+than he is about finding business intelligence hidden inside the
+complexities of that omnipresent buzzword, "big data".
+
+In fact, Google Fellow Luiz André Barroso, speaking at ISSCC on Sunday
+night, isn't convinced that the industry has even come to a consensus
+about what exactly big data means.
+
+"I think we're all trying to figure out what that is," he said. "And
+we have this vague idea that it has to do with analytics for very,
+very large volumes of data that are made possible by the existence of
+these very, very big data centers – which I'm calling today
+'landhelds' to make fun of things like 'handhelds'."
+
+Barroso said that from Google's point of view, big data isn't
+something to which you pose complex analytical queries and get your
+response "in the order of minutes or hours." Instead, it's something
+that feeds what he refers to as "online data-intensive workloads."
+
+Boiled down to their essence, such workloads should be thought of as
+"big data, little time," he said. In other words, the ability to
+squeeze a response out of a shedload of data as quickly as 100
+milliseconds or less.
+
+That's not an easy task, though Google is managing to keep ahead of
+the "ridiculous amount of data" coursing through its data
+centers. However, the problem is about to get much worse.
+
+"If you think that the amount of computing and data necessary for
+Universal Search at Google is an awful lot – and it is – and that
+responding to user queries in a few milliseconds is very hard, imagine
+what happens when we move to a world when the majority of our users
+are using things like Google Glass," Barroso said.
+
+He quickly pointed out that he wasn't talking only about Google's
+head-mounted device, but of voice queries in general, as well as those
+based upon what cameras see or sensors detect. All will require much
+more complex parsing than is now needed by mere typed commands and
+queries, and as more and more users join the online world, the
+problems of scaling up such services will grow by leaps and bounds.
+
+"I find this a very, very challenging problem," he said, "and the
+combination of scale and tight deadline is particularly compelling."
+To make such services work, response times need to remain at the
+millisecond level that Google's Universal Search can now achieve – and
+accomplishing those low latencies with rich-data inputs and vastly
+increased scale ain't gonna be no walk in the park.
+
+Oh, and then there is, of course, the matter of doing all that within
+a power range that doesn't require every mega–data center to have its
+own individual nuclear power plant.
+
+Barroso identified three major challenges that need to be overcome
+before this "big data, little time" problem can be solved: what he
+referred to as energy proportionality, tail-tolerance, and microsecond
+computing.
+
+Energy in the right proportions
+
+By energy proportionality, Barroso means the effort to better match
+the energy needs of entire systems to the workloads running upon them,
+an effort that in a paper published in 2007, Barroso and his coauthor,
+Google SVP for technical infrastructure Urs Hölzle, said could
+potentially double data-center servers' efficiency in real-world use,
+particularly in improvements of the efficiency of memory and storage.
+
+Unfortunately, although a lot of progress has been made in the area of
+energy proportionality, it has often come at the expense of
+latency. "Many of the techniques that give us some degree of energy
+proportionality today," Barroso said, "cause delays that actually can
+be quite serious hiccups in the performance of our large, large data
+centers."
+
+So that's challenge number one. The number two item that need to be
+handled when attempting to assemble highly responsive mega–data
+centers is the somewhat more-arcane concept of tail-tolerance.
+
+The evil 1 per cent Imagine, Barroso said, that you're running a
+straightforward web server that runs quite smoothly, giving results at
+the millisecond level 99 per cent of the time. But if 1 per cent of
+the time something causes that server to cough – garbage collection, a
+system daemon doing management tasks in the background, whatever –
+it's not a fatal problem, since it only effects 1 per cent of the
+queries sent to the server.
+
+However, now imagine that you've scaled up and distributed your
+web-serving workload over many servers, as does Google in their data
+centers – your problem increases exponentially.
+
+"Your query now has to talk to, say, hundreds of these servers,"
+Barroso explained, "and can only respond to the user when you've
+finished computing through all of them. You can do the math:
+two-thirds of the time you're actually going to have one of these slow
+queries" since the possibility of one or more – many more – of those
+servers coughing during a distributed query is much higher than if one
+server alone were performing the workload.
+
+"The interesting part about this," he said, "is that nothing changed
+in the system other than scale. You went from a system that worked
+reasonably well to a system with unacceptable latency just because of
+scale, and nothing else."
+
+Google's response to this problem has, in the main, to try to reduce
+that 1 per cent of increased latency queries, and to do so on all the
+servers sharing the workload. While they've had some success with this
+effort, he said, "Since it's an exponential problem it's ultimately a
+losing proposition at some scale."
+
+Even if you get that 1 per cent down to, say, 0.001 per cent, the more
+you scale up, the more the problem becomes additive, and your latency
+inevitably increases. Not good.
+
+Learning from fault-tolerance
+
+Squashing that 1 per cent down is not enough, Barroso said, and so
+Google "took inspiration" from fault-tolerant computing. "A
+fault-tolerant system is actually more reliable in principle than any
+of its components," he said, noting that what needs to be done is to
+create similar techniques for latency – in other words, create a
+large, distributed system that is highly responsive even if its
+individual components aren't completely free from latency hiccups,
+coughs, belches, or other time-wasting bodily functions.
+
+One example of a possible lesson from fault tolerance that could be
+extended to latency tolerance – what Barroso calls tail-tolerance – is
+the replication in Google's file system. You could, for example, send
+a request to one iteration of the file system, wait for, say, 95 per
+cent of the time that you'd normally expect a reply, and if you
+haven't received it, fire off the request to a replicated iteration of
+the same file-system content.
+
+"It works actually incredibly well," he said. "First of all, the
+maximum amount of extra overhead in your system is, by definition, 5
+per cent because you're firing the second request at 95 per cent. But
+most of all it's incredibly powerful at reducing tail latency."
+
+Barroso pointed his audience to a paper he and coauthor Google Fellow
+Jeffrey Dean published in February 2013 for more of their thoughts on
+how to reduce tail latency and/or tail tolerance, but said that much
+more work needs to be done.
+
+"This is not a problem we have solved," he said. "It's a problem we
+have identified."
+
+'We suck at microseconds' 
+
+The third of the three challenges that Barroso identified as hampering
+the development of highly responsive, massively scaled data center is
+perhaps a bit counterintuitive: microsecond computing.
+
+Addressing his audience of ISSCC chip designers, he said "You guys
+here in this room are the gods of nanosecond computing – or maybe
+picosecond computing." Over the years, a whole raft of techniques have
+been developed to deal with latencies in the nanosecond range.
+
+But there remain a number of problems with latencies of much longer
+periods of time: microsecond latencies. The internet or disk drives,
+for example, induce latencies at the millisecond level, and so far the
+industry has been able to deal with these latencies by providing
+context-switching at the five-to-seven microsecond level. No problem,
+really.
+
+However, Barroso said, "Here we are today, and I would propose that
+most of the interesting devices that we deal with in our 'landheld'
+computers are not in the nanosecond level, they're not in the
+millisecond level – they're in the microsecond level. And we suck at
+microseconds."
+
+From his point of view the reason that the industry sucks at handling
+microsecond latencies is simply because it hasn't been paying
+attention to them while they've been focused on the nanosecond and
+millisecond levels of latencies.
+
+As an example of a microsecond latency in a mega–datacenter, he gave
+the example of the data center itself. "Think about it. Two machines
+communicating in one of these large facilities. If the fiber has to go
+200 meters or so, you have a microsecond." Add switching to that, and
+you have a bit more than a microsecond.
+
+Multiply those microsecond latencies by the enormous amount of
+communications among machines and switches, and you're talking a large
+aggregate sum. In regard to flash storage – not to mention the
+higher-speed, denser non-volatile memory technologies of the future –
+you're going to see more microsecond latencies that need to be dealt
+with in the mega–data center.
+
+The hardware-software solution
+
+"Where this breaks down," Barroso said, "is when people today at
+Google and other companies try to build very efficient, say, messaging
+systems to deal with microsecond-level latencies in data centers."
+
+The problem today is that when programmers want to send a call to a
+system one microsecond away and have it respond with data that takes
+another microsecond to return, they use remote procedure call
+libraries or messaging libraries when they want to, say, perform an
+RDMA call in a distributed system rather than use a direct RDMA
+operation.
+
+When using such a library, he said, "Those two microseconds quickly
+went to almost a hundred microseconds." Admittedly, some of that
+problem is that software is often unnecessarily bloated, but Barroso
+says that the main reason is that "we don't have the underlying
+mechanisms that make it easy for programmers to deal with
+microsecond-level latencies."
+
+This is a problem that will have to be dealt with both at the hardware
+and the software levels, he said – and by the industry promoting
+microsecond-level latencies to a first-order problem when designing
+systems for the mega–data center.
+
+All three of these challenges are about creating highly scalable data
+centers that can accomplish the goal of "big data, little time" – but
+despite the fact that he was speaking at an ISSCC session during which
+all the other presenters spoke at length about the buzzword du jour,
+Barroso refused to be drawn into the hype-fest.
+
+"I will not talk about 'big data' per se," he said. "Or to use the
+Google internal term for it: 'data'." ®

@@ -31,7 +31,7 @@
 #define LWIP_PLATFORM_NTOHL(x) ntoh32(x)
 
 #define LWIP_WND_SCALE 1
-#define TCP_RCV_SCALE 6
+#define TCP_RCV_SCALE 7
 #define TCP_SND_BUF 65536
 #define TCP_MSS 1460
-#define TCP_WND (16 * TCP_MSS)
+#define TCP_WND (2048 * TCP_MSS)

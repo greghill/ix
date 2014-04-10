@@ -6,6 +6,8 @@
 
 #include <arpa/inet.h>
 
+#include <netinet/tcp.h>
+
 #include <sys/prctl.h>
 
 #include <string.h>
@@ -178,6 +180,7 @@ static void new_connection(struct event_base *base, struct ctx *ctx)
 {
 	int s;
 	struct linger linger;
+	int flag;
 
 	s = socket(AF_INET, SOCK_STREAM, 0);
 	if (s == -1) {
@@ -189,6 +192,12 @@ static void new_connection(struct event_base *base, struct ctx *ctx)
 	linger.l_linger = 0;
 	if (setsockopt(s, SOL_SOCKET, SO_LINGER, (void *) &linger, sizeof(linger))) {
 		perror("setsockopt(SO_LINGER)");
+		exit(1);
+	}
+
+	flag = 1;
+	if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (void *) &flag, sizeof(flag))) {
+		perror("setsockopt(TCP_NODELAY)");
 		exit(1);
 	}
 

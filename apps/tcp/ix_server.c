@@ -20,8 +20,8 @@ static void tcp_recv(hid_t handle, unsigned long cookie,
 {
 	struct sg_entry *ent = &ents[ix_bsys_idx()];
 
-	ents[0].base = addr;
-	ents[0].len = len;
+	ent->base = addr;
+	ent->len = len;
 
 	/*
 	 * FIXME: this will work fine except if the send window

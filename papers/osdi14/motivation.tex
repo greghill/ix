@@ -58,7 +58,7 @@ replies.  For example, the event-oriented nginx HTTP
 server and proxy~\cite{reese2008nginx} outperforms the thread-oriented Apache server~\cite{misc:apache}.
 
 Libraries simplify the development of event-driven applications.  For
-example, the popular \texttt{libevent} library~\cite{misc:libevent} provides a level of
+example, the popular \texttt{libevent} library~\cite{provos2003libevent} provides a level of
 abstraction that exposes the paradigm to applications running on top
 of Linux, *BSD, and Windows~\cite{missing}.  Many web-scale
 applications, including memcached~\cite{missing}, XXX~\cite{missing} are built on top
@@ -159,6 +159,25 @@ applications).  As a result, the remote procedure call latency
 observed by application software is one to two orders of magnitude
 greater than the intrinsic latency.
 
+\input{figs/float-pingpong}
+
+Fig.~\ref{fig:pingpong} illustrates the importance of system software
+design and configuration tradeoffs using a simple ping-pong benchmark
+similar to netpipe~\cite{snell1996netpipe} that exchanges a fixed-size
+message between two servers.  Although the application is trivial, it
+provides a good proxy for the effective performance of synchronous
+remote procedure calls in uncontended situations.  We compare the
+performance of an out-of-the-box Ubuntu XXX configuration
+(\texttt{Linux-base}), a tuned configuration of the same kernel
+(\texttt{Linux-opt})), and of our own system (\ix).  For the same
+application and hardware configuration (described in
+\S\ref{sec:eval:setup}), the differences are dramatic.  This
+benchmark is both latency- and bandwdith- sensitive.  We see that \ix
+achieves 50\% of the asymptotic bandwdith with messages as small as
+\george{XXX bytes}.  In constrast, both Linux configurations remain
+latency-bound.
+
+
 These issues compound when considering the long tail of the latency
 distributions~\cite{DBLP:journals/cacm/DeanB13}. Although
 tail-tolerance itself is actually an end-to-end problem, the
@@ -194,14 +213,19 @@ volume of the solution.
 On the software side, the typical architecture of a middlebox solution
 is designed around the following principles: 
 
-\paragaph{Run to completion.}.  Packets are processed ``to
+\paragraph{Run to completion.}  Packets are processed ``to
 completion'' by the dataplane, eliminating most or all forms of
-internal queuing.  In contrast, the classic POSIX model divides the
-roles of the protocol processing stack (which pulls packets from the
-driver, de-multiplex them into socket queues, and implements the L3/L4
+context switching, system calls, and internal queuing.  In contrast,
+the classic kernel construction model generally executes the device
+driver code as the result of an interrupt, requires a separate system
+call for each segment of a flow received or sent.  The MegaPipe
+project~\cite{han2012megapipe} eliminates this latter bottleneck, with
+significant benefits.  Furthermore, the POSIX model divides the roles
+of the protocol processing stack (which pulls packets from the driver,
+de-multiplex them into socket queues, and implements the L3/L4
 protocols) and the applications, which asynchronously pull the socket
 payload from these queues.  Processing is similar on the transmission
-side; in fact, both directions typically require a memory copy. 
+side; in fact, both directions typically require a memory copy.
 
 \paragraph{Coherence-free execution.} 
 Different cores operate totally independently
