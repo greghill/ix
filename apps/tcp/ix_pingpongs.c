@@ -9,7 +9,6 @@
 #include <ix.h>
 #include <ix/hash.h>
 #include <ix/list.h>
-#include <ix/mempool.h>
 
 #define BATCH_DEPTH	512
 
@@ -22,16 +21,21 @@ static __thread struct sg_entry *ents;
 
 static size_t msg_size;
 
+struct buffer_pool_entry {
+	struct hlist_node link;
+	char *pointer;
+};
+
 struct ctx {
 	hid_t handle;
 	struct hlist_node link;
 	size_t bytes_left;
-	char *buffer;
+	struct buffer_pool_entry *buffer;
 };
 
 static __thread struct hlist_head ctx_tbl[CTX_MAX_ENTRIES];
 static __thread char *buffer_pool;
-static __thread int buffer_pool_ofs;
+static __thread struct hlist_head buffer_pool_head;
 
 static inline int handle_to_idx(hid_t handle)
 {
@@ -73,14 +77,16 @@ static inline void ctx_del(struct ctx *ctx)
 static void tcp_knock(hid_t handle, struct ip_tuple *id)
 {
 	struct ctx *ctx;
+	struct buffer_pool_entry *entry;
 
-	if (buffer_pool_ofs >= BUFFER_POOL_SIZE)
+	entry = hlist_entry(buffer_pool_head.head, struct buffer_pool_entry, link);
+	if (!entry)
 		return;
+	hlist_del_head(&buffer_pool_head);
 
 	ctx = malloc(sizeof(*ctx));
 	ctx->bytes_left = msg_size;
-	ctx->buffer = &buffer_pool[buffer_pool_ofs];
-	buffer_pool_ofs += align_up(msg_size, 64);
+	ctx->buffer = entry;
 
 	ctx_put(handle, ctx);
 
@@ -93,13 +99,15 @@ static void tcp_recv(hid_t handle, unsigned long cookie,
 	struct ctx *ctx;
 
 	ctx = ctx_get(handle);
+	if (!ctx)
+		goto out;
 
-	memcpy(&ctx->buffer[msg_size - ctx->bytes_left], addr, len);
+	memcpy(&ctx->buffer->pointer[msg_size - ctx->bytes_left], addr, len);
 	ctx->bytes_left -= len;
 	if (!ctx->bytes_left) {
 		struct sg_entry *ent = &ents[ix_bsys_idx()];
 
-		ent->base = ctx->buffer;
+		ent->base = ctx->buffer->pointer;
 		ent->len = msg_size;
 
 		ctx->bytes_left = msg_size;
@@ -110,12 +118,23 @@ static void tcp_recv(hid_t handle, unsigned long cookie,
 		 */
 		ix_tcp_sendv(handle, ent, 1);
 	}
+out:
 	ix_tcp_recv_done(handle, len);
 }
 
 static void tcp_dead(hid_t handle, unsigned long cookie)
 {
-	ctx_del(ctx_get(handle));
+	struct ctx *ctx;
+
+	ctx = ctx_get(handle);
+	if (!ctx)
+		goto out;
+
+	hlist_add_head(&buffer_pool_head, &ctx->buffer->link);
+	free(ctx);
+	ctx_del(ctx);
+
+out:
 	ix_tcp_close(handle);
 }
 
@@ -143,6 +162,8 @@ static void *thread_main(void *arg)
 {
 	int ret;
 	int cpu, tmp;
+	int i;
+	struct buffer_pool_entry *entry;
 
 	ret = ix_init(&ops, BATCH_DEPTH);
 	if (ret) {
@@ -165,6 +186,16 @@ static void *thread_main(void *arg)
 	if (ret) {
 		printf("unable to allocate memory for zero-copy\n");
 		return NULL;
+	}
+
+	for (i = 0; i < BUFFER_POOL_SIZE; i += align_up(msg_size, 64)) {
+		entry = malloc(sizeof(*entry));
+		if (!entry) {
+			printf("unable to allocate memory for buffer pool management\n");
+			return NULL;
+		}
+		entry->pointer = &buffer_pool[i];
+		hlist_add_head(&buffer_pool_head, &entry->link);
 	}
 
 	while (1) {
