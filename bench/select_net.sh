@@ -49,7 +49,11 @@ elif [ $1 = 'none' ]; then
   tear_down
 elif [ $1 = 'linux' -a "$2" = 'single' ]; then
   setup_linux
-  ifconfig $SINGLE_NIC $IP
+  if [ $IP = 'auto' ]; then
+    ifup $SINGLE_NIC >/dev/null
+  else
+    ifconfig $SINGLE_NIC $IP
+  fi
 elif [ $1 = 'linux' -a "$2" = 'bond' ]; then
   setup_linux
   ifup $BOND_SLAVES >/dev/null
