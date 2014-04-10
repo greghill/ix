@@ -55,3 +55,22 @@ energy
 `Usage: sudo ./energy.py`
 
 Assumes a system with two physical CPUs/sockets. Reports every second the energy consumption in Joules for each socket. The numbers wrap and special consideration has been taken to avoid the wrap within a single utility execution.
+
+select_net.sh
+--
+```
+Usage:
+  ./select_net.sh none
+  ./select_net.sh linux [single|bond]
+  ./select_net.sh ix    [node0|node1|...]
+```
+Enables the specified network. Either Linux (single or bond) or IX (on specified numa node). Accepts a number of parameters from the environment:
+* `BMOS_PATH`: Path to BMOS.
+* `ALL_IFS`: All network interfaces that should be managed by this tool.
+* `BOND`: The bond device.
+* `BOND_SLAVES`: The bond slaves.
+* `SINGLE_NIC`: The device to be enabled in Linux single mode.
+* `IP`: The IP to assign in Linux single mode.
+* `PAGE_COUNT_2MB`: The number of 2MB pages to allocate for IX mode.
+
+Example: `BMOS_PATH=~/bmos sudo -E ./select_net.sh none`
