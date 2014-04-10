@@ -34,6 +34,33 @@ The utility uses libevent to coordinate sockets. If a connection stalls for more
 * `timeouts_recv` = the number of timeouts that occurred while waiting for data.
 * `error_summary` = triplets <source, errno, count>
 
+simple_client
+--
+`Usage: ./simple_client IP PORT THREADS CONNECTIONS_PER_THREAD MSG_SIZE MESSAGES_PER_CONNECTION`
+* `IP` = Server IP address.
+* `PORT` = Server TCP port.
+* `THREADS` = Number of threads to use. Threads are not tied to cores.
+* `CONNECTIONS_PER_THREAD` = Total number of connections to open per thread.
+* `MSG_SIZE` = The size of the message to send. After sending the message, the client waits for receiving the same message before sending the next one.
+* `MESSAGES_PER_CONNECTION` = The number of messages to send before closing and reopening the TCP connection.
+
+The utility does NOT uses libevent. Each thread handles its sockets in a serial fashion:
+1. It connects all sockets.
+2. For each socket:
+ * It sends the message.
+ * It waits to receive the echo reply.
+3. Repeat step 2 `MESSAGES_PER_CONNECTION` times.
+4. Go to step 1.
+
+Every 1 second it reports the following data on stdout:
+
+`total_connections total_messages 0 0 0`
+
+* `total_connections` = the number of connections performed from the beginning of execution across all threads.
+* `total_messages` = the number of messages sent and received.
+
+The output format is compatible with the output format of the `client` utility.
+
 latency
 --
 `Usage: ./latency IP PORT PROBES_PER_CONNECTION INTERVAL_MS PERCENTILE...`
