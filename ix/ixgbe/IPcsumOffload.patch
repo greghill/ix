@@ -1,0 +1,119 @@
+28a29,31
+> #define PKT_TX_IP_CKSUM      	0x1000 /**< IP cksum of TX pkt. computed by NIC. */
+> #define PKT_TX_TCP_CKSUM      	0x2000 /**< TCP cksum of TX pkt. computed by NIC. */
+> 
+339a343,421
+> /*
+>  * tx_ctx_check - Check if we already have a tx context matching this mbuf's ol_flags
+>  *
+>  * @tx_queue: pointer to the tx queue
+>  * @flags: the mbuf's ol_flags field & (PKT_TX_IP_CKSUM | PKT_TX_TCP_CKSUM)
+>  *
+>  * Returns 1 if find match
+>  * Returns 0 if no match
+>  */
+> static inline uint32_t
+> tx_ctx_check(struct tx_queue *txq, uint16_t flags)
+> {
+> 	/* Check if match with context 0 */
+> 	if (likely(txq->ctx_cache[0].flags == flags)) {
+> 			return 1;
+> 	}
+> 
+> 	/* No match, indicate will need to make new ctx */
+> 	return 0;
+> }
+> 
+> 
+> #define IP_HDR_LEN	20
+> /* ixgbe_tx_xmit_ctx - "transmit" context descriptor
+>  * 						tells NIC to load a new ctx into its memory
+>  * Currently assuming no TCP checksum, no LSO.
+>  */						
+> static int ixgbe_tx_xmit_ctx(struct tx_queue *txq, int ol_flags, int ctx_idx){
+> 	
+> 	volatile struct ixgbe_adv_tx_context_desc *txctxd;
+> 	volatile union ixgbe_adv_tx_desc *txdp;
+> 	uint32_t type_tucmd_mlhl, mss_l4len_idx, vlan_macip_lens;
+> 
+> 	/* Make sure enough space is available in the descriptor ring */
+> 	if (unlikely((uint16_t) (txq->tail + 1 - txq->head) >= txq->len)) {
+> 		ixgbe_tx_reclaim(&txq->etxq);
+> 		if ((uint16_t) (txq->tail + 1 - txq->head) >= txq->len)
+> 			return -EAGAIN;
+> 	}
+> 	
+> 	/* Mark desc type as advanced context descriptor */
+> 	type_tucmd_mlhl = IXGBE_ADVTXD_DTYP_CTXT | IXGBE_ADVTXD_DCMD_DEXT;
+> 	
+> 	/* Checksums */
+> 	if (ol_flags & PKT_TX_IP_CKSUM) {
+> 		type_tucmd_mlhl |= IXGBE_ADVTXD_TUCMD_IPV4;
+> 	}
+> 
+> 	if (ol_flags & PKT_TX_TCP_CKSUM) {
+> 		type_tucmd_mlhl |= IXGBE_ADVTXD_TUCMD_L4T_TCP; 
+> 	}
+> 
+> 	/* Set context idx. MSS and L4LEN ignored if no LSO */
+> 	mss_l4len_idx = ctx_idx << IXGBE_ADVTXD_IDX_SHIFT;
+> 
+> 	vlan_macip_lens = (ETH_HDR_LEN << IXGBE_ADVTXD_MACLEN_SHIFT) | IP_HDR_LEN;
+> 
+> 	/* Put context desc on the desc ring */
+> 	txctxd = (struct ixgbe_adv_tx_context_desc *) &txq->ring[txq->tail & (txq->len - 1)];
+> 
+> 	txctxd->type_tucmd_mlhl = cpu_to_le32(type_tucmd_mlhl);
+> 	txctxd->mss_l4len_idx   = cpu_to_le32(mss_l4len_idx);
+> 	txctxd->seqnum_seed     = 0;
+> 	txctxd->vlan_macip_lens = cpu_to_le32(vlan_macip_lens);
+> 
+> 	/* Mark corresponding mbuf as NULL to allow desc reclaim */
+> 	txq->ring_entries[txq->tail & (txq->len - 1)].mbuf = NULL;
+> 			
+> 	/* Used up a descriptor, advance tail */
+> 	txq->tail++;
+> 
+> 	/* Update flag info in software ctx_cache */
+> 	txq->ctx_cache[ctx_idx].flags = ol_flags;
+> 
+> 	return 0;
+> 
+> }
+> 
+> 
+345a428
+> 	uint32_t  olinfo_status = 0;
+356a440,450
+> 	/* 
+> 	 * Check mbuf's offload flags 
+> 	 * If flags match context 0 on NIC, use it
+> 	 * Otherwise, no context
+> 	 */
+> 	int use_ctx = tx_ctx_check(txq, mbuf->ol_flags);
+> 	if (use_ctx){
+> 		olinfo_status |= IXGBE_ADVTXD_POPTS_IXSM;
+> 	}
+> 
+> 
+372c466
+< 		txdp->read.olinfo_status = 0;
+---
+> 		txdp->read.olinfo_status = cpu_to_le32(olinfo_status);
+392c486,487
+< 	txdp->read.olinfo_status = cpu_to_le32(pay_len << IXGBE_ADVTXD_PAYLEN_SHIFT);
+---
+> 	txdp->read.olinfo_status = cpu_to_le32(pay_len << IXGBE_ADVTXD_PAYLEN_SHIFT) | 
+> 					cpu_to_le32(olinfo_status);
+439a535,540
+> 
+> 	/* Clear context descriptors */
+> 	txq->ctx_curr = 0;
+> 	memset((void*)&txq->ctx_cache, 0,
+> 		IXGBE_CTX_NUM * sizeof(struct ixgbe_advctx_info));
+> 
+1692a1794,1797
+> 
+> 	/* Add context descriptor at idx 0 for IP checksum offload on NIC */
+> 	int ol_flags = PKT_TX_IP_CKSUM;
+> 	ixgbe_tx_xmit_ctx(txq, ol_flags, 0);
