@@ -1,17 +1,20 @@
 
 \begin{figure*}
+ \centering
+  \subfloat{\includegraphics[width=1\textwidth,clip]{figs/short-key.eps}}
+ \vspace{.01in}
 \centering
  \subfloat[Multi-core scalability (n=1;s=64B)]{
   \label{fig:short:mcore}
-   \includegraphics[width=.32\textwidth,clip]{figs/blank.eps}}
+   \includegraphics[width=.32\textwidth,clip]{figs/short-mcore.eps}}
  \hspace{.01in}
  \subfloat[$n$ roundtrips per conn. (core=8,s=64B)]{
   \label{fig:short:roundtrips}
-  \includegraphics[width=.32\textwidth,clip]{figs/blank.eps}}
+  \includegraphics[width=.32\textwidth,clip]{figs/short-roundtrips.eps}}
   \hspace{.01in}
  \subfloat[Different message sizes $s$ (core=8,n=1)]{
   \label{fig:short:size}
-  \includegraphics[width=.32\textwidth,clip]{figs/blank.eps}}
+  \includegraphics[width=.32\textwidth,clip]{figs/short-size.eps}}
 
 \caption{Short message performance.}
  \label{fig:short}
