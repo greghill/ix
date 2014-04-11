@@ -309,7 +309,7 @@ static err_t on_sent(void *arg, struct tcp_pcb *pcb, u16_t len)
 		  arg, pcb, len);
 
 	api = (struct tcpapi_pcb *) arg;
-	usys_tcp_xmit_win(api->handle, api->cookie, len);
+	usys_tcp_sent(api->handle, api->cookie, len);
 
 	return ERR_OK;
 }

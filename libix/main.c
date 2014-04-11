@@ -81,8 +81,8 @@ int ix_init(struct ix_ops *ops, int batch_depth)
 	usys_tbl[USYS_TCP_KNOCK]	= (bsysfn_t) ops->tcp_knock;
 	usys_tbl[USYS_TCP_RECV]		= (bsysfn_t) ops->tcp_recv;
 	usys_tbl[USYS_TCP_CONNECT_RET]	= (bsysfn_t) ops->tcp_connect_ret;
-	usys_tbl[USYS_TCP_XMIT_WIN]	= (bsysfn_t) ops->tcp_xmit_win;
 	usys_tbl[USYS_TCP_SEND_RET]	= (bsysfn_t) ops->tcp_send_ret;
+	usys_tbl[USYS_TCP_SENT]		= (bsysfn_t) ops->tcp_sent;
 	usys_tbl[USYS_TCP_DEAD]		= (bsysfn_t) ops->tcp_dead;
 
 	/* provide sane defaults so we don't leak memory */

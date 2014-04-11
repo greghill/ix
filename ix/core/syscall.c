@@ -117,7 +117,7 @@ again:
 	KSTATS_PUSH(tx_xmit, NULL);
 	i = eth_tx_xmit(percpu_get(eth_tx), percpu_get(tx_batch_pos),
 		        percpu_get(tx_batch));
-	if (i != percpu_get(tx_batch_pos))
+	if (unlikely(i != percpu_get(tx_batch_pos)))
 		panic("transmit failed\n");
 	percpu_get(tx_batch_len) = 0;
 	percpu_get(tx_batch_pos) = 0;

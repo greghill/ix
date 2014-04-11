@@ -23,7 +23,6 @@
 #include <ix/stddef.h>
 #include <ix/errno.h>
 #include <ix/mempool.h>
-#include <sys/mman.h>
 #include <ix/page.h>
 #include <ix/vm.h>
 
