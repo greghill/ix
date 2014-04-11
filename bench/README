@@ -34,6 +34,33 @@ The utility uses libevent to coordinate sockets. If a connection stalls for more
 * `timeouts_recv` = the number of timeouts that occurred while waiting for data.
 * `error_summary` = triplets <source, errno, count>
 
+simple_client
+--
+`Usage: ./simple_client IP PORT THREADS CONNECTIONS_PER_THREAD MSG_SIZE MESSAGES_PER_CONNECTION`
+* `IP` = Server IP address.
+* `PORT` = Server TCP port.
+* `THREADS` = Number of threads to use. Threads are not tied to cores.
+* `CONNECTIONS_PER_THREAD` = Total number of connections to open per thread.
+* `MSG_SIZE` = The size of the message to send. After sending the message, the client waits for receiving the same message before sending the next one.
+* `MESSAGES_PER_CONNECTION` = The number of messages to send before closing and reopening the TCP connection.
+
+The utility does NOT uses libevent. Each thread handles its sockets in a serial fashion:
+1. It connects all sockets.
+2. For each socket:
+ * It sends the message.
+ * It waits to receive the echo reply.
+3. Repeat step 2 `MESSAGES_PER_CONNECTION` times.
+4. Go to step 1.
+
+Every 1 second it reports the following data on stdout:
+
+`total_connections total_messages 0 0 0`
+
+* `total_connections` = the number of connections performed from the beginning of execution across all threads.
+* `total_messages` = the number of messages sent and received.
+
+The output format is compatible with the output format of the `client` utility.
+
 latency
 --
 `Usage: ./latency IP PORT PROBES_PER_CONNECTION INTERVAL_MS PERCENTILE...`
@@ -55,3 +82,39 @@ energy
 `Usage: sudo ./energy.py`
 
 Assumes a system with two physical CPUs/sockets. Reports every second the energy consumption in Joules for each socket. The numbers wrap and special consideration has been taken to avoid the wrap within a single utility execution.
+
+select_net.sh
+--
+```
+Usage:
+  ./select_net.sh none
+  ./select_net.sh linux [single|bond]
+  ./select_net.sh ix    [node0|node1|...]
+```
+Enables the specified network. Either Linux (single or bond) or IX (on specified numa node). Accepts a number of parameters from the environment:
+* `BMOS_PATH`: Path to BMOS.
+* `ALL_IFS`: All network interfaces that should be managed by this tool.
+* `BOND`: The bond device.
+* `BOND_SLAVES`: The bond slaves.
+* `SINGLE_NIC`: The device to be enabled in Linux single mode.
+* `IP`: The IP to assign in Linux single mode.
+* `PAGE_COUNT_2MB`: The number of 2MB pages to allocate for IX mode.
+
+Example: `BMOS_PATH=~/bmos sudo -E ./select_net.sh none`
+
+launch.py
+--
+```
+usage: launch.py [-h] --clients CLIENTS --client-cmdline CLIENT_CMDLINE
+                 [--debug] [--time TIME] [--user USER]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --clients CLIENTS     comma-separated list of hostnames
+  --client-cmdline CLIENT_CMDLINE
+                        the command line to execute at each client
+  --debug               enable debug log
+  --time TIME           time of benchmark execution in seconds
+  --user USER           SSH username for connecting to the clients
+```
+This tool can execute the `client` or `simple_client` tool on a number of remote hosts. It coordinates execution, gathers data for the specified amount of time and reports the messages per second sent and received by all clients.

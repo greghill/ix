@@ -146,8 +146,6 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		if (!(status & IXGBE_RXDADV_STAT_DD))
 			break;
 
-		KSTATS_PUSH(eth_input, &save);
-
 		rxd = *rxdp;
 
 		rxqe = &rxq->ring_entries[rxq->pos & (rxq->len -1)];
@@ -169,8 +167,6 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 
 		rxq->pos++;
 		nb_descs++;
-
-		KSTATS_POP(&save);
 	}
 
 	if (nb_descs) {

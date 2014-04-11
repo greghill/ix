@@ -53,7 +53,7 @@ static struct ix_ops ops = {
 	.tcp_recv	= tcp_recv,
 	.tcp_dead	= tcp_dead,
 	.tcp_send_ret	= tcp_send_ret,
-	.tcp_xmit_win	= tcp_sent,
+	.tcp_sent	= tcp_sent,
 };
 
 static void *thread_main(void *arg)

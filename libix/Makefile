@@ -5,7 +5,7 @@ CC 	= gcc
 CFLAGS	= -g -Wall -O3 $(INC)
 AR	= ar
 
-SRCS	= main.c
+SRCS	= main.c mem.c mempool.c
 OBJS	= $(subst .c,.o,$(SRCS))
 
 all: libix.a

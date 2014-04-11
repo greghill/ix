@@ -12,11 +12,14 @@ struct mempool_hdr {
 } __packed;
 
 struct mempool {
-	void *buf;
-	void *iomap_addr;
-	uintptr_t iomap_offset;
-	struct mempool_hdr *head;
-	int nr_pages;
+	void			*buf;
+	struct mempool_hdr	*head;
+	int			nr_pages;
+
+#ifdef __KERNEL__
+	void 			*iomap_addr;
+	uintptr_t		iomap_offset;
+#endif
 };
 
 
@@ -55,6 +58,8 @@ extern int mempool_create(struct mempool *m, int nr_elems, size_t elem_len);
 extern void mempool_destroy(struct mempool *m);
 
 
+#ifdef __KERNEL__
+
 /**
  * mempool_pagemem_to_iomap - get the IOMAP address of a mempool entry
  * @m: the mempool
@@ -71,4 +76,6 @@ extern int
 mempool_pagemem_create(struct mempool *m, int nr_elems, size_t elem_len);
 extern int mempool_pagemem_map_to_user(struct mempool *m);
 extern void mempool_pagemem_destroy(struct mempool *m);
+
+#endif /* __KERNEL__ */
 

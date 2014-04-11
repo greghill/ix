@@ -561,7 +561,7 @@ static int parse_arguments(int argc, char *argv[])
 	}
 
 	arguments.restv = &argv[optind];
-	arguments.restc = argc - optind;
+	arguments.restc = argc - optind - 1;
 
 	return 0;
 }

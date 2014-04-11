@@ -33,13 +33,13 @@ void echo(int sd)
 			     (struct sockaddr *)&remote, &len);
 
 		/* print out the address of the sender */
-		printf("Got a datagram from %s port %d\n",
-		       inet_ntoa(remote.sin_addr), ntohs(remote.sin_port));
+//		printf("Got a datagram from %s port %d\n",
+//		       inet_ntoa(remote.sin_addr), ntohs(remote.sin_port));
 
 		if (n<0) {
 			perror("Error receiving data");
 		} else {
-			printf("GOT %ld BYTES\n",n);
+//			printf("GOT %ld BYTES\n",n);
 			/* Got something, just send it back */
 			sendto(sd, bufin, n, 0,
 			       (struct sockaddr *)&remote, len);
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
   */
 	skaddr.sin_family = AF_INET;
 	skaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-	skaddr.sin_port = htons(0);
+	skaddr.sin_port = htons(10013);
 
 	if (bind(ld, (struct sockaddr *) &skaddr, sizeof(skaddr))<0) {
 		printf("Problem binding\n");

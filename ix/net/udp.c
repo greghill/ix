@@ -10,6 +10,8 @@
 #include <ix/uaccess.h>
 #include <ix/vm.h>
 
+#include <asm/chksum.h>
+
 #include <net/ip.h>
 #include <net/udp.h>
 
@@ -91,6 +93,7 @@ static int udp_output(struct mbuf *__restrict pkt,
 
 	ip_setup_header(iphdr, IPPROTO_UDP,
 			cfg_host_addr.addr, id->dst_ip, full_len);
+	iphdr->chksum = chksum_internet((void *) iphdr, sizeof(struct ip_hdr));
 
 	udphdr->src_port = hton16(id->src_port);
 	udphdr->dst_port = hton16(id->dst_port);
