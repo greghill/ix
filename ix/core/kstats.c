@@ -87,10 +87,13 @@ static void kstats_printone(kstats_distr *d, const char *name)
  */
 static void kstats_print(struct timer *t)
 {
+  uint64_t total_cycles = (uint64_t) cycles_per_us * KSTATS_INTERVAL;
+
   kstats *ks = &(percpu_get(_kstats));
-  log_info("--- BEGIN KSTATS --- %ld%% idle\n",
-	   (ks->idle.tot_lat * 100 /
-	    ((uint64_t) cycles_per_us * KSTATS_INTERVAL)));
+  log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys\n",
+	   ks->idle.tot_lat * 100 / total_cycles,
+	   ks->user.tot_lat * 100 / total_cycles,
+	   (total_cycles - ks->idle.tot_lat - ks->user.tot_lat) * 100 / total_cycles);
 #undef DEF_KSTATS
 #define DEF_KSTATS(_c)  kstats_printone(&ks->_c, # _c);
 #include <ix/kstatvectors.h>

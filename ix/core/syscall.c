@@ -278,8 +278,10 @@ void do_syscall(struct dune_tf *tf, uint64_t sysnr)
 		return;
 	}
 
+	KSTATS_POP(NULL);
 	tf->rax = (uint64_t) sys_tbl[sysnr](tf->rdi, tf->rsi, tf->rdx,
 					    tf->rcx, tf->r8, tf->r9);
+	KSTATS_PUSH(user, NULL);
 }
 
 /**
