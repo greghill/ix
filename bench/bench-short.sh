@@ -28,7 +28,8 @@ TIME=10
 
 if [ $# -lt 2 ]; then
   echo "Usage: $0 SERVER_SPEC CLIENT_SPEC"
-  echo "  SERVER_SPEC = IX-10-RPC|IX-40-RPC|Linux-10-RPC|Linux-10-Stream|Linux-40-RPC|Linux-40-Stream"
+  echo "  SERVER_SPEC = IX-10-RPC|IX-10-Stream|IX-40-RPC|IX-40-Stream"
+  echo "              | Linux-10-RPC|Linux-10-Stream|Linux-40-RPC|Linux-40-Stream"
   echo "  CLIENT_SPEC = Linux-Libevent|Linux-Simple"
   exit
 fi
@@ -78,11 +79,19 @@ elif [ $SERVER_SPEC = 'Linux-40-Stream' ]; then
   ON_EXIT=on_exit_linux_stream
   CORES="0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
 elif [ $SERVER_SPEC = 'IX-10-Stream' ]; then
-  echo 'not implemented' >&2
-  exit 1
+  SERVER_NET="ix node1"
+  SERVER=server_ix_stream
+  SERVER_PORT=8000
+  ON_EXIT=on_exit_ix
+  CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
+  IX_PARAMS="-d 0000:42:00.1 -c \$IX_PARAMS_CORES"
 elif [ $SERVER_SPEC = 'IX-40-Stream' ]; then
-  echo 'not implemented' >&2
-  exit 1
+  SERVER_NET="ix node0"
+  SERVER=server_ix_stream
+  SERVER_PORT=8000
+  ON_EXIT=on_exit_ix
+  CORES="0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
+  IX_PARAMS="-d 0000:04:00.0,0000:04:00.1,0000:05:00.0,0000:05:00.1 -c \$IX_PARAMS_CORES"
 else
   echo 'invalid parameters' >&2
   exit 1
@@ -140,8 +149,11 @@ server_ix_rpc() {
 }
 
 server_ix_stream() {
-  echo 'Not implemented' >&2
-  exit 1
+  CORE_COUNT=$1
+  MSG_SIZE=$2
+
+  IX_PARAMS_CORES=`echo $CORES|cut -d',' -f-$CORE_COUNT`
+  (cd $DIR/../ix; sudo ./ix `eval echo $IX_PARAMS` /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ../apps/tcp/ix_server > /dev/null) &
 }
 
 server_linux_rpc() {
