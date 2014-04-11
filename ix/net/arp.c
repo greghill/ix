@@ -168,6 +168,7 @@ static int arp_send_pkt(uint16_t op,
 	ethip->target_mac = *target_mac;
 	ethip->target_ip.addr = hton32(target_ip->addr);
 
+	pkt->ol_flags = 0;
 	ret = eth_tx_xmit_one(percpu_get(eth_tx), pkt, ARP_PKT_SIZE);
 
 	if (unlikely(ret != 1)) {

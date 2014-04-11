@@ -159,12 +159,14 @@ int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest, uint8_t
 	iphdr->proto = proto;
 	iphdr->src_addr.addr = src->addr;
 	iphdr->dst_addr.addr = dest->addr;
-	iphdr->chksum = chksum_internet((void *) iphdr, sizeof(struct ip_hdr));
 
 	for (curp = p; curp; curp = curp->next) {
 		memcpy(payload, curp->payload, curp->len);
 		payload += curp->len;
 	}
+
+	/* Offload IP checksum */
+	pkt->ol_flags = PKT_TX_IP_CKSUM;
 
 	ret = eth_tx_xmit_one(percpu_get(eth_tx), pkt, sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + p->tot_len);
 
