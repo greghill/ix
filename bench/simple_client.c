@@ -1,4 +1,5 @@
 #include <arpa/inet.h>
+#include <errno.h>
 #include <netinet/tcp.h>
 #include <pthread.h>
 #include <signal.h>
@@ -6,11 +7,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/prctl.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 #define MAX_CORES 128
 #define BUFFER_SIZE 65536
 #define MAX_CONNECTIONS_PER_THREAD 65536
+#define WAIT_AFTER_ERROR_US 1000000
 
 struct worker {
 	pthread_t tid;
@@ -19,15 +22,37 @@ struct worker {
 	unsigned long long total_messages;
 } worker[MAX_CORES];
 
+struct sock {
+	int fd;
+	enum {
+		SOCK_STATE_CLOSED,
+		SOCK_STATE_CONNECTED,
+	} state;
+	long try_again_at;
+	long message_count;
+};
+
 static struct sockaddr_in server_addr;
 static int msg_size;
 static long messages_per_connection;
 static int connections_per_thread;
 
-int sock_connect(void)
+static long time_in_us(void)
+{
+	struct timeval tv;
+
+	if (gettimeofday(&tv, NULL)) {
+		perror("gettimeofday");
+		exit(1);
+	}
+	return tv.tv_sec * 1000000 + tv.tv_usec;
+}
+
+static int sock_connect(struct sock *sock)
 {
 	int fd;
 	int flag;
+	int ret;
 	struct linger linger;
 
 	fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -35,6 +60,7 @@ int sock_connect(void)
 		perror("socket");
 		exit(1);
 	}
+	sock->fd = fd;
 
 	linger.l_onoff = 1;
 	linger.l_linger = 0;
@@ -49,33 +75,48 @@ int sock_connect(void)
 		exit(1);
 	}
 
-	if (connect(fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1) {
+	ret = connect(fd, (struct sockaddr *) &server_addr, sizeof(server_addr));
+	if (ret == -1 && errno == ECONNRESET) {
+		return 1;
+	} else if (ret == -1) {
 		perror("connect");
 		exit(1);
 	}
 
-	return fd;
+	sock->state = SOCK_STATE_CONNECTED;
+	sock->message_count = 0;
+	return 0;
 }
 
-void sock_send_recv(int fd, char *send_buffer)
+static int sock_send_recv(struct sock *sock, char *send_buffer)
 {
 	static char recv_buffer[BUFFER_SIZE];
 	ssize_t ret;
+	int recved;
 
-	ret = send(fd, send_buffer, msg_size, 0);
-	if (ret == -1) {
+	ret = send(sock->fd, send_buffer, msg_size, 0);
+	if (ret == -1 && errno == ECONNRESET) {
+		return 1;
+	} else if (ret == -1) {
 		perror("send");
 		exit(1);
 	} else if (ret != msg_size) {
 		fprintf(stderr, "Sent only %ld bytes out of %d.\n", ret, msg_size);
 		exit(1);
 	}
-	ret = recv(fd, recv_buffer, msg_size, 0);
-	if (ret == -1) {
-		perror("recv");
-		exit(1);
-	} else if (ret != msg_size) {
-		fprintf(stderr, "Received only %ld bytes out of %d.\n", ret, msg_size);
+	recved = 0;
+	while (recved < msg_size) {
+		ret = recv(sock->fd, &recv_buffer[recved], msg_size - recved, 0);
+		if (ret == -1 && errno == ECONNRESET) {
+			return 1;
+		} else if (ret == -1) {
+			perror("recv");
+			exit(1);
+		}
+		recved += ret;
+	}
+	if (recved != msg_size) {
+		fprintf(stderr, "Received %d bytes instead of %d.\n", recved, msg_size);
 		exit(1);
 	}
 #if 0
@@ -84,13 +125,55 @@ void sock_send_recv(int fd, char *send_buffer)
 		exit(1);
 	}
 #endif
+
+	sock->message_count++;
+	return 0;
+}
+
+static void sock_close(struct sock *sock)
+{
+	close(sock->fd);
+	sock->state = SOCK_STATE_CLOSED;
+}
+
+static void sock_handle(long now, struct sock *sock, struct worker *worker)
+{
+	int ret;
+
+	if (now < sock->try_again_at)
+		return;
+	sock->try_again_at = 0;
+
+	switch (sock->state) {
+	case SOCK_STATE_CLOSED:
+		ret = sock_connect(sock);
+		if (ret) {
+			sock_close(sock);
+			sock->try_again_at = now + WAIT_AFTER_ERROR_US;
+		} else {
+			worker->total_connections++;
+		}
+		break;
+	case SOCK_STATE_CONNECTED:
+		ret = sock_send_recv(sock, worker->buffer);
+		if (ret) {
+			sock_close(sock);
+			sock->try_again_at = now + WAIT_AFTER_ERROR_US;
+		} else {
+			worker->total_messages++;
+			if (sock->message_count == messages_per_connection)
+				sock_close(sock);
+		}
+		break;
+	}
 }
 
 static void *start_worker(void *p)
 {
-	int i, j, rnd;
+	int i, rnd;
+	long now;
 	struct worker *worker;
-	int sock[MAX_CONNECTIONS_PER_THREAD];
+	struct sock sock[MAX_CONNECTIONS_PER_THREAD];
 
 	worker = p;
 
@@ -100,20 +183,9 @@ static void *start_worker(void *p)
 		worker->buffer[i] = 'A' + (i + rnd) % 26;
 
 	while (1) {
+		now = time_in_us();
 		for (i = 0; i < connections_per_thread; i++) {
-			sock[i] = sock_connect();
-			worker[i].total_connections++;
-		}
-
-		for (j = 0; j < messages_per_connection; j++) {
-			for (i = 0; i < connections_per_thread; i++) {
-				sock_send_recv(sock[i], worker->buffer);
-				worker->total_messages++;
-			}
-		}
-
-		for (i = 0; i < connections_per_thread; i++) {
-			close(sock[i]);
+			sock_handle(now, &sock[i], worker);
 		}
 	}
 
