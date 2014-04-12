@@ -1,6 +1,11 @@
 #!/bin/bash
 
-set -e
+set -eEu -o pipefail
+
+on_err() {
+  echo "${BASH_SOURCE[0]}: line ${BASH_LINENO[0]}: Failed"
+}
+trap on_err ERR
 
 # set default values if not found in the environment
 foo=${BMOS_PATH:=~/epfl1/prg/me/bmos}
