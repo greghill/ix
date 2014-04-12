@@ -15,6 +15,7 @@
 #include <ix/hash.h>
 #include <ix/mempool.h>
 #include <ix/log.h>
+#include <ix/lock.h>
 
 #include <net/ethernet.h>
 #include <net/ip.h>
@@ -37,6 +38,8 @@ struct arp_entry {
 	struct timer		timer;
 	struct hlist_node	link;
 };
+
+static DEFINE_SPINLOCK(arp_lock);
 
 #define ARP_FLAG_RESOLVING	0x1
 #define ARP_FLAG_VALID		0x2
@@ -75,6 +78,8 @@ static struct arp_entry *arp_lookup(struct ip_addr *addr, bool create_okay)
 	}
 
 	if (create_okay) {
+		spin_lock(&arp_lock);
+
 		e = (struct arp_entry *)mempool_alloc(&arp_mempool);
 		if (unlikely(!e))
 			return NULL;
@@ -84,6 +89,7 @@ static struct arp_entry *arp_lookup(struct ip_addr *addr, bool create_okay)
 		e->retries = 0;
 		timer_init_entry(&e->timer, &arp_timer_handler);
 		hlist_add_head(h, &e->link);
+		spin_unlock(&arp_lock);
 		return e;
 	}
 
