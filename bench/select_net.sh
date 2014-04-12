@@ -42,6 +42,18 @@ invalid_params() {
   exit 1
 }
 
+print_help() {
+  echo "Usage:"
+  echo "  $0 none"
+  echo "  $0 linux [single|bond]"
+  echo "  $0 ix    [node0|node1|...]"
+}
+
+if [ $# -lt 2 ]; then
+  print_help
+  exit
+fi
+
 if [ -z $1 ]; then
   echo 'missing parameter' >&2
   exit 1
@@ -66,10 +78,7 @@ elif [ $1 = 'ix' ]; then
     invalid_params
   fi
 elif [ $1 = '--help' ]; then
-  echo "Usage:"
-  echo "  $0 none"
-  echo "  $0 linux [single|bond]"
-  echo "  $0 ix    [node0|node1|...]"
+  print_help
 else
   invalid_params
 fi
