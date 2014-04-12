@@ -350,6 +350,7 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	id->dst_ip = cfg_host_addr.addr;
 	id->src_port = pcb->local_port;
 	id->dst_port = pcb->remote_port;
+	api->id = id;
 
 	handle = tcpapi_to_handle(api);
 	api->handle = handle;
