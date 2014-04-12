@@ -194,6 +194,7 @@ static int arp_send_response_reuse(struct mbuf *pkt,
 	ethip->sender_ip.addr = hton32(cfg_host_addr.addr);
 	ethip->sender_mac = cfg_mac;
 
+	pkt->ol_flags = 0;
 	ret = eth_tx_xmit_one(percpu_get(eth_tx), pkt, ARP_PKT_SIZE);
 
 	if (unlikely(ret != 1)) {
