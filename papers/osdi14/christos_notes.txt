@@ -29,4 +29,41 @@ Thoughts on organizing the eval later on.
 Christos
 
 
+============================================
+
+Goals
+- high packet rate 
+- low latency, usec level with low jitter (udp 9usec roundtrip unloaded)
+- high connection count  + bigh connection churn 
+- elasticity (energy efficiency, proportionality, etc) 
+- security (multi tenancy, rich security policies, isolation) 
+
+Techniques
+- zero copy in an end-to-end manner no setup cost, both directions
+- batching every sub operation (each step of the pipeline)
+	improves caching, prefetching, branch predictors
+	batch as small as we can get away with (b=1 for low load)
+		overhead of batching vs overhead of queuing 
+	other people do batching at the API
+		mtcp does batching at the granularity millisecond
+- Dune — single app kernel
+	through the use of virtualization we focus on a single app (DISCO)
+- trying to match hardware structure (queues and offloads)
+	our messages (sys calls) have 1-to-1 mapping to the underlying ops on packets
+- no POSIX (exokernel argument) 
+- never allocate memory - we do not conserve memory, we just optimize for speed
+ 	dump but fast, 
+- no sharing across CPUs, coherence traffic free on the data plane, coherence traffic at the control plane (coherence on IP fragmentation, rebalancing) xs
+
+pipeline
+	system call batching
+	polling phase
+	transmit phase
+	reclaim phase 
+	timer phase 
+
+
+
+- ugly things about user-level stacks, 
+	timers are somewhat different, we don’t support explicit congestion control, datacenter TCP
 
