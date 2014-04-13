@@ -160,32 +160,40 @@ observed by application software is one to two orders of magnitude
 greater than the intrinsic latency.
 
 \input{figs/float-pingpong}
+\input{tbl-pingpong}
 
 Fig.~\ref{fig:pingpong} illustrates the importance of system software
-design and configuration tradeoffs using a simple ping-pong benchmark
-similar to netpipe~\cite{snell1996netpipe} that exchanges a fixed-size
-message between two servers.  Although the application is trivial, it
-provides a good proxy for the effective performance of synchronous
-remote procedure calls in uncontended situations.  We compare the
-performance of an out-of-the-box Ubuntu XXX configuration
-(\texttt{Linux-base}), a tuned configuration of the same kernel
-(\texttt{Linux-opt})), and of our own system (\ix).  For the same
+design and configuration tradeoffs using the NetPIPE ping-pong
+benchmark~\cite{snell1996netpipe} that exchanges a fixed-size message
+between two servers.  Although the application is trivial, it provides
+a good proxy for the effective performance of synchronous remote
+procedure calls in uncontended situations.  We compare the performance
+of (i) an out-of-the-box Ubuntu XXX configuration
+(\texttt{Linux-base}) running an unmodified NetPIPE v3.7.2; (ii) a
+tuned configuration of the same kernel (\texttt{Linux-opt})) with the
+same application; (iii) between two mTCP-based equivalent
+applications; (iv) a hybrid version in which a Linux client talking to
+an \ix server; and finally (v) between two \ix systems.  For the same
 application and hardware configuration (described in
-\S\ref{sec:eval:setup}), the differences are dramatic.  This
-benchmark is both latency- and bandwdith- sensitive.  We see that \ix
-achieves 50\% of the asymptotic bandwdith with messages as small as
-\george{XXX bytes}.  In constrast, both Linux configurations remain
-latency-bound.
+\S\ref{sec:eval:setup}), the differences are dramatic.  We see that
+\ix-\ix achieves 50\% of the asymptotic bandwdith with messages as small
+as \george{XXX bytes}.  In constrast, both Linux configurations remain
+latency-bound.  Although mTCP, ....
 
 
 These issues compound when considering the long tail of the latency
-distributions~\cite{DBLP:journals/cacm/DeanB13}. Although
-tail-tolerance itself is actually an end-to-end problem, the
-protocol-processing stacks play a significant role in exacerbating the
-problem.  In particular, protocol processing techniques that reduce
-latency to microseconds in the common case, but don't improve the 95\%
-or 99\% latency are unlikely to result into end-to-end application
-gains.
+distributions of remote procedure
+calls~\cite{DBLP:journals/cacm/DeanB13} . Although tail-tolerance
+itself is actually an end-to-end problem, the protocol-processing
+stacks play a significant role in exacerbating the problem.  In
+particular, protocol processing techniques that reduce latency to
+microseconds in the common case, but don't improve the 95\% or 99\%
+latency are unlikely to result into end-to-end application gains.
+
+Table~\ref{tbl:pingping} lists the average and 99\% percentile half
+round-trip latencies for small messages (64B), using the same netpipe
+benchmark.  \edb{TODO - COMMENTARY.}
+
 
 \subsection{The Dataplane Alternative}
 \label{sec:motivation:dp}
