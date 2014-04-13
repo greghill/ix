@@ -16,7 +16,7 @@ struct ix_ops {
 				 int ret);
 	void (*tcp_send_ret)	(hid_t handle, unsigned long cookie,
 				 ssize_t ret);
-	void (*tcp_xmit_win)	(hid_t handle, unsigned long cookie,
+	void (*tcp_sent)	(hid_t handle, unsigned long cookie,
 				 size_t win_size);
 	void (*tcp_dead)	(hid_t handle, unsigned long cookie);
 };
@@ -111,6 +111,9 @@ static inline void ix_tcp_close(hid_t handle)
 
 	ksys_tcp_close(__bsys_arr_next(karr), handle);
 }
+
+extern void *ix_alloc_pages(int nrpages);
+extern void ix_free_pages(void *addr, int nrpages);
 
 extern int ix_poll(void);
 extern int ix_init(struct ix_ops *ops, int batch_depth);

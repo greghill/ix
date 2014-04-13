@@ -281,7 +281,7 @@ enum {
 	USYS_TCP_RECV,
 	USYS_TCP_CONNECT_RET,
 	USYS_TCP_SEND_RET,
-	USYS_TCP_XMIT_WIN,
+	USYS_TCP_SENT,
 	USYS_TCP_DEAD,
 	USYS_NR,
 };
@@ -394,19 +394,19 @@ usys_tcp_send_ret(hid_t handle, unsigned long cookie, ssize_t ret)
 }
 
 /**
- * usys_tcp_xmit_win - indicates the size of the transmit window has changed
+ * usys_tcp_sent - indicates transmission is finished
  * @handle: the TCP flow handle
  * @cookie: a user-level tag for the flow
- * @win_size: the new size of the window
+ * @len: the length in bytes sent
  *
- * Typically, an application will use this notifier to know it is time to
- * send more pending data.
+ * Typically, an application will use this notifier to unreference buffers
+ * and to send more pending data.
  */
 static inline void
-usys_tcp_xmit_win(hid_t handle, unsigned long cookie, size_t win_size)
+usys_tcp_sent(hid_t handle, unsigned long cookie, size_t len)
 {
 	struct bsys_desc *d = usys_next();
-	BSYS_DESC_3ARG(d, USYS_TCP_XMIT_WIN, handle, cookie, win_size);
+	BSYS_DESC_3ARG(d, USYS_TCP_SENT, handle, cookie, len);
 }
 
 /**

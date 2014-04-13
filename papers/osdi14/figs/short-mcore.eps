@@ -1,7 +1,7 @@
 %!PS-Adobe-2.0 EPSF-2.0
 %%Title: ../papers/osdi14/figs/short-mcore.eps
-%%Creator: gnuplot 4.4 patchlevel 3
-%%CreationDate: Thu Apr 10 19:26:35 2014
+%%Creator: gnuplot 4.6 patchlevel 5
+%%CreationDate: Sat Apr 12 14:04:51 2014
 %%DocumentFonts: (atend)
 %%BoundingBox: 50 50 410 302
 %%EndComments
@@ -20,10 +20,12 @@ gnudict begin
 /Level1 false def
 /Rounded false def
 /ClipToBoundingBox false def
+/SuppressPDFMark false def
 /TransparentPatterns false def
 /gnulinewidth 5.000 def
 /userlinewidth gnulinewidth def
 /Gamma 1.0 def
+/BackgroundColor {-1.000 -1.000 -1.000} def
 %
 /vshift -46 def
 /dl1 {
@@ -38,22 +40,6 @@ gnudict begin
 /vpt_ 31.5 def
 /hpt hpt_ def
 /vpt vpt_ def
-Level1 {} {
-/SDict 10 dict def
-systemdict /pdfmark known not {
-  userdict /pdfmark systemdict /cleartomark get put
-} if
-SDict begin [
-  /Title (../papers/osdi14/figs/short-mcore.eps)
-  /Subject (gnuplot plot)
-  /Creator (gnuplot 4.4 patchlevel 3)
-  /Author (prekas)
-%  /Producer (gnuplot)
-%  /Keywords ()
-  /CreationDate (Thu Apr 10 19:26:35 2014)
-  /DOCINFO pdfmark
-end
-} ifelse
 /doclip {
   ClipToBoundingBox {
     newpath 50 50 moveto 410 50 lineto 410 302 lineto 50 302 lineto closepath
@@ -61,7 +47,7 @@ end
   } if
 } def
 %
-% Gnuplot Prolog Version 4.4 (August 2010)
+% Gnuplot Prolog Version 4.6 (September 2012)
 %
 %/SuppressPDFMark true def
 %
@@ -328,7 +314,8 @@ end
 /PatternFill {gsave /PFa [ 9 2 roll ] def
   PFa 0 get PFa 2 get 2 div add PFa 1 get PFa 3 get 2 div add translate
   PFa 2 get -2 div PFa 3 get -2 div PFa 2 get PFa 3 get Rec
-  gsave 1 setgray fill grestore clip
+  TransparentPatterns {} {gsave 1 setgray fill grestore} ifelse
+  clip
   currentlinewidth 0.5 mul setlinewidth
   /PFs PFa 2 get dup mul PFa 3 get dup mul add sqrt def
   0 0 M PFa 5 get rotate PFs -2 div dup translate
@@ -461,8 +448,26 @@ currentdict end definefont pop
   Blacktext {gsave 0 setgray MFshow grestore} {MFshow} ifelse } bind def
 /XYsave    { [( ) 1 2 true false 3 ()] } bind def
 /XYrestore { [( ) 1 2 true false 4 ()] } bind def
+Level1 SuppressPDFMark or 
+{} {
+/SDict 10 dict def
+systemdict /pdfmark known not {
+  userdict /pdfmark systemdict /cleartomark get put
+} if
+SDict begin [
+  /Title (../papers/osdi14/figs/short-mcore.eps)
+  /Subject (gnuplot plot)
+  /Creator (gnuplot 4.6 patchlevel 5)
+  /Author (prekas)
+%  /Producer (gnuplot)
+%  /Keywords ()
+  /CreationDate (Sat Apr 12 14:04:51 2014)
+  /DOCINFO pdfmark
+end
+} ifelse
 end
 %%EndProlog
+%%Page: 1 1
 gnudict begin
 gsave
 doclip
@@ -471,6 +476,7 @@ doclip
 0 setgray
 newpath
 (Times) findfont 140 scalefont setfont
+BackgroundColor 0 lt 3 1 roll 0 lt exch 0 lt or or not {BackgroundColor C 1.000 0 0 7200.00 5040.00 BoxColFill} if
 1.000 UL
 LTb
 1.000 UL
@@ -489,57 +495,43 @@ stroke
 LTb
 1.000 UL
 LTa
-749 947 M
+749 1056 M
 6198 0 V
 stroke
 LTb
-749 947 M
+749 1056 M
 -63 0 V
 stroke
-602 947 M
+602 1056 M
 [ [(Times) 240.0 0.0 true true 0 ( 0.5)]
 ] -80.0 MRshow
 1.000 UL
 LTb
 1.000 UL
 LTa
-749 1383 M
+749 1601 M
 6198 0 V
 stroke
 LTb
-749 1383 M
+749 1601 M
 -63 0 V
 stroke
-602 1383 M
+602 1601 M
 [ [(Times) 240.0 0.0 true true 0 ( 1)]
 ] -80.0 MRshow
 1.000 UL
 LTb
 1.000 UL
 LTa
-749 1819 M
+749 2146 M
 6198 0 V
 stroke
 LTb
-749 1819 M
+749 2146 M
 -63 0 V
 stroke
-602 1819 M
+602 2146 M
 [ [(Times) 240.0 0.0 true true 0 ( 1.5)]
-] -80.0 MRshow
-1.000 UL
-LTb
-1.000 UL
-LTa
-749 2255 M
-6198 0 V
-stroke
-LTb
-749 2255 M
--63 0 V
-stroke
-602 2255 M
-[ [(Times) 240.0 0.0 true true 0 ( 2)]
 ] -80.0 MRshow
 1.000 UL
 LTb
@@ -553,63 +545,49 @@ LTb
 -63 0 V
 stroke
 602 2691 M
+[ [(Times) 240.0 0.0 true true 0 ( 2)]
+] -80.0 MRshow
+1.000 UL
+LTb
+1.000 UL
+LTa
+749 3236 M
+6198 0 V
+stroke
+LTb
+749 3236 M
+-63 0 V
+stroke
+602 3236 M
 [ [(Times) 240.0 0.0 true true 0 ( 2.5)]
 ] -80.0 MRshow
 1.000 UL
 LTb
 1.000 UL
 LTa
-749 3127 M
+749 3781 M
 6198 0 V
 stroke
 LTb
-749 3127 M
+749 3781 M
 -63 0 V
 stroke
-602 3127 M
+602 3781 M
 [ [(Times) 240.0 0.0 true true 0 ( 3)]
 ] -80.0 MRshow
 1.000 UL
 LTb
 1.000 UL
 LTa
-749 3563 M
+749 4326 M
 6198 0 V
 stroke
 LTb
-749 3563 M
+749 4326 M
 -63 0 V
 stroke
-602 3563 M
+602 4326 M
 [ [(Times) 240.0 0.0 true true 0 ( 3.5)]
-] -80.0 MRshow
-1.000 UL
-LTb
-1.000 UL
-LTa
-749 3999 M
-6198 0 V
-stroke
-LTb
-749 3999 M
--63 0 V
-stroke
-602 3999 M
-[ [(Times) 240.0 0.0 true true 0 ( 4)]
-] -80.0 MRshow
-1.000 UL
-LTb
-1.000 UL
-LTa
-749 4435 M
-6198 0 V
-stroke
-LTb
-749 4435 M
--63 0 V
-stroke
-602 4435 M
-[ [(Times) 240.0 0.0 true true 0 ( 4.5)]
 ] -80.0 MRshow
 1.000 UL
 LTb
@@ -623,7 +601,7 @@ LTb
 -63 0 V
 stroke
 602 4871 M
-[ [(Times) 240.0 0.0 true true 0 ( 5)]
+[ [(Times) 240.0 0.0 true true 0 ( 4)]
 ] -80.0 MRshow
 1.000 UL
 LTb
@@ -790,155 +768,151 @@ LTb
 LTb
 % Begin plot #1
 1.000 UP
-7.000 UL
+1.000 UL
 LT0
-/Times findfont 140 scalefont setfont
-1136 555 M
+1136 561 M
 388 14 V
-387 22 V
-388 18 V
+387 24 V
+388 21 V
 387 18 V
-387 13 V
-388 14 V
+387 16 V
+388 15 V
 387 11 V
-387 10 V
+387 13 V
 388 8 V
-387 8 V
-388 7 V
-387 5 V
+387 10 V
+388 6 V
+387 7 V
 387 4 V
-388 3 V
-387 2 V
-1136 555 Pls
-1524 569 Pls
-1911 591 Pls
-2299 609 Pls
-2686 627 Pls
-3073 640 Pls
-3461 654 Pls
-3848 665 Pls
-4235 675 Pls
-4623 683 Pls
-5010 691 Pls
-5398 698 Pls
-5785 703 Pls
-6172 707 Pls
-6560 710 Pls
-6947 712 Pls
+388 4 V
+387 3 V
+1136 561 Pls
+1524 575 Pls
+1911 599 Pls
+2299 620 Pls
+2686 638 Pls
+3073 654 Pls
+3461 669 Pls
+3848 680 Pls
+4235 693 Pls
+4623 701 Pls
+5010 711 Pls
+5398 717 Pls
+5785 724 Pls
+6172 728 Pls
+6560 732 Pls
+6947 735 Pls
 % End plot #1
 % Begin plot #2
 1.000 UP
-7.000 UL
+1.000 UL
 LT1
-/Times findfont 140 scalefont setfont
-1136 554 M
+1136 559 M
 388 11 V
-387 21 V
-388 16 V
-387 16 V
-387 12 V
+387 23 V
+388 19 V
+387 17 V
+387 14 V
 388 12 V
-387 9 V
-387 9 V
+387 11 V
+387 11 V
 388 7 V
-387 8 V
-388 6 V
+387 10 V
+388 5 V
 387 5 V
-387 4 V
-388 3 V
-387 -20 V
-1136 554 Crs
-1524 565 Crs
-1911 586 Crs
-2299 602 Crs
-2686 618 Crs
-3073 630 Crs
-3461 642 Crs
-3848 651 Crs
-4235 660 Crs
-4623 667 Crs
-5010 675 Crs
-5398 681 Crs
-5785 686 Crs
-6172 690 Crs
-6560 693 Crs
-6947 673 Crs
+387 6 V
+388 4 V
+387 1 V
+1136 559 Crs
+1524 570 Crs
+1911 593 Crs
+2299 612 Crs
+2686 629 Crs
+3073 643 Crs
+3461 655 Crs
+3848 666 Crs
+4235 677 Crs
+4623 684 Crs
+5010 694 Crs
+5398 699 Crs
+5785 704 Crs
+6172 710 Crs
+6560 714 Crs
+6947 715 Crs
 % End plot #2
 % Begin plot #3
 1.000 UP
-7.000 UL
+1.000 UL
 LT2
-/Times findfont 140 scalefont setfont
-1136 1138 M
-388 103 V
-387 207 V
-388 497 V
-387 -44 V
-387 -61 V
-388 -20 V
-387 -14 V
+1136 1113 M
+388 56 V
+387 255 V
+388 449 V
+387 55 V
+387 300 V
+388 -135 V
+387 -62 V
 387 -4 V
-388 -4 V
-387 -1 V
-388 -3 V
-387 -10 V
-387 3 V
-388 -5 V
-387 -155 V
-1136 1138 Star
-1524 1241 Star
-1911 1448 Star
-2299 1945 Star
-2686 1901 Star
-3073 1840 Star
-3461 1820 Star
-3848 1806 Star
-4235 1802 Star
-4623 1798 Star
-5010 1797 Star
-5398 1794 Star
-5785 1784 Star
-6172 1787 Star
-6560 1782 Star
-6947 1627 Star
+388 -2 V
+387 -14 V
+388 -1 V
+387 -12 V
+387 0 V
+388 -27 V
+387 15 V
+1136 1113 Star
+1524 1169 Star
+1911 1424 Star
+2299 1873 Star
+2686 1928 Star
+3073 2228 Star
+3461 2093 Star
+3848 2031 Star
+4235 2027 Star
+4623 2025 Star
+5010 2011 Star
+5398 2010 Star
+5785 1998 Star
+6172 1998 Star
+6560 1971 Star
+6947 1986 Star
 % End plot #3
 % Begin plot #4
 1.000 UP
-7.000 UL
+1.000 UL
 LT3
-/Times findfont 140 scalefont setfont
-1136 1073 M
-388 98 V
+1136 511 M
+388 1 V
+387 1 V
+388 1208 V
 387 284 V
-388 348 V
-387 300 V
-387 310 V
-388 163 V
-387 544 V
-387 -49 V
-388 276 V
-387 533 V
-388 -6 V
-387 562 V
-387 -27 V
-388 -74 V
-387 92 V
-1136 1073 Box
-1524 1171 Box
-1911 1455 Box
-2299 1803 Box
-2686 2103 Box
-3073 2413 Box
-3461 2576 Box
-3848 3120 Box
-4235 3071 Box
-4623 3347 Box
-5010 3880 Box
-5398 3874 Box
-5785 4436 Box
-6172 4409 Box
-6560 4335 Box
-6947 4427 Box
+387 251 V
+388 260 V
+387 296 V
+387 -71 V
+388 487 V
+387 378 V
+388 68 V
+387 501 V
+387 41 V
+388 83 V
+387 523 V
+1136 511 Box
+1524 512 Box
+1911 513 Box
+2299 1721 Box
+2686 2005 Box
+3073 2256 Box
+3461 2516 Box
+3848 2812 Box
+4235 2741 Box
+4623 3228 Box
+5010 3606 Box
+5398 3674 Box
+5785 4175 Box
+6172 4216 Box
+6560 4299 Box
+6947 4822 Box
 % End plot #4
 1.000 UL
 LTb

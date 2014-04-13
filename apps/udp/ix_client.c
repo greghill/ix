@@ -67,7 +67,7 @@ static void udp_send_ret(unsigned long cookie, int64_t ret)
 	if (ret) {
 		struct xmit_ctx *ctx = get_ctx((int) cookie);
 
-		if (ret != (int64_t) -35)
+		if (ret != (int64_t) -RET_AGAIN)
 			printf("packet %lx had error %ld\n", cookie, ret);
 
 		ctx->tsc = rdtsc();

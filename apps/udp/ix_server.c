@@ -5,7 +5,7 @@
 
 #include <ix.h>
 
-#define BATCH_DEPTH	32
+#define BATCH_DEPTH	512
 #define ECHO_PORT	10013
 
 static struct ip_tuple *ids;

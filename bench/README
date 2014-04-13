@@ -101,3 +101,20 @@ Enables the specified network. Either Linux (single or bond) or IX (on specified
 * `PAGE_COUNT_2MB`: The number of 2MB pages to allocate for IX mode.
 
 Example: `BMOS_PATH=~/bmos sudo -E ./select_net.sh none`
+
+launch.py
+--
+```
+usage: launch.py [-h] --clients CLIENTS --client-cmdline CLIENT_CMDLINE
+                 [--debug] [--time TIME] [--user USER]
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --clients CLIENTS     comma-separated list of hostnames
+  --client-cmdline CLIENT_CMDLINE
+                        the command line to execute at each client
+  --debug               enable debug log
+  --time TIME           time of benchmark execution in seconds
+  --user USER           SSH username for connecting to the clients
+```
+This tool can execute the `client` or `simple_client` tool on a number of remote hosts. It coordinates execution, gathers data for the specified amount of time and reports the messages per second sent and received by all clients.
