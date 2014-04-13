@@ -235,6 +235,18 @@ scalable manner; our API and our implementation should support that.
 RadixVM~\cite{DBLP:conf/eurosys/ClementsKZ13} provides scalable
 address spaces for multithreaded applications; we address this as well.
 
+\paragraph*{Congestion management}
+Network congestion is a key cause of poor tail-latency performance in
+datacenter networks~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10}.
+DCTCP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10} relies on in-network
+ECN support to eliminate up to 90\% of buffering in the network.
+\ix's approach to packet buffering effectively extends the network
+routing latyer to an extra hop on each end-point.  That extra hop could
+be used to signal congestion back to the source by marking the ECN bit
+before processing the packet in \ix's TCP stack.
+
+
+
 \paragraph{The case against user-level networking}
 Margo's original paper (same title)~\cite{magoutis2004case}
 

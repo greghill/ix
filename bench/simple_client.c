@@ -10,6 +10,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include "client_common.h"
+
 #define MAX_CORES 128
 #define BUFFER_SIZE 65536
 #define MAX_CONNECTIONS_PER_THREAD 65536
@@ -17,7 +19,6 @@
 
 struct worker {
 	pthread_t tid;
-	char *buffer;
 	unsigned long long total_connections;
 	unsigned long long total_messages;
 } worker[MAX_CORES];
@@ -30,6 +31,8 @@ struct sock {
 	} state;
 	long try_again_at;
 	long message_count;
+	char *send_buffer;
+	char *recv_buffer;
 };
 
 static struct sockaddr_in server_addr;
@@ -88,13 +91,12 @@ static int sock_connect(struct sock *sock)
 	return 0;
 }
 
-static int sock_send_recv(struct sock *sock, char *send_buffer)
+static int sock_send_recv(struct sock *sock)
 {
-	static char recv_buffer[BUFFER_SIZE];
 	ssize_t ret;
 	int recved;
 
-	ret = send(sock->fd, send_buffer, msg_size, 0);
+	ret = send(sock->fd, sock->send_buffer, msg_size, 0);
 	if (ret == -1 && errno == ECONNRESET) {
 		return 1;
 	} else if (ret == -1) {
@@ -106,7 +108,7 @@ static int sock_send_recv(struct sock *sock, char *send_buffer)
 	}
 	recved = 0;
 	while (recved < msg_size) {
-		ret = recv(sock->fd, &recv_buffer[recved], msg_size - recved, 0);
+		ret = recv(sock->fd, &sock->recv_buffer[recved], msg_size - recved, 0);
 		if (ret == -1 && errno == ECONNRESET) {
 			return 1;
 		} else if (ret == -1) {
@@ -119,12 +121,11 @@ static int sock_send_recv(struct sock *sock, char *send_buffer)
 		fprintf(stderr, "Received %d bytes instead of %d.\n", recved, msg_size);
 		exit(1);
 	}
-#if 0
-	if (memcmp(send_buffer, recv_buffer, msg_size)) {
-		fprintf(stderr, "Send and recv data do not match.\n");
+
+	if (memcmp(sock->send_buffer, sock->recv_buffer, msg_size)) {
+		fprintf(stderr, "Send and recv data do not match.\nSend: '%.*s'\nRecv: '%.*s'\n", msg_size, sock->send_buffer, msg_size, sock->recv_buffer);
 		exit(1);
 	}
-#endif
 
 	sock->message_count++;
 	return 0;
@@ -155,7 +156,7 @@ static void sock_handle(long now, struct sock *sock, struct worker *worker)
 		}
 		break;
 	case SOCK_STATE_CONNECTED:
-		ret = sock_send_recv(sock, worker->buffer);
+		ret = sock_send_recv(sock);
 		if (ret) {
 			sock_close(sock);
 			sock->try_again_at = now + WAIT_AFTER_ERROR_US;
@@ -170,17 +171,21 @@ static void sock_handle(long now, struct sock *sock, struct worker *worker)
 
 static void *start_worker(void *p)
 {
-	int i, rnd;
+	int i, j, ofs, step;
 	long now;
 	struct worker *worker;
 	struct sock sock[MAX_CONNECTIONS_PER_THREAD];
 
 	worker = p;
 
-	worker->buffer = malloc(BUFFER_SIZE);
-	rnd = rand();
-	for (i = 0; i < msg_size; i++)
-		worker->buffer[i] = 'A' + (i + rnd) % 26;
+	for (i = 0; i < connections_per_thread; i++) {
+		sock[i].send_buffer = malloc(msg_size);
+		sock[i].recv_buffer = malloc(msg_size);
+		ofs = rand();
+		step = rand() % 4;
+		for (j = 0; j < msg_size; j++)
+			sock[i].send_buffer[j] = 'A' + (j * step + ofs) % 26;
+	}
 
 	while (1) {
 		now = time_in_us();
@@ -211,6 +216,10 @@ int main(int argc, char **argv)
 	int threads;
 	long long total_connections;
 	long long total_messages;
+	char buf;
+	int ret;
+	char ifname[64];
+	long rx_bytes, rx_packets, tx_bytes, tx_packets;
 
 	prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
 
@@ -240,17 +249,31 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	get_ifname(&server_addr, ifname);
+
 	start_threads(threads);
+	puts("ok");
+	fflush(stdout);
 
 	while (1) {
-		sleep(1);
+		ret = read(STDIN_FILENO, &buf, 1);
+		if (ret == 0) {
+			fprintf(stderr, "Error: EOF on STDIN.\n");
+			return 1;
+		} else if (ret == -1) {
+			perror("read");
+			return 1;
+		}
+		get_eth_stats(ifname, &rx_bytes, &rx_packets, &tx_bytes, &tx_packets);
 		total_connections = 0;
 		total_messages = 0;
 		for (i = 0; i < threads; i++) {
 			total_connections += worker[i].total_connections;
 			total_messages += worker[i].total_messages;
 		}
-		printf("%lld %lld %d %d %d\n", total_connections, total_messages, 0, 0, 0);
+		printf("%lld %lld %d %d %d ", total_connections, total_messages, 0, 0, 0);
+		printf("%ld %ld %ld %ld ", rx_bytes, rx_packets, tx_bytes, tx_packets);
+		puts("");
 		fflush(stdout);
 	}
 

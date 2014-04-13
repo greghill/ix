@@ -1,0 +1,27 @@
+
+%%%
+%%%  use the ping-pong test to measure the half rountrip latency @ 64B
+%%% 
+
+\begin{table}[b]
+\vspace{-1em}
+\begin{center}
+\begin{small}
+\begin{tabular}{|l|c|c|}
+\hline
+Workload &  Avg lat. & 99\% lat. \\
+\hline
+Linux(base)-Linux(base)  & 1\microsecond & 1\microsecond\\
+Linux(opt)-Linux(opt)    & 1\microsecond & 1\microsecond \\
+mTCP-mTCP                & 1\microsecond & 1\microsecond \\
+Linux(opt)-\ix           & 1\microsecond &  1\microsecond\\
+\ix-\ix                  & 1\microsecond & 1\microsecond\\
+\hline
+\end{tabular}
+\caption{Netpipe half-roundtrip latency (s=64B)}
+\vspace*{-2em}
+\label{table:pingpong}
+\end{small}
+\end{center}
+\end{table}
+

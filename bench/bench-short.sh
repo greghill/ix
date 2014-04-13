@@ -1,6 +1,11 @@
 #!/bin/bash
 
-set -eu
+set -eEu -o pipefail
+
+on_err() {
+  echo "${BASH_SOURCE[0]}: line ${BASH_LINENO[0]}: Failed at `date`"
+}
+trap on_err ERR
 
 ### conf
 
@@ -28,7 +33,8 @@ TIME=10
 
 if [ $# -lt 2 ]; then
   echo "Usage: $0 SERVER_SPEC CLIENT_SPEC"
-  echo "  SERVER_SPEC = IX-10-RPC|IX-40-RPC|Linux-10-RPC|Linux-10-Stream|Linux-40-RPC|Linux-40-Stream"
+  echo "  SERVER_SPEC = IX-10-RPC|IX-10-Stream|IX-40-RPC|IX-40-Stream"
+  echo "              | Linux-10-RPC|Linux-10-Stream|Linux-40-RPC|Linux-40-Stream"
   echo "  CLIENT_SPEC = Linux-Libevent|Linux-Simple"
   exit
 fi
@@ -78,11 +84,19 @@ elif [ $SERVER_SPEC = 'Linux-40-Stream' ]; then
   ON_EXIT=on_exit_linux_stream
   CORES="0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
 elif [ $SERVER_SPEC = 'IX-10-Stream' ]; then
-  echo 'not implemented' >&2
-  exit 1
+  SERVER_NET="ix node1"
+  SERVER=server_ix_stream
+  SERVER_PORT=8000
+  ON_EXIT=on_exit_ix
+  CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
+  IX_PARAMS="-d 0000:42:00.1 -c \$IX_PARAMS_CORES"
 elif [ $SERVER_SPEC = 'IX-40-Stream' ]; then
-  echo 'not implemented' >&2
-  exit 1
+  SERVER_NET="ix node0"
+  SERVER=server_ix_stream
+  SERVER_PORT=8000
+  ON_EXIT=on_exit_ix
+  CORES="0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
+  IX_PARAMS="-d 0000:04:00.0,0000:04:00.1,0000:05:00.0,0000:05:00.1 -c \$IX_PARAMS_CORES"
 else
   echo 'invalid parameters' >&2
   exit 1
@@ -136,12 +150,15 @@ server_ix_rpc() {
   MSG_SIZE=$2
 
   IX_PARAMS_CORES=`echo $CORES|cut -d',' -f-$CORE_COUNT`
-  (cd $DIR/../ix; sudo ./ix `eval echo $IX_PARAMS` /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ../apps/tcp/ix_pingpongs $MSG_SIZE > /dev/null) &
+  (trap ERR; cd $DIR/../ix; sudo stdbuf -o0 -e0 ./ix `eval echo $IX_PARAMS` /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ../apps/tcp/ix_pingpongs $MSG_SIZE >> ix.log 2>&1) &
 }
 
 server_ix_stream() {
-  echo 'Not implemented' >&2
-  exit 1
+  CORE_COUNT=$1
+  MSG_SIZE=$2
+
+  IX_PARAMS_CORES=`echo $CORES|cut -d',' -f-$CORE_COUNT`
+  (trap ERR; cd $DIR/../ix; sudo stdbuf -o0 -e0 ./ix `eval echo $IX_PARAMS` /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ../apps/tcp/ix_server >> ix.log 2>&1) &
 }
 
 server_linux_rpc() {
@@ -165,8 +182,8 @@ run_single() {
 
   $SERVER $CORE_COUNT $MSG_SIZE
   ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then exit 1; fi; done"
-  echo -ne "$CORE_COUNT\t$MSG_SIZE\t$MSG_PER_CONN\t"
-  python $DIR/launch.py --time $TIME --clients $CLIENT_HOSTS --client-cmdline "`eval echo $CLIENT_CMDLINE`"
+  echo -ne "$CORE_COUNT\t$MSG_SIZE\t$MSG_PER_CONN\t" >> $OUTDIR/data
+  python $DIR/launch.py --time $TIME --clients $CLIENT_HOSTS --client-cmdline "`eval echo $CLIENT_CMDLINE`" >> $OUTDIR/data
   $ON_EXIT
 }
 
@@ -175,7 +192,7 @@ run() {
   for i in {1..15}; do
     run_single $i 64 1
   done
-  for i in 2 8 32 64 128; do
+  for i in 2 8 32 64 128 256 512 1024; do
     run_single 16 64 $i
   done
   for i in 256 1024 4096 8192; do
@@ -186,5 +203,5 @@ run() {
 prepare
 OUTDIR=`bench_start "short/$SERVER_SPEC/$CLIENT_SPEC"`
 trap $ON_EXIT EXIT
-run > $OUTDIR/data
+run
 bench_stop $OUTDIR

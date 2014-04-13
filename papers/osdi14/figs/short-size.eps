@@ -1,7 +1,7 @@
 %!PS-Adobe-2.0 EPSF-2.0
 %%Title: ../papers/osdi14/figs/short-size.eps
-%%Creator: gnuplot 4.4 patchlevel 3
-%%CreationDate: Thu Apr 10 19:26:35 2014
+%%Creator: gnuplot 4.6 patchlevel 5
+%%CreationDate: Sat Apr 12 14:04:51 2014
 %%DocumentFonts: (atend)
 %%BoundingBox: 50 50 410 302
 %%EndComments
@@ -20,10 +20,12 @@ gnudict begin
 /Level1 false def
 /Rounded false def
 /ClipToBoundingBox false def
+/SuppressPDFMark false def
 /TransparentPatterns false def
 /gnulinewidth 5.000 def
 /userlinewidth gnulinewidth def
 /Gamma 1.0 def
+/BackgroundColor {-1.000 -1.000 -1.000} def
 %
 /vshift -46 def
 /dl1 {
@@ -38,22 +40,6 @@ gnudict begin
 /vpt_ 31.5 def
 /hpt hpt_ def
 /vpt vpt_ def
-Level1 {} {
-/SDict 10 dict def
-systemdict /pdfmark known not {
-  userdict /pdfmark systemdict /cleartomark get put
-} if
-SDict begin [
-  /Title (../papers/osdi14/figs/short-size.eps)
-  /Subject (gnuplot plot)
-  /Creator (gnuplot 4.4 patchlevel 3)
-  /Author (prekas)
-%  /Producer (gnuplot)
-%  /Keywords ()
-  /CreationDate (Thu Apr 10 19:26:35 2014)
-  /DOCINFO pdfmark
-end
-} ifelse
 /doclip {
   ClipToBoundingBox {
     newpath 50 50 moveto 410 50 lineto 410 302 lineto 50 302 lineto closepath
@@ -61,7 +47,7 @@ end
   } if
 } def
 %
-% Gnuplot Prolog Version 4.4 (August 2010)
+% Gnuplot Prolog Version 4.6 (September 2012)
 %
 %/SuppressPDFMark true def
 %
@@ -328,7 +314,8 @@ end
 /PatternFill {gsave /PFa [ 9 2 roll ] def
   PFa 0 get PFa 2 get 2 div add PFa 1 get PFa 3 get 2 div add translate
   PFa 2 get -2 div PFa 3 get -2 div PFa 2 get PFa 3 get Rec
-  gsave 1 setgray fill grestore clip
+  TransparentPatterns {} {gsave 1 setgray fill grestore} ifelse
+  clip
   currentlinewidth 0.5 mul setlinewidth
   /PFs PFa 2 get dup mul PFa 3 get dup mul add sqrt def
   0 0 M PFa 5 get rotate PFs -2 div dup translate
@@ -461,8 +448,26 @@ currentdict end definefont pop
   Blacktext {gsave 0 setgray MFshow grestore} {MFshow} ifelse } bind def
 /XYsave    { [( ) 1 2 true false 3 ()] } bind def
 /XYrestore { [( ) 1 2 true false 4 ()] } bind def
+Level1 SuppressPDFMark or 
+{} {
+/SDict 10 dict def
+systemdict /pdfmark known not {
+  userdict /pdfmark systemdict /cleartomark get put
+} if
+SDict begin [
+  /Title (../papers/osdi14/figs/short-size.eps)
+  /Subject (gnuplot plot)
+  /Creator (gnuplot 4.6 patchlevel 5)
+  /Author (prekas)
+%  /Producer (gnuplot)
+%  /Keywords ()
+  /CreationDate (Sat Apr 12 14:04:51 2014)
+  /DOCINFO pdfmark
+end
+} ifelse
 end
 %%EndProlog
+%%Page: 1 1
 gnudict begin
 gsave
 doclip
@@ -471,6 +476,7 @@ doclip
 0 setgray
 newpath
 (Times) findfont 140 scalefont setfont
+BackgroundColor 0 lt 3 1 roll 0 lt exch 0 lt or or not {BackgroundColor C 1.000 0 0 7200.00 5040.00 BoxColFill} if
 1.000 UL
 LTb
 1.000 UL
@@ -489,43 +495,29 @@ stroke
 LTb
 1.000 UL
 LTa
-665 1056 M
+665 1238 M
 6282 0 V
 stroke
 LTb
-665 1056 M
+665 1238 M
 -63 0 V
 stroke
-518 1056 M
+518 1238 M
 [ [(Times) 240.0 0.0 true true 0 ( 5)]
 ] -80.0 MRshow
 1.000 UL
 LTb
 1.000 UL
 LTa
-665 1601 M
+665 1964 M
 6282 0 V
 stroke
 LTb
-665 1601 M
+665 1964 M
 -63 0 V
 stroke
-518 1601 M
+518 1964 M
 [ [(Times) 240.0 0.0 true true 0 ( 10)]
-] -80.0 MRshow
-1.000 UL
-LTb
-1.000 UL
-LTa
-665 2146 M
-6282 0 V
-stroke
-LTb
-665 2146 M
--63 0 V
-stroke
-518 2146 M
-[ [(Times) 240.0 0.0 true true 0 ( 15)]
 ] -80.0 MRshow
 1.000 UL
 LTb
@@ -539,49 +531,35 @@ LTb
 -63 0 V
 stroke
 518 2691 M
+[ [(Times) 240.0 0.0 true true 0 ( 15)]
+] -80.0 MRshow
+1.000 UL
+LTb
+1.000 UL
+LTa
+665 3418 M
+6282 0 V
+stroke
+LTb
+665 3418 M
+-63 0 V
+stroke
+518 3418 M
 [ [(Times) 240.0 0.0 true true 0 ( 20)]
 ] -80.0 MRshow
 1.000 UL
 LTb
 1.000 UL
 LTa
-665 3236 M
+665 4144 M
 6282 0 V
 stroke
 LTb
-665 3236 M
+665 4144 M
 -63 0 V
 stroke
-518 3236 M
+518 4144 M
 [ [(Times) 240.0 0.0 true true 0 ( 25)]
-] -80.0 MRshow
-1.000 UL
-LTb
-1.000 UL
-LTa
-665 3781 M
-6282 0 V
-stroke
-LTb
-665 3781 M
--63 0 V
-stroke
-518 3781 M
-[ [(Times) 240.0 0.0 true true 0 ( 30)]
-] -80.0 MRshow
-1.000 UL
-LTb
-1.000 UL
-LTa
-665 4326 M
-6282 0 V
-stroke
-LTb
-665 4326 M
--63 0 V
-stroke
-518 4326 M
-[ [(Times) 240.0 0.0 true true 0 ( 35)]
 ] -80.0 MRshow
 1.000 UL
 LTb
@@ -595,7 +573,7 @@ LTb
 -63 0 V
 stroke
 518 4871 M
-[ [(Times) 240.0 0.0 true true 0 ( 40)]
+[ [(Times) 240.0 0.0 true true 0 ( 30)]
 ] -80.0 MRshow
 1.000 UL
 LTb
@@ -672,67 +650,63 @@ LTb
 LTb
 % Begin plot #1
 1.000 UP
-7.000 UL
+1.000 UL
 LT0
-/Times findfont 140 scalefont setfont
-1921 524 M
-1257 38 V
-4434 713 L
-1257 488 V
-1256 -88 V
-1921 524 Pls
-3178 562 Pls
-4434 713 Pls
-5691 1201 Pls
-6947 1113 Pls
+1921 526 M
+1257 44 V
+4434 711 L
+5691 899 L
+1256 201 V
+1921 526 Pls
+3178 570 Pls
+4434 711 Pls
+5691 899 Pls
+6947 1100 Pls
 % End plot #1
 % Begin plot #2
 1.000 UP
-7.000 UL
+1.000 UL
 LT1
-/Times findfont 140 scalefont setfont
-1921 521 M
-1257 37 V
+1921 525 M
+1257 40 V
 4434 696 L
-1257 434 V
-1256 343 V
-1921 521 Crs
-3178 558 Crs
+5691 878 L
+1256 192 V
+1921 525 Crs
+3178 565 Crs
 4434 696 Crs
-5691 1130 Crs
-6947 1473 Crs
+5691 878 Crs
+6947 1070 Crs
 % End plot #2
 % Begin plot #3
 1.000 UP
-7.000 UL
+1.000 UL
 LT2
-/Times findfont 140 scalefont setfont
-1921 582 M
-3178 851 L
-1256 498 V
-1257 173 V
-1256 32 V
-1921 582 Star
-3178 851 Star
-4434 1349 Star
-5691 1522 Star
-6947 1554 Star
+1921 612 M
+3178 908 L
+1256 632 V
+5691 531 L
+1256 -8 V
+1921 612 Star
+3178 908 Star
+4434 1540 Star
+5691 531 Star
+6947 523 Star
 % End plot #3
 % Begin plot #4
 1.000 UP
-7.000 UL
+1.000 UL
 LT3
-/Times findfont 140 scalefont setfont
-1921 762 M
-1257 749 V
-4434 3576 L
-1257 806 V
-1256 115 V
-1921 762 Box
-3178 1511 Box
-4434 3576 Box
-5691 4382 Box
-6947 4497 Box
+1921 805 M
+1257 841 V
+4434 4199 L
+5691 568 L
+1256 37 V
+1921 805 Box
+3178 1646 Box
+4434 4199 Box
+5691 568 Box
+6947 605 Box
 % End plot #4
 1.000 UL
 LTb
