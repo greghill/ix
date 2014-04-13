@@ -122,12 +122,21 @@ def main():
 
   stop_time, stop_data = get_data()
 
-  msg_per_sec = 0
-  for i in clients:
-    msg_per_sec += stop_data[i][1] - start_data[i][1]
-  msg_per_sec /= stop_time - start_time
+  duration = stop_time - start_time
 
-  print '%d' % (msg_per_sec,)
+  def calc(column):
+    sum = 0
+    for i in clients:
+      sum += stop_data[i][column] - start_data[i][column]
+    return sum / duration
+
+  msg_per_sec = calc(1)
+  rx_bytes = calc(5)
+  rx_packets = calc(6)
+  tx_bytes = calc(7)
+  tx_packets = calc(8)
+
+  print '%d %d %d %d %d' % (msg_per_sec, rx_bytes, rx_packets, tx_bytes, tx_packets)
 
   for i in clients:
     clients[i].proc.terminate()

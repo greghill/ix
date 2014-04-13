@@ -19,6 +19,7 @@
 #include <pthread.h>
 #include <signal.h>
 
+#include "client_common.h"
 #include "timer.h"
 
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
@@ -301,6 +302,8 @@ int main(int argc, char **argv)
 	int timeouts_recv;
 	char buf;
 	int ret;
+	char ifname[64];
+	long rx_bytes, rx_packets, tx_bytes, tx_packets;
 
 	prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
 
@@ -330,6 +333,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	get_ifname(&server_addr, ifname);
+
 	start_threads(cores, connections);
 	puts("ok");
 	fflush(stdout);
@@ -343,6 +348,7 @@ int main(int argc, char **argv)
 			perror("read");
 			return 1;
 		}
+		get_eth_stats(ifname, &rx_bytes, &rx_packets, &tx_bytes, &tx_packets);
 		total_connections = 0;
 		total_messages = 0;
 		active_connections = 0;
@@ -356,6 +362,7 @@ int main(int argc, char **argv)
 			timeouts_recv += worker[i].timeouts_recv;
 		}
 		printf("%lld %lld %d %d %d ", total_connections, total_messages, active_connections, timeouts_connect, timeouts_recv);
+		printf("%ld %ld %ld %ld ", rx_bytes, rx_packets, tx_bytes, tx_packets);
 		for (i = 0; i < MAX_ERRSOURCE; i++) {
 			for (j = 0; j < MAX_ERRNO; j++) {
 				sum = 0;

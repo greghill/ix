@@ -10,6 +10,8 @@
 #include <sys/time.h>
 #include <unistd.h>
 
+#include "client_common.h"
+
 #define MAX_CORES 128
 #define BUFFER_SIZE 65536
 #define MAX_CONNECTIONS_PER_THREAD 65536
@@ -213,6 +215,8 @@ int main(int argc, char **argv)
 	long long total_messages;
 	char buf;
 	int ret;
+	char ifname[64];
+	long rx_bytes, rx_packets, tx_bytes, tx_packets;
 
 	prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
 
@@ -242,6 +246,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	get_ifname(&server_addr, ifname);
+
 	start_threads(threads);
 	puts("ok");
 	fflush(stdout);
@@ -255,13 +261,16 @@ int main(int argc, char **argv)
 			perror("read");
 			return 1;
 		}
+		get_eth_stats(ifname, &rx_bytes, &rx_packets, &tx_bytes, &tx_packets);
 		total_connections = 0;
 		total_messages = 0;
 		for (i = 0; i < threads; i++) {
 			total_connections += worker[i].total_connections;
 			total_messages += worker[i].total_messages;
 		}
-		printf("%lld %lld %d %d %d\n", total_connections, total_messages, 0, 0, 0);
+		printf("%lld %lld %d %d %d ", total_connections, total_messages, 0, 0, 0);
+		printf("%ld %ld %ld %ld ", rx_bytes, rx_packets, tx_bytes, tx_packets);
+		puts("");
 		fflush(stdout);
 	}
 
