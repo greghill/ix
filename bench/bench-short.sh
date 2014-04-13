@@ -182,8 +182,8 @@ run_single() {
 
   $SERVER $CORE_COUNT $MSG_SIZE
   ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then exit 1; fi; done"
-  echo -ne "$CORE_COUNT\t$MSG_SIZE\t$MSG_PER_CONN\t"
-  python $DIR/launch.py --time $TIME --clients $CLIENT_HOSTS --client-cmdline "`eval echo $CLIENT_CMDLINE`"
+  echo -ne "$CORE_COUNT\t$MSG_SIZE\t$MSG_PER_CONN\t" >> $OUTDIR/data
+  python $DIR/launch.py --time $TIME --clients $CLIENT_HOSTS --client-cmdline "`eval echo $CLIENT_CMDLINE`" >> $OUTDIR/data
   $ON_EXIT
 }
 
@@ -203,5 +203,5 @@ run() {
 prepare
 OUTDIR=`bench_start "short/$SERVER_SPEC/$CLIENT_SPEC"`
 trap $ON_EXIT EXIT
-run > $OUTDIR/data
+run
 bench_stop $OUTDIR
