@@ -299,6 +299,8 @@ int main(int argc, char **argv)
 	int active_connections;
 	int timeouts_connect;
 	int timeouts_recv;
+	char buf;
+	int ret;
 
 	prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
 
@@ -329,9 +331,18 @@ int main(int argc, char **argv)
 	}
 
 	start_threads(cores, connections);
+	puts("ok");
+	fflush(stdout);
 
 	while (1) {
-		sleep(1);
+		ret = read(STDIN_FILENO, &buf, 1);
+		if (ret == 0) {
+			fprintf(stderr, "Error: EOF on STDIN.\n");
+			return 1;
+		} else if (ret == -1) {
+			perror("read");
+			return 1;
+		}
 		total_connections = 0;
 		total_messages = 0;
 		active_connections = 0;

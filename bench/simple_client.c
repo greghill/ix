@@ -211,6 +211,8 @@ int main(int argc, char **argv)
 	int threads;
 	long long total_connections;
 	long long total_messages;
+	char buf;
+	int ret;
 
 	prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
 
@@ -241,9 +243,18 @@ int main(int argc, char **argv)
 	}
 
 	start_threads(threads);
+	puts("ok");
+	fflush(stdout);
 
 	while (1) {
-		sleep(1);
+		ret = read(STDIN_FILENO, &buf, 1);
+		if (ret == 0) {
+			fprintf(stderr, "Error: EOF on STDIN.\n");
+			return 1;
+		} else if (ret == -1) {
+			perror("read");
+			return 1;
+		}
 		total_connections = 0;
 		total_messages = 0;
 		for (i = 0; i < threads; i++) {

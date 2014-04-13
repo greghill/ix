@@ -18,6 +18,7 @@ class RemoteExec():
 
   def execute(self):
     self.proc = subprocess.Popen(['ssh', '%s@%s' % (self.user,self.host), self.exec_cmdline], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    self.stdin = self.proc.stdin
     self.stderr = self.proc.stderr
     self.stdout = self.proc.stdout
 
@@ -55,7 +56,7 @@ def main():
     fds.append(clients[id].stderr)
   logging.debug('after execute')
 
-  def check_and_cat(title, fd):
+  def check_and_cat(title, fd, r):
     if fd in r:
       sys.stdout.write('\033[1m%s: \033[0m' % title)
       sys.stdout.flush()
@@ -63,39 +64,68 @@ def main():
         sys.stdout.write('-closed-\n')
         sys.stdout.flush()
         fds.remove(fd)
+      return 1
+    return 0
 
-  stats = {}
-  timestamps = {}
-  record = 'start'
-  timestamps['start'] = time.time()
-  while time.time() - timestamps['start'] < args.time:
-    r, _, _ = select.select(fds, [], [], 1)
+  def get_stdout_from_all():
+    ret = {}
+    while len(ret) < len(clients):
+      r, _, _ = select.select(fds, [], [])
+
+      for i in clients:
+        if clients[i].stdout in r:
+          line = clients[i].stdout.readline()
+          if len(line) == 0:
+            print '%s-stdout: -closed-' % i
+            sys.exit(1)
+          ret[i] = line
+        if check_and_cat('%s-stderr' % i, clients[i].stderr, r):
+          sys.exit(1)
+    return ret
+
+  def get_data():
+    now = time.time()
+    for i in clients:
+      clients[i].stdin.write('\n')
+      clients[i].stdin.flush()
+    now2 = time.time()
+
+    ret = get_stdout_from_all()
+    for i in ret:
+      ret[i] = [int(x) for x in ret[i].split()]
+
+    return now, ret
+
+  ret = get_stdout_from_all()
+  for i in ret:
+    if ret[i] != 'ok\n':
+      print '%s-stdout: %s' % (i, ret[i])
+      sys.exit(1)
+
+  time.sleep(1)
+
+  start_time, start_data = get_data()
+
+  while True:
+    r, _, _ = select.select(fds, [], [], start_time - time.time() + args.time)
+
+    if len(r) == 0:
+      break
 
     for i in clients:
-      if clients[i].stdout in r:
-        line = clients[i].stdout.readline()
-        if len(line) == 0:
-          fds.remove(clients[i].stdout)
-        else:
-          data = [int(x) for x in line.split()]
-          now = time.time()
-          if i not in stats:
-            stats[i] = {'start': None, 'stop': None}
-          stats[i][record] = data
-          timestamps[record] = time.time()
-          if record == 'start' and len(stats) == len(clients):
-            logging.debug('all clients responded')
-            record = 'stop'
-      check_and_cat('%s-stderr' % i, clients[i].stderr)
+      check_and_cat('%s-stdout' % i, clients[i].stdout, r)
+      check_and_cat('%s-stderr' % i, clients[i].stderr, r)
+
+    sys.exit(1)
+
   logging.debug('loop done')
 
-  duration = timestamps['stop'] - timestamps['start']
+  stop_time, stop_data = get_data()
 
   msg_per_sec = 0
-  for i in sorted(stats):
-    data = stats[i]
-    msg_per_sec += data['stop'][1] - data['start'][1]
-  msg_per_sec /= duration
+  for i in clients:
+    msg_per_sec += stop_data[i][1] - start_data[i][1]
+  msg_per_sec /= stop_time - start_time
 
   print '%d' % (msg_per_sec,)
 
