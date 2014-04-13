@@ -2,11 +2,51 @@
 \section{Implementation}
 \label{sec:impl}
 
+\subsection{Overview}
+
+\paragraph{System Architecture}
+
 \input{figs/float-cp-dp}
+
+\paragraph{Protection using hardware virtualization}
+
+
+\paragraph{Multi-Queue and Bonding}
+
+\input{figs/float-queues-cores}
 %\input{figs/float-queue-takeover}
 
-\todo System Archictecture (Dune~\cite{belay2012dune})
 
-\todo Driver layer
+\paragraph{Resource allocation}
 
-\todo TODO (figures, ...)
+
+\subsection{The \ix Pipeline}
+
+\input{figs/float-mainloop}
+
+\todo   Fig.~\ref{fig:mainloop} state machine (main loop)
+\todo   batching, stage, main loop, ...
+\todo   hardware optimization
+\todo   the driver layer
+\todo   TCP processing
+     
+\subsection{The \ix native API}
+
+\input{figs/float-listing}
+\todo Fig.~\ref{fig:listing} Listing .. (echo server)
+\todo list of events (is it like Megapipe and/or mTCP)
+\todo  true zero-copy
+
+\subsection{LibEvent Compatibility}
+
+\todo Details
+
+\subsection{Congestion management and flow control}
+
+\todo memory maangement
+\todo secure application flow control
+\todo congestion detection
+\todo congestion notification
+
+
+

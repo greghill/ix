@@ -17,6 +17,7 @@ servers~\cite{DBLP:conf/sosp/AdyaCMP11} or messaging
 servers~\cite{whatsapp-2mil}. 
 
 
+
 \begin{comment}
 
 %%% V1
@@ -68,6 +69,74 @@ entirely.  For example, mTCP~\cite{jeong2014mtcp} is a user-level TCP
 stack with the highest known scalability for short-lived connections.
 
 \end{comment}
+
+
+
+\subsection{XXX LEGACY - The Dataplane Alternative}
+\label{sec:motivation:dp}
+
+
+The solution involves potential tradeoffs in both hardware and
+software.  On the hardware side, middlebox services can be deployed
+either on commodity Xeon-class servers or virtual machines, or on
+processors specifically designed for the networking market.  For
+example, Cavium's OCTEON III family of processors offers multiple
+100Gbps of external connectivity and 48 64-bit MIPS cores into a
+single System-on-Chip~\cite{cavium-octeon}.  This provides increases
+energy-efficiencies and densities, at the expense of generality and
+volume of the solution.  
+
+On the software side, the typical architecture of a middlebox solution
+is designed around the following principles: 
+
+\paragraph{Run to completion.}  Packets are processed ``to
+completion'' by the dataplane, eliminating most or all forms of
+context switching, system calls, and internal queuing.  In contrast,
+the classic kernel construction model generally executes the device
+driver code as the result of an interrupt, requires a separate system
+call for each segment of a flow received or sent.  The MegaPipe
+project~\cite{han2012megapipe} eliminates this latter bottleneck, with
+significant benefits.  Furthermore, the POSIX model divides the roles
+of the protocol processing stack (which pulls packets from the driver,
+de-multiplex them into socket queues, and implements the L3/L4
+protocols) and the applications, which asynchronously pull the socket
+payload from these queues.  Processing is similar on the transmission
+side; in fact, both directions typically require a memory copy.
+
+\paragraph{Coherence-free execution.} 
+Different cores operate totally independently
+of each other.  In particular common case operations should execute in
+a coherence-free manner, i.e., without any cache misses due to the
+cache-coherency protocol or any atomic operations that require a
+similar access to the cache-coherency layered. This is a much stronger
+form of decoupling that the use of locks or of wait-free
+synchronization techniques, which have an inherent cache-coherency
+traffic cost; 
+
+\paragraph{Embeded deployment model.} 
+
+The software stack is designed to run a single
+application, which is directly embedded within the dataplane.  Like
+most embedded systems, the application controls all resources, and the
+software stack is deployed and operated as a single blob with no
+externally-visible distinction between the components.
+
+
+
+
+\subsection{Misc. - TODO.}
+
+Connection scalability is also a challenge for Internet-facing servers
+such as notification services~\cite{DBLP:conf/sosp/AdyaCMP11} and
+instant-messaging services.  Indeed, such servers should ideally
+support much larger connection counts that for intra-datacenter
+communication, as connection capacity becomes the primary metric, and
+low-latency and even throughput become secondary.  For example,
+WhatsApp Inc. (now part of Facebook) supports up to 2 million
+concurrent connections on FreeBSD, as of 2012~\cite{whatsapp-2mil}.
+
+
+
 
 
 \subsection{Stuff to cite somehow}
