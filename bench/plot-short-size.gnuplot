@@ -16,5 +16,6 @@ fig(infile) = "< awk '//{if ($1==16&&$3==1)print $0 }' ".infile.'| sort -nk2'
 set xlabel 'Message Size' font ',24'
 set ylabel 'Throughput (Gbps)' font ',24'
 set xrange [0:*]
+set yrange [0:*]
 set xtics ('0' 0)
 plot for [i=1:words(infile)] fig(word(infile,i)) using ($0+1):($2*$4*8/10**9):xticlabel(2) title gen_title(i)
