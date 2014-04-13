@@ -7,7 +7,7 @@
 #include <ix/types.h>
 #include <ix/cpu.h>
 
-#define NQUEUE	16
+#define NQUEUE	64
 
 /* used to define perqueue variables */
 #define DEFINE_PERQUEUE(type, name) \
