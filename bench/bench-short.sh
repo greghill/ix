@@ -3,7 +3,7 @@
 set -eEu -o pipefail
 
 on_err() {
-  echo "${BASH_SOURCE[0]}: line ${BASH_LINENO[0]}: Failed"
+  echo "${BASH_SOURCE[0]}: line ${BASH_LINENO[0]}: Failed at `date`"
 }
 trap on_err ERR
 
@@ -150,7 +150,7 @@ server_ix_rpc() {
   MSG_SIZE=$2
 
   IX_PARAMS_CORES=`echo $CORES|cut -d',' -f-$CORE_COUNT`
-  (cd $DIR/../ix; sudo ./ix `eval echo $IX_PARAMS` /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ../apps/tcp/ix_pingpongs $MSG_SIZE > /dev/null) &
+  (trap ERR; cd $DIR/../ix; sudo stdbuf -o0 -e0 ./ix `eval echo $IX_PARAMS` /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ../apps/tcp/ix_pingpongs $MSG_SIZE >> ix.log 2>&1) &
 }
 
 server_ix_stream() {
@@ -158,7 +158,7 @@ server_ix_stream() {
   MSG_SIZE=$2
 
   IX_PARAMS_CORES=`echo $CORES|cut -d',' -f-$CORE_COUNT`
-  (cd $DIR/../ix; sudo ./ix `eval echo $IX_PARAMS` /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ../apps/tcp/ix_server > /dev/null) &
+  (trap ERR; cd $DIR/../ix; sudo stdbuf -o0 -e0 ./ix `eval echo $IX_PARAMS` /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ../apps/tcp/ix_server >> ix.log 2>&1) &
 }
 
 server_linux_rpc() {
@@ -192,7 +192,7 @@ run() {
   for i in {1..15}; do
     run_single $i 64 1
   done
-  for i in 2 8 32 64 128; do
+  for i in 2 8 32 64 128 256 512 1024; do
     run_single 16 64 $i
   done
   for i in 256 1024 4096 8192; do
