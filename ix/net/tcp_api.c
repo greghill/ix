@@ -244,7 +244,6 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 	/* Walk through the full receive chain */
 	do {
 		pkt = p->mbuf;
-		pkt->done_data = 0; /* FIXME: so terrible :( */
 		pkt->len = p->len; /* repurpose len for recv_done */
 		usys_tcp_recv(api->handle, api->cookie,
 			      mbuf_to_iomap(pkt, p->payload), p->len);

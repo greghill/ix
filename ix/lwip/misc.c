@@ -86,12 +86,7 @@ void tcp_input_tmp(struct mbuf *pkt, struct ip_hdr *iphdr, void *tcphdr)
 	pbuf->mbuf = pkt;
 	perqueue_get(ip_data).current_iphdr_dest.addr = iphdr->dst_addr.addr;
 	perqueue_get(ip_data).current_iphdr_src.addr = iphdr->src_addr.addr;
-	pkt->done_data = 0xCAFEBABE;
 	tcp_input(pbuf, &netif);
-
-	/* FIXME: so terrible :( */
-	if (pkt->done_data == 0xCAFEBABE)
-		mbuf_free(pkt);
 }
 
 DEFINE_PERCPU(struct mempool, pbuf_mempool);
