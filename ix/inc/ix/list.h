@@ -689,7 +689,8 @@ static inline void hlist_add_head(struct hlist_head *h, struct hlist_node *n)
 static inline void hlist_del_head(struct hlist_head *h)
 {
 	h->head = h->head->next;
-	h->head->prev = (struct hlist_node *) h;
+	if (h->head)
+		h->head->prev = (struct hlist_node *) h;
 }
 
 static inline void hlist_del(struct hlist_node *n)

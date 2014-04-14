@@ -271,6 +271,7 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 	else
 		api->recvd_tail->next = p->mbuf;
 
+	tmp = p;
 	/* Walk through the full receive chain */
 	do {
 		pkt = p->mbuf;
@@ -279,10 +280,9 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 		usys_tcp_recv(api->handle, api->cookie,
 			      mbuf_to_iomap(pkt, p->payload), p->len);
 
-		tmp = p->next;
-		pbuf_free(p);
-		p = tmp;
+		p = p->next;
 	} while (p);
+	pbuf_free(tmp);
 
 	api->recvd_tail = pkt;
 
