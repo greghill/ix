@@ -13,7 +13,6 @@
 #include "client_common.h"
 
 #define MAX_CORES 128
-#define BUFFER_SIZE 65536
 #define MAX_CONNECTIONS_PER_THREAD 65536
 #define WAIT_AFTER_ERROR_US 1000000
 
@@ -238,11 +237,6 @@ int main(int argc, char **argv)
 	connections_per_thread = atoi(argv[4]);
 	msg_size = atoi(argv[5]);
 	messages_per_connection = strtol(argv[6], NULL, 10);
-
-	if (msg_size > BUFFER_SIZE) {
-		fprintf(stderr, "Error: MSG_SIZE (%d) is larger than maximum allowed (%d).\n", msg_size, BUFFER_SIZE);
-		return 1;
-	}
 
 	if (connections_per_thread <= 0 || connections_per_thread > MAX_CONNECTIONS_PER_THREAD) {
 		fprintf(stderr, "Error: Invalid CONNECTIONS_PER_THREAD.\n");
