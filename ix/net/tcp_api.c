@@ -29,8 +29,6 @@ struct tcpapi_pcb {
 	unsigned long cookie;
 	struct ip_tuple *id;
 	hid_t handle;
-	struct mbuf *recvd;
-	struct mbuf *recvd_tail;
 	int queue;
 };
 
@@ -179,7 +177,6 @@ void bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
 void bsys_tcp_recv_done(hid_t handle, size_t len)
 {
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
-	struct mbuf *recvd, *next;
 
 	log_debug("tcpapi: bsys_tcp_recv_done - handle %lx, len %ld\n",
 		  handle, len);
@@ -189,29 +186,13 @@ void bsys_tcp_recv_done(hid_t handle, size_t len)
 		return;
 	}
 
-	recvd = api->recvd;
-
 	if (api->pcb)
 		tcp_recved(api->pcb, len);
-	while (recvd) {
-		if (len < recvd->len) {
-			recvd->len -= len;
-			break;
-		}
-
-		len -= recvd->len;
-		next = recvd->next;
-		mbuf_free(recvd);
-		recvd = next;
-	}
-
-	api->recvd = recvd;
 }
 
 void bsys_tcp_close(hid_t handle)
 {
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
-	struct mbuf *recvd, *next;
 
 	log_debug("tcpapi: bsys_tcp_close - handle %lx\n", handle);
 
@@ -224,13 +205,6 @@ void bsys_tcp_close(hid_t handle)
 		err_t err = tcp_close(api->pcb);
 		if (err != ERR_OK)
 			tcp_abort(api->pcb);
-	}
-
-	recvd = api->recvd;
-	while (recvd) {
-		next = recvd->next;
-		mbuf_free(recvd);
-		recvd = next;
 	}
 
 	if (api->id) {
@@ -266,11 +240,6 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 		return ERR_OK;
 	}
 
-	if (!api->recvd)
-		api->recvd = p->mbuf;
-	else
-		api->recvd_tail->next = p->mbuf;
-
 	tmp = p;
 	/* Walk through the full receive chain */
 	do {
@@ -283,8 +252,6 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 		p = p->next;
 	} while (p);
 	pbuf_free(tmp);
-
-	api->recvd_tail = pkt;
 
 	return ERR_OK;
 }
@@ -336,8 +303,6 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	api->pcb = pcb;
 	api->alive = true;
 	api->cookie = 0;
-	api->recvd = NULL;
-	api->recvd_tail = NULL;
 
 	tcp_nagle_disable(pcb);
 	tcp_arg(pcb, api);
@@ -380,8 +345,6 @@ static err_t on_connected(void *arg, struct tcp_pcb *pcb, err_t err)
 	api->pcb = pcb;
 	api->alive = true;
 	api->cookie = (unsigned long) arg;
-	api->recvd = NULL;
-	api->recvd_tail = NULL;
 
 	tcp_arg(pcb, api);
 
