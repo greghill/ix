@@ -1,5 +1,7 @@
 #!/bin/bash
 
+NOFILE=10000000
+
 bench_start() {
   name=$1
   dir=results/$(date +%Y-%m-%d-%H-%M-%S)/$name
@@ -52,6 +54,13 @@ fi
 
   sudo bash select_net.sh $SERVER_NET &
   sudo bash <<< "$INIT_SCRIPT"
+  sudo sysctl fs.nr_open=$NOFILE > /dev/null
+  if [ `ulimit -n` -lt $NOFILE ]; then
+    echo 'Add the following lines into /etc/security/limits.conf and re-login.'
+    echo "`whoami` soft nofile $NOFILE"
+    echo "`whoami` hard nofile $NOFILE"
+    exit 1
+  fi
   for CLIENT_DESC in $CLIENTS; do
     IFS='|'
     read -r HOST NIC <<< "$CLIENT_DESC"
