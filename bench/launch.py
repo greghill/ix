@@ -135,8 +135,10 @@ def main():
   rx_packets = calc(6)
   tx_bytes = calc(7)
   tx_packets = calc(8)
+  latency_99 = max(data[9] for data in stop_data.itervalues())
 
-  print '%d %d %d %d %d' % (msg_per_sec, rx_bytes, rx_packets, tx_bytes, tx_packets)
+  print '%d %d %d %d %d ' % (msg_per_sec, rx_bytes, rx_packets, tx_bytes, tx_packets),
+  print '%d ' % latency_99,
 
   for i in clients:
     clients[i].proc.terminate()
