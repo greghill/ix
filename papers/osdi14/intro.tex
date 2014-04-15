@@ -2,9 +2,10 @@
 \section{Introduction}
 \label{sec:intro}
 
-\edb{Not updated in a while....}
+%\edb{Not updated in a while....}
 
-
+\christos{State of the world: bring up apps from search to social nets
+to ecommerce. Large-scale and centered around networking}
 Web-scale applications are redefining the requirements of system
 software.  A single application can consist of hundreds of software
 components deployed on tens of thousands of machines per datacenter,
@@ -12,6 +13,13 @@ and on multiple datacenters.  For example, Amazon routinely accesses
 150 distinct services to render a single
 page~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07}.  
 
+\christos{requirements paragraph: high packet rate, low tail latency,
+  high connection count and connection churn, elasticity,
+  protection. We should list them all even if we don't do much with
+  some in this paper (e.g., elasticity)}
+
+\christos{1-2 paragraphs on how mainstream approaches fail many 
+of these requirements. A trimmed down version of what is shown below. }
 At massive scale, these interactions constrain applications.  For
 example, latency considerations force Facebook to restrict the number
 of sequential data accesses to fewer than 150 per rendered web
@@ -71,6 +79,10 @@ or even (vi) replacing the general-purpose hardware with a specialized
 FPGA implementation dedicated to serving a single, simple workload
 such as memcached~\cite{DBLP:conf/fpga/ChalamalasettiLWARM13}.
 
+\christos{This is where we bring up the design principles of IX:
+  separation data/control plane; native zero-copy event-oriented API; 
+data-plane architecture that runs to completion; design for multi-core
+and multi-queue. Probably two paragraphs}
 In this paper, we propose an architecture designed specifically for
 event-driven, web-scale applications.  Like a conventional commodity
 operating system, the kernel  ---including the entire network protocol-processing stack--- is protected from the application.  Unlike a
@@ -106,13 +118,14 @@ implementation has a symmetrical design in which each hyperthread
 interleaves execution in kernel- and userspace, and executes in a
 \emph{coherence-free} manner end-to-end in the common case.
 
-Our evaluation of \ix shows that, on comparable hardware, it
+\christos{lots of good numbers} Our evaluation of \ix shows that, on comparable hardware, it
 outperforms mTCP~\cite{jeong2014mtcp}, the current state-of-the-art userlevel TCP stack by
 3x on all microbenchmarks, and yet provides additional security and
 tail-latency benefits.
 
-\edb{MORE, MORE, MORE}
-
+\christos{I prefer to enumerate the main design principles and the
+  list impressive numbers towards the goals rather than come up with
+  another contribution list that is repetative}
 The primary contributions of this paper are as follows:
 
 \begin{itemize}

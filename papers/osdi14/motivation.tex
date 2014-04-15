@@ -179,12 +179,20 @@ infrastructure.
 \subsection{Current Approaches}
 \label{sec:motivation:current}
 
+\christos{If we leave this here, it is essentially related work. It
+  needs to be beefed up and will overlap with the one at the end. I
+  suggest we inline the critique to current approaches in the two
+  previous section. In 2.1, we add a paragrah that lists the main
+  approarch. Then as we review requirements, we inline in each
+  paragraph how some current approaches fail it. }
+
 The conventional wisdom is that these challenges are rooted in a
 mismatch between existing commodity operating systems, existing
 network protocols, and the unique requirements of web-scale
 applications.  Indeed, with today's technology, commodity Xeon
 processors support 8-10 cores with dedicated L1 caches, between 16-40
-hyperthreads, up to 50 Gbps of PCIe bandwidth, and NIC that transfer
+hyperthreads, up to 50 Gbps of PCIe bandwidth \christos{Intel E5 chips
+  have 24GBytes/sec PCIe bandwidth per socket}, and NIC that transfer
 frames in a few \microsecond.  Unfortunately, the distinct nature of
 web-scale applications prevents them from saturating the hardware.
 Different approaches have been proposed to address each a subset of

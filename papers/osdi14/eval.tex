@@ -25,6 +25,12 @@ the server has two sockets, our experiments pin IRQs, processes, and
 the IX dataplane onto a single socket and use memory from that socket;
 all NICs are attached to that socket via the PCIe root complex.
 
+\christos{We should organize the eval in the following way: first
+  micro-benchmarks that showcase each of the advantages (high packet
+  rate, low latency/jitter, high connection/churn). The title of the
+  subsection should indicate the aspect evaluated. Then there should
+  a subsection on full app eval (memcache hopefully).}
+
 \subsection{Ping-Pong (NetPIPE)}
 
 \input{figs/float-pingpong}
