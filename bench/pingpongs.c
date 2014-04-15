@@ -6,8 +6,6 @@ struct ctx {
 	unsigned char *buffer;
 };
 
-#define BUFFER_SIZE 65536
-
 static size_t msg_size;
 
 void echo_read_cb(struct bufferevent *bev, void *arg)
@@ -45,10 +43,6 @@ int main(int argc, char **argv)
 	}
 
 	msg_size = atoi(argv[1]);
-	if (msg_size > BUFFER_SIZE) {
-		fprintf(stderr, "Error: MSG_SIZE (%ld) is larger than maximum allowed (%d).\n", msg_size, BUFFER_SIZE);
-		return 1;
-	}
 
 	ret = parse_cpus(argc > 2 ? argv[2] : NULL);
 	if (ret)
