@@ -25,7 +25,7 @@ client
 
 The utility uses libevent to coordinate sockets. If a connection stalls for more than TIMEOUT_US (1 second), it is closed and reopened and the event is counted as a timeout. Every 1 second it reports the following data on stdout:
 
-`total_connections total_messages active_connections timeouts_connect timeouts_recv rx_bytes rx_packets tx_bytes tx_packets error_summary`
+`total_connections total_messages active_connections timeouts_connect timeouts_recv rx_bytes rx_packets tx_bytes tx_packets 0 error_summary`
 
 * `total_connections` = the number of connections performed from the beginning of execution across all threads/cores.
 * `total_messages` = the number of messages sent and received.
@@ -58,7 +58,7 @@ The utility does NOT uses libevent. Each thread handles its sockets in a serial 
 
 Every 1 second it reports the following data on stdout:
 
-`total_connections total_messages 0 0 0 rx_bytes rx_packets tx_bytes tx_packets`
+`total_connections total_messages 0 0 0 rx_bytes rx_packets tx_bytes tx_packets latency_99`
 
 * `total_connections` = the number of connections performed from the beginning of execution across all threads.
 * `total_messages` = the number of messages sent and received.
@@ -66,6 +66,7 @@ Every 1 second it reports the following data on stdout:
 * `rx_packets` = the number of packets received.
 * `tx_bytes` = the number of bytes transmitted.
 * `tx_packets` = the number of packets transmitted.
+* `latency_99` = the top 99th percentile of the round-trip time to send and receive a message.
 
 The output format is compatible with the output format of the `client` utility.
 

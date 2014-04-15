@@ -278,6 +278,7 @@ int main(int argc, char **argv)
 		}
 		printf("%lld %lld %d %d %d ", total_connections, total_messages, 0, 0, 0);
 		printf("%ld %ld %ld %ld ", rx_bytes, rx_packets, tx_bytes, tx_packets);
+		printf("%d ", (int) histogram_get_percentile(0.99));
 		puts("");
 		fflush(stdout);
 	}
