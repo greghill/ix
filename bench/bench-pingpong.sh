@@ -201,8 +201,8 @@ run() {
 }
 
 run_netpipe() {
-  PARAMS="-l 64 -u $[2**25]"
-  ./NPtcp $PARAMS 2> /dev/null &
+  PARAMS="-r -n 100 -p 0 -l 64 -u $[2**25]"
+  ./NPtcp $PARAMS > /dev/null 2>&1 &
   ssh $HOST "./NPtcp $PARAMS -h $SERVER_IP 2> /dev/null && awk '//{printf(\"0\\t%d\\t999999999\\t%f 0 0 0 0 0\\n\",\$1,\$2*1024*1024/8/2/\$1)}' np.out" > $OUTDIR/data
 }
 
