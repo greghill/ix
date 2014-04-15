@@ -18,7 +18,9 @@ if [ $# -lt 2 ]; then
   echo "  SERVER_SPEC = IX-10-RPC|IX-10-Stream|IX-40-RPC|IX-40-Stream"
   echo "              | Linux-10-RPC|Linux-10-Stream|Linux-40-RPC|Linux-40-Stream"
   echo "              | Netpipe-10 | Netpipe-40"
+  echo "              | Netpipe-10-Optimized | Netpipe-40-Optimized"
   echo "  CLIENT_SPEC = Linux-Libevent|Linux-Simple|Netpipe"
+  echo "              | Netpipe-Optimized"
   exit
 fi
 
@@ -90,6 +92,14 @@ elif [ $SERVER_SPEC = 'Netpipe-40' ]; then
   SERVER_NET="linux bond"
   ON_EXIT=on_exit_netpipe
   NETPIPE=$[$NETPIPE+1]
+elif [ $SERVER_SPEC = 'Netpipe-10-Optimized' ]; then
+  SERVER_NET="linux single opt"
+  ON_EXIT=on_exit_netpipe
+  NETPIPE=$[$NETPIPE+1]
+elif [ $SERVER_SPEC = 'Netpipe-40-Optimized' ]; then
+  SERVER_NET="linux bond opt"
+  ON_EXIT=on_exit_netpipe
+  NETPIPE=$[$NETPIPE+1]
 else
   echo 'invalid parameters' >&2
   exit 1
@@ -111,6 +121,10 @@ elif [ $CLIENT_SPEC = 'Linux-Simple' ]; then
 elif [ $CLIENT_SPEC = 'Netpipe' ]; then
   DEPLOY_FILES="select_net.sh NPtcp"
   CLIENT_NET="linux single"
+  NETPIPE=$[$NETPIPE+1]
+elif [ $CLIENT_SPEC = 'Netpipe-Optimized' ]; then
+  DEPLOY_FILES="select_net.sh NPtcp"
+  CLIENT_NET="linux single opt"
   NETPIPE=$[$NETPIPE+1]
 elif [ $CLIENT_SPEC = 'IX' ]; then
   echo 'not implemented' >&2
