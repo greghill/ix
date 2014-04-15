@@ -34,9 +34,28 @@ Christos
 Goals
 - high packet rate 
 - low latency, usec level with low jitter (udp 9usec roundtrip unloaded)
-- high connection count  + bigh connection churn 
+- high connection count  + high connection churn 
 - elasticity (energy efficiency, proportionality, etc) 
-- security (multi tenancy, rich security policies, isolation) 
+- protection (multi tenancy, rich security policies, isolation, protection) 
+
+A.  Separation of control and data plane
+   - use hardware virtualization for dataplane
+   - use Linux for the control plane
+
+B.  native, zero-copy event-oriented API
+   - meets commutative criteria
+   - provides memory protection to the networking stack
+
+C.  data plane architecture that runs to completion
+   - no intermediate buffering  between application and operating systme
+   - safe expose TCP flow control directly to applications
+   - adaptive, batched pipeline	processing - optimizes for both	throughput and latency
+   - buffer incoming raw packets for processing
+
+D. Design for multi-core and multiqueue
+   - aligned with hardware NIC features
+   - pervasive multicore
+
 
 Techniques
 - zero copy in an end-to-end manner no setup cost, both directions
