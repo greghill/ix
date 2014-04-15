@@ -203,7 +203,7 @@ run() {
 run_netpipe() {
   PARAMS="-u $[2**27]"
   ./NPtcp $PARAMS 2> /dev/null &
-  ssh $HOST "./NPtcp $PARAMS -h $SERVER_IP 2> /dev/null && awk '//{printf(\"0\\t%d\\t999999999\\t%f %.0f 0 %.0f 0 0\\n\",\$1,\$2*1024*1024/8/2/\$1,\$2*1024*1024/8/2,\$2*1024*1024/8/2)}' np.out" > $OUTDIR/data
+  ssh $HOST "./NPtcp $PARAMS -h $SERVER_IP 2> /dev/null && awk '//{printf(\"0\\t%d\\t999999999\\t%f 0 0 0 0 0\\n\",\$1,\$2*1024*1024/8/2/\$1)}' np.out" > $OUTDIR/data
 }
 
 prepare
