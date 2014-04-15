@@ -195,13 +195,13 @@ run_single() {
 }
 
 run() {
-  for i in {0..27}; do
+  for i in {6..25}; do
     run_single $[2**$i]
   done
 }
 
 run_netpipe() {
-  PARAMS="-u $[2**27]"
+  PARAMS="-l 64 -u $[2**25]"
   ./NPtcp $PARAMS 2> /dev/null &
   ssh $HOST "./NPtcp $PARAMS -h $SERVER_IP 2> /dev/null && awk '//{printf(\"0\\t%d\\t999999999\\t%f 0 0 0 0 0\\n\",\$1,\$2*1024*1024/8/2/\$1)}' np.out" > $OUTDIR/data
 }
