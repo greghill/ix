@@ -9,7 +9,49 @@
 
 \section{Related Work}
 
-We organize the disussion on the related work based on the nature of their approach, while avoiding redundant commentary already exposed in \S\ref{sec:motivation:current}.
+We organize the disussion topically, by first discussing prior work
+that inspired our key design decisions (\S\ref{sec:design}) and then
+the alternative approaches to solving the scalability challenges of
+web-scale applications, while avoiding redundant commentary already
+exposed in (\S\ref{sec:sec:motivation:current}.
+
+
+\paragraph{Separation of control and data plane.}
+
+The notion of architected separation between control and data plane is
+pervasise in networking protocols (e.g., BPG/OSFP vs. LPM- for
+routing) as it has allowed each to scale independently of each other.
+In systems, virtualization also separates the control and execution
+functions; type I hypervisors the control plane operates within a
+customized environment (e.g., Xen's
+dom0~\cite{DBLP:conf/sosp/BarhamDFHHHN03}) whereas the control plane
+of type II hypervisors runs as process on top of a commodity operating
+system~\cite{DBLP:journals/tocs/BugnionDRSW12}.  Recently,
+Arrakis~\cite{peter2013arrakis,arrakisTR13} proposes to separate the
+networking stack into a distinct dataplane.  Our work most closely
+ressembles Arrakis, but with noticeable differences: Arrakis uses the
+Barrelfish multikernel as its control plane, whereas our work suggests
+that Linux using the Dune framework~\cite{belay2012dune} is an
+appropriate foundation.  \edb{TODO -- comparison with Arrakis}.
+
+
+\paragraph{Native, zero-copy API.}
+
+\todo IOLITE ~\cite{DBLP:journals/tocs/PaiDZ00}
+\todo edb{MORE}
+
+\paragraph{Adaptive, batched run to completion}
+
+\todo TODO
+
+\paragraph{Coherence-free, flow-consistent processing}
+
+\todo Affinity Accept, mTCP, ...
+
+\paragraph{Buffering at the NIC edge}
+
+\todo DCTCP (actually belongs there?)
+
 
 \paragraph{Improvements to existing operating systems.}
 
