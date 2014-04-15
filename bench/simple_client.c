@@ -11,6 +11,8 @@
 #include <unistd.h>
 
 #include "client_common.h"
+#include "histogram.h"
+#include "timer.h"
 
 #define MAX_CORES 128
 #define MAX_CONNECTIONS_PER_THREAD 65536
@@ -94,7 +96,9 @@ static int sock_send_recv(struct sock *sock)
 {
 	ssize_t ret;
 	int recved;
+	unsigned long start;
 
+	start = rdtsc();
 	ret = send(sock->fd, sock->send_buffer, msg_size, 0);
 	if (ret == -1 && errno == ECONNRESET) {
 		return 1;
@@ -116,6 +120,7 @@ static int sock_send_recv(struct sock *sock)
 		}
 		recved += ret;
 	}
+	histogram_record((rdtsc() - start) / cycles_per_us);
 	if (recved != msg_size) {
 		fprintf(stderr, "Received %d bytes instead of %d.\n", recved, msg_size);
 		exit(1);
@@ -244,6 +249,12 @@ int main(int argc, char **argv)
 	}
 
 	get_ifname(&server_addr, ifname);
+
+	if (timer_calibrate_tsc()) {
+		fprintf(stderr, "Error: Timer calibration failed.\n");
+		return 1;
+	}
+	histogram_init();
 
 	start_threads(threads);
 	puts("ok");

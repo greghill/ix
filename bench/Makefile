@@ -12,8 +12,8 @@ pingpongs: pingpongs.c server_common.c server.h
 client: client.c timer.c timer.h client_common.c
 	gcc -O2 -Wall -I/home/prekas/libevent/include -I/home/prekas/libevent/build/include -g client.c timer.c client_common.c -o client -L/home/prekas/libevent/build/lib -levent -pthread -lrt
 
-simple_client: simple_client.c client_common.c
-	gcc -O2 -Wall simple_client.c client_common.c -o simple_client -pthread
+simple_client: simple_client.c client_common.c histogram.c histogram.h timer.c timer.h
+	gcc -O2 -Wall simple_client.c client_common.c histogram.c timer.c -o simple_client -pthread -lrt
 
 latency: latency.c timer.c timer.h histogram.c histogram.h
 	gcc -O2 -Wall latency.c timer.c histogram.c -o latency -pthread -lrt
