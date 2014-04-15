@@ -15,8 +15,8 @@ client: client.c timer.c timer.h client_common.c
 simple_client: simple_client.c client_common.c
 	gcc -O2 -Wall simple_client.c client_common.c -o simple_client -pthread
 
-latency: latency.c timer.c timer.h
-	gcc -O2 -Wall latency.c timer.c -o latency -pthread -lrt
+latency: latency.c timer.c timer.h histogram.c histogram.h
+	gcc -O2 -Wall latency.c timer.c histogram.c -o latency -pthread -lrt
 
 rexec: rexec.c
 	gcc -O2 -Wall -o rexec rexec.c
