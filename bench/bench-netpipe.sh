@@ -17,12 +17,15 @@ if [ $# -lt 2 ]; then
   echo "Usage: $0 SERVER_SPEC CLIENT_SPEC"
   echo "  SERVER_SPEC = IX-10-RPC|IX-10-Stream|IX-40-RPC|IX-40-Stream"
   echo "              | Linux-10-RPC|Linux-10-Stream|Linux-40-RPC|Linux-40-Stream"
-  echo "  CLIENT_SPEC = Linux-Libevent|Linux-Simple"
+  echo "              | Netpipe-10 | Netpipe-40"
+  echo "  CLIENT_SPEC = Linux-Libevent|Linux-Simple|Netpipe"
   exit
 fi
 
 SERVER_SPEC=$1
 CLIENT_SPEC=$2
+
+NETPIPE=0
 
 if [ -z $SERVER_SPEC ]; then
   echo 'missing parameter' >&2
@@ -79,6 +82,14 @@ elif [ $SERVER_SPEC = 'IX-40-Stream' ]; then
   ON_EXIT=on_exit_ix
   CORES="0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
   IX_PARAMS="-d 0000:04:00.0,0000:04:00.1,0000:05:00.0,0000:05:00.1 -c \$IX_PARAMS_CORES"
+elif [ $SERVER_SPEC = 'Netpipe-10' ]; then
+  SERVER_NET="linux single"
+  ON_EXIT=on_exit_netpipe
+  NETPIPE=$[$NETPIPE+1]
+elif [ $SERVER_SPEC = 'Netpipe-40' ]; then
+  SERVER_NET="linux bond"
+  ON_EXIT=on_exit_netpipe
+  NETPIPE=$[$NETPIPE+1]
 else
   echo 'invalid parameters' >&2
   exit 1
@@ -97,6 +108,10 @@ elif [ $CLIENT_SPEC = 'Linux-Simple' ]; then
   CLIENT_CMDLINE="./simple_client $SERVER_IP $SERVER_PORT $THREADS $CONNECTIONS_PER_THREAD \$MSG_SIZE 999999999"
   DEPLOY_FILES="select_net.sh simple_client"
   CLIENT_NET="linux single"
+elif [ $CLIENT_SPEC = 'Netpipe' ]; then
+  DEPLOY_FILES="NPtcp"
+  CLIENT_NET="linux single"
+  NETPIPE=$[$NETPIPE+1]
 elif [ $CLIENT_SPEC = 'IX' ]; then
   echo 'not implemented' >&2
   exit 1
@@ -106,6 +121,11 @@ else
 fi
 
 DIR=`dirname $0`
+
+if [ $NETPIPE -eq 1 ]; then
+  echo 'Netpipe must be selected on both server and client' 2>&1
+  exit 1
+fi
 
 . $DIR/bench-common.sh
 
@@ -122,6 +142,13 @@ on_exit_linux_rpc() {
 
 on_exit_linux_stream() {
   PID=`pidof server||echo 0`
+  if [ $PID -eq 0 ]; then return; fi
+  kill $PID
+  wait $PID 2>/dev/null || true
+}
+
+on_exit_netpipe() {
+  PID=`pidof NPtcp||echo 0`
   if [ $PID -eq 0 ]; then return; fi
   kill $PID
   wait $PID 2>/dev/null || true
@@ -168,13 +195,23 @@ run_single() {
 }
 
 run() {
-  for i in {0..30}; do
+  for i in {0..27}; do
     run_single $[2**$i]
   done
+}
+
+run_netpipe() {
+  PARAMS="-u $[2**27]"
+  ./NPtcp $PARAMS 2> /dev/null &
+  ssh $HOST "./NPtcp $PARAMS -h $SERVER_IP 2> /dev/null && awk '//{printf(\"0\\t%d\\t999999999\\t%f %.0f 0 %.0f 0 0\\n\",\$1,\$2*1024*1024/8/2/\$1,\$2*1024*1024/8/2,\$2*1024*1024/8/2)}' np.out" > $OUTDIR/data
 }
 
 prepare
 OUTDIR=`bench_start "netpipe/$SERVER_SPEC/$CLIENT_SPEC"`
 trap $ON_EXIT EXIT
-run
+if [ $NETPIPE -eq 0 ]; then
+  run
+else
+  run_netpipe
+fi
 bench_stop $OUTDIR
