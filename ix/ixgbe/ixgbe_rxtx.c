@@ -147,8 +147,22 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 			break;
 
 		rxd = *rxdp;
-
 		rxqe = &rxq->ring_entries[rxq->pos & (rxq->len -1)];
+
+		/* Check IP and TCP checksums calculated by hardware (if applicable) */
+		if (rxdp->wb.upper.status_error & IXGBE_RXD_STAT_IPCS){
+			if (unlikely(rxdp->wb.upper.status_error & IXGBE_RXDADV_ERR_IPE)){
+				log_err("ixgbe: IP rx checksum error, dropping pkt\n");
+				goto bad_csum;
+			}
+			if (rxdp->wb.upper.status_error & IXGBE_RXD_STAT_L4CS){
+				if (unlikely(rxdp->wb.upper.status_error & IXGBE_RXDADV_ERR_TCPE)){
+					log_err("ixgbe: TCP rx checksum error, dropping pkt\n");
+					goto bad_csum;
+				}
+			}
+		}
+
 		b = rxqe->mbuf;
 		b->len = le32_to_cpu(rxd.wb.upper.length);
 
@@ -176,6 +190,11 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 	}
 
 	return nb_descs;
+
+bad_csum:
+	mbuf_free(rxqe->mbuf);
+	return -EINVAL;
+	
 }
 
 /* FIXME: make this driver independent */
@@ -336,7 +355,7 @@ static int ixgbe_tx_reclaim(struct eth_tx_queue *tx)
 #define IP_HDR_LEN	20
 /* ixgbe_tx_xmit_ctx - "transmit" context descriptor
  * 			tells NIC to load a new ctx into its memory
- * Currently assuming no TCP checksum, no LSO.
+ * Currently assuming no no LSO.
  */						
 static int ixgbe_tx_xmit_ctx(struct tx_queue *txq, int ol_flags, int ctx_idx){
 	
@@ -412,14 +431,15 @@ static int ixgbe_tx_xmit_one(struct tx_queue *txq, struct mbuf *mbuf)
 
 	/* 
 	 * Check mbuf's offload flags 
-	 * If flags match context 0 on NIC (IP chksum), use context
+	 * If flags match context 0 on NIC (IP and TCP chksum), use context
 	 * Otherwise, no context
 	 */
-	if (mbuf->ol_flags & PKT_TX_IP_CKSUM){
+	if ((mbuf->ol_flags & PKT_TX_IP_CKSUM) && 
+		(mbuf->ol_flags & PKT_TX_TCP_CKSUM)){
 		olinfo_status |= IXGBE_ADVTXD_POPTS_IXSM;
+		olinfo_status |= IXGBE_ADVTXD_POPTS_TXSM;
 		olinfo_status |= IXGBE_ADVTXD_CC;
 	}
-
 
 	for (i = 0; i < nr_iov; i++) {
 		struct mbuf_iov iov = mbuf->iovs[i];
@@ -1779,8 +1799,9 @@ int ixgbe_dev_tx_queue_init(struct rte_eth_dev *dev, int tx_queue_id)
 				"Tx Queue %d\n", tx_queue_id);
 	}
 
-	/* Add context descriptor at idx 0 for IP checksum offload on NIC */
+	/* Add context descriptor at idx 0 for IP and TCP checksum offload on NIC */
 	int ol_flags = PKT_TX_IP_CKSUM;
+	ol_flags |= PKT_TX_TCP_CKSUM;
 	ixgbe_tx_xmit_ctx(txq, ol_flags, 0);
 	
 	return 0;

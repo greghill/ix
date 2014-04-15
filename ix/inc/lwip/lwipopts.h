@@ -35,3 +35,6 @@
 #define TCP_SND_BUF 65536
 #define TCP_MSS 1460
 #define TCP_WND (2048 * TCP_MSS)
+
+#define CHECKSUM_CHECK_IP               0
+#define CHECKSUM_CHECK_TCP              0
