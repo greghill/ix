@@ -24,8 +24,6 @@ fi
 DEVS="p3p1"
 #if [ -x /sys/class/net/p1p2 ]; then DEVS="p1p1 p1p2"; fi
 
-#stop autofs
-
 /etc/init.d/puppet stop
 stop cron
 stop irqbalance
@@ -53,13 +51,8 @@ sleep 1
 
 rmmod ixgbe
 
-#echo xyz $ITR $NOATR
-
-#insmod ~leverich/src/ixgbe-*/src/ixgbe.ko "$@"
 modprobe ixgbe $ITR $NOATR "$@"
 echo modprobe ixgbe $ITR $NOATR "$@"
-
-#modprobe ixgbe "$@"
 
 sleep 3
 
@@ -73,9 +66,7 @@ for i in $DEVS; do ethtool -C $i $IC; done
 
 sleep 3
 
-for i in $DEVS; do /usr/src/ixgbe-3.18.7/scripts/set_irq_affinity $i; done
-
-#for i in $DEVS; do ~leverich/src/ixgbe-3.10.16/scripts/set_irq_affinity.sh $i; done
+for i in $DEVS; do $(dirname $0)/set_irq_affinity.sh $i; done
 
 for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
     echo userspace > $i
@@ -88,7 +79,7 @@ for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed; do
 done
 
 killall pmqos
-nohup ~leverich/bin/pmqos -c 1 < /dev/null &> /dev/null &
+nohup $(dirname $0)/pmqos -c 1 < /dev/null &> /dev/null &
 sleep 1
 
 sysctl net.core.netdev_max_backlog=1000
@@ -110,6 +101,4 @@ for i in $DEVS; do
 done
 
 sleep 2
-
-#start autofs
 
