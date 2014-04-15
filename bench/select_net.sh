@@ -32,6 +32,27 @@ setup_linux() {
   service irqbalance start >/dev/null
   modprobe ixgbe
   ifdown $ALL_IFS 2>/dev/null
+  sudo sysctl net.core.netdev_max_backlog=1000 > /dev/null
+  sudo sysctl net.core.rmem_max=212992 > /dev/null
+  sudo sysctl net.core.wmem_max=212992 > /dev/null
+  sudo sysctl net.ipv4.tcp_adv_win_scale=1 > /dev/null
+  sudo sysctl net.ipv4.tcp_app_win=31 > /dev/null
+  sudo sysctl net.ipv4.tcp_congestion_control=cubic > /dev/null
+  sudo sysctl net.ipv4.tcp_rmem='4096 87380 6291456' > /dev/null
+  sudo sysctl net.ipv4.tcp_tso_win_divisor=3 > /dev/null
+  sudo sysctl net.ipv4.tcp_wmem='4096 16384 4194304' > /dev/null
+}
+
+optimize_linux() {
+  sudo sysctl net.core.netdev_max_backlog=30000 > /dev/null
+  sudo sysctl net.core.rmem_max=16777216 > /dev/null
+  sudo sysctl net.core.wmem_max=16777216 > /dev/null
+  sudo sysctl net.ipv4.tcp_adv_win_scale=31 > /dev/null
+  sudo sysctl net.ipv4.tcp_app_win=1 > /dev/null
+  sudo sysctl net.ipv4.tcp_congestion_control=htcp > /dev/null
+  sudo sysctl net.ipv4.tcp_rmem='262144 262144 6291456' > /dev/null
+  sudo sysctl net.ipv4.tcp_tso_win_divisor=1 > /dev/null
+  sudo sysctl net.ipv4.tcp_wmem='262144 262144 6291456' > /dev/null
 }
 
 setup_ix() {
@@ -50,7 +71,7 @@ invalid_params() {
 print_help() {
   echo "Usage:"
   echo "  $0 none"
-  echo "  $0 linux [single|bond]"
+  echo "  $0 linux [single|bond] [opt]"
   echo "  $0 ix    [node0|node1|...]"
 }
 
@@ -64,16 +85,22 @@ if [ -z $1 ]; then
   exit 1
 elif [ $1 = 'none' ]; then
   tear_down
-elif [ $1 = 'linux' -a "$2" = 'single' ]; then
+elif [[ $1 == 'linux' && "$2" == 'single' && ( $# -lt 3 || "$3" == 'opt' ) ]]; then
   setup_linux
   if [ $IP = 'auto' ]; then
     ifup $SINGLE_NIC >/dev/null
   else
     ifconfig $SINGLE_NIC $IP
   fi
-elif [ $1 = 'linux' -a "$2" = 'bond' ]; then
+  if [[ $# -ge 3 && "$3" == 'opt' ]]; then
+    optimize_linux
+  fi
+elif [[ $1 == 'linux' && "$2" == 'bond' && ( $# -lt 3 || "$3" == 'opt' ) ]]; then
   setup_linux
   ifup $BOND_SLAVES >/dev/null
+  if [[ $# -ge 3 && "$3" == 'opt' ]]; then
+    optimize_linux
+  fi
 elif [ $1 = 'ix' ]; then
   SYSFILE=/sys/devices/system/node/$2/hugepages/hugepages-2048kB/nr_hugepages
   if [ -f $SYSFILE ]; then
