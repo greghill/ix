@@ -3,7 +3,7 @@
 
 #include "histogram.h"
 
-#define MAX_COUNT 131072
+#define MAX_COUNT (16 * 1024 * 1024)
 
 static int data[MAX_COUNT];
 static int index;
