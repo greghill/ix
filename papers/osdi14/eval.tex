@@ -2,10 +2,25 @@
 \section{Evaluation}
 \label{sec:eval}
 
+We evaluate the scalability of \ix and compare it the Linux baseline
+and to mTCP, the state-of-the-art user-space TCP alternative available
+on the same hardware.  We first describe the experimental setup
+(\S\ref{sec:eval:setup}).  We then characterize the performance using
+a series of micro-benchmark: the popular NetPIPE ping-pong
+test~\cite{snell1996netpipe} in \S\ref{sec:eval:netpipe}; the short
+message transaction test previously used to evaluate
+MegaPipe~\cite{han2012megapipe} and mTCP~\cite{jeong2014mtcp} in
+\S\ref{sec:eval:short}; and the scalability of the system for large
+persistent connections in \S\ref{sec:eval:scale}.  Finally, we
+characterize the performance of the \ix system by running real-world
+applications such as memcached and XXX using the
+\texttt{libevent-}compatibility library.
+
+
 \subsection{Experimental setup}
 \label{sec:eval:setup}
 
-\edb{TO FIXUP once we decide final location.   Current values are for EPFL} 
+\edb{Describes EPFL setup:}
 
 Our experimental setup consists of a cluster of 19 clients and one
 server connected by an HP 5820AF-24XG low-latency 10GbE switch.  The client
@@ -31,7 +46,8 @@ all NICs are attached to that socket via the PCIe root complex.
   subsection should indicate the aspect evaluated. Then there should
   a subsection on full app eval (memcache hopefully).}
 
-\subsection{Ping-Pong (NetPIPE)}
+\subsection{Single stream ping-pong (NetPIPE)}
+\label{sec:eval:netpipe}
 
 \input{figs/float-pingpong}
 \input{tbl-pingpong}
@@ -55,11 +71,12 @@ as \george{XXX bytes}.  In constrast, both Linux configurations remain
 latency-bound.  Although mTCP, ....
 
 
-Table~\ref{tbl:pingping} lists the average and 99\% percentile half
+Table~\ref{tbl:pingpong} lists the average and 99\% percentile half
 round-trip latencies for small messages (64B), using the same netpipe
 benchmark.  \edb{TODO - COMMENTARY.}
 
 \subsection{Handling short TCP transactions}
+\label{sec:eval:short}
 
 \input{figs/float-short}
 
@@ -80,6 +97,7 @@ Fig.~\ref{fig:short} shows the results. XXX
 subsection{Connection Scalability}
 
 \input{figs/float-connscaling}
+\label{sec:eval:scale}
 
 We then evaluate \ix's scalabilty when handling a large number of concurrent connections. 
 

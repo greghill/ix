@@ -37,8 +37,8 @@ control. For example, a commodity OS will return \texttt{ACK} and
 slide its receive window even though the application is not consuming
 data, up to some extent. Second, dataplanes are designed to operate in
 a \emph{flow-consistent, coherence-free, flow-consistent} manner.
-Network flows are distributed into distinct queues based on a L4
-hash~\cite{rssref} and each queue is served by a single core so that
+Network flows are distributed into distinct queues via receive-side 
+scaling~\cite{DBLP:journals/computer/RegnierMIIMHNCF04} and each queue is served by a single core so that
 the common case processing of a packet requires no
 synchronization or cache coherence interactions between cores.
 
