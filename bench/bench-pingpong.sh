@@ -207,7 +207,7 @@ run_netpipe() {
 }
 
 prepare
-OUTDIR=`bench_start "netpipe/$SERVER_SPEC/$CLIENT_SPEC"`
+OUTDIR=`bench_start "pingpong/$SERVER_SPEC/$CLIENT_SPEC"`
 trap $ON_EXIT EXIT
 if [ $NETPIPE -eq 0 ]; then
   run
