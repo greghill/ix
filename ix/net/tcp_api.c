@@ -29,8 +29,8 @@ struct tcpapi_pcb {
 	unsigned long cookie;
 	struct ip_tuple *id;
 	hid_t handle;
-	struct mbuf *recvd;
-	struct mbuf *recvd_tail;
+	struct pbuf *recvd;
+	struct pbuf *recvd_tail;
 	int queue;
 };
 
@@ -179,7 +179,7 @@ void bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
 void bsys_tcp_recv_done(hid_t handle, size_t len)
 {
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
-	struct mbuf *recvd, *next;
+	struct pbuf *recvd, *next;
 
 	log_debug("tcpapi: bsys_tcp_recv_done - handle %lx, len %ld\n",
 		  handle, len);
@@ -201,7 +201,7 @@ void bsys_tcp_recv_done(hid_t handle, size_t len)
 
 		len -= recvd->len;
 		next = recvd->next;
-		mbuf_free(recvd);
+		pbuf_free(recvd);
 		recvd = next;
 	}
 
@@ -211,7 +211,7 @@ void bsys_tcp_recv_done(hid_t handle, size_t len)
 void bsys_tcp_close(hid_t handle)
 {
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
-	struct mbuf *recvd, *next;
+	struct pbuf *recvd, *next;
 
 	log_debug("tcpapi: bsys_tcp_close - handle %lx\n", handle);
 
@@ -229,7 +229,7 @@ void bsys_tcp_close(hid_t handle)
 	recvd = api->recvd;
 	while (recvd) {
 		next = recvd->next;
-		mbuf_free(recvd);
+		pbuf_free(recvd);
 		recvd = next;
 	}
 
@@ -267,11 +267,10 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 	}
 
 	if (!api->recvd)
-		api->recvd = p->mbuf;
+		api->recvd = p;
 	else
-		api->recvd_tail->next = p->mbuf;
+		api->recvd_tail->next = p;
 
-	tmp = p;
 	/* Walk through the full receive chain */
 	do {
 		pkt = p->mbuf;
@@ -279,11 +278,11 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 		usys_tcp_recv(api->handle, api->cookie,
 			      mbuf_to_iomap(pkt, p->payload), p->len);
 
+		tmp = p;
 		p = p->next;
 	} while (p);
-	pbuf_free(tmp);
 
-	api->recvd_tail = pkt;
+	api->recvd_tail = tmp;
 
 	return ERR_OK;
 }
