@@ -39,6 +39,8 @@ static struct sockaddr_in server_addr;
 static int msg_size;
 static long messages_per_connection;
 static int connections_per_thread;
+static int exit_on_error;
+static int send_delay;
 
 static long time_in_us(void)
 {
@@ -74,7 +76,12 @@ static int sock_connect(struct sock *sock)
 
 	ret = connect(fd, (struct sockaddr *) &server_addr, sizeof(server_addr));
 	if (ret == -1 && errno == ECONNRESET) {
-		return 1;
+		if (exit_on_error) {
+			perror("connect");
+			exit(1);
+		} else {
+			return 1;
+		}
 	} else if (ret == -1) {
 		perror("connect");
 		exit(1);
@@ -94,7 +101,12 @@ static int sock_send_recv(struct sock *sock)
 	start = rdtsc();
 	ret = send(sock->fd, sock->send_buffer, msg_size, 0);
 	if (ret == -1 && errno == ECONNRESET) {
-		return 1;
+		if (exit_on_error) {
+			perror("send");
+			exit(1);
+		} else {
+			return 1;
+		}
 	} else if (ret == -1) {
 		perror("send");
 		exit(1);
@@ -106,7 +118,12 @@ static int sock_send_recv(struct sock *sock)
 	while (recved < msg_size) {
 		ret = recv(sock->fd, &sock->recv_buffer[recved], msg_size - recved, 0);
 		if (ret == -1 && errno == ECONNRESET) {
-			return 1;
+			if (exit_on_error) {
+				perror("recv");
+				exit(1);
+			} else {
+				return 1;
+			}
 		} else if (ret == -1) {
 			perror("recv");
 			exit(1);
@@ -162,6 +179,8 @@ static void sock_handle(long now, struct sock *sock, struct worker *worker)
 			if (sock->message_count == messages_per_connection)
 				sock_close(sock);
 		}
+		if (send_delay)
+			usleep(send_delay);
 		break;
 	}
 }
@@ -184,9 +203,13 @@ static void *start_worker(void *p)
 			sock[i].send_buffer[j] = 'A' + (j * step + ofs) % 26;
 	}
 
+	now = 0;
 	while (1) {
-		now = time_in_us();
+		if (!send_delay)
+			now = time_in_us();
 		for (i = 0; i < connections_per_thread; i++) {
+			if (send_delay)
+				now = time_in_us();
 			sock_handle(now, &sock[i], worker);
 		}
 	}
@@ -220,8 +243,8 @@ int main(int argc, char **argv)
 
 	prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
 
-	if (argc != 7) {
-		fprintf(stderr, "Usage: %s IP PORT THREADS CONNECTIONS_PER_THREAD MSG_SIZE MESSAGES_PER_CONNECTION\n", argv[0]);
+	if (argc != 9) {
+		fprintf(stderr, "Usage: %s IP PORT THREADS CONNECTIONS_PER_THREAD MSG_SIZE MESSAGES_PER_CONNECTION EXIT_ON_ERROR SEND_DELAY\n", argv[0]);
 		return 1;
 	}
 
@@ -235,6 +258,8 @@ int main(int argc, char **argv)
 	connections_per_thread = atoi(argv[4]);
 	msg_size = atoi(argv[5]);
 	messages_per_connection = strtol(argv[6], NULL, 10);
+	exit_on_error = atoi(argv[7]);
+	send_delay = atoi(argv[8]);
 
 	if (connections_per_thread <= 0 || connections_per_thread > MAX_CONNECTIONS_PER_THREAD) {
 		fprintf(stderr, "Error: Invalid CONNECTIONS_PER_THREAD.\n");
