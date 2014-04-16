@@ -155,13 +155,13 @@ void
 tcp_tmr(void)
 {
   /* Call tcp_fasttmr() every 250 ms */
-  KSTATS_VECTOR(tcp_fasttmr);
+  KSTATS_VECTOR(timer_tcp_fasttmr);
   tcp_fasttmr();
 
   if (++perqueue_get(tcp_timer) & 1) {
     /* Call tcp_tmr() every 500 ms, i.e., every other timer
        tcp_tmr() is called. */
-    KSTATS_VECTOR(tcp_slowtmr);
+    KSTATS_VECTOR(timer_tcp_slowtmr);
     tcp_slowtmr();
   }
 }
@@ -1092,7 +1092,7 @@ void tcp_send_delayed_ack(struct timer *t)
 {
 	struct tcp_pcb *pcb = container_of(t, struct tcp_pcb, delayed_ack_timer);
 
-	KSTATS_VECTOR(tcp_send_delayed_ack);
+	KSTATS_VECTOR(timer_tcp_send_delayed_ack);
 	percpu_get(current_perqueue) = pcb->perqueue;
 
 	tcp_ack_now(pcb);
