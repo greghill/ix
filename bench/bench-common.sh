@@ -23,11 +23,13 @@ bench_stop() {
 }
 
 prepare() {
+  CLIENT_COUNT=0
   CLIENT_HOSTS=
   for CLIENT_DESC in $CLIENTS; do
     IFS='|'
     read -r HOST NIC <<< "$CLIENT_DESC"
     CLIENT_HOSTS="$CLIENT_HOSTS,$HOST"
+    CLIENT_COUNT=$[$CLIENT_COUNT + 1]
   done
   IFS=' '
   CLIENT_HOSTS=${CLIENT_HOSTS:1}
