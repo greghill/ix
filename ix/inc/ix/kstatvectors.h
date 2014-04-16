@@ -18,3 +18,4 @@ DEF_KSTATS(tcp_slowtmr);
 DEF_KSTATS(eth_input);
 DEF_KSTATS(tcp_input_fast_path);
 DEF_KSTATS(tcp_send_delayed_ack);
+DEF_KSTATS(timer_handler);
