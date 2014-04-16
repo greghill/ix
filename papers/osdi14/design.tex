@@ -55,27 +55,26 @@ the following question: {\it can the dataplane architecture be
 following key design principles:
 
 
-\paragraph{Separation of control and data plane.}
-
-Software dataplanes are designed to operate on flows, not to provision
-resources or manage them in an elastic and proportional manner.  Our
-design separates the control function, responsible for resource
-configuration, provisioning, monitoring and scheduling, from the
+{\bf Separation of control and data plane:} 
+% Software dataplanes are designed to operate on flows, not to
+% provision resources or manage them in an elastic and proportional
+% manner.
+Our design separates the control function, responsible for resource
+configuration, provisioning, scheduling, and monitoring, from the
 dataplane, which runs the application and the networking stack.  Like
 an operating for applications, the control plane multiplexes and
-schedules resources among dataplane operating systems.  Unlike a traditional operating system
-deployment, the control plane multiplexes resources at a very coarse
-grain in time and space: core are dedicated until revoked; memory is
-allocated in GB chunks; hardware queues are exclusively assigned to a
-single dataplane.
+schedules resources among dataplane operating systems.  Unlike a
+traditional operating system deployment, the control plane multiplexes
+resources at a very coarse grain in time and space: core are dedicated
+until revoked; memory is allocated in GB chunks; hardware queues are
+exclusively assigned to a single dataplane.
 
-Each dataplane instance supports one single address-space
-application.  This is similar to the Exokernel approach of using
-library operating systems~\cite{DBLP:conf/sosp/EnglerKO95}.  Unlike
-the Exokernels of the '90s however, our dataplane protects the
-operating system from the application.  This is made possible by the
-ubiquitous availability of hardware virtualization features such as
-VT-x in today's
+Each dataplane instance supports one single address-space application.
+This is similar to the Exokernel approach of using library operating
+systems~\cite{DBLP:conf/sosp/EnglerKO95}.  Unlike the Exokernels of
+the '90s however, our dataplane protects the operating system from the
+application.  This is made possible by the ubiquitous availability of
+hardware virtualization features such as VT-x in today's
 processors~\cite{DBLP:journals/computer/UhligNRSMABKLS05}.
 
 
