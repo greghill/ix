@@ -409,6 +409,7 @@ DECLARE_PERQUEUE(struct tcp_pcb *, tcp_tw_pcbs);      /* List of all TCP PCBs in
     (npcb)->next = *pcbs;                          \
     (npcb)->prev = NULL;                           \
     *(pcbs) = (npcb);                              \
+    (npcb)->perqueue = percpu_get(current_perqueue); \
     tcp_timer_needed();                            \
   } while (0)
 
@@ -421,6 +422,7 @@ DECLARE_PERQUEUE(struct tcp_pcb *, tcp_tw_pcbs);      /* List of all TCP PCBs in
       (npcb)->next->prev = (npcb)->prev;           \
     if ((npcb)->prev)                              \
       (npcb)->prev->next = (npcb)->next;           \
+    (npcb)->perqueue = NULL;                       \
   } while(0)
 
 #define TCP_HASH_RMV(pcbs, npcb)                   \
