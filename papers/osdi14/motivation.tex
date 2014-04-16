@@ -168,79 +168,71 @@ background services share multi-core servers even in private
 datacenters~\cite{Schwarzkopf:2013:OFS,DBLP:journals/cacm/DeanB13},
 there is need for isolated protocol stacks. For single-tenant
 deployments where all services are administered by the same
-organization, the use of TCP-based protocol running with commodity
-kernels such as Linux largely addresses the problem.  Challenges
-emerge when the networking stack is lifted into the user-space and
-application bugs can corrupt the networking stack and impact other
-services.
+organization, the use of kernel-based protocol stacks largely
+addresses the problem.  Challenges emerge when the networking stack is
+lifted into the user-space and application bugs can corrupt the
+networking stack and impact other services.
 
 
-\subsection{Current Approaches}
+\subsection{Alternative Approaches}
 \label{sec:motivation:current}
 
-\christos{If we leave this here, it is essentially related work. It
-  needs to be beefed up and will overlap with the one at the end. I
-  suggest we inline the critique to current approaches in the two
-  previous section. In 2.1, we add a paragrah that lists the main
-  approarch. Then as we review requirements, we inline in each
-  paragraph how some current approaches fail it. }
+Unfortunately, TCP-based network stacks implemented within commodity
+kernels such as Linux do not meet these requirements, despite the
+abudance of hardware resources (tens of cores and tens of GBytes/sec
+DRAM and PCIe bandwidth per server, 10 to 40 GbE interfaces, and
+\microsecond-level latency across datacenters).
+% The conventional wisdom is that these challenges are rooted in a
+% mismatch between existing commodity operating systems, existing
+% network protocols, and the unique requirements of web-scale
+% applications.  Indeed, with today's technology, commodity Xeon
+% processors support 8-10 cores with dedicated L1 caches, between 16-40
+% hyperthreads, up to 50 Gbps of PCIe bandwidth \christos{Intel E5 chips
+%   have 24GBytes/sec PCIe bandwidth per socket}, and NIC that transfer
+% frames in a few \microsecond. 
+%Unfortunately, the distinct nature of
+%web-scale applications prevents them from saturating the hardware.
+Alternative approaches have been proposed, each addressing a subset of
+the requirements for web-scale applications. Unfortunately, no
+proposal meets all requirements on commodity hardware. 
 
-The conventional wisdom is that these challenges are rooted in a
-mismatch between existing commodity operating systems, existing
-network protocols, and the unique requirements of web-scale
-applications.  Indeed, with today's technology, commodity Xeon
-processors support 8-10 cores with dedicated L1 caches, between 16-40
-hyperthreads, up to 50 Gbps of PCIe bandwidth \christos{Intel E5 chips
-  have 24GBytes/sec PCIe bandwidth per socket}, and NIC that transfer
-frames in a few \microsecond.  Unfortunately, the distinct nature of
-web-scale applications prevents them from saturating the hardware.
-Different approaches have been proposed to address each a subset of
-these challenges:
+{\bf User-space networking stacks:} Systems such as
+OpenOnload~\cite{openonload} or mTCP~\cite{jeong2014mtcp} run the
+entire networking stack in user-space, offering either low latency
+(OpenOnload) or connection scalability (mTCP) at the expense of
+protection. There are still tradeoffs between packet rate and
+latency. For instance, mTCP uses dedicated hyperthreads for the TCP
+stack, which communicate at relatively coarse grain with application
+threads. This allows mTCP to amortize switching overheads at the
+expense of ms-scale latency.
 
-\paragraph{Running the networking stack in user-space.}  
+{\bf Alternatives to TCP:} Some low-latency key-value stores rely on
+kernel-bypass and RDMA to offload protocol processing on dedicated
+Infiniband host channel
+adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH}.  Using
+commodity Ethernet networking, Facebook's memcached deployment uses
+UDP to avoid connection scalability
+limitations~\cite{nishtala2013scaling}. Even though UDP itself is
+running in the kernel, the responsibilities of congestion management
+and flow control and entrusted into applications.
 
-Approaches such as OpenOnload~\cite{openonload} or
-mTCP~\cite{jeong2014mtcp} run the entire networking stack in
-userspace, which are designed to offer load-latency communication
-(e.g. OpenOnload) or connection scalability (e.g. mTCP), at the
-expense of protection.  mTCP's design has the TCP stack running on
-dedicated hyperthreads which synchronizes at relatively coarse grain
-with the application. Although tail latency can be bounded, the focus
-is measured at ms-scale rather than \microsecond-scale.
+{\bf Alternatives to POSIX API:} MegaPipe~\cite{han2012megapipe}
+replaces the POSIX API with lightweight sockets implemented with
+in-memory command rings. This substantially reduces software overheads
+and increases packet rates.  However, the pragmatic use of the kernel
+TCP stack and interrupt model maintains the latency challenges of the
+original system.
 
-\paragraph{Alternatives to TCP.}
-
-Low-latency key-value stores such as
-RAMcloud~\cite{DBLP:conf/sosp/OngaroRSOR11} rely on kernel-bypass and
-RDMA to offload all protocol processing on dedicated Infiniband Host Channel
-Adapters.  Using standard hardware and networking fabrics, Facebook's
-deployment of memcached uses UDP to avoid any connection scalability
-limitations.  Even though UDP itself is running in the kernel, the
-responsibilities of congestion management and flow control and
-entrusted into applications.
-
-\paragraph{Alternatives to POSIX API.}
-
-MegaPipe~\cite{han2012megapipe} replaces the POSIX API with
-lightweight sockets implement by in-memory command rings.  This
-substantially reduces software overheads and substantially increases
-packet rates.  The pragmatic use of the operating system's TCP stack
-and interrupt model presents any microsecond-computing solution.
-
-\paragraph{Enhancements to the OS.}
-
-Operating system modifications tradeoff superior ease of deployability
-(and quite frankly, pragmatism in terms of production use) even though
-the improvements might be more incremental.
-Affinity-Accept~\cite{DBLP:conf/eurosys/PesterevSZM12} improves the
-affinity of incoming and outgoing network processing by considering
-the affinity of flows to core and controlling the NIC hardware.  Linux
+{\bf OS enhancements:} Tuning kernel-based stacks provides incremental
+benefits with superior ease of deployment and use.  Linux
 \texttt{SO\_REUSE} allows multi-threaded applications to accept
-incoming connections in parallel.  Although such approaches minimize
-communication between core, they do not eliminate them.  The lack of
-commutativity~\cite{DBLP:conf/sosp/ClementsKZMK13} in the POSIX socket
-API implies that cross-core communication is necessary whenever a
-connection is accepted or closed.  When microsecond latencies are
-irrelevant, such as Internet-facing communication services, properly
-tuned stacks can support millions of concurrent connections in
-production~\cite{whatsapp-2mil}.  
+incoming connections in parallel. Affinity-accept reduces overheads by
+considering the affinity of network flows to specific
+cores~\cite{DBLP:conf/eurosys/PesterevSZM12}. These approaches
+minimize communication between cores, but do not eliminate them, as
+the lack of commutativity in the POSIX socket API implies that
+cross-core communication is necessary whenever a connection is
+accepted or closed~\cite{DBLP:conf/sosp/ClementsKZMK13}. When
+microsecond latencies are irrelevant, such as Internet-facing
+communication services, properly tuned stacks can support millions of
+concurrent connections in production~\cite{whatsapp-2mil}.
