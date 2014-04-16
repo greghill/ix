@@ -1,16 +1,16 @@
 all: client server latency rexec pingpongs simple_client
 
 server: server.c server_common.c server.h
-	gcc -O2 -Wall -I/home/prekas/libevent/include -I/home/prekas/libevent/build/include -g server.c server_common.c -o server -L/home/prekas/libevent/build/lib -levent -pthread
+	gcc -O2 -Wall -g server.c server_common.c -o server -levent -pthread
 
 server_mtcp: server_mtcp.c server_common_mtcp.c server_mtcp.h
 	gcc -O2 -Wall -g server_mtcp.c server_common_mtcp.c -o server_mtcp -lmtcp -lnuma -lpthread -lps -lrt
 
 pingpongs: pingpongs.c server_common.c server.h
-	gcc -O2 -Wall -I/home/prekas/libevent/include -I/home/prekas/libevent/build/include -g pingpongs.c server_common.c -o pingpongs -L/home/prekas/libevent/build/lib -levent -pthread
+	gcc -O2 -Wall -g pingpongs.c server_common.c -o pingpongs -levent -pthread
 
 client: client.c timer.c timer.h client_common.c
-	gcc -O2 -Wall -I/home/prekas/libevent/include -I/home/prekas/libevent/build/include -g client.c timer.c client_common.c -o client -L/home/prekas/libevent/build/lib -levent -pthread -lrt
+	gcc -O2 -Wall -g client.c timer.c client_common.c -o client -levent -pthread -lrt
 
 simple_client: simple_client.c client_common.c histogram.c histogram.h timer.c timer.h
 	gcc -O2 -Wall simple_client.c client_common.c histogram.c timer.c -o simple_client -pthread -lrt
