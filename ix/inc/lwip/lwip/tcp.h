@@ -36,6 +36,8 @@
 
 #if LWIP_TCP /* don't build if not configured for use in lwipopts.h */
 
+#include <ix/timer.h>
+
 #include "lwip/mem.h"
 #include "lwip/pbuf.h"
 #include "lwip/ip.h"
@@ -171,6 +173,8 @@ enum tcp_state {
   type *next; /* for the linked list */ \
   type *prev; /* for the linked list */ \
   type *hash_bucket_next; /* for the hash bucket linked list */ \
+  void *perqueue; \
+  struct timer delayed_ack_timer; \
   void *callback_arg; \
   /* the accept callback for listen- and normal pcbs, if LWIP_CALLBACK_API */ \
   DEF_ACCEPT_CALLBACK \
@@ -191,7 +195,6 @@ struct tcp_pcb {
   u16_t remote_port;
   
   tcpflags_t flags;
-#define TF_ACK_DELAY   ((tcpflags_t)0x0001U)   /* Delayed ACK. */
 #define TF_ACK_NOW     ((tcpflags_t)0x0002U)   /* Immediate ACK. */
 #define TF_INFR        ((tcpflags_t)0x0004U)   /* In fast recovery. */
 #define TF_TIMESTAMP   ((tcpflags_t)0x0008U)   /* Timestamp option enabled */

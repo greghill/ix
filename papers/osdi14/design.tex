@@ -30,8 +30,8 @@ are single-purpose systems, not exposed directly to users.
 Dataplanes differ from a traditional OS designs in two fundamental
 ways. First, they are designed to \emph{run each packet to
   completion}. All protocol and application processing for a packet is
-done before moving to the next packet.  A commodity OS is designed
-with protocol processing decouple from the application itself in order
+done before moving on to the next packet.  A commodity OS is designed
+with protocol processing decoupled from the application itself in order
 to enable flexibility in terms of resource scheduling and flow
 control. For example, a commodity OS will return \texttt{ACK} and
 slide its receive window even though the application is not consuming
@@ -61,48 +61,46 @@ following key design principles:
 % manner.
 Our design separates the control function, responsible for resource
 configuration, provisioning, scheduling, and monitoring, from the
-dataplane, which runs the application and the networking stack.  Like
-an operating for applications, the control plane multiplexes and
-schedules resources among dataplane operating systems.  Unlike a
-traditional operating system deployment, the control plane multiplexes
-resources at a very coarse grain in time and space: core are dedicated
-until revoked; memory is allocated in GB chunks; hardware queues are
-exclusively assigned to a single dataplane.
+dataplane, which runs the networking stack and application logic.
+Like a conventional OS, our control plane multiplexes and schedule
+resources among dataplanes but in an coarse-grain manner in space and
+time: cores are dedicated until revoked; memory is allocated in GB
+chunks; hardware queues are exclusively assigned to a single dataplane
+for long time periods. Each dataplane instance supports one, single
+address-space, application.  This is similar to the Exokernel approach
+of using library operating systems~\cite{DBLP:conf/sosp/EnglerKO95},
+but we offer protection between applications and the control plane
+using the ubiquitous available hardware virtualization features in
+modern
+servers~\cite{DBLP:journals/computer/UhligNRSMABKLS05,belay2012dune}.
+\christos{should we say here that Linux is the control plane or leave
+  it for 4?}
 
-Each dataplane instance supports one single address-space application.
-This is similar to the Exokernel approach of using library operating
-systems~\cite{DBLP:conf/sosp/EnglerKO95}.  Unlike the Exokernels of
-the '90s however, our dataplane protects the operating system from the
-application.  This is made possible by the ubiquitous availability of
-hardware virtualization features such as VT-x in today's
-processors~\cite{DBLP:journals/computer/UhligNRSMABKLS05}.
+{\bf Native zero-copy, event-oriented API:} Our dataplane does not
+expose or emulate the POSIX API.  Instead, it exposes a native
+event-oriented API that meets the commutativity
+rule~\cite{DBLP:conf/sosp/ClementsKZMK13}. Similar to Megapipe's
+lwsockets, each hardware thread \christos{why hardware thread?} has a
+pair of in-memory command and completion rings, used to communicate
+between the dataplane and the application. The API allows for a true
+zero-copy operation in both the receive and transfer directions by
+having the dataplane and the application cooperatively manage the
+\texttt{mbuf} buffer pool.  All incoming packets are stored in
+\texttt{mbufs}, which are mapped read-only into the
+application. Applications may hold onto mbufs and return them to the
+kernel at a later point.  Similarly, the application may send to the
+dataplane scatter/gather lists of mbufs for transmission. As the
+contents are not copied, the application must keep the content
+immutable until reception is acknowledged.  We also support a libevent
+compatibility mode for legacy applications. Unfortunately, libevent
+assumes a different memory allocation model and true zero-copy is not
+possible in this case. 
 
 
-\paragraph{Native Zero-copy, event-oriented API.}
-
-The dataplane does not expose or emulate the POSIX API.  Instead, it
-exposes a native event-oriented API.  Similar to Megapipe's lwsockets,
-each hardware thread has a pair of in-memory command and completion
-rings, used to communicate between the kernel and the applications.
-The API itself meets the commutativity
-rule~\cite{DBLP:conf/sosp/ClementsKZMK13} which is the pre-requisite
-for a coherency-free operation.  The API allows for a true zero-copy
-operation model in both receive and transfer directions by having the
-kernel and application cooperatively manage the \texttt{mbuf} buffer
-pool.  All incoming packets are stored in \texttt{mbufs}, which are
-mapped read-only into application.  Applications may hold onto mbufs
-and return them to the kernel at a later date.  Similarly,
-applications may send scatter/gather lists to flows. As the contents
-are not copied, applications must keep their content immutable until
-the flow peer acknowledges reception.
-
-Many event-driven applications rely on the libevent framework, which
-creates an OS-independent level of abstraction for Linux, *BSD and
-Windows capable of using the native, scalable APIs of these operating
-systems, such as \texttt{epoll} and Windows IO Completion ports.  We
-provide libevent compatibility to legacy applications. Unfortunately,
-libevent assumes a different memory allocation model; as a result,
-true zero-copy is not general in the common case.
+% Many event-driven applications rely on the libevent framework, which
+% creates an OS-independent level of abstraction for Linux, *BSD and
+% Windows capable of using the native, scalable APIs of these operating
+% systems, such as \texttt{epoll} and Windows IO Completion ports. 
 
 
 \paragraph{Adaptive batched run to completion.}

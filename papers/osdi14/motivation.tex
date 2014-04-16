@@ -93,17 +93,16 @@ the overall latency experienced by the user, it is essential to
 minimize the latency for each service
 request~\cite{luiz-isscc,rumble2011s}. Today's networking
 technologies allow for one-way communication across a large-scale
-datacenter within a few \microsecond : 3~\microsecond latency across
+datacenter within a few \microsecond : 3\microsecond latency across
 a pair of 10 GbE NICs~\cite{cisco-sereno}, one to five switch
 crossings with cut-through latencies of a few hundred $ns$ each, and
-propagation delays of 500 $ns$ for 100 meters distance. Unfortunately,
+propagation delays of 500$ns$ for 100 meters distance. Unfortunately,
 system software is designed to operate at a totally different
 timescale. Interrupt coalescing used to improve throughput, queuing
 latency due to device driver processing intervals, and protocol
 processing of incoming packets without necessarily immediately
 scheduling the receiving application frequently add several $ms$ of
-latency to to remote procedure calls (see measurements in Section
-\ref{sec:eval}).
+latency to to remote procedure calls (see measurements in \S\ref{sec:eval}).
 
 % As a result, the remote procedure call latency observed by application
 % software is one to two orders of magnitude greater than the intrinsic
@@ -163,7 +162,7 @@ proportionality~\cite{DBLP:journals/computer/BarrosoH07}.
 % a combination of cluster-wide, and machine-local resource management,
 % workload placement and rebalancing techniques~\cite{missing,missing}.
 
-{\bf Security and protection:} Finally, as multiple foreground and
+{\bf Protection:} Finally, as multiple foreground and
 background services share multi-core servers even in private
 datacenters~\cite{Schwarzkopf:2013:OFS,DBLP:journals/cacm/DeanB13},
 there is need for isolated protocol stacks. For single-tenant

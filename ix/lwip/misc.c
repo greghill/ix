@@ -55,7 +55,7 @@ static void tcpip_tcp_timer(struct timer *t)
 	}
 
 	if (needed)
-		timer_add(&percpu_get(tcp_timer), TCP_TMR_INTERVAL * 4);
+		timer_add(&percpu_get(tcp_timer), TCP_TMR_INTERVAL);
 }
 
 void tcp_timer_needed(void)
@@ -68,7 +68,7 @@ void tcp_timer_needed(void)
 			timer_init_entry(&percpu_get(tcp_timer), &tcpip_tcp_timer);
 
 		if (!timer_pending(&percpu_get(tcp_timer)))
-			timer_add(&percpu_get(tcp_timer), TCP_TMR_INTERVAL * 4);
+			timer_add(&percpu_get(tcp_timer), TCP_TMR_INTERVAL);
 	}
 }
 

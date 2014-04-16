@@ -1,5 +1,5 @@
 if (format eq 'eps') {
-  set terminal postscript eps enhanced lw 1 font 'Times'
+  set terminal postscript eps enhanced size 3.2,1.4 font 'Times'
 } else {
   set terminal pngcairo size 1024,1024 lw 1 font 'Times'
 }
@@ -14,11 +14,18 @@ set style data linespoints
 set output outfile
 set grid y
 set border 3
-set tics out nomirror font ',10'
+set tics out nomirror
+set key top left
 
-set xlabel 'Message Size' font ',24'
-set ylabel 'Throughput (Gbps)' font ',24'
+set xlabel 'Message Size'
+set ylabel 'Throughput (Gbps)'
 set xrange [0:*]
 set yrange [0:*]
-set xtics ('0' 0)
-plot for [i=1:words(infile)] word(infile,i) using (invpow2($2)-5):(2*$4*$2*8/10**9):xticlabel(sizefmt(column(2))) title gen_title(i)
+set macro
+xtics = "('0' 0"
+do for [i=6:32:2] {
+  xtics = xtics . sprintf(",'%s' %d", sizefmt(2**i), i-5)
+}
+xtics = xtics.")"
+set xtics @xtics
+plot for [i=1:words(infile)] word(infile,i) using (invpow2($2)-5):(2*$4*$2*8/10**9) title gen_title(i)

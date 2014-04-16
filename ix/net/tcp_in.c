@@ -654,7 +654,7 @@ tcp_process(struct tcp_pcb *pcb)
       LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_process: Connection RESET\n"));
       LWIP_ASSERT("tcp_input: pcb->state != CLOSED", pcb->state != CLOSED);
       perqueue_get(recv_flags) |= TF_RESET;
-      pcb->flags &= ~TF_ACK_DELAY;
+      timer_del(&pcb->delayed_ack_timer);
       return ERR_RST;
     } else {
       LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_process: unacceptable reset seqno %"U32_F" rcv_nxt %"U32_F"\n",
