@@ -1,55 +1,58 @@
-\section{\ix Design Principles}
+\section{\ix Design Approach}
 \label{sec:design}
 
-We now present the fundamental design principles of a dataplane
-architecture designed to run untrusted, event-driven applicatxions, and
-designed to address the specific scalability challenges of today's
-web-scale applications.
+% We now present the fundamental design principles of a dataplane
+% architecture designed to run untrusted, event-driven applicatxions, and
+% designed to address the specific scalability challenges of today's
+% web-scale applications.
 
-We note that the first three challenges of
-\S\ref{sec:motivation:challenges} -- high packet rate, microsecond
-computing and connection scalability--- are not limited to
-event-driven applications operating at large scale.  In fact, such
-challenges have been addressed and are reasonably well understood in
-others domains.  In particular, middleboxes such as
-firewalls~\cite{missing}, load-balancers~\cite{missing}, and software
+The first three requirements of \S\ref{sec:motivation:challenges} --
+high packet rate, microsecond latency, and connection scalability---
+are not unique to event-driven, web-scale applications.  These
+requirements are reasonably well understood and have been addressed in
+the design of middleboxes such as firewalls~\cite{missing},
+load-balancers~\cite{missing}, and software
 routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09};
-have addresses the problem long ago by integrating the networking
-stack and the application into a single \emph{dataplane}.  
+by integrating the networking stack and the application into a single
+\emph{dataplane}. The two remaining requirements, resource elasticity
+and protection, are not addressed for such middleboxes because they
+are single-purpose systems, not exposed directly to users. 
 
-As for the other two remaining aspects -- resource elasticity and
-security and protection --, middleboxes provide fewer insights: since
-each middlebox typically performs a single function, resource
-elasticity and proportionality is less of a direct concern.  They are
-traditionally deployed and maintained using an embedded paradigm in
-which the entire stack -- operating system, applications and utilities
--- is packaged as single blob.  As such, the security and protection
-model is not directly exposed to users.
+% As for the other two remaining aspects -- resource elasticity and
+% security and protection --, middleboxes provide fewer insights: since
+% each middlebox typically performs a single function, resource
+% elasticity and proportionality is less of a direct concern.  They are
+% traditionally deployed and maintained using an embedded paradigm in
+% which the entire stack -- operating system, applications and utilities
+% -- is packaged as single blob.  As such, the security and protection
+% model is not directly exposed to users.
 
-Dataplane differ from traditional operating system designs in two
-fundamental ways. First, they are designed to \emph{run to completion}
-each packet: all protocol and application processing for that packet
-is done before moving on to the next one.  A traditional commodity
-operating system has a different design in which protocol processing
-is fundamentally decoupled from the application itself.  The
-decoupling enables a greater degree of flexibility in terms of resource
-scheduling and flow control.  For example, an operating system will
-return \texttt{ACK} to slide its receive window even though the
-application is not consuming data, up to some extent.
+Dataplanes differ from a traditional OS designs in two fundamental
+ways. First, they are designed to \emph{run each packet to
+  completion}. All protocol and application processing for a packet is
+done before moving to the next packet.  A commodity OS is designed
+with protocol processing decouple from the application itself in order
+to enable flexibility in terms of resource scheduling and flow
+control. For example, a commodity OS will return \texttt{ACK} and
+slide its receive window even though the application is not consuming
+data, up to some extent. Second, dataplanes are designed to operate in
+a \emph{flow-consistent, coherence-free, flow-consistent} manner.
+Network flows are distributed into distinct queues based on a L4
+hash~\cite{rssref} and each queue is served by a single core so that
+the common case processing of a packet requires no
+synchronization or cache coherence interactions between cores.
 
-Second, dataplane are designed to operate in a \emph{coherence-free,
-  flow-consistent} manner, meaning that the common case processing of
-a packet can operate without causing any cache-coherency interactions
-with other cores.  Flow-consistency distributes flows into distinct
-queues based on a L4-hash; this is routinely supported in network CPUs
-used in middleboxes (e.g., ~\cite{cavium-octeon}) as well as commodity
-NIC via Receive Side Scaling (RSS)~\cite{missing}.
+% Flow-consistency distributes flows
+% into distinct queues based on a L4-hash; this is routinely supported
+% in network CPUs used in middleboxes (e.g., ~\cite{cavium-octeon}) as
+% well as commodity NIC via Receive Side Scaling (RSS)~\cite{missing}.
 
-This paper answers the following research question: can dataplane
-architectures be efficiently extended to support untrusted,
-event-driven applications and address simultaneously the five
-challenges of \S\ref{sec:motivation:challenges} ?  The answer relies
-on the following fundamental design principles:
+Building upon the lessons from middleboxes, we design \ix to answer
+the following question: {\it can the dataplane architecture be
+  efficiently extended to support untrusted, event-driven applications
+  and satisfy simultaneously the five requirements of
+  \S\ref{sec:motivation:challenges}?}  The answer relies on the
+following key design principles:
 
 
 \paragraph{Separation of control and data plane.}
