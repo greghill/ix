@@ -402,6 +402,8 @@ DECLARE_PERQUEUE(struct tcp_pcb *, tcp_tw_pcbs);      /* List of all TCP PCBs in
 
 #else /* LWIP_DEBUG */
 
+void tcp_send_delayed_ack(struct timer *t);
+
 #define TCP_REG(pcbs, npcb)                        \
   do {                                             \
     if (*(pcbs))                                   \
@@ -410,6 +412,7 @@ DECLARE_PERQUEUE(struct tcp_pcb *, tcp_tw_pcbs);      /* List of all TCP PCBs in
     (npcb)->prev = NULL;                           \
     *(pcbs) = (npcb);                              \
     (npcb)->perqueue = percpu_get(current_perqueue); \
+    timer_init_entry(&(npcb)->delayed_ack_timer, tcp_send_delayed_ack); \
     tcp_timer_needed();                            \
   } while (0)
 
@@ -423,6 +426,7 @@ DECLARE_PERQUEUE(struct tcp_pcb *, tcp_tw_pcbs);      /* List of all TCP PCBs in
     if ((npcb)->prev)                              \
       (npcb)->prev->next = (npcb)->next;           \
     (npcb)->perqueue = NULL;                       \
+    timer_del(&(npcb)->delayed_ack_timer);         \
   } while(0)
 
 #define TCP_HASH_RMV(pcbs, npcb)                   \
@@ -482,12 +486,12 @@ struct tcp_seg *tcp_seg_copy(struct tcp_seg *seg);
 
 #define tcp_ack(pcb)                               \
   do {                                             \
-    if((pcb)->flags & TF_ACK_DELAY) {              \
-      (pcb)->flags &= ~TF_ACK_DELAY;               \
+    if(timer_pending(&(pcb)->delayed_ack_timer)) {  \
+      timer_del(&(pcb)->delayed_ack_timer);        \
       (pcb)->flags |= TF_ACK_NOW;                  \
     }                                              \
     else {                                         \
-      (pcb)->flags |= TF_ACK_DELAY;                \
+      timer_add(&(pcb)->delayed_ack_timer, TCP_ACK_DELAY); \
     }                                              \
   } while (0)
 

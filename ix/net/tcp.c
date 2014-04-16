@@ -1088,6 +1088,18 @@ tcp_slowtmr_start:
   }
 }
 
+void tcp_send_delayed_ack(struct timer *t)
+{
+	struct tcp_pcb *pcb = container_of(t, struct tcp_pcb, delayed_ack_timer);
+
+	KSTATS_VECTOR(tcp_send_delayed_ack);
+	percpu_get(current_perqueue) = pcb->perqueue;
+
+	tcp_ack_now(pcb);
+	tcp_output(pcb);
+	pcb->flags &= ~TF_ACK_NOW;
+}
+
 /**
  * Is called every TCP_FAST_INTERVAL (250 ms) and process data previously
  * "refused" by upper layer (application) and sends delayed ACKs.
@@ -1108,13 +1120,6 @@ tcp_fasttmr_start:
     if (pcb->last_timer != perqueue_get(tcp_timer_ctr)) {
       struct tcp_pcb *next;
       pcb->last_timer = perqueue_get(tcp_timer_ctr);
-      /* send delayed ACKs */
-      if (pcb->flags & TF_ACK_DELAY) {
-        LWIP_DEBUGF(TCP_DEBUG, ("tcp_fasttmr: delayed ACK\n"));
-        tcp_ack_now(pcb);
-        tcp_output(pcb);
-        pcb->flags &= ~(TF_ACK_DELAY | TF_ACK_NOW);
-      }
 
       next = pcb->next;
 
@@ -1643,7 +1648,7 @@ tcp_pcb_remove(struct tcp_pcb **pcblist, struct tcp_pcb *pcb)
   /* if there is an outstanding delayed ACKs, send it */
   if (pcb->state != TIME_WAIT &&
      pcb->state != LISTEN &&
-     pcb->flags & TF_ACK_DELAY) {
+     timer_pending(&pcb->delayed_ack_timer)) {
     pcb->flags |= TF_ACK_NOW;
     tcp_output(pcb);
   }

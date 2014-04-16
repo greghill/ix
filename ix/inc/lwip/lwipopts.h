@@ -35,3 +35,5 @@
 #define TCP_SND_BUF 65536
 #define TCP_MSS 1460
 #define TCP_WND (2048 * TCP_MSS)
+
+#define TCP_ACK_DELAY (1 * ONE_MS)
