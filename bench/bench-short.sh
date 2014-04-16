@@ -128,7 +128,9 @@ DIR=`dirname $0`
 . $DIR/bench-common.sh
 
 on_exit_ix() {
-  sudo kill -KILL `pidof ix` 2>/dev/null
+  PID=`pidof ix||echo 0`
+  if [ $PID -eq 0 ]; then return; fi
+  sudo kill -KILL $PID
 }
 
 on_exit_linux_rpc() {
