@@ -309,7 +309,7 @@ address spaces for multithreaded applications; we address this as well.
 Network congestion is a key cause of poor tail-latency performance in
 datacenter networks~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10}.
 DCTCP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10} relies on in-network
-ECN support to eliminate up to 90\% of buffering in the network.
+ECN~\cite{ramakrishnan2001addition} support to eliminate up to 90\% of buffering in the network.
 \ix's approach to packet buffering effectively extends the network
 routing latyer to an extra hop on each end-point.  That extra hop could
 be used to signal congestion back to the source by marking the ECN bit
@@ -340,3 +340,11 @@ specialization vs. software specialization (of the OS).
 
 
 \paragraph*{ngnx}
+
+\subsection{Latex sizes}
+
+\begin{itemize}
+
+\item colummwidth: \the\columnwidth
+\item textwidth:  \the\textwidth
+\end{itemize}
