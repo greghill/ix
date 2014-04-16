@@ -198,7 +198,7 @@ static void *start_worker(void *p)
 		sock[i].send_buffer = malloc(msg_size);
 		sock[i].recv_buffer = malloc(msg_size);
 		ofs = rand();
-		step = rand() % 4;
+		step = rand() % 4 + 1;
 		for (j = 0; j < msg_size; j++)
 			sock[i].send_buffer[j] = 'A' + (j * step + ofs) % 26;
 	}
