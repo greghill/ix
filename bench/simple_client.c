@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/prctl.h>
-#include <sys/time.h>
 #include <unistd.h>
 
 #include "client_common.h"
@@ -43,13 +42,7 @@ static int connections_per_thread;
 
 static long time_in_us(void)
 {
-	struct timeval tv;
-
-	if (gettimeofday(&tv, NULL)) {
-		perror("gettimeofday");
-		exit(1);
-	}
-	return tv.tv_sec * 1000000 + tv.tv_usec;
+	return rdtsc() / cycles_per_us;
 }
 
 static int sock_connect(struct sock *sock)
