@@ -149,7 +149,7 @@ datacenter (e.g., background
 analytics)~\cite{Hindman:2011:MPF,DBLP:conf/asplos/DelimitrouK14,Leverich:RHSU:2014}
 or placed into low power modes in order to achieve energy
 proportionality~\cite{DBLP:journals/computer/BarrosoH07}.
-\christos{keeping this simple since we will not do much in this paper}
+%\christos{keeping this simple since we will not do much in this paper}
 
 % Datacenters for web-scale applications are
 % essentially built today using thousands of commodity Xeon-class
@@ -177,11 +177,11 @@ networking stack and impact other services.
 \subsection{Alternative Approaches}
 \label{sec:motivation:current}
 
-Unfortunately, TCP-based network stacks implemented within commodity
-kernels such as Linux do not meet these requirements, despite the
-abudance of hardware resources (tens of cores and tens of GBytes/sec
-DRAM and PCIe bandwidth per server, 10 to 40 GbE interfaces, and
-\microsecond-level latency across datacenters).
+TCP-based network stacks implemented within commodity kernels such as
+Linux do not meet these requirements, despite the abudance of hardware
+resources (tens of cores and tens of GBytes/sec DRAM and PCIe
+bandwidth per server, 10 to 40 GbE interfaces, and \microsecond-level
+latency across datacenters).
 % The conventional wisdom is that these challenges are rooted in a
 % mismatch between existing commodity operating systems, existing
 % network protocols, and the unique requirements of web-scale
@@ -193,7 +193,7 @@ DRAM and PCIe bandwidth per server, 10 to 40 GbE interfaces, and
 %Unfortunately, the distinct nature of
 %web-scale applications prevents them from saturating the hardware.
 Alternative approaches have been proposed, each addressing a subset of
-the requirements for web-scale applications. Unfortunately, no
+the requirements for web-scale applications. However, no
 proposal meets all requirements on commodity hardware. 
 
 {\bf User-space networking stacks:} Systems such as
@@ -201,9 +201,9 @@ OpenOnload~\cite{openonload} or mTCP~\cite{jeong2014mtcp} run the
 entire networking stack in user-space, offering either low latency
 (OpenOnload) or connection scalability (mTCP) at the expense of
 protection. There are still tradeoffs between packet rate and
-latency. For instance, mTCP uses dedicated hyperthreads for the TCP
+latency. For instance, mTCP uses dedicated hreads for the TCP
 stack, which communicate at relatively coarse grain with application
-threads. This allows mTCP to amortize switching overheads at the
+threads. This amortizes switching overheads at the
 expense of ms-scale latency.
 
 {\bf Alternatives to TCP:} Some low-latency key-value stores rely on
@@ -212,27 +212,27 @@ Infiniband host channel
 adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH}.  Using
 commodity Ethernet networking, Facebook's memcached deployment uses
 UDP to avoid connection scalability
-limitations~\cite{nishtala2013scaling}. Even though UDP itself is
-running in the kernel, the responsibilities of congestion management
-and flow control and entrusted into applications.
+limitations~\cite{nishtala2013scaling}. Even though UDP is running in
+the kernel, congestion management and flow control are entrusted into
+applications.
 
 {\bf Alternatives to POSIX API:} MegaPipe~\cite{han2012megapipe}
 replaces the POSIX API with lightweight sockets implemented with
 in-memory command rings. This substantially reduces software overheads
-and increases packet rates.  However, the pragmatic use of the kernel
+and increases packet rates. However, the pragmatic use of the kernel
 TCP stack and interrupt model maintains the latency challenges of the
 original system.
 
 {\bf OS enhancements:} Tuning kernel-based stacks provides incremental
-benefits with superior ease of deployment and use.  Linux
-\texttt{SO\_REUSE} allows multi-threaded applications to accept
-incoming connections in parallel. Affinity-accept reduces overheads by
-considering the affinity of network flows to specific
-cores~\cite{DBLP:conf/eurosys/PesterevSZM12}. These approaches
-minimize communication between cores, but do not eliminate them, as
-the lack of commutativity in the POSIX socket API implies that
-cross-core communication is necessary whenever a connection is
-accepted or closed~\cite{DBLP:conf/sosp/ClementsKZMK13}. When
-microsecond latencies are irrelevant, such as Internet-facing
-communication services, properly tuned stacks can support millions of
-concurrent connections in production~\cite{whatsapp-2mil}.
+benefits with superior ease of deployment.  Linux \texttt{SO\_REUSE}
+allows multi-threaded applications to accept incoming connections in
+parallel. Affinity-accept reduces overheads by considering the
+affinity of network flows to specific
+cores~\cite{DBLP:conf/eurosys/PesterevSZM12}. These approaches cannot
+completely eliminate communication between cores, as the lack of
+commutativity in the POSIX socket API implies that cross-core
+communication is needed when connections are accepted or
+closed~\cite{DBLP:conf/sosp/ClementsKZMK13}. When microsecond
+latencies are irrelevant, such as Internet-facing communication
+services, properly tuned stacks can support millions of concurrent
+connections~\cite{whatsapp-2mil}.
