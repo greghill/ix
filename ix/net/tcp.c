@@ -828,6 +828,28 @@ tcp_connect(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port,
   return ret;
 }
 
+void pcb_remove_called_from_timer(struct tcp_pcb *pcb, int pcb_reset)
+{
+      tcp_pcb_purge(pcb);
+      /* Remove PCB from tcp_active_pcbs list. */
+      TCP_HASH_RMV(perqueue_get(tcp_active_pcbs_tbl), pcb);
+      if (pcb->prev != NULL) {
+        LWIP_ASSERT("tcp_slowtmr: middle tcp != tcp_active_pcbs", pcb != perqueue_get(tcp_active_pcbs));
+        pcb->prev->next = pcb->next;
+      } else {
+        /* This PCB was the first. */
+        LWIP_ASSERT("tcp_slowtmr: first pcb == tcp_active_pcbs", perqueue_get(tcp_active_pcbs) == pcb);
+        perqueue_get(tcp_active_pcbs) = pcb->next;
+      }
+
+      if (pcb_reset) {
+        tcp_rst(pcb->snd_nxt, pcb->rcv_nxt, &pcb->local_ip, &pcb->remote_ip,
+                 pcb->local_port, pcb->remote_port, PCB_ISIPV6(pcb));
+      }
+
+      memp_free(MEMP_TCP_PCB, pcb);
+}
+
 /**
  * Called every 500 ms and implements the retransmission timer and the timer that
  * removes PCBs that have been in TIME-WAIT for enough time. It also increments
@@ -839,7 +861,6 @@ void
 tcp_slowtmr(void)
 {
   struct tcp_pcb *pcb, *prev;
-  tcpwnd_size_t eff_wnd;
   u8_t pcb_remove;      /* flag if a PCB should be removed */
   u8_t pcb_reset;       /* flag if a RST should be sent when removing */
   err_t err;
@@ -871,14 +892,6 @@ tcp_slowtmr_start:
     pcb_remove = 0;
     pcb_reset = 0;
 
-    if (pcb->state == SYN_SENT && pcb->nrtx == TCP_SYNMAXRTX) {
-      ++pcb_remove;
-      LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: max SYN retries reached\n"));
-    }
-    else if (pcb->nrtx == TCP_MAXRTX) {
-      ++pcb_remove;
-      LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: max DATA retries reached\n"));
-    } else {
       if (pcb->persist_backoff > 0) {
         /* If snd_wnd is zero, use persist timer to send 1 byte probes
          * instead of using the standard retransmission mechanism. */
@@ -890,44 +903,7 @@ tcp_slowtmr_start:
           }
           tcp_zero_window_probe(pcb);
         }
-      } else {
-        /* Increase the retransmission timer if it is running */
-        if(pcb->rtime >= 0) {
-          ++pcb->rtime;
-        }
-
-        if (pcb->unacked != NULL && pcb->rtime >= pcb->rto) {
-          /* Time for a retransmission. */
-          LWIP_DEBUGF(TCP_RTO_DEBUG, ("tcp_slowtmr: rtime %"S16_F
-                                      " pcb->rto %"S16_F"\n",
-                                      pcb->rtime, pcb->rto));
-
-          /* Double retransmission time-out unless we are trying to
-           * connect to somebody (i.e., we are in SYN_SENT). */
-          if (pcb->state != SYN_SENT) {
-            pcb->rto = ((pcb->sa >> 3) + pcb->sv) << tcp_backoff[pcb->nrtx];
-          }
-
-          /* Reset the retransmission timer. */
-          pcb->rtime = 0;
-
-          /* Reduce congestion window and ssthresh. */
-          eff_wnd = LWIP_MIN(pcb->cwnd, pcb->snd_wnd);
-          pcb->ssthresh = eff_wnd >> 1;
-          if (pcb->ssthresh < (tcpwnd_size_t)(pcb->mss << 1)) {
-            pcb->ssthresh = (pcb->mss << 1);
-          }
-          pcb->cwnd = pcb->mss;
-          LWIP_DEBUGF(TCP_CWND_DEBUG, ("tcp_slowtmr: cwnd %"TCPWNDSIZE_F
-                                       " ssthresh %"TCPWNDSIZE_F"\n",
-                                       pcb->cwnd, pcb->ssthresh));
-
-          /* The following needs to be called AFTER cwnd is set to one
-             mss - STJ */
-          tcp_rexmit_rto(pcb);
-        }
       }
-    }
     /* Check if this PCB has stayed too long in FIN-WAIT-2 */
     if (pcb->state == FIN_WAIT_2) {
       /* If this PCB is in FIN_WAIT_2 because of SHUT_WR don't let it time out. */
@@ -999,28 +975,12 @@ tcp_slowtmr_start:
       struct tcp_pcb *pcb2;
       tcp_err_fn err_fn;
       void *err_arg;
-      tcp_pcb_purge(pcb);
-      /* Remove PCB from tcp_active_pcbs list. */
-      TCP_HASH_RMV(perqueue_get(tcp_active_pcbs_tbl), pcb);
-      if (prev != NULL) {
-        LWIP_ASSERT("tcp_slowtmr: middle tcp != tcp_active_pcbs", pcb != perqueue_get(tcp_active_pcbs));
-        prev->next = pcb->next;
-      } else {
-        /* This PCB was the first. */
-        LWIP_ASSERT("tcp_slowtmr: first pcb == tcp_active_pcbs", perqueue_get(tcp_active_pcbs) == pcb);
-        perqueue_get(tcp_active_pcbs) = pcb->next;
-      }
-
-      if (pcb_reset) {
-        tcp_rst(pcb->snd_nxt, pcb->rcv_nxt, &pcb->local_ip, &pcb->remote_ip,
-                 pcb->local_port, pcb->remote_port, PCB_ISIPV6(pcb));
-      }
 
       err_fn = pcb->errf;
       err_arg = pcb->callback_arg;
       pcb2 = pcb;
       pcb = pcb->next;
-      memp_free(MEMP_TCP_PCB, pcb2);
+      pcb_remove_called_from_timer(pcb2, pcb_reset);
 
       perqueue_get(tcp_active_pcbs_changed) = 0;
       TCP_EVENT_ERR(err_fn, err_arg, ERR_ABRT);
@@ -1098,6 +1058,56 @@ void tcp_send_delayed_ack(struct timer *t)
 	tcp_ack_now(pcb);
 	tcp_output(pcb);
 	pcb->flags &= ~TF_ACK_NOW;
+}
+
+void tcp_retransmit_handler(struct timer *t)
+{
+	tcpwnd_size_t eff_wnd;
+	int pcb_remove;
+	struct tcp_pcb *pcb = container_of(t, struct tcp_pcb, retransmit_timer);
+
+	KSTATS_VECTOR(timer_tcp_retransmit);
+	percpu_get(current_perqueue) = pcb->perqueue;
+
+        if (pcb->unacked == NULL)
+		return;
+
+	if (pcb->snd_wnd == 0) {
+		pcb->rto = (pcb->sa >> 3) + pcb->sv;
+		timer_add(t, pcb->rto * RTO_UNITS);
+		return;
+	}
+
+	pcb_remove = 0;
+	if (pcb->state == SYN_SENT && pcb->nrtx == TCP_SYNMAXRTX)
+		pcb_remove = 1;
+	else if (pcb->nrtx == TCP_MAXRTX)
+		pcb_remove = 1;
+
+	if (pcb_remove) {
+		pcb_remove_called_from_timer(pcb, 0);
+		return;
+	}
+
+	/* Time for a retransmission. */
+
+	/* Double retransmission time-out unless we are trying to
+	* connect to somebody (i.e., we are in SYN_SENT). */
+	if (pcb->state != SYN_SENT) {
+		pcb->rto = ((pcb->sa >> 3) + pcb->sv) << tcp_backoff[pcb->nrtx];
+	}
+
+	/* Reduce congestion window and ssthresh. */
+	eff_wnd = LWIP_MIN(pcb->cwnd, pcb->snd_wnd);
+	pcb->ssthresh = eff_wnd >> 1;
+	if (pcb->ssthresh < (tcpwnd_size_t)(pcb->mss << 1)) {
+		pcb->ssthresh = (pcb->mss << 1);
+	}
+	pcb->cwnd = pcb->mss;
+
+	/* The following needs to be called AFTER cwnd is set to one
+	mss - STJ */
+	tcp_rexmit_rto(pcb);
 }
 
 /**
@@ -1403,7 +1413,6 @@ tcp_alloc(u8_t prio)
     pcb->rto = 3000 / TCP_SLOW_INTERVAL;
     pcb->sa = 0;
     pcb->sv = 3000 / TCP_SLOW_INTERVAL;
-    pcb->rtime = -1;
     pcb->cwnd = 1;
     iss = tcp_next_iss();
     pcb->snd_wl2 = iss;
@@ -1621,7 +1630,7 @@ tcp_pcb_purge(struct tcp_pcb *pcb)
 
     /* Stop the retransmission timer as it will expect data on unacked
        queue if it fires */
-    pcb->rtime = -1;
+    timer_del(&pcb->retransmit_timer);
 
     tcp_segs_free(pcb->unsent);
     tcp_segs_free(pcb->unacked);

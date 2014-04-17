@@ -716,9 +716,9 @@ tcp_process(struct tcp_pcb *pcb)
       /* If there's nothing left to acknowledge, stop the retransmit
          timer, otherwise reset it to start again */
       if(pcb->unacked == NULL)
-        pcb->rtime = -1;
+        timer_del(&pcb->retransmit_timer);
       else {
-        pcb->rtime = 0;
+        timer_mod(&pcb->retransmit_timer, pcb->rto * RTO_UNITS);
         pcb->nrtx = 0;
       }
 
@@ -985,7 +985,7 @@ tcp_receive(struct tcp_pcb *pcb)
         /* Clause 3 */
         if (pcb->snd_wl2 + pcb->snd_wnd == right_wnd_edge){
           /* Clause 4 */
-          if (pcb->rtime >= 0) {
+          if (timer_pending(&pcb->retransmit_timer)) {
             /* Clause 5 */
             if (pcb->lastack == perqueue_get(ackno)) {
               found_dupack = 1;
@@ -1094,9 +1094,9 @@ tcp_receive(struct tcp_pcb *pcb)
       /* If there's nothing left to acknowledge, stop the retransmit
          timer, otherwise reset it to start again */
       if (pcb->unacked == NULL) {
-        pcb->rtime = -1;
+        timer_del(&pcb->retransmit_timer);
       } else {
-        pcb->rtime = 0;
+        timer_mod(&pcb->retransmit_timer, pcb->rto * RTO_UNITS);
       }
 
       pcb->polltmr = 0;

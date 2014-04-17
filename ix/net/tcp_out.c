@@ -1137,9 +1137,7 @@ tcp_output_segment(struct tcp_seg *seg, struct tcp_pcb *pcb)
 
   /* Set retransmission timer running if it is not currently enabled
      This must be set before checking the route. */
-  if (pcb->rtime == -1) {
-    pcb->rtime = 0;
-  }
+  timer_mod(&pcb->retransmit_timer, pcb->rto * RTO_UNITS);
 
   /* If we don't have a local IP address, we get one by
      calling ip_route(). */
