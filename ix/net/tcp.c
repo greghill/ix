@@ -892,18 +892,6 @@ tcp_slowtmr_start:
     pcb_remove = 0;
     pcb_reset = 0;
 
-      if (pcb->persist_backoff > 0) {
-        /* If snd_wnd is zero, use persist timer to send 1 byte probes
-         * instead of using the standard retransmission mechanism. */
-        pcb->persist_cnt++;
-        if (pcb->persist_cnt >= tcp_persist_backoff[pcb->persist_backoff-1]) {
-          pcb->persist_cnt = 0;
-          if (pcb->persist_backoff < sizeof(tcp_persist_backoff)) {
-            pcb->persist_backoff++;
-          }
-          tcp_zero_window_probe(pcb);
-        }
-      }
     /* Check if this PCB has stayed too long in FIN-WAIT-2 */
     if (pcb->state == FIN_WAIT_2) {
       /* If this PCB is in FIN_WAIT_2 because of SHUT_WR don't let it time out. */
@@ -1108,6 +1096,22 @@ void tcp_retransmit_handler(struct timer *t)
 	/* The following needs to be called AFTER cwnd is set to one
 	mss - STJ */
 	tcp_rexmit_rto(pcb);
+}
+
+void tcp_persist_handler(struct timer *t)
+{
+	struct tcp_pcb *pcb = container_of(t, struct tcp_pcb, persist_timer);
+
+	KSTATS_VECTOR(timer_tcp_persist);
+	percpu_get(current_perqueue) = pcb->perqueue;
+
+	/* If snd_wnd is zero, use persist timer to send 1 byte probes
+	* instead of using the standard retransmission mechanism. */
+	if (pcb->persist_backoff < sizeof(tcp_persist_backoff)) {
+		pcb->persist_backoff++;
+	}
+	tcp_zero_window_probe(pcb);
+	timer_add(t, tcp_persist_backoff[pcb->persist_backoff - 1] * RTO_UNITS);
 }
 
 /**

@@ -176,6 +176,7 @@ enum tcp_state {
   void *perqueue; \
   struct timer delayed_ack_timer; \
   struct timer retransmit_timer; \
+  struct timer persist_timer; \
   void *callback_arg; \
   /* the accept callback for listen- and normal pcbs, if LWIP_CALLBACK_API */ \
   DEF_ACCEPT_CALLBACK \
