@@ -194,13 +194,11 @@ void bsys_tcp_recv_done(hid_t handle, size_t len)
 	if (api->pcb)
 		tcp_recved(api->pcb, len);
 	while (recvd) {
-		if (len < recvd->len) {
-			recvd->len -= len;
+		if (len < recvd->len)
 			break;
-		}
 
 		len -= recvd->len;
-		next = recvd->next;
+		next = recvd->tcp_api_next;
 		pbuf_free(recvd);
 		recvd = next;
 	}
@@ -228,7 +226,7 @@ void bsys_tcp_close(hid_t handle)
 
 	recvd = api->recvd;
 	while (recvd) {
-		next = recvd->next;
+		next = recvd->tcp_api_next;
 		pbuf_free(recvd);
 		recvd = next;
 	}
@@ -251,7 +249,6 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 {
 	struct tcpapi_pcb *api;
 	struct mbuf *pkt;
-	struct pbuf *tmp;
 
 	log_debug("tcpapi: on_recv - arg %p, pcb %p, pbuf %p, err %d\n",
 		  arg, pcb, p, err);
@@ -266,10 +263,14 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 		return ERR_OK;
 	}
 
-	if (!api->recvd)
+	if (!api->recvd) {
 		api->recvd = p;
-	else
-		api->recvd_tail->next = p;
+		api->recvd_tail = p;
+	} else {
+		api->recvd_tail->tcp_api_next = p;
+		api->recvd_tail = p;
+	}
+	p->tcp_api_next = NULL;
 
 	/* Walk through the full receive chain */
 	do {
@@ -278,11 +279,8 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 		usys_tcp_recv(api->handle, api->cookie,
 			      mbuf_to_iomap(pkt, p->payload), p->len);
 
-		tmp = p;
 		p = p->next;
 	} while (p);
-
-	api->recvd_tail = tmp;
 
 	return ERR_OK;
 }
