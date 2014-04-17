@@ -1,4 +1,4 @@
-all: client server latency rexec pingpongs simple_client
+all: client server latency pingpongs simple_client
 
 server: server.c server_common.c server.h
 	gcc -O2 -Wall -g server.c server_common.c -o server -levent -pthread
@@ -18,8 +18,5 @@ simple_client: simple_client.c client_common.c histogram.c histogram.h timer.c t
 latency: latency.c timer.c timer.h histogram.c histogram.h
 	gcc -O2 -Wall latency.c timer.c histogram.c -o latency -pthread -lrt
 
-rexec: rexec.c
-	gcc -O2 -Wall -o rexec rexec.c
-
 clean:
-	rm -f server server_mtcp client latency rexec pingpongs simple_client
+	rm -f server server_mtcp client latency pingpongs simple_client

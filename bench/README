@@ -86,12 +86,6 @@ Every 1 second it reports the following data on stdout:
 * `count_of_probes` = the number of probes sent and received
 * `latency_us` = a space separated list of latencies in us in correspondence with the PERCENTILE command line option
 
-energy
---
-`Usage: sudo ./energy.py`
-
-Assumes a system with two physical CPUs/sockets. Reports every second the energy consumption in Joules for each socket. The numbers wrap and special consideration has been taken to avoid the wrap within a single utility execution.
-
 select_net.sh
 --
 ```
