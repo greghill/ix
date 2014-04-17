@@ -75,7 +75,7 @@ print_help() {
   echo "  $0 ix    [node0|node1|...]"
 }
 
-if [ $# -lt 2 ]; then
+if [ $# -lt 1 ]; then
   print_help
   exit
 fi
@@ -85,7 +85,7 @@ if [ -z $1 ]; then
   exit 1
 elif [ $1 = 'none' ]; then
   tear_down
-elif [[ $1 == 'linux' && "$2" == 'single' && ( $# -lt 3 || "$3" == 'opt' ) ]]; then
+elif [[ $1 == 'linux' && $# -gt 1 && "$2" == 'single' && ( $# -lt 3 || "$3" == 'opt' ) ]]; then
   setup_linux
   if [ $IP = 'auto' ]; then
     ifup $SINGLE_NIC >/dev/null
@@ -95,7 +95,7 @@ elif [[ $1 == 'linux' && "$2" == 'single' && ( $# -lt 3 || "$3" == 'opt' ) ]]; t
   if [[ $# -ge 3 && "$3" == 'opt' ]]; then
     optimize_linux
   fi
-elif [[ $1 == 'linux' && "$2" == 'bond' && ( $# -lt 3 || "$3" == 'opt' ) ]]; then
+elif [[ $1 == 'linux' && $# -gt 1 && "$2" == 'bond' && ( $# -lt 3 || "$3" == 'opt' ) ]]; then
   setup_linux
   ifup $BOND_SLAVES >/dev/null
   if [[ $# -ge 3 && "$3" == 'opt' ]]; then
