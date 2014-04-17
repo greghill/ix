@@ -7,6 +7,11 @@ on_err() {
 }
 trap on_err ERR
 
+if [ "$UID" -ne 0 ]; then
+  echo "Must be root to run this script." 2>&1
+  exit 1;
+fi
+
 # set default values if not found in the environment
 foo=${BMOS_PATH:=~/epfl1/prg/me/bmos}
 foo=${ALL_IFS:="eth4 eth5 eth6 eth7 eth8 eth9 eth10 eth11 bond0"}
@@ -32,33 +37,33 @@ setup_linux() {
   service irqbalance start >/dev/null
   modprobe ixgbe
   ifdown $ALL_IFS 2>/dev/null
-  sudo sysctl net.core.netdev_max_backlog=1000 > /dev/null
-  sudo sysctl net.core.rmem_max=212992 > /dev/null
-  sudo sysctl net.core.wmem_max=212992 > /dev/null
-  sudo sysctl net.ipv4.tcp_adv_win_scale=1 > /dev/null
-  sudo sysctl net.ipv4.tcp_app_win=31 > /dev/null
-  sudo sysctl net.ipv4.tcp_congestion_control=cubic > /dev/null
-  sudo sysctl net.ipv4.tcp_rmem='4096 87380 6291456' > /dev/null
-  sudo sysctl net.ipv4.tcp_tso_win_divisor=3 > /dev/null
-  sudo sysctl net.ipv4.tcp_wmem='4096 16384 4194304' > /dev/null
+  sysctl net.core.netdev_max_backlog=1000 > /dev/null
+  sysctl net.core.rmem_max=212992 > /dev/null
+  sysctl net.core.wmem_max=212992 > /dev/null
+  sysctl net.ipv4.tcp_adv_win_scale=1 > /dev/null
+  sysctl net.ipv4.tcp_app_win=31 > /dev/null
+  sysctl net.ipv4.tcp_congestion_control=cubic > /dev/null
+  sysctl net.ipv4.tcp_rmem='4096 87380 6291456' > /dev/null
+  sysctl net.ipv4.tcp_tso_win_divisor=3 > /dev/null
+  sysctl net.ipv4.tcp_wmem='4096 16384 4194304' > /dev/null
 }
 
 optimize_linux() {
-  sudo sysctl net.core.netdev_max_backlog=30000 > /dev/null
-  sudo sysctl net.core.rmem_max=16777216 > /dev/null
-  sudo sysctl net.core.wmem_max=16777216 > /dev/null
-  sudo sysctl net.ipv4.tcp_adv_win_scale=31 > /dev/null
-  sudo sysctl net.ipv4.tcp_app_win=1 > /dev/null
-  sudo sysctl net.ipv4.tcp_congestion_control=htcp > /dev/null
-  sudo sysctl net.ipv4.tcp_rmem='262144 262144 6291456' > /dev/null
-  sudo sysctl net.ipv4.tcp_tso_win_divisor=1 > /dev/null
-  sudo sysctl net.ipv4.tcp_wmem='262144 262144 6291456' > /dev/null
+  sysctl net.core.netdev_max_backlog=30000 > /dev/null
+  sysctl net.core.rmem_max=16777216 > /dev/null
+  sysctl net.core.wmem_max=16777216 > /dev/null
+  sysctl net.ipv4.tcp_adv_win_scale=31 > /dev/null
+  sysctl net.ipv4.tcp_app_win=1 > /dev/null
+  sysctl net.ipv4.tcp_congestion_control=htcp > /dev/null
+  sysctl net.ipv4.tcp_rmem='262144 262144 6291456' > /dev/null
+  sysctl net.ipv4.tcp_tso_win_divisor=1 > /dev/null
+  sysctl net.ipv4.tcp_wmem='262144 262144 6291456' > /dev/null
 }
 
 setup_ix() {
   tear_down
-  (cd $BMOS_PATH/dune && make -j64 >/dev/null 2>&1)
-  (cd $BMOS_PATH/igb_stub && make -j64 >/dev/null)
+  sudo -u $SUDO_USER bash -c "(cd $BMOS_PATH/dune && make -j64 >/dev/null 2>&1)"
+  sudo -u $SUDO_USER bash -c "(cd $BMOS_PATH/igb_stub && make -j64 >/dev/null)"
   insmod $BMOS_PATH/dune/dune.ko
   insmod $BMOS_PATH/igb_stub/igb_stub.ko
 }
