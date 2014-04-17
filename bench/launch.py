@@ -104,10 +104,21 @@ def main():
 
   time.sleep(1)
 
-  start_time, start_data = get_data()
+  failed = False
+  try:
+    start_time, start_data = get_data()
+  except IOError, e:
+    if e.errno == 32: # EPIPE
+      failed = True
+    else:
+      raise
 
   while True:
-    r, _, _ = select.select(fds, [], [], start_time - time.time() + args.time)
+    if failed:
+      timeout = 1
+    else:
+      timeout = start_time - time.time() + args.time
+    r, _, _ = select.select(fds, [], [], timeout)
 
     if len(r) == 0:
       break
@@ -119,6 +130,10 @@ def main():
     sys.exit(1)
 
   logging.debug('loop done')
+
+  if failed:
+    logging.error('A client has failed and select did not catch it.')
+    sys.exit(1)
 
   stop_time, stop_data = get_data()
 
