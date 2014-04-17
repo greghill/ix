@@ -1059,6 +1059,10 @@ static inline int eth_tx_xmit_one(struct eth_tx_queue *tx,
 	mbuf->len = len;
 	mbuf->nr_iov = 0;
 
+#ifdef ENABLE_PCAP
+	pcap_write(mbuf);
+#endif
+
 	return !eth_tx_xmit_batched(tx, mbuf);
 }
 
