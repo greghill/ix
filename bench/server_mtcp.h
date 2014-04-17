@@ -28,16 +28,12 @@
 
 #define SO_REUSEPORT 15
 
-struct worker {
-	int cpu;
-	unsigned long long total_connections;
-	pthread_t tid;
-	int enable;
-    mctx_t mctx;
-    int ep;
-};
+struct ctx;
+struct worker;
 
 void init(void);
 int parse_cpus(char *cpus);
 int start_threads(void);
-void mtcp_read_handler(struct worker *worker, int sock_read);
+int mtcp_read_handler(struct ctx *ctx, int sock_read);
+struct ctx *init_ctx(mctx_t mctx);
+void free_ctx(struct ctx *ctx);

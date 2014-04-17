@@ -1,8 +1,17 @@
 #include "server_mtcp.h"
 
-struct worker worker[CORES];
+#define SOCKET_CTX_MAP_ENTRIES 16384
 
-static int accept_conn(struct worker *worker, int sock_listener)
+struct worker {
+	int cpu;
+	unsigned long long total_connections;
+	pthread_t tid;
+	int enable;
+    mctx_t mctx;
+    int ep;
+} worker[CORES];
+
+static int accept_conn(struct worker *worker, struct ctx **sctx_map, int sock_listener)
 {
     int sock_accepted;
     struct mtcp_epoll_event evctl;
@@ -15,22 +24,25 @@ static int accept_conn(struct worker *worker, int sock_listener)
             exit(1);
         }
     } else {
-        // register the accepted socket for read events
-        evctl.events = MTCP_EPOLLIN;
+        // register the accepted socket for read and disconnect events
+        evctl.events = MTCP_EPOLLIN | MTCP_EPOLLHUP | MTCP_EPOLLRDHUP;
         evctl.data.sockid = sock_accepted;
         mtcp_setsock_nonblock(worker->mctx, sock_accepted);
         mtcp_epoll_ctl(worker->mctx, worker->ep, MTCP_EPOLL_CTL_ADD, sock_accepted, &evctl);
         
         worker->total_connections++;
+        sctx_map[sock_accepted] = init_ctx(worker->mctx);
     }
     
     return sock_accepted;
 }
 
-static void close_mtcp_socket(struct worker *worker, int sock)
+static void close_mtcp_socket(struct worker *worker, struct ctx **sctx_map, int sock)
 {
     mtcp_epoll_ctl(worker->mctx, worker->ep, MTCP_EPOLL_CTL_DEL, sock, NULL);
     mtcp_close(worker->mctx, sock);
+    free_ctx(sctx_map[sock]);
+    sctx_map[sock] = NULL;
 }
 
 static void initialize_worker(struct worker *worker)
@@ -56,6 +68,7 @@ static void initialize_worker(struct worker *worker)
 static void *start_worker(void *p)
 {
 	struct worker *worker;
+    struct ctx **sctx_map;
     struct mtcp_epoll_event *events;
     struct mtcp_epoll_event evctl;
 	int nevents;
@@ -65,7 +78,8 @@ static void *start_worker(void *p)
     int i;
 
 	worker = p;
-
+    sctx_map = (struct ctx **)calloc(SOCKET_CTX_MAP_ENTRIES, sizeof(struct ctx *));
+    
 	initialize_worker(worker);
     
     events = (struct mtcp_epoll_event *)calloc(MAX_EVENTS, sizeof(struct mtcp_epoll_event));
@@ -74,7 +88,7 @@ static void *start_worker(void *p)
         exit(EXIT_FAILURE);
     }
     
-    sock_listener = mtcp_socket(worker->mctx, AF_INET, SOCK_STREAM, 0);
+    sock_listener = mtcp_socket(worker->mctx, AF_INET, MTCP_SOCK_STREAM, 0);
 	if (sock_listener < 0) {
 		perror("socket");
 		exit(1);
@@ -121,27 +135,39 @@ static void *start_worker(void *p)
                 // accept the connection if the event is from the listener
                 do_accept = true;
             } else if (events[i].events & MTCP_EPOLLERR) {
-                // error on socket, close the connection
-                close_mtcp_socket(worker, events[i].data.sockid);
+                // error on socket, bail
+                fprintf(stderr, "Error: Socket error on core %d\n", worker->cpu);
+                exit(1);
+            } else if (events[i].events & MTCP_EPOLLHUP) {
+                // unexpected close, just release the connection
+                close_mtcp_socket(worker, sctx_map, events[i].data.sockid);
+            } else if (events[i].events & MTCP_EPOLLRDHUP) {
+                // peer closed the connection, so release it
+                close_mtcp_socket(worker, sctx_map, events[i].data.sockid);
             } else if (events[i].events & MTCP_EPOLLIN) {
-                mtcp_read_handler(worker, events[i].data.sockid);
+                // handle the read event and close the connection if there is a problem
+                if (0 >= mtcp_read_handler(sctx_map[events[i].data.sockid], events[i].data.sockid)) {
+                    close_mtcp_socket(worker, sctx_map, events[i].data.sockid);
+                }
             } else {
                 // should not happen, bail
                 fprintf(stderr, "Error: Unrecognised socket event on core %d\n", worker->cpu);
+                exit(1);
             }
         }
         
         // accept connections if the flag is set
         if (do_accept) {
             while (1) {
-                if (accept_conn(worker, sock_listener) > 0) {
+                if (accept_conn(worker, sctx_map, sock_listener) > 0) {
                     break;
                 }
             }
         }
     }
 
-	return 0;
+	free((void *)sctx_map);
+    return 0;
 }
 
 int start_threads(void)

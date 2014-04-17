@@ -1,17 +1,22 @@
 #include "server_mtcp.h"
 
-void mtcp_read_handler(struct worker *worker, int sock_read)
+struct ctx {
+	 mctx_t mctx;
+};
+
+int mtcp_read_handler(struct ctx *ctx, int sock_read)
 {
-    int rd, wr, wrtot;
+    int rd, rdtot, wr, wrtot;
     char buf[4096];
     
-    rd = mtcp_read(worker->mctx, sock_read, buf, sizeof(buf));
+    rd = mtcp_read(ctx->mctx, sock_read, buf, sizeof(buf));
+    rdtot = rd;
     
     while (rd > 0) {
         wrtot = 0;
         
         while (wrtot < rd) {
-            wr = mtcp_write(worker->mctx, sock_read, buf, rd);
+            wr = mtcp_write(ctx->mctx, sock_read, buf, rd);
             
             if (wr >= 0) {
                 wrtot += wr;
@@ -23,8 +28,24 @@ void mtcp_read_handler(struct worker *worker, int sock_read)
             }
         }
         
-        rd = mtcp_read(worker->mctx, sock_read, buf, sizeof(buf));
+        rd = mtcp_read(ctx->mctx, sock_read, buf, sizeof(buf));
+        rdtot += rd;
     }
+    
+    return rdtot;
+}
+
+struct ctx *init_ctx(mctx_t mctx)
+{
+	struct ctx *ctx;
+	ctx = malloc(sizeof(struct ctx));
+	ctx->mctx = mctx;
+	return ctx;
+}
+
+void free_ctx(struct ctx *ctx)
+{
+    free((void *)ctx);
 }
 
 int main(int argc, char **argv)

@@ -5,6 +5,13 @@ server
 
 Listens to TCP socket 9876. It accepts all incoming connections. It sends back data unchanged as soon as they are received. Uses libevent.
 
+server_mtcp
+--
+`Usage: ./server_mtcp CPUS`
+* `CPUS` = A comma separated list of the CPUs to use for handling traffic.
+
+Same as "server" but ported to use the mTCP user-mode TCP stack.
+
 pingpongs
 --
 `Usage: ./pingpongs MSG_SIZE CPUS`
@@ -12,6 +19,14 @@ pingpongs
 * `CPUS` = A comma separated list of the CPUs to use for handling traffic.
 
 Listens to TCP socket 9876. It accepts all incoming connections. It waits for `MSG_SIZE` bytes of data that are kept in a buffer. When it has received `MSG_SIZE` bytes of data, it writes them back.
+
+pingpongs_mtcp
+--
+`Usage: ./pingpongs MSG_SIZE CPUS`
+* `MSG_SIZE` = The message size to expect and send.
+* `CPUS` = A comma separated list of the CPUs to use for handling traffic.
+
+Same as "pingpongs" but ported to use the mTCP user-mode TCP stack.
 
 client
 --
