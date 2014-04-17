@@ -403,6 +403,8 @@ DECLARE_PERQUEUE(struct tcp_pcb *, tcp_tw_pcbs);      /* List of all TCP PCBs in
 #else /* LWIP_DEBUG */
 
 void tcp_send_delayed_ack(struct timer *t);
+void tcp_retransmit_handler(struct timer *t);
+void tcp_persist_handler(struct timer *t);
 
 #define TCP_REG(pcbs, npcb)                        \
   do {                                             \
@@ -413,6 +415,8 @@ void tcp_send_delayed_ack(struct timer *t);
     *(pcbs) = (npcb);                              \
     (npcb)->perqueue = percpu_get(current_perqueue); \
     timer_init_entry(&(npcb)->delayed_ack_timer, tcp_send_delayed_ack); \
+    timer_init_entry(&(npcb)->retransmit_timer, tcp_retransmit_handler); \
+    timer_init_entry(&(npcb)->persist_timer, tcp_persist_handler); \
     tcp_timer_needed();                            \
   } while (0)
 
@@ -427,6 +431,8 @@ void tcp_send_delayed_ack(struct timer *t);
       (npcb)->prev->next = (npcb)->next;           \
     (npcb)->perqueue = NULL;                       \
     timer_del(&(npcb)->delayed_ack_timer);         \
+    timer_del(&(npcb)->retransmit_timer);          \
+    timer_del(&(npcb)->persist_timer);             \
   } while(0)
 
 #define TCP_HASH_RMV(pcbs, npcb)                   \

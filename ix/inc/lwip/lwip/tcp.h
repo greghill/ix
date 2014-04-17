@@ -175,6 +175,8 @@ enum tcp_state {
   type *hash_bucket_next; /* for the hash bucket linked list */ \
   void *perqueue; \
   struct timer delayed_ack_timer; \
+  struct timer retransmit_timer; \
+  struct timer persist_timer; \
   void *callback_arg; \
   /* the accept callback for listen- and normal pcbs, if LWIP_CALLBACK_API */ \
   DEF_ACCEPT_CALLBACK \
@@ -219,9 +221,6 @@ struct tcp_pcb {
   tcpwnd_size_t rcv_wnd;   /* receiver window available */
   tcpwnd_size_t rcv_ann_wnd; /* receiver window to announce */
   u32_t rcv_ann_right_edge; /* announced right edge of window */
-
-  /* Retransmission timer. */
-  s16_t rtime;
 
   u16_t mss;   /* maximum segment size */
 

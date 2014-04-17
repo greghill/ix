@@ -37,3 +37,4 @@
 #define TCP_WND (2048 * TCP_MSS)
 
 #define TCP_ACK_DELAY (1 * ONE_MS)
+#define RTO_UNITS (500 * ONE_MS)
