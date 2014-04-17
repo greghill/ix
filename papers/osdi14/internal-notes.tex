@@ -315,6 +315,15 @@ routing latyer to an extra hop on each end-point.  That extra hop could
 be used to signal congestion back to the source by marking the ECN bit
 before processing the packet in \ix's TCP stack.
 
+For instance, it allows the dataplane to detect
+congestion and explicitly mark the flow as congested using
+ECN~\cite{ramakrishnan2001addition}, the prerequisite for protocols
+such as DCTCP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10}. Similarly,
+the control plane can react to inbound congestion by allocating
+additional resources (more hardware threads, increase clock frequency)
+for a dataplane.
+
+
 
 
 \paragraph{The case against user-level networking}

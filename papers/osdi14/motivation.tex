@@ -31,13 +31,13 @@ consist of tens of distinct, well-defined services such as
 load-balancing and http proxies, web and application serving, content
 distribution and streaming, memory caching, queuing services,
 relational databases and object
-storage~\cite{Alonso:2010:WSC,Eriksen:2013:YSF}. \christos{what is the
-  authoritative ref for SOA?} Collectively, these services occupy
+storage~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07,Alonso:2010:WSC,Eriksen:2013:YSF}. 
+Collectively, these services occupy
 hundreds to thousands of servers connected through high-speed
 networking. Different services are routinely implemented using
 different programming languages and paradigms, but are connected
 through a unifying framework for RPC, serialization, service
-discovery, and logging \cite{protocolbuffers, thrift, fingale,
+discovery, and logging~\cite{protocolbuffers, thrift, fingale,
   others}. An incoming request from an external user leads to tens to
 hundreds of internal requests across the various services, with some
 requests issued sequentially due to dependencies in application logic,
@@ -51,12 +51,12 @@ while other requests are issued in a parallel, fan-out manner.
 Each node for these services responds to external requests such as new
 incoming connections, data requests from existing connections, or
 replies to requests made to a downstream service.  The most efficient
-implementations today use event-driven framworks in which the service
+implementations use event-driven frameworks in which the service
 logic interacts with the framework exclusively via non-blocking
-calls. This is in contrast with the classic thread-oriented
+calls~\cite{DBLP:conf/usenix/PaiDZ99,missing,missing}. This is in contrast with the classic thread-oriented
 programming paradigm, in which sessions are divided among a large pool
 of (kernel) threads, which block while waiting for incoming traffic or
-outstanding replies. For example, the event-oriented nginx HTTP server
+outstanding replies. For example, event-oriented nginx HTTP server
 and proxy~\cite{reese2008nginx} outperforms the thread-oriented Apache
 server~\cite{misc:apache}.
 
@@ -66,7 +66,7 @@ popular \texttt{libevent} library~\cite{provos2003libevent} provides a
 level of abstraction that exposes the paradigm to applications running
 on top of Linux, *BSD, and Windows.  Many web-scale applications, such
 as memcached~\cite{missing}, are built on top of libevent.  Others
-such as Nginx and node.js are built using similar frameworks.
+such as nginx and node.js are built using similar frameworks.
 
 
 \subsection{Main Requirements}
@@ -76,7 +76,7 @@ Although the event-based paradigm has several system-level benefits,
 such as lower context switching rates, its use in web-scale
 applications poses many unique challenges to system software:
 
-{\bf High packet rates:} The requests and, often times, the replies
+\myparagraph{High packet rates:} The requests and, often times, the replies
 between services in web-scale applications are quite small. In the
 memcached service at Facebook, for example, the vast majority of
 requests use keys shorter than 50 bytes and involve values shorter
@@ -87,7 +87,7 @@ In such conditions, common hardware optimizations found in network
 interfaces, such as TCP segmentation and large receive offloading,
 have a marginal impact on performance. 
 
-{\bf Micro-second latency:} To enable rich interactions between a
+\myparagraph{Micro-second latency:} To enable rich interactions between a
 large number of services in a web-scale application without impacting
 the overall latency experienced by the user, it is essential to
 minimize the latency for each service
@@ -120,7 +120,7 @@ Protocol-processing techniques that reduce latency to \microsecond in
 the average, but do no improve 95th or 99th percentile latency are
 unlikely to result into end-to-end application gains.
 
-{\bf Connection scalability:} For applications that use thousands
+\myparagraph{Connection scalability:} For applications that use thousands
 multi-core servers, it is desirable to efficiently support both a
 large number of concurrent connections per server, as well as high
 churn in these connections.  Ideally, the only limitation to a
@@ -138,7 +138,7 @@ resulting in deployments that use UDP datagrams for \texttt{get}
 operations and an aggregation proxy for \texttt{put}
 operations~\cite{nishtala2013scaling}.
 
-{\bf Resource elasticity:} The load of web-scale applications varies
+\myparagraph{Resource elasticity:} The load of web-scale applications varies
 significantly due to diurnal patterns and unexpected spikes in user
 traffic. Ideally, each service node will use the minimum amount of
 resources (cores, memory, or IOPS) needed to satisfy packet rate and
@@ -162,7 +162,7 @@ proportionality~\cite{DBLP:journals/computer/BarrosoH07}.
 % a combination of cluster-wide, and machine-local resource management,
 % workload placement and rebalancing techniques~\cite{missing,missing}.
 
-{\bf Protection:} Finally, as multiple foreground and
+\myparagraph{Protection:} Finally, as multiple foreground and
 background services share multi-core servers even in private
 datacenters~\cite{Schwarzkopf:2013:OFS,DBLP:journals/cacm/DeanB13},
 there is need for isolated protocol stacks. For single-tenant
@@ -177,7 +177,7 @@ networking stack and impact other services.
 \label{sec:motivation:current}
 
 TCP-based network stacks implemented within commodity kernels such as
-Linux do not meet these requirements, despite the abudance of hardware
+Linux do not meet these requirements, despite the abundance of hardware
 resources (tens of cores and tens of GBytes/sec DRAM and PCIe
 bandwidth per server, 10 to 40 GbE interfaces, and \microsecond-level
 latency across datacenters).
@@ -195,17 +195,17 @@ Alternative approaches have been proposed, each addressing a subset of
 the requirements for web-scale applications. However, no
 proposal meets all requirements on commodity hardware. 
 
-{\bf User-space networking stacks:} Systems such as
+\myparagraph{User-space networking stacks:} Systems such as
 OpenOnload~\cite{openonload} or mTCP~\cite{jeong2014mtcp} run the
 entire networking stack in user-space, offering either low latency
 (OpenOnload) or connection scalability (mTCP) at the expense of
 protection. There are still tradeoffs between packet rate and
-latency. For instance, mTCP uses dedicated hreads for the TCP
+latency. For instance, mTCP uses dedicated threads for the TCP
 stack, which communicate at relatively coarse grain with application
 threads. This amortizes switching overheads at the
-expense of ms-scale latency.
+expense of \microsecond-scale latency.
 
-{\bf Alternatives to TCP:} Some low-latency key-value stores rely on
+\myparagraph{Alternatives to TCP:} Some low-latency key-value stores rely on
 kernel-bypass and RDMA to offload protocol processing on dedicated
 Infiniband host channel
 adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH}.  Using
@@ -215,14 +215,14 @@ limitations~\cite{nishtala2013scaling}. Even though UDP is running in
 the kernel, congestion management and flow control are entrusted into
 applications.
 
-{\bf Alternatives to POSIX API:} MegaPipe~\cite{han2012megapipe}
+\myparagraph{Alternatives to POSIX API:} MegaPipe~\cite{han2012megapipe}
 replaces the POSIX API with lightweight sockets implemented with
 in-memory command rings. This substantially reduces software overheads
 and increases packet rates. However, the pragmatic use of the kernel
 TCP stack and interrupt model maintains the latency challenges of the
 original system.
 
-{\bf OS enhancements:} Tuning kernel-based stacks provides incremental
+\myparagraph{OS enhancements:} Tuning kernel-based stacks provides incremental
 benefits with superior ease of deployment.  Linux \texttt{SO\_REUSE}
 allows multi-threaded applications to accept incoming connections in
 parallel. Affinity-accept reduces overheads by considering the

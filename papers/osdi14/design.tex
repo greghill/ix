@@ -30,10 +30,11 @@ are single-purpose systems, not exposed directly to users.
 Dataplanes differ from a traditional OS designs in two fundamental
 ways. First, they are designed to \emph{run each packet to
   completion}. All protocol and application processing for a packet is
-done before moving on to the next packet.  A commodity OS is designed
+done before moving on to the next packet.  In contrast, a commodity OS is designed
 with protocol processing decoupled from the application itself in
 order to enable flexibility in terms of resource scheduling and flow
-control. For example, a commodity OS will return \texttt{ACK} and
+control. For example, a commodity OS relies on device and soft interrupts to context switch from application processing to protocol processing; 
+similarily, the OS will return \texttt{ACK} and
 slide its receive window even though the application is not consuming
 data, up to some extent. Second, dataplanes are designed to operate in
 a \emph{flow-consistent, coherence-free, flow-consistent} manner.
@@ -56,7 +57,7 @@ the following question: {\it can the dataplane architecture be
 following key design principles:
 
 
-{\bf Separation of control and data plane:} 
+\myparagraph{Separation of control and data plane:} 
 % Software dataplanes are designed to operate on flows, not to
 % provision resources or manage them in an elastic and proportional
 % manner.
@@ -77,7 +78,7 @@ servers~\cite{DBLP:journals/computer/UhligNRSMABKLS05,belay2012dune}.
 \christos{should we say here that Linux is the control plane or leave
   it for 4?}
 
-{\bf Native zero-copy, event-oriented API:} Our dataplane does not
+\myparagraph{Native zero-copy, event-oriented API:} Our dataplane does not
 expose or emulate the POSIX API.  Instead, it exposes a native
 event-oriented API that meets the commutativity
 rule~\cite{DBLP:conf/sosp/ClementsKZMK13}. Similar to Megapipe's
@@ -103,12 +104,12 @@ allocation model and true zero-copy is not possible in this case.
 % systems, such as \texttt{epoll} and Windows IO Completion ports. 
 
 
-{\bf Run to completion with adaptive batching:} Our dataplane 
+\myparagraph{Run to completion with adaptive batching:} Our dataplane 
 runs to completion all pipeline stages needed to receive or transmit a
 packet, intermixing protocol processing and application logic as
 needed. Hence, there is no need for intermediate buffering between
 pipeline stages or between the application logic and network protocol
-stack. Since there is no socket layer at all, flow control is redictly
+stack. Since there is no socket layer at all, flow control is directly
 but safely exposed to the architecture, especially for outgoing
 packets (see \texttt{mbufs} discussion  above).
 
@@ -124,17 +125,17 @@ packets introduces negligible jitter and is sufficient to amortize all
 per-packet overheads.
 
 
-{\bf Flow consistent, coherence-free processing:} We use multi-queue
+\myparagraph{Flow consistent, coherence-free processing:} We use multi-queue
 NICs with RSS support to provide flow-consistent hashing of incoming
 traffic to distinct hardware queues. Each queue is served by a single
 hardware thread all the way to the application layer, eliminating the
 need for synchronization and cache coherence traffic between
 cores. Similarly, memory management is organized in distinct pools for
 each hardware thread. The absence of a socket layer eliminates the
-issue of the shared file descriptor namespace~\cite{missing}. Hence,
+issue of the shared file descriptor namespace in multithreaded applications~\cite{DBLP:conf/sosp/ClementsKZMK13}. Hence,
 our design scales well with the increasing number of cores in modern
 servers. Our approach does not restrict the memory model for
-applications. Application logic can take advantae of coherent, shared
+applications. Application logic can take advantage of coherent, shared
 memory to exchange information and synchronize between cores. For
 instance, this may be needed if the application must combine
 information arriving from multiple network flows.
@@ -143,16 +144,15 @@ information arriving from multiple network flows.
 %The approach extends to link-aggregation bonds to scale to multiple links.
 
 
-{\bf Buffering at the NIC edge:} Since there is no intermediate
-buffering within the dataplane pipeline, buffering and therefore
-congestion will occur only at the NIC edge for incomming packets
-before they are processed and for outgoing packets before they are
-sent on the wire.  In effect, the NIC edge acts like the last-hop
-buffer in the network, providing several optimization
-opportunities. For instance, it allows the dataplane to detect
-congestion and explicitly mark the flow as congested using
-ECN~\cite{ramakrishnan2001addition}, the prerequisite for protocols
-such as DCTCP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10}. Similarly,
-the control plane can react to inbound congestion by allocating
-additional resources (more hardware threads, increase clock frequency)
-for a dataplane.
+\myparagraph{Buffering at the NIC edge:} Since there is no
+intermediate buffering within the dataplane pipeline, buffering and
+therefore congestion will occur only at the NIC edge for incoming
+packets before they are processed and for outgoing packets before they
+are sent on the wire.  In effect, the NIC edge acts like the last-hop
+buffer in the network.  Like switches and routers, the NIC edge can
+monitor queue depths to detect congestion, signal the control plane to
+allocate additional resources (more hardware threads, increase clock
+frequency) for the dataplane, notify explicity flow sources of
+congestion via ECN~\cite{ramakrishnan2001addition}, and finally make
+policy decisions on when and how to drop packets when buffers run
+low~\cite{DBLP:journals/ton/FloydJ93}.
