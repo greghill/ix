@@ -130,7 +130,9 @@ static void timer_run_bucket(struct hlist_head *h)
 {
 	struct hlist_node *n, *tmp;
 	struct timer *t;
+#ifdef ENABLE_KSTATS
 	kstats_accumulate save;
+#endif
 
 	hlist_for_each_safe(h, n, tmp) {
 		t = hlist_entry(n, struct timer, link);
@@ -146,7 +148,9 @@ static void timer_reinsert_bucket(struct hlist_head *h)
 {
 	struct hlist_node *pos, *tmp;
 	struct timer *t;
+#ifdef ENABLE_KSTATS
 	kstats_accumulate save;
+#endif
 
 	hlist_for_each_safe(h, pos, tmp) {
 		t = hlist_entry(pos, struct timer, link);
