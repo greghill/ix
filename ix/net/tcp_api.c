@@ -15,6 +15,7 @@
 #include "cfg.h"
 
 #define MAX_PCBS	65536
+#define ARG_IS_COOKIE	0x8000000000000000ul
 
 static DEFINE_PERQUEUE(struct tcp_pcb *, listen_pcb);
 
@@ -238,8 +239,13 @@ void bsys_tcp_close(hid_t handle)
 	mempool_free(&perqueue_get(pcb_mempool), api);
 }
 
-static void mark_dead(struct tcpapi_pcb *api)
+static void mark_dead(struct tcpapi_pcb *api, unsigned long cookie)
 {
+	if (!api) {
+		usys_tcp_dead(0, cookie);
+		return;
+	}
+
 	api->alive = false;
 	api->pcb = NULL;
 	usys_tcp_dead(api->handle, api->cookie);
@@ -259,7 +265,7 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 
 	/* Was the connection closed? */
 	if (!p) {
-		mark_dead(api);
+		mark_dead(api, api->cookie);
 		return ERR_OK;
 	}
 
@@ -288,13 +294,20 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 static void on_err(void *arg, err_t err)
 {
 	struct tcpapi_pcb *api;
+	unsigned long cookie;
 
 	log_debug("tcpapi: on_err - arg %p err %d\n", arg, err);
 
-	api = (struct tcpapi_pcb *) arg;
+	if ((unsigned long) arg & ARG_IS_COOKIE) {
+		api = NULL;
+		cookie = (unsigned long) arg & ~ARG_IS_COOKIE;
+	} else {
+		api = (struct tcpapi_pcb *) arg;
+		cookie = api->cookie;
+	}
 
 	if (err == ERR_ABRT || err == ERR_RST || err == ERR_CLSD)
-		mark_dead(api);
+		mark_dead(api, cookie);
 }
 
 static err_t on_sent(void *arg, struct tcp_pcb *pcb, u16_t len)
@@ -367,6 +380,8 @@ static err_t on_connected(void *arg, struct tcp_pcb *pcb, err_t err)
 		return err;
 	}
 
+	arg = (void *) ((unsigned long) arg & ~ARG_IS_COOKIE);
+
 	api = mempool_alloc(&perqueue_get(pcb_mempool));
 	if (unlikely(!api)) {
 		usys_tcp_connect_ret(0, (unsigned long) arg, -RET_FAULT);
@@ -409,7 +424,7 @@ void bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 		goto pcb_fail;
 	tcp_nagle_disable(pcb);
 
-	tcp_arg(pcb, (void *) cookie);
+	tcp_arg(pcb, (void *) (ARG_IS_COOKIE | cookie));
 	tcp_recv(pcb, on_recv);
 	tcp_err(pcb, on_err);
 	tcp_sent(pcb, on_sent);
