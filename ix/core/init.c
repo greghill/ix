@@ -501,6 +501,7 @@ static int parse_arguments(int argc, char *argv[])
 		{"dev", required_argument, 0, 'd'},
 		{"cpu", required_argument, 0, 'c'},
 		{"mac", required_argument, 0, 'm'},
+		{"quiet", no_argument, 0, 'q'},
 #ifdef ENABLE_PCAP
 		{"pcap-read", required_argument, 0, 'r'},
 		{"pcap-write", required_argument, 0, 'w'},
@@ -508,9 +509,9 @@ static int parse_arguments(int argc, char *argv[])
 		{NULL, 0, NULL, 0}
 	};
 #ifdef ENABLE_PCAP
-	static const char *optstring = "d:c:m:r:w:";
+	static const char *optstring = "d:c:m:qr:w:";
 #else
-	static const char *optstring = "d:c:m:";
+	static const char *optstring = "d:c:m:q";
 #endif
 
 	while ((c = getopt_long(argc, argv, optstring, long_options, NULL)) != -1) {
@@ -523,6 +524,9 @@ static int parse_arguments(int argc, char *argv[])
 			break;
 		case 'm':
 			arguments.mac = optarg;
+			break;
+		case 'q':
+			max_loglevel = LOG_WARN;
 			break;
 #ifdef ENABLE_PCAP
 		case 'r':
@@ -575,12 +579,12 @@ int main(int argc, char *argv[])
 	struct cpu_thread_params cpu_thread_params[MAX_QUEUES];
 	char *eth_pci_addr;
 
-	log_info("init: starting IX\n");
-
 	if (parse_arguments(argc, argv)) {
 		log_err("init: invalid arguments\n");
 		return -EINVAL;
 	}
+
+	log_info("init: starting IX\n");
 
 	ret = cpu_init();
 	if (ret) {

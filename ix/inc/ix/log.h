@@ -10,6 +10,8 @@ extern bool log_is_early_boot;
 
 extern void logk(int level, const char *fmt, ...);
 
+extern int max_loglevel;
+
 enum {
 	LOG_EMERG	= 0, /* system is dead */
 	LOG_CRIT	= 1, /* critical */
