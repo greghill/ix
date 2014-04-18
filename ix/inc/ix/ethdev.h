@@ -974,6 +974,7 @@ struct rte_eth_dev_sriov {
 struct eth_rx_queue {
 	int (*poll) (struct eth_rx_queue *rx);
 	void *perqueue_offset;
+	int queue_idx;
 };
 
 /**

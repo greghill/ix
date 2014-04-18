@@ -176,6 +176,7 @@ int eth_dev_get_rx_queue(struct rte_eth_dev *dev, struct eth_rx_queue **rx_queue
 		goto err;
 
 	*rx_queue = dev->data->rx_queues[rx_queue_id];
+	(*rx_queue)->queue_idx = rx_queue_id;
 
 	return 0;
 
