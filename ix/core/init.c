@@ -71,6 +71,7 @@ extern int virtual_init(void);
 extern int tcp_echo_server_init(int port);
 extern int sandbox_init(int argc, char *argv[]);
 extern void tcp_init(void);
+extern void toeplitz_init(void);
 
 volatile int uaccess_fault;
 
@@ -597,6 +598,8 @@ int main(int argc, char *argv[])
 		log_err("init: failed to initialize dune\n");
 		return ret;
 	}
+
+	toeplitz_init();
 
 	dune_register_pgflt_handler(pgflt_handler);
 

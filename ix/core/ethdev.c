@@ -10,6 +10,7 @@
 #include <ix/log.h>
 #include <ix/cpu.h>
 #include <ix/queue.h>
+#include <ix/toeplitz.h>
 
 #include <net/ethernet.h>
 
@@ -26,6 +27,8 @@ DEFINE_PERCPU(int, tx_batch_len);
 DEFINE_PERCPU(int, tx_batch_pos);
 DEFINE_PERCPU(struct mbuf *, tx_batch[ETH_DEV_TX_QUEUE_SZ]);
 
+static uint8_t rss_key[40];
+
 static const struct rte_eth_conf default_conf = {
         .rxmode = {
                 .split_hdr_size = 0,
@@ -39,6 +42,7 @@ static const struct rte_eth_conf default_conf = {
 	.rx_adv_conf = {
 		.rss_conf = {
 			.rss_hf = ETH_RSS_IPV4_TCP,
+			.rss_key = rss_key,
 		},
 	},
         .txmode = {
@@ -263,6 +267,7 @@ struct rte_eth_dev *eth_dev_alloc(size_t private_len)
 
 	memset(dev->data, 0, sizeof(struct rte_eth_dev_data));
 	dev->data->dev_conf = default_conf;
+	toeplitz_get_key(rss_key, sizeof(rss_key));
 
 	dev->data->dev_private = malloc(private_len);
 	if (!dev->data->dev_private) {
