@@ -1,4 +1,4 @@
-
+s
 \section{Evaluation}
 \label{sec:eval}
 
@@ -21,7 +21,6 @@ applications such as memcached and XXX using the
 \label{sec:eval:setup}
 
 \edb{Describes EPFL setup:}
-
 Our experimental setup consists of a cluster of 19 clients and one
 server connected by an HP 5820AF-24XG low-latency 10GbE switch.  The client
 machines are a mix of dual Xenon E5-2637 running at 3.5 Ghz and single Xenon E5-2650 running at 2.6 Ghz with a single, Intel
@@ -33,78 +32,130 @@ hyperthreading enabled, and both hyperthreads of the cores are used.
 
 The server is connected to
 the switch via a 4x10GbE bond configured in as a L2+L3
-hash~\cite{missing} in the switch via LACP~\cite{ieee802.3ad}.  Jumbo
+hash in the switch via LACP~\cite{ieee802.3ad}.  Jumbo
 frames are never enabled.  Our baseline configuration in each machine
 is the Ubuntu 12.04.4 LTS distribution running the 3.11 Linux kernel.  Although
 the server has two sockets, our experiments pin IRQs, processes, and
 the IX dataplane onto a single socket and use memory from that socket;
-all NICs are attached to that socket via the PCIe root complex.
+all NICs are attached to that socket via the PCIe root complex. 
+\edb{CONTREVERSIAL: We chose to limit execution to a single NUMA node to simplify the
+  analysis because of the asymmetrical nature of our hardware, to
+  model the experimental setup after the one used in recent related
+  work~\cite{jeong2014mtcp}, and also as we are practically never CPU-bound in our tests}
 
-\christos{We should organize the eval in the following way: first
-  micro-benchmarks that showcase each of the advantages (high packet
-  rate, low latency/jitter, high connection/churn). The title of the
-  subsection should indicate the aspect evaluated. Then there should
-  a subsection on full app eval (memcache hopefully).}
+%\christos{We should organize the eval in the following way: first
+%  micro-benchmarks that showcase each of the advantages (high packet
+%  rate, low latency/jitter, high connection/churn). The title of the
+%  subsection should indicate the aspect evaluated. Then there should
+%  a subsection on full app eval (memcache hopefully).}
 
-\subsection{Single stream ping-pong (NetPIPE)}
+Whenever both practical and relevant, we compare the performance of an
+\ix server with a baseline out-of-the-box Linux configuration
+((\texttt{Linux-base}), an optimized configuration of Linux
+(\texttt{Linux-opt}), and the performance of mTCP, a
+recently-published user-level TCP stack specifically designed for
+scalability~\cite{jeong2014mtcp}.  Unless specifically mentioned, all
+clients run an baseline Linux configuration.  
+
+Typically, the client implementation uses the classic blocking
+paradigm to send and receive messages over a single, well-known
+socket.  In contrast, the Linux server implementations use the
+\texttt{libevent} framework running on XXX threads to serve the
+clients. The mTCP server implementation use the native mTCP API
+running on up to 8 cores (within each core, one hyperthread is
+dedicated to processing the network stack).  Finally, \ix server use
+the native \ix API running on up to 8 cores (using symmetrically both
+hyperthreads).
+
+
+\subsection{High-bandwidth and low-latency}
 \label{sec:eval:netpipe}
 
 \input{figs/float-pingpong}
 \input{tbl-pingpong}
 
-Fig.~\ref{fig:pingpong} illustrates the importance of system software
-design and configuration tradeoffs using the NetPIPE ping-pong
+We start the evaluation with the popular NetPIPE ping-pong
 benchmark~\cite{snell1996netpipe} that exchanges a fixed-size message
-between two servers.  Although the application is trivial, it provides
-a good proxy for the effective performance of synchronous remote
-procedure calls in uncontended situations.  We compare the performance
-of (i) an out-of-the-box Ubuntu 12.04.4 LTS configuration
-(\texttt{Linux-base}) running an unmodified NetPIPE v3.7.2; (ii) a
-tuned configuration of the same kernel (\texttt{Linux-opt})) with the
-same application; (iii) between two mTCP-based equivalent
-applications; (iv) a hybrid version in which a Linux client talking to
-an \ix server; and finally (v) between two \ix systems.  For the same
-application and hardware configuration (described in
-\S\ref{sec:eval:setup}), the differences are dramatic.  We see that
-\ix-\ix achieves 50\% of the asymptotic bandwdith with messages as small
-as \george{XXX bytes}.  In constrast, both Linux configurations remain
-latency-bound.  Although mTCP, ....
+between two servers.  The benchmark is used to calibrate the latency
+and single-flow bandwidth of a communication link: with minimal
+message size (64B), this benchmark determines the one-way latency for
+short message communication.  With increasingly larger messages, it
+determines how quickly this single ping-pong behavior can utilize 50\%
+of the available bandwidth on the link.
+
+Fig.~\ref{fig:pingpong} compares the performance of various
+configurations for different message sizes and Table~\ref{tbl:pingpong}
+additionally lists the average and 99\% latencies for 64B messages, as
+well as the minimal message size required to exceed 5Gbps of
+bandwidth.
+
+\edb{TODO -- commentary}
 
 
-Table~\ref{tbl:pingpong} lists the average and 99\% percentile half
-round-trip latencies for small messages (64B), using the same netpipe
-benchmark.  \edb{TODO - COMMENTARY.}
-
-\subsection{Handling short TCP transactions}
+\subsection{Handling high TCP connection churn}
 \label{sec:eval:short}
 
 \input{figs/float-short}
 
-We first evaluate \ix's scalability with a benchmark that stresses
-connection churn in server, as used to evaluate
+We then evaluate \ix's multi-core scalability in handling workloads
+with extremely connection churn by using the same benchmark used to evaluate
 Megapipe~\cite{han2012megapipe} and mTCP~\cite{jeong2014mtcp}:
-multiple clients connect to a single server listeningo on a single
+multiple clients connect to a single server listening on a single
 port, send a request of size $s$ and wait for an echo of a message of
-the same size.  As with netpipe, while accepting the message, the server holds off its
+the same size.  As with NetPIPE, while accepting the message, the server holds off its
 echo response until the message has been entirely received.
 Each client performs this synchronous remote procedure
 call $n$ times, and then close the connection using a reset
 (\texttt{TCP RST}).
 
-Fig.~\ref{fig:short} shows the results. XXX
+
+\edb{PLACEHOLDER:} Fig.~\ref{fig:short} shows the results for both
+10GbE and 4x10GbE hardware configurations.  We first
+are able to confirm and reproduce the mTCP performance published in
+~\cite{jeong2014mtcp}.  On this benchmark, \ix generally scales XXx
+better than mTCP on a per core basis and XXx better than Linux.  In
+Fig.~\ref{fig:short:mcore}, we see that \ix can saturate the single
+10Gbpe wire using only 3 cores; in contrast mTCP requires all 8
+cores. \ix can further scale to nearly XX\% of the wire limit on a
+4x10GbE configuration, and using a single socket.
+Fig.~\ref{fig:short:roundtrips}, which uses 8 cores, similarly shows
+that \ix can nearly saturate the wire on the single-link
+configuration, but remains CPU-bound on the 4x10 configuration.
+Finally, Fig.~\ref{fig:short:size} shows that only \ix can saturate
+4x10Gbps with 4KB messages, and only \ix and mTCP can saturate the
+single-link configuration.
 
 
-subsection{Connection Scalability}
+\subsection{Connection Scalability}
 
 \input{figs/float-connscaling}
 \label{sec:eval:scale}
 
-We then evaluate \ix's scalabilty when handling a large number of concurrent connections. 
+We now evaluate \ix's scalability when handling a large number of
+concurrent connections. In this benchmark, each client machine runs
+$n$ threads, with each thread independently performing a 64B remote
+procedure call to the server.  Each RPC randomly chooses among $m$
+open sockets to perform the RPC.  In our setup with 18 clients, the
+server must multiplex among $18 \times n \times m$ open connections.
+We experimentally set $n \leq 24$ to maximize throughput.  The 19th
+client performs RPC at a low rate on a single connection to measure
+latency.  We report the throughput in message per second and the
+round-trip latency for varying number of total established connections.
 
-XXX
+Fig.~\ref{fig:connscaling} shows the results.  As expected, throughput
+increases with the degree of concurrency, but then decreases with
+increasing number of connections due to the increasingly high cost of
+multiplexing among open connections.  At the peak, \ix performs XXx
+better than Linux, consistent with the results from
+Fig.~\ref{fig:short:roundtrips}.  With 100,000 connections, \ix is
+able to deliver XX\% of its peak throughput, whereas Linux only
+delivers XXX\% of its own peak throughput\footnote{Unexplained
+  performance issues with our client configuration setup limit our
+  experiments to 100,000 connections at the time of submission. \ix is
+  designed to scale to millions of concurrent connections.}
 
 
-\subsection{TODO}
+\subsection{Application performance -- memcache}
 
 \todo Compare apples-to-apples with Megapipe, and mTCP in terms of microbenchmarks.
 
