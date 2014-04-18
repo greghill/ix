@@ -9,6 +9,7 @@
 #include <ix/log.h>
 #include <ix/uaccess.h>
 #include <ix/ethdev.h>
+#include <ix/toeplitz.h>
 
 #include <lwip/tcp.h>
 
@@ -18,6 +19,10 @@
 #define ARG_IS_COOKIE	0x8000000000000000ul
 
 static DEFINE_PERQUEUE(struct tcp_pcb *, listen_pcb);
+/* FIXME: this should be probably per queue */
+static DEFINE_PERCPU(uint16_t, local_port);
+/* FIXME: this should be more adaptive to various configurations */
+#define PORTS_PER_CPU (65536 / 32)
 
 /*
  * FIXME: LWIP and IX have different lifetime rules so we have to maintain
@@ -402,6 +407,36 @@ static err_t on_connected(void *arg, struct tcp_pcb *pcb, err_t err)
 	return ERR_OK;
 }
 
+/* FIXME: we should maintain a bitmap to hold the available TCP ports */
+int get_local_port_and_set_queue(struct ip_tuple *id)
+{
+	int i;
+	uint32_t hash;
+	uint32_t queue_idx;
+
+	if (!percpu_get(local_port))
+		percpu_get(local_port) = percpu_get(cpu_id) * PORTS_PER_CPU;
+	while (1) {
+		percpu_get(local_port)++;
+		if (percpu_get(local_port) >= (percpu_get(cpu_id) + 1) * PORTS_PER_CPU)
+			percpu_get(local_port) = percpu_get(cpu_id) * PORTS_PER_CPU + 1;
+		hash = toeplitz_rawhash_addrport(id->src_ip, id->dst_ip, hton16(percpu_get(local_port)), hton16(id->dst_port));
+		queue_idx = hash & (ETH_RSS_RETA_MAX_QUEUE - 1);
+		if (percpu_get(eth_rx_bitmap) & (1 << queue_idx)) {
+			id->src_port = percpu_get(local_port);
+			for (i = 0; i < percpu_get(eth_rx_count); i++) {
+				if (percpu_get(eth_rx)[i]->queue_idx == queue_idx) {
+					set_current_queue(percpu_get(eth_rx)[i]);
+					break;
+				}
+			}
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 void bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 {
 	err_t err;
@@ -417,7 +452,12 @@ void bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
                 return;
         }
 
-	addr.addr = tmp.dst_ip;
+	tmp.src_ip = hton32(cfg_host_addr.addr);
+
+	if (unlikely(get_local_port_and_set_queue(&tmp))) {
+                usys_tcp_connect_ret(0, cookie, -RET_FAULT);
+                return;
+	}
 
 	pcb = tcp_new();
 	if (unlikely(!pcb))
@@ -429,9 +469,19 @@ void bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 	tcp_err(pcb, on_err);
 	tcp_sent(pcb, on_sent);
 
+	addr.addr = tmp.src_ip;
+
+	err = tcp_bind(pcb, &addr, tmp.src_port);
+	if (unlikely(err != ERR_OK))
+		goto connect_fail;
+
+	addr.addr = tmp.dst_ip;
+
 	err = tcp_connect(pcb, &addr, tmp.dst_port, on_connected);
 	if (unlikely(err != ERR_OK))
 		goto connect_fail;
+
+	return;
 
 connect_fail:
 	tcp_abort(pcb);
