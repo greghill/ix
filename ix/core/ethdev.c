@@ -21,6 +21,7 @@ struct rte_eth_dev *eth_dev[MAX_ETH_DEVICES];
 DEFINE_PERCPU(uint16_t, eth_rx_count);
 DEFINE_PERCPU(struct eth_rx_queue **, eth_rx);
 DEFINE_PERCPU(struct eth_tx_queue *, eth_tx);
+DEFINE_PERCPU(uint64_t, eth_rx_bitmap);
 
 DEFINE_PERCPU(int, tx_batch_cap);
 DEFINE_PERCPU(int, tx_batch_len);

@@ -1125,4 +1125,5 @@ extern struct rte_eth_dev *eth_dev[];
 DECLARE_PERCPU(uint16_t, eth_rx_count);
 DECLARE_PERCPU(struct eth_rx_queue **, eth_rx);
 DECLARE_PERCPU(struct eth_tx_queue *, eth_tx);
+DECLARE_PERCPU(uint64_t, eth_rx_bitmap);
 

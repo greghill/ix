@@ -280,8 +280,10 @@ static int cpu_networking_init(int nb_rx_queues)
 		return -ENOMEM;
 	}
 
+	percpu_get(eth_rx_bitmap) = 0;
 	for (i = 0; i < nb_rx_queues; i++) {
 		ret = get_rx_queue(&percpu_get(eth_rx)[i]);
+		percpu_get(eth_rx_bitmap) |= 1 << percpu_get(eth_rx)[i]->queue_idx;
 		if (ret) {
 			log_err("init: failed to get an RX queue\n");
 			return ret;
