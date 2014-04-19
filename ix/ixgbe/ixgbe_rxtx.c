@@ -135,6 +135,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 	machaddr_t maddr;
 	uint32_t status;
 	int nb_descs = 0;
+	bool valid_checksum;
 #ifdef ENABLE_KSTATS
 	kstats_accumulate save;
 #endif
@@ -142,6 +143,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 	while (1) {
 		rxdp = &rxq->ring[rxq->pos & (rxq->len - 1)];
 		status = le32_to_cpu(rxdp->wb.upper.status_error);
+		valid_checksum = true;
 
 		if (!(status & IXGBE_RXDADV_STAT_DD))
 			break;
@@ -149,18 +151,18 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		rxd = *rxdp;
 		rxqe = &rxq->ring_entries[rxq->pos & (rxq->len -1)];
 
-		/* Check IP and TCP checksums calculated by hardware (if applicable) */
-		if (rxdp->wb.upper.status_error & IXGBE_RXD_STAT_IPCS){
-			if (unlikely(rxdp->wb.upper.status_error & IXGBE_RXDADV_ERR_IPE)){
-				log_err("ixgbe: IP rx checksum error, dropping pkt\n");
-				goto bad_csum;
-			}
-			if (rxdp->wb.upper.status_error & IXGBE_RXD_STAT_L4CS){
-				if (unlikely(rxdp->wb.upper.status_error & IXGBE_RXDADV_ERR_TCPE)){
-					log_err("ixgbe: TCP rx checksum error, dropping pkt\n");
-					goto bad_csum;
-				}
-			}
+		/* Check IP checksum calculated by hardware (if applicable) */
+		if (unlikely((rxdp->wb.upper.status_error & IXGBE_RXD_STAT_IPCS) &&
+			     (rxdp->wb.upper.status_error & IXGBE_RXDADV_ERR_IPE))) {
+			log_err("ixgbe: IP RX checksum error, dropping pkt\n");
+			valid_checksum = false;
+		}
+
+		/* Check TCP checksum calculated by hardware (if applicable) */
+		if (unlikely((rxdp->wb.upper.status_error & IXGBE_RXD_STAT_L4CS) &&
+			     (rxdp->wb.upper.status_error & IXGBE_RXDADV_ERR_TCPE))) {
+			log_err("ixgbe: TCP RX checksum error, dropping pkt\n");
+			valid_checksum = false;
 		}
 
 		b = rxqe->mbuf;
@@ -177,7 +179,10 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		rxdp->read.hdr_addr = cpu_to_le32(maddr);
 		rxdp->read.pkt_addr = cpu_to_le32(maddr);
 
-		eth_input(rx, b);
+		if (likely(valid_checksum))
+			eth_input(rx, b);
+		else
+			mbuf_free(b);
 
 		rxq->pos++;
 		nb_descs++;
@@ -190,11 +195,6 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 	}
 
 	return nb_descs;
-
-bad_csum:
-	mbuf_free(rxqe->mbuf);
-	return -EINVAL;
-	
 }
 
 /* FIXME: make this driver independent */
@@ -357,10 +357,9 @@ static int ixgbe_tx_reclaim(struct eth_tx_queue *tx)
  * 			tells NIC to load a new ctx into its memory
  * Currently assuming no no LSO.
  */						
-static int ixgbe_tx_xmit_ctx(struct tx_queue *txq, int ol_flags, int ctx_idx){
-	
+static int ixgbe_tx_xmit_ctx(struct tx_queue *txq, int ol_flags, int ctx_idx)
+{	
 	volatile struct ixgbe_adv_tx_context_desc *txctxd;
-	volatile union ixgbe_adv_tx_desc *txdp;
 	uint32_t type_tucmd_mlhl, mss_l4len_idx, vlan_macip_lens;
 
 	/* Make sure enough space is available in the descriptor ring */
@@ -407,9 +406,7 @@ static int ixgbe_tx_xmit_ctx(struct tx_queue *txq, int ol_flags, int ctx_idx){
 	txq->ctx_cache[ctx_idx].flags = ol_flags;
 
 	return 0;
-
 }
-
 
 static int ixgbe_tx_xmit_one(struct tx_queue *txq, struct mbuf *mbuf)
 {
