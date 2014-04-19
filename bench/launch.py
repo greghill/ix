@@ -58,11 +58,11 @@ def main():
 
   def check_and_cat(title, fd, r):
     if fd in r:
-      sys.stdout.write('\033[1m%s: \033[0m' % title)
-      sys.stdout.flush()
-      if cat(fd, sys.stdout):
-        sys.stdout.write('-closed-\n')
-        sys.stdout.flush()
+      sys.stderr.write('\033[1m%s: \033[0m' % title)
+      sys.stderr.flush()
+      if cat(fd, sys.stderr):
+        sys.stderr.write('-closed-\n')
+        sys.stderr.flush()
         fds.remove(fd)
       return 1
     return 0
@@ -76,7 +76,7 @@ def main():
         if clients[i].stdout in r:
           line = clients[i].stdout.readline()
           if len(line) == 0:
-            print '%s-stdout: -closed-' % i
+            print >>sys.stderr, '%s-stdout: -closed-' % i
             sys.exit(1)
           ret[i] = line
         if check_and_cat('%s-stderr' % i, clients[i].stderr, r):
@@ -103,7 +103,7 @@ def main():
   ret = get_stdout_from_all()
   for i in ret:
     if ret[i] != 'ok\n':
-      print '%s-stdout: %s' % (i, ret[i])
+      print >>sys.stderr, '%s-stdout: %s' % (i, ret[i])
       sys.exit(1)
 
   time.sleep(1)
