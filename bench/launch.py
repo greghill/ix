@@ -92,7 +92,11 @@ def main():
 
     ret = get_stdout_from_all()
     for i in ret:
-      ret[i] = [int(x) for x in ret[i].split()]
+      try:
+        ret[i] = [int(x) for x in ret[i].split()]
+      except ValueError:
+        logging.error('%s: Malformed output: %s', i, ret[i])
+        sys.exit(1)
 
     return now, ret
 
