@@ -55,6 +55,8 @@ fi
 "
 
   sudo bash select_net.sh $SERVER_NET &
+  pids=''
+  pids="$pids $!"
   sudo bash <<< "$INIT_SCRIPT"
   sudo sysctl fs.nr_open=$NOFILE > /dev/null
   if [ `ulimit -n` -lt $NOFILE ]; then
@@ -67,9 +69,13 @@ fi
     IFS='|'
     read -r HOST NIC <<< "$CLIENT_DESC"
     ssh $HOST "sudo ALL_IFS=$NIC SINGLE_NIC=$NIC IP=auto bash select_net.sh $CLIENT_NET" &
+    pids="$pids $!"
     ssh $HOST '/bin/bash' <<< "$INIT_SCRIPT" &
+    pids="$pids $!"
   done
   IFS=' '
 
-  wait
+  for pid in $pids; do
+    wait $pid
+  done
 }
