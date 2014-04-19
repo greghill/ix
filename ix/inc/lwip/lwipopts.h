@@ -36,5 +36,8 @@
 #define TCP_MSS 1460
 #define TCP_WND (2048 * TCP_MSS)
 
+#define CHECKSUM_CHECK_IP               0
+#define CHECKSUM_CHECK_TCP              0
 #define TCP_ACK_DELAY (1 * ONE_MS)
 #define RTO_UNITS (500 * ONE_MS)
+

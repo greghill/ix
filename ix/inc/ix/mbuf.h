@@ -55,11 +55,17 @@ struct mbuf {
 
 	void (*done) (struct mbuf *m);
 	unsigned long done_data;
+	uint16_t ol_flags;	/* offload flags */
 };
 
 #define MBUF_HEADER_LEN		64	/* one cache line */
 #define MBUF_DATA_LEN		2048	/* 2 kb */
 #define MBUF_LEN		(MBUF_HEADER_LEN + MBUF_DATA_LEN)
+
+/* Offload flag bits */
+#define PKT_TX_IP_CKSUM      0x1000 /**< IP cksum of TX pkt. computed by NIC. */
+#define PKT_TX_TCP_CKSUM     0x2000 /**< TCP cksum of TX pkt. computed by NIC. */
+
 
 /**
  * mbuf_mtod_off - cast a pointer to the data with an offset
