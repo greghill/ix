@@ -88,6 +88,7 @@ typedef enum {
 struct pbuf {
   /** next pbuf in singly linked pbuf chain */
   struct pbuf *next;
+  struct pbuf *tcp_api_next;
 
   /** pointer to the actual data in the buffer */
   void *payload;

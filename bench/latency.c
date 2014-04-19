@@ -10,70 +10,26 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "histogram.h"
 #include "timer.h"
 
 #define BUFFER_SIZE 64
-#define MAX_LATENCIES 131072
 #define MAX_PERCENTILES 64
 
 static char buffer[BUFFER_SIZE];
-static int latencies[MAX_LATENCIES];
-static int latency_index;
 
 static struct sockaddr_in server_addr;
 static int probes_per_connection;
 static int interval_ms;
 
-static int compare_int(const void *x, const void *y)
-{
-	int a = *((int *)x);
-	int b = *((int *)y);
-	if (a < b)
-		return -1;
-	if (a > b)
-		return 1;
-	return 0;
-}
-
-static double calc_percentile(int *array, int size, double percentile)
-{
-	double index;
-	int floor, ceiling;
-
-	if (!size)
-		return 0;
-
-	index = percentile * size - 1;
-	floor = (int) index;
-	ceiling = floor + 1;
-	if (floor < 0)
-		return array[0];
-	if (ceiling > size - 1)
-		return array[size - 1];
-	return array[floor] + (array[ceiling] - array[floor]) * (index - floor);
-}
-
 static void print_percentiles(double *percentiles, int percentiles_count)
 {
 	int i;
 
-	qsort(latencies, latency_index, sizeof(latencies[0]), compare_int);
-
-	printf("%d ", latency_index);
+	printf("%d ", histogram_get_count());
 	for (i = 0; i < percentiles_count; i++)
-		printf("%f ", calc_percentile(latencies, latency_index, percentiles[i]));
+		printf("%f ", histogram_get_percentile(percentiles[i]));
 	puts("");
-}
-
-static void record(int latency_us)
-{
-	if (latency_index >= MAX_LATENCIES) {
-		fprintf(stderr, "error: cannot record more than %d latencies.\n", MAX_LATENCIES);
-		exit(1);
-	}
-
-	latencies[latency_index] = latency_us;
-	latency_index++;
 }
 
 static int probe(int sock)
@@ -97,7 +53,7 @@ static int probe(int sock)
 		}
 		recv_count += len;
 	}
-	record((rdtsc() - start) / cycles_per_us);
+	histogram_record((rdtsc() - start) / cycles_per_us);
 	return 0;
 }
 
@@ -187,6 +143,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Error: Timer calibration failed.\n");
 		return 1;
 	}
+	histogram_init();
 
 	for (i = 0; i < sizeof(buffer); i++)
 		buffer[i] = '0';

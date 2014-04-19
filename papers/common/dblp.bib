@@ -1,3 +1,36 @@
+@inproceedings{Schwarzkopf:2013:OFS,
+ author = {Schwarzkopf, Malte and Konwinski, Andy and Abd-El-Malek, Michael and Wilkes, John},
+ title = {Omega: Flexible, Scalable Schedulers for Large Compute Clusters},
+ booktitle = {Proceedings of the 8th ACM European Conference on Computer Systems},
+ series = {EuroSys '13},
+ year = {2013},
+ isbn = {978-1-4503-1994-2},
+ location = {Prague, Czech Republic},
+ pages = {351--364},
+ numpages = {14},
+ url = {http://doi.acm.org/10.1145/2465351.2465386},
+ doi = {10.1145/2465351.2465386},
+ acmid = {2465386},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {cluster scheduling, optimistic concurrency control},
+} 
+
+@inproceedings{Hindman:2011:MPF,
+ author = {Hindman, Benjamin and Konwinski, Andy and Zaharia, Matei and Ghodsi, Ali and Joseph, Anthony D. and Katz, Randy and Shenker, Scott and Stoica, Ion},
+ title = {Mesos: A Platform for Fine-grained Resource Sharing in the Data Center},
+ booktitle = {Proceedings of the 8th USENIX Conference on Networked Systems Design and Implementation},
+ series = {NSDI'11},
+ year = {2011},
+ location = {Boston, MA},
+ pages = {22--22},
+ numpages = {1},
+ url = {http://dl.acm.org/citation.cfm?id=1972457.1972488},
+ acmid = {1972488},
+ publisher = {USENIX Association},
+ address = {Berkeley, CA, USA},
+} 
+
 
 @string{SOSP89 = "Proceedings of the 12th ACM Symposium on Operating Systems Principles (SOSP)"}
 @string{SOSP91 = "Proceedings of the 13th ACM Symposium on Operating Systems Principles (SOSP)"}
@@ -71,7 +104,8 @@
 
 @string{FPGA13 = "Proceedings of the 2013 ACM/SIGDA International Symposium on Field Programmable Gate Arrays (FPGA '13)"}
 
-@string{Eurosys12 = "Proceedings of the Seventh EuroSys Conference (Eurosys '12)"}
+@string{Eurosys12 = "Proceedings of the 7th EuroSys Conference (Eurosys '12)"}
+@string{Eurosys13 = "Proceedings of the 8th EuroSys Conference (Eurosys '13)"}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% 1968 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -581,6 +615,19 @@
   year      = {1993},
   pages     = {262-273},
   ee        = {http://doi.acm.org/10.1145/169627.169724},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
+}
+
+@article{DBLP:journals/ton/FloydJ93,
+  author    = {Sally Floyd and
+               Van Jacobson},
+  title     = {Random early detection gateways for congestion avoidance},
+  journal   = {IEEE/ACM Trans. Netw.},
+  volume    = {1},
+  number    = {4},
+  year      = {1993},
+  pages     = {397-413},
+  ee        = {http://dx.doi.org/10.1109/90.251892},
   bibsource = {DBLP, http://dblp.uni-trier.de}
 }
 
@@ -1163,6 +1210,18 @@
   ee        = {http://doi.ieeecomputersociety.org/10.1109/2.769448},
   bibsource = {DBLP, http://dblp.uni-trier.de}
 }
+
+@inproceedings{DBLP:conf/usenix/PaiDZ99,
+  author    = {Vivek S. Pai and
+               Peter Druschel and
+               Willy Zwaenepoel},
+  title     = {Flash: An efficient and portable Web server},
+  booktitle = {USENIX Annual Technical Conference, General Track},
+  year      = {1999},
+  pages     = {199-212},
+  ee        = {http://www.usenix.org/events/usenix99/full_papers/pai/pai.pdf},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
+}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% 2000 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1220,6 +1279,20 @@
   year      = {2000},
   pages     = {263-297},
   ee        = {http://doi.acm.org/10.1145/354871.354874},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
+}
+
+@article{DBLP:journals/tocs/PaiDZ00,
+  author    = {Vivek S. Pai and
+               Peter Druschel and
+               Willy Zwaenepoel},
+  title     = {IO-Lite: a unified I/O buffering and caching system},
+  journal   = {ACM Trans. Comput. Syst.},
+  volume    = {18},
+  number    = {1},
+  year      = {2000},
+  pages     = {37-66},
+  ee        = {http://doi.acm.org/10.1145/332799.332895},
   bibsource = {DBLP, http://dblp.uni-trier.de}
 }
 
@@ -1590,6 +1663,26 @@
   year      = {2004},
   pages     = {15-28},
   ee        = {http://www.usenix.org/publications/library/proceedings/usenix04/tech/general/cantrill.html},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
+}
+
+@article{DBLP:journals/computer/RegnierMIIMHNCF04,
+  author    = {Greg J. Regnier and
+               Srihari Makineni and
+               Ramesh Illikkal and
+               Ravi R. Iyer and
+               Dave B. Minturn and
+               Ram Huggahalli and
+               Donald Newell and
+               Linda S. Cline and
+               Annie P. Foong},
+  title     = {TCP Onloading for Data Center Servers},
+  journal   = {IEEE Computer},
+  volume    = {37},
+  number    = {11},
+  year      = {2004},
+  pages     = {48-58},
+  ee        = {http://doi.ieeecomputersociety.org/10.1109/MC.2004.223},
   bibsource = {DBLP, http://dblp.uni-trier.de}
 }
 
@@ -3154,7 +3247,7 @@
                M. Frans Kaashoek and
                Nickolai Zeldovich},
   title     = {RadixVM: scalable address spaces for multithreaded applications},
-  booktitle = {EuroSys},
+  booktitle = EuroSys13,
   year      = {2013},
   pages     = {211-224},
   ee        = {http://doi.acm.org/10.1145/2465351.2465373},

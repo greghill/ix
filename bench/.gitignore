@@ -2,7 +2,5 @@
 server
 client
 latency
-rexec
-cfg-*.py
 pingpongs
 simple_client

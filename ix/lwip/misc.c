@@ -55,7 +55,7 @@ static void tcpip_tcp_timer(struct timer *t)
 	}
 
 	if (needed)
-		timer_add(&percpu_get(tcp_timer), TCP_TMR_INTERVAL * 4);
+		timer_add(&percpu_get(tcp_timer), TCP_TMR_INTERVAL);
 }
 
 void tcp_timer_needed(void)
@@ -68,7 +68,7 @@ void tcp_timer_needed(void)
 			timer_init_entry(&percpu_get(tcp_timer), &tcpip_tcp_timer);
 
 		if (!timer_pending(&percpu_get(tcp_timer)))
-			timer_add(&percpu_get(tcp_timer), TCP_TMR_INTERVAL * 4);
+			timer_add(&percpu_get(tcp_timer), TCP_TMR_INTERVAL);
 	}
 }
 
@@ -86,12 +86,7 @@ void tcp_input_tmp(struct mbuf *pkt, struct ip_hdr *iphdr, void *tcphdr)
 	pbuf->mbuf = pkt;
 	perqueue_get(ip_data).current_iphdr_dest.addr = iphdr->dst_addr.addr;
 	perqueue_get(ip_data).current_iphdr_src.addr = iphdr->src_addr.addr;
-	pkt->done_data = 0xCAFEBABE;
 	tcp_input(pbuf, &netif);
-
-	/* FIXME: so terrible :( */
-	if (pkt->done_data == 0xCAFEBABE)
-		mbuf_free(pkt);
 }
 
 DEFINE_PERCPU(struct mempool, pbuf_mempool);

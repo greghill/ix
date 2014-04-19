@@ -29,8 +29,8 @@ struct tcpapi_pcb {
 	unsigned long cookie;
 	struct ip_tuple *id;
 	hid_t handle;
-	struct mbuf *recvd;
-	struct mbuf *recvd_tail;
+	struct pbuf *recvd;
+	struct pbuf *recvd_tail;
 	int queue;
 };
 
@@ -179,7 +179,7 @@ void bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
 void bsys_tcp_recv_done(hid_t handle, size_t len)
 {
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
-	struct mbuf *recvd, *next;
+	struct pbuf *recvd, *next;
 
 	log_debug("tcpapi: bsys_tcp_recv_done - handle %lx, len %ld\n",
 		  handle, len);
@@ -194,14 +194,12 @@ void bsys_tcp_recv_done(hid_t handle, size_t len)
 	if (api->pcb)
 		tcp_recved(api->pcb, len);
 	while (recvd) {
-		if (len < recvd->len) {
-			recvd->len -= len;
+		if (len < recvd->len)
 			break;
-		}
 
 		len -= recvd->len;
-		next = recvd->next;
-		mbuf_free(recvd);
+		next = recvd->tcp_api_next;
+		pbuf_free(recvd);
 		recvd = next;
 	}
 
@@ -211,7 +209,7 @@ void bsys_tcp_recv_done(hid_t handle, size_t len)
 void bsys_tcp_close(hid_t handle)
 {
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
-	struct mbuf *recvd, *next;
+	struct pbuf *recvd, *next;
 
 	log_debug("tcpapi: bsys_tcp_close - handle %lx\n", handle);
 
@@ -228,8 +226,8 @@ void bsys_tcp_close(hid_t handle)
 
 	recvd = api->recvd;
 	while (recvd) {
-		next = recvd->next;
-		mbuf_free(recvd);
+		next = recvd->tcp_api_next;
+		pbuf_free(recvd);
 		recvd = next;
 	}
 
@@ -251,7 +249,6 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 {
 	struct tcpapi_pcb *api;
 	struct mbuf *pkt;
-	struct pbuf *tmp;
 
 	log_debug("tcpapi: on_recv - arg %p, pcb %p, pbuf %p, err %d\n",
 		  arg, pcb, p, err);
@@ -266,25 +263,24 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 		return ERR_OK;
 	}
 
-	if (!api->recvd)
-		api->recvd = p->mbuf;
-	else
-		api->recvd_tail->next = p->mbuf;
+	if (!api->recvd) {
+		api->recvd = p;
+		api->recvd_tail = p;
+	} else {
+		api->recvd_tail->tcp_api_next = p;
+		api->recvd_tail = p;
+	}
+	p->tcp_api_next = NULL;
 
-	tmp = p;
 	/* Walk through the full receive chain */
 	do {
 		pkt = p->mbuf;
-		pkt->done_data = 0; /* FIXME: so terrible :( */
 		pkt->len = p->len; /* repurpose len for recv_done */
 		usys_tcp_recv(api->handle, api->cookie,
 			      mbuf_to_iomap(pkt, p->payload), p->len);
 
 		p = p->next;
 	} while (p);
-	pbuf_free(tmp);
-
-	api->recvd_tail = pkt;
 
 	return ERR_OK;
 }

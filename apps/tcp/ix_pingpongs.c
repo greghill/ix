@@ -188,7 +188,7 @@ static void *thread_main(void *arg)
 		return NULL;
 	}
 
-	for (i = 0; i < BUFFER_POOL_SIZE; i += align_up(msg_size, 64)) {
+	for (i = 0; i <= BUFFER_POOL_SIZE - msg_size; i += align_up(msg_size, 64)) {
 		entry = malloc(sizeof(*entry));
 		if (!entry) {
 			printf("unable to allocate memory for buffer pool management\n");

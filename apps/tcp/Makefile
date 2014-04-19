@@ -11,7 +11,7 @@ ix_pingpongs: ix_pingpongs.o ../../libix/libix.a
 	$(CC) $(CFLAGS) $(<) -o ix_pingpongs -L../../libix -lix -lpthread
 
 clean:
-	rm -f *.o *.d ix_recv ix_server
+	rm -f *.o *.d ix_recv ix_server ix_pingpongs
 
 -include *.d
 

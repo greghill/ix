@@ -2,6 +2,12 @@
 \section{Internal notes}
 
 
+\subsection{Glossary}
+
+\paragraph{thread/core/xxx?.}  In IX, this is the fundamental unique of scheduling... maybe we should just call it a thread...
+
+
+
 \subsection{ CUT from Intro}
 
 
@@ -165,7 +171,8 @@ concurrent connections on FreeBSD, as of 2012~\cite{whatsapp-2mil}.
 
 \subsection{To put in related work}
 
-\paragraph*{Exokernel}   Exokernels~\cite{DBLP:conf/sosp/EnglerKO95} safely expose hardware to library operating systems.  We propose
+
+\paragraph*{Exokernel}   Exokernels~\cite{DBLP:conf/sosp/EnglerKO95} safely expose hardware to library operating systems.  We expose TCP flow control directly (and safely) to userspace --- the true end-to-end-argument~\cite{DBLP:journals/tocs/SaltzerRC84}
 
 
 \paragraph*{Akkaris}.  
@@ -308,11 +315,20 @@ address spaces for multithreaded applications; we address this as well.
 Network congestion is a key cause of poor tail-latency performance in
 datacenter networks~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10}.
 DCTCP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10} relies on in-network
-ECN support to eliminate up to 90\% of buffering in the network.
+ECN~\cite{ramakrishnan2001addition} support to eliminate up to 90\% of buffering in the network.
 \ix's approach to packet buffering effectively extends the network
 routing latyer to an extra hop on each end-point.  That extra hop could
 be used to signal congestion back to the source by marking the ECN bit
 before processing the packet in \ix's TCP stack.
+
+For instance, it allows the dataplane to detect
+congestion and explicitly mark the flow as congested using
+ECN~\cite{ramakrishnan2001addition}, the prerequisite for protocols
+such as DCTCP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10}. Similarly,
+the control plane can react to inbound congestion by allocating
+additional resources (more hardware threads, increase clock frequency)
+for a dataplane.
+
 
 
 
@@ -339,3 +355,11 @@ specialization vs. software specialization (of the OS).
 
 
 \paragraph*{ngnx}
+
+\subsection{Latex sizes}
+
+\begin{itemize}
+
+\item colummwidth: \the\columnwidth
+\item textwidth:  \the\textwidth
+\end{itemize}

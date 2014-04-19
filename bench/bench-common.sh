@@ -1,5 +1,7 @@
 #!/bin/bash
 
+NOFILE=10000000
+
 bench_start() {
   name=$1
   dir=results/$(date +%Y-%m-%d-%H-%M-%S)/$name
@@ -21,11 +23,13 @@ bench_stop() {
 }
 
 prepare() {
+  CLIENT_COUNT=0
   CLIENT_HOSTS=
   for CLIENT_DESC in $CLIENTS; do
     IFS='|'
     read -r HOST NIC <<< "$CLIENT_DESC"
     CLIENT_HOSTS="$CLIENT_HOSTS,$HOST"
+    CLIENT_COUNT=$[$CLIENT_COUNT + 1]
   done
   IFS=' '
   CLIENT_HOSTS=${CLIENT_HOSTS:1}
@@ -52,6 +56,13 @@ fi
 
   sudo bash select_net.sh $SERVER_NET &
   sudo bash <<< "$INIT_SCRIPT"
+  sudo sysctl fs.nr_open=$NOFILE > /dev/null
+  if [ `ulimit -n` -lt $NOFILE ]; then
+    echo 'Add the following lines into /etc/security/limits.conf and re-login.'
+    echo "`whoami` soft nofile $NOFILE"
+    echo "`whoami` hard nofile $NOFILE"
+    exit 1
+  fi
   for CLIENT_DESC in $CLIENTS; do
     IFS='|'
     read -r HOST NIC <<< "$CLIENT_DESC"

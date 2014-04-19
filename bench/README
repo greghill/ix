@@ -5,6 +5,13 @@ server
 
 Listens to TCP socket 9876. It accepts all incoming connections. It sends back data unchanged as soon as they are received. Uses libevent.
 
+server_mtcp
+--
+`Usage: ./server_mtcp CPUS`
+* `CPUS` = A comma separated list of the CPUs to use for handling traffic.
+
+Same as "server" but ported to use the mTCP user-mode TCP stack.
+
 pingpongs
 --
 `Usage: ./pingpongs MSG_SIZE CPUS`
@@ -12,6 +19,14 @@ pingpongs
 * `CPUS` = A comma separated list of the CPUs to use for handling traffic.
 
 Listens to TCP socket 9876. It accepts all incoming connections. It waits for `MSG_SIZE` bytes of data that are kept in a buffer. When it has received `MSG_SIZE` bytes of data, it writes them back.
+
+pingpongs_mtcp
+--
+`Usage: ./pingpongs MSG_SIZE CPUS`
+* `MSG_SIZE` = The message size to expect and send.
+* `CPUS` = A comma separated list of the CPUs to use for handling traffic.
+
+Same as "pingpongs" but ported to use the mTCP user-mode TCP stack.
 
 client
 --
@@ -25,13 +40,17 @@ client
 
 The utility uses libevent to coordinate sockets. If a connection stalls for more than TIMEOUT_US (1 second), it is closed and reopened and the event is counted as a timeout. Every 1 second it reports the following data on stdout:
 
-`total_connections total_messages active_connections timeouts_connect timeouts_recv error_summary`
+`total_connections total_messages active_connections timeouts_connect timeouts_recv rx_bytes rx_packets tx_bytes tx_packets 0 error_summary`
 
 * `total_connections` = the number of connections performed from the beginning of execution across all threads/cores.
 * `total_messages` = the number of messages sent and received.
 * `active_connections` = the instantaneous number of active connections.
 * `timeouts_connect` = the number of timeouts that occurred while waiting to connect.
 * `timeouts_recv` = the number of timeouts that occurred while waiting for data.
+* `rx_bytes` = the number of bytes received by the network interface of the client as reported by /proc/net/dev.
+* `rx_packets` = the number of packets received.
+* `tx_bytes` = the number of bytes transmitted.
+* `tx_packets` = the number of packets transmitted.
 * `error_summary` = triplets <source, errno, count>
 
 simple_client
@@ -54,10 +73,15 @@ The utility does NOT uses libevent. Each thread handles its sockets in a serial 
 
 Every 1 second it reports the following data on stdout:
 
-`total_connections total_messages 0 0 0`
+`total_connections total_messages 0 0 0 rx_bytes rx_packets tx_bytes tx_packets latency_99`
 
 * `total_connections` = the number of connections performed from the beginning of execution across all threads.
 * `total_messages` = the number of messages sent and received.
+* `rx_bytes` = the number of bytes received by the network interface of the client as reported by /proc/net/dev.
+* `rx_packets` = the number of packets received.
+* `tx_bytes` = the number of bytes transmitted.
+* `tx_packets` = the number of packets transmitted.
+* `latency_99` = the top 99th percentile of the round-trip time to send and receive a message.
 
 The output format is compatible with the output format of the `client` utility.
 
@@ -76,12 +100,6 @@ Every 1 second it reports the following data on stdout:
 
 * `count_of_probes` = the number of probes sent and received
 * `latency_us` = a space separated list of latencies in us in correspondence with the PERCENTILE command line option
-
-energy
---
-`Usage: sudo ./energy.py`
-
-Assumes a system with two physical CPUs/sockets. Reports every second the energy consumption in Joules for each socket. The numbers wrap and special consideration has been taken to avoid the wrap within a single utility execution.
 
 select_net.sh
 --

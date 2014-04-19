@@ -1,159 +1,158 @@
-\section{Design Principles}
+\section{\ix Design Approach}
 \label{sec:design}
 
-We now present the fundamental design principles of a dataplane
-architecture designed to run untrusted, event-driven applications, and
-designed to address the specific scalability challenges of today's
-web-scale applications.
+% We now present the fundamental design principles of a dataplane
+% architecture designed to run untrusted, event-driven applicatxions, and
+% designed to address the specific scalability challenges of today's
+% web-scale applications.
 
-We note that the first three challenges of
-\S\ref{sec:motivation:challenges} -- high packet rate, microsecond
-computing and connection scalability--- are not limited to
-event-driven applications operating at large scale.  In fact, such
-challenges have been addressed and are reasonably well understood in
-others domains.  In particular, middleboxes such as
-firewalls~\cite{missing}, load-balancers~\cite{missing}, and software
+The first three requirements of \S\ref{sec:motivation:challenges} --
+high packet rate, microsecond latency, and connection scalability---
+are not unique to event-driven, web-scale applications.  These
+requirements are reasonably well understood and have been addressed in
+the design of middleboxes such as firewalls~\cite{missing},
+load-balancers~\cite{missing}, and software
 routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09};
-have addresses the problem long ago by integrating the networking
-stack and the application into a single \emph{dataplane}.  
+by integrating the networking stack and the application into a single
+\emph{dataplane}. The two remaining requirements, resource elasticity
+and protection, are not addressed for such middleboxes because they
+are single-purpose systems, not exposed directly to users. 
 
-As for the other two remaining aspects -- resource elasticity and
-security and protection --, middleboxes provide fewer insights: since
-each middlebox typically performs a single function, resource
-elasticity and proportionality is less of a direct concern.  They are
-traditionally deployed and maintained using an embedded paradigm in
-which the entire stack -- operating system, applications and utilities
--- is packaged as single blob.  As such, the security and protection
-model is not directly exposed to users.
+% As for the other two remaining aspects -- resource elasticity and
+% security and protection --, middleboxes provide fewer insights: since
+% each middlebox typically performs a single function, resource
+% elasticity and proportionality is less of a direct concern.  They are
+% traditionally deployed and maintained using an embedded paradigm in
+% which the entire stack -- operating system, applications and utilities
+% -- is packaged as single blob.  As such, the security and protection
+% model is not directly exposed to users.
 
-Dataplane differ from traditional operating system designs in two
-fundamental ways. First, they are designed to \emph{run to completion}
-each packet: all protocol and application processing for that packet
-is done before moving on to the next one.  A traditional commodity
-operating system has a different design in which protocol processing
-is fundamentally decoupled from the application itself.  The
-decoupling enables a greater degree of flexibility in terms of resource
-scheduling and flow control.  For example, an operating system will
-return \texttt{ACK} to slide its receive window even though the
-application is not consuming data, up to some extent.
+Dataplanes differ from a traditional OS designs in two fundamental
+ways. First, they are designed to \emph{run each packet to
+  completion}. All protocol and application processing for a packet is
+done before moving on to the next packet.  In contrast, a commodity OS is designed
+with protocol processing decoupled from the application itself in
+order to enable flexibility in terms of resource scheduling and flow
+control. For example, a commodity OS relies on device and soft interrupts to context switch from application processing to protocol processing; 
+similarily, the OS will return \texttt{ACK} and
+slide its receive window even though the application is not consuming
+data, up to some extent. Second, dataplanes are designed to operate in
+a \emph{flow-consistent, coherence-free, flow-consistent} manner.
+Network flows are distributed into distinct queues via receive-side
+scaling (RSS)~\cite{DBLP:journals/computer/RegnierMIIMHNCF04} and each queue
+is served by a single core so that the common case processing of a
+packet requires no synchronization or cache coherence interactions
+between cores.
 
-Second, dataplane are designed to operate in a \emph{coherence-free,
-  flow-consistent} manner, meaning that the common case processing of
-a packet can operate without causing any cache-coherency interactions
-with other cores.  Flow-consistency distributes flows into distinct
-queues based on a L4-hash; this is routinely supported in network CPUs
-used in middleboxes (e.g., ~\cite{cavium-octeon}) as well as commodity
-NIC via Receive Side Scaling (RSS)~\cite{missing}.
+% Flow-consistency distributes flows
+% into distinct queues based on a L4-hash; this is routinely supported
+% in network CPUs used in middleboxes (e.g., ~\cite{cavium-octeon}) as
+% well as commodity NIC via Receive Side Scaling (RSS)~\cite{missing}.
 
-This paper answers the following research question: can dataplane
-architectures be efficiently extended to support untrusted,
-event-driven applications and address simultaneously the five
-challenges of \S\ref{sec:motivation:challenges} ?  The answer relies
-on the following fundamental design principles:
+Building upon the lessons from middleboxes, we design \ix to answer
+the following question: {\it can the dataplane architecture be
+  efficiently extended to support untrusted, event-driven applications
+  and satisfy simultaneously the five requirements of
+  \S\ref{sec:motivation:challenges}?}  The answer relies on the
+following key design principles:
 
 
-\paragraph{Separation of control and data plane.}
-
-Software dataplanes are designed to operate on flows, not to provision
-resources or manage them in an elastic and proportional manner.  Our
-design separates the control function, responsible for resource
-configuration, provisioning, monitoring and scheduling, from the
-dataplane, which runs the application and the networking stack.  Like
-an operating for applications, the control plane multiplexes and
-schedules resources among dataplane operating systems.  Unlike a traditional operating system
-deployment, the control plane multiplexes resources at a very coarse
-grain in time and space: core are dedicated until revoked; memory is
+\myparagraph{Separation of control and data plane:} 
+% Software dataplanes are designed to operate on flows, not to
+% provision resources or manage them in an elastic and proportional
+% manner.
+Our design separates the control function, responsible for resource
+configuration, provisioning, scheduling, and monitoring, from the
+dataplane, which runs the networking stack and application logic.
+Like a conventional OS, our control plane multiplexes and schedule
+resources among dataplanes but in an coarse-grain manner in space and
+time: cores are dedicated to applications until revoked; memory is
 allocated in GB chunks; hardware queues are exclusively assigned to a
-single dataplane.
+single dataplane for long time periods. Each dataplane instance
+supports one, single address-space, application.  This is similar to
+the Exokernel approach of using library operating
+systems~\cite{DBLP:conf/sosp/EnglerKO95}, but we offer protection
+between applications and the control plane using the ubiquitous
+available hardware virtualization features in modern
+servers~\cite{DBLP:journals/computer/UhligNRSMABKLS05,belay2012dune}.
+\christos{should we say here that Linux is the control plane or leave
+  it for 4?}
 
-Each dataplane instance supports one single address-space
-application.  This is similar to the Exokernel approach of using
-library operating systems~\cite{DBLP:conf/sosp/EnglerKO95}.  Unlike
-the Exokernels of the '90s however, our dataplane protects the
-operating system from the application.  This is made possible by the
-ubiquitous availability of hardware virtualization features such as
-VT-x in today's
-processors~\cite{DBLP:journals/computer/UhligNRSMABKLS05}.
-
-
-\paragraph{Native Zero-copy, event-oriented API.}
-
-The dataplane does not expose or emulate the POSIX API.  Instead, it
-exposes a native event-oriented API.  Similar to Megapipe's lwsockets,
-each hardware thread has a pair of in-memory command and completion
-rings, used to communicate between the kernel and the applications.
-The API itself meets the commutativity
-rule~\cite{DBLP:conf/sosp/ClementsKZMK13} which is the pre-requisite
-for a coherency-free operation.  The API allows for a true zero-copy
-operation model in both receive and transfer directions by having the
-kernel and application cooperatively manage the \texttt{mbuf} buffer
-pool.  All incoming packets are stored in \texttt{mbufs}, which are
-mapped read-only into application.  Applications may hold onto mbufs
-and return them to the kernel at a later date.  Similarly,
-applications may send scatter/gather lists to flows. As the contents
-are not copied, applications must keep their content immutable until
-the flow peer acknowledges reception.
-
-Many event-driven applications rely on the libevent framework, which
-creates an OS-independent level of abstraction for Linux, *BSD and
-Windows capable of using the native, scalable APIs of these operating
-systems, such as \texttt{epoll} and Windows IO Completion ports.  We
-provide libevent compatibility to legacy applications. Unfortunately,
-libevent assumes a different memory allocation model; as a result,
-true zero-copy is not general in the common case.
+\myparagraph{Native zero-copy, event-oriented API:} Our dataplane does not
+expose or emulate the POSIX API.  Instead, it exposes a native
+event-oriented API that meets the commutativity
+rule~\cite{DBLP:conf/sosp/ClementsKZMK13}. Similar to Megapipe's
+lwsockets, each hardware thread has a pair of in-memory command and
+completion rings, used to communicate between the dataplane and the
+application. The API allows for a true zero-copy operation in both the
+receive and transfer directions by having the dataplane and the
+application cooperatively manage the \texttt{mbuf} buffer pool.  All
+incoming packets are stored in \texttt{mbufs}, which are mapped
+read-only into the application. Applications may hold onto mbufs and
+return them to the kernel at a later point.  Similarly, the
+application may send to the dataplane scatter/gather lists of mbufs
+for transmission. As the contents are not copied, the application must
+keep the content immutable until reception is acknowledged.  We also
+support a libevent compatibility mode for legacy
+applications. Unfortunately, libevent assumes a different memory
+allocation model and true zero-copy is not possible in this case.
 
 
-\paragraph{Adaptive batched run to completion.}
+% Many event-driven applications rely on the libevent framework, which
+% creates an OS-independent level of abstraction for Linux, *BSD and
+% Windows capable of using the native, scalable APIs of these operating
+% systems, such as \texttt{epoll} and Windows IO Completion ports. 
 
-The dataplane architecture maximizes processor efficiency by
-processing bounded batches through a non-blocking pipeline.  The
-various stages of the pipeline intermix protocol processing and
-application execution.  To increase efficiency, we perform each stage
-of the pipeline on a batch of packets or commands.  To minimize
-latency, we adaptively batch, and only in the presence of backlogs.
-To minimize jitter, we bound the size of each batch to be large enough
-only to amortize processor cache effects -- experimentally a few
-\edb{XXX dozen?}packets suffice.
 
-The dataplane design does not introduce any immediate buffering within
-the pipeline.  There is no intermediate buffering between the
-prococol-procesing stack and the application, which is normally found
-in the socket layer of an operating system. Here, there is no socket
-layer at all.  Consequently, some artifacts of TCP flow control, and
-in particular the sliding window of outgoing flows, are directly (but
-safely) exposed to application.
+\myparagraph{Run to completion with adaptive batching:} Our dataplane 
+runs to completion all pipeline stages needed to receive or transmit a
+packet, intermixing protocol processing and application logic as
+needed. Hence, there is no need for intermediate buffering between
+pipeline stages or between the application logic and network protocol
+stack. Since there is no socket layer at all, flow control is directly
+but safely exposed to the architecture, especially for outgoing
+packets (see \texttt{mbufs} discussion  above).
 
-\paragraph{Coherence-free, flow consistent processing}
+We minimize overheads by processing packets in bounded batches.
+Unlike previous proposals that batch only at the API level in order to
+amortize system call overhead~\cite{jeong2014mtcp,han2012megapipe}, we
+execute every pipeline stage on a small batch of packets or commands
+in order to fully amortize instruction caching effects and the
+overhead of PCIe transfers. To minimize the impact on latency, we
+adaptively batch and only in the presence of backlogs. We
+experimentally find that batching up to a dozen \christos{check}
+packets introduces negligible jitter and is sufficient to amortize all
+per-packet overheads.
 
-The design specifically relies on multi-queue NICs with support for
-RSS to provide flow-consistent hashing into distinct hardware queues.
-The approach extends to link-aggregation bonds to scale to multiple
-links.  The dataplane's kernel operates in a coherence free manner:
-memory management is organized in distinct pools for each hyperthread;
-protocol processing operates on a disjoint subset of flows; the
-absence of a socket layer eliminates the issue of the file descriptor
-namespace.  The flow separation extends to the application layer.
-Although the application itself has a shared-memory model, each flow
-is bound to a single hardware queue and hyperthread.  As a
-consequence, some applications will need to connect parallel outbound
-flows, as if originating from different clients.
 
-Obviously, many applications will take advantage of the shared-memory
-nature of the application, and some may in the common case have
-cache-coherency traffic.  The design does not require or restrict the coherency model of applications.
+\myparagraph{Flow consistent, coherence-free processing:} We use multi-queue
+NICs with RSS support to provide flow-consistent hashing of incoming
+traffic to distinct hardware queues. Each queue is served by a single
+hardware thread all the way to the application layer, eliminating the
+need for synchronization and cache coherence traffic between
+cores. Similarly, memory management is organized in distinct pools for
+each hardware thread. The absence of a socket layer eliminates the
+issue of the shared file descriptor namespace in multithreaded applications~\cite{DBLP:conf/sosp/ClementsKZMK13}. Hence,
+our design scales well with the increasing number of cores in modern
+servers. Our approach does not restrict the memory model for
+applications. Application logic can take advantage of coherent, shared
+memory to exchange information and synchronize between cores. For
+instance, this may be needed if the application must combine
+information arriving from multiple network flows.
 
-\paragraph{Buffering at the NIC edge.}
+% \christos{seems like an implementation detail to me}
+%The approach extends to link-aggregation bonds to scale to multiple links.
 
-Even though there is no intermediate buffering within the pipeline,
-buffering (and therefore congestion) will occur at the NIC edge of the
-pipeline: for incomming packets before they are processed, and for
-outgoing packets as they are being sent on the wire.  In effect, the
-NIC edge acts like the last-hop buffer in the network.  This provides
-opportunities for both the conxtrol and the dataplane: by monitoring
-congestion, the control plane can determine and adjust resource
-allocation decisions, for example to add additional hardware threads
-for a dataplane.  The dataplane itself can also detect congestion, and
-explicitly mark the flow as congested using ECN~\cite{}, the
-prerequisite for protocols such as
-DCTCP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10}. 
 
+\myparagraph{Buffering at the NIC edge:} Since there is no
+intermediate buffering within the dataplane pipeline, buffering and
+therefore congestion will occur only at the NIC edge for incoming
+packets before they are processed and for outgoing packets before they
+are sent on the wire.  In effect, the NIC edge acts like the last-hop
+buffer in the network.  Like switches and routers, the NIC edge can
+monitor queue depths to detect congestion, signal the control plane to
+allocate additional resources (more hardware threads, increase clock
+frequency) for the dataplane, notify explicitly flow sources of
+congestion via ECN~\cite{ramakrishnan2001addition}, and finally make
+policy decisions on when and how to drop packets when buffers run
+low~\cite{DBLP:journals/ton/FloydJ93}.

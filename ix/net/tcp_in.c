@@ -87,6 +87,8 @@ static void tcp_parseopt(struct tcp_pcb *pcb);
 static err_t tcp_listen_input(struct tcp_pcb_listen *pcb);
 static err_t tcp_timewait_input(struct tcp_pcb *pcb);
 
+extern const u8_t tcp_persist_backoff[];
+
 /**
  * The initial input processing of TCP. It verifies the TCP header, demultiplexes
  * the segment between the PCBs and passes it on to tcp_process(), which implements
@@ -654,7 +656,7 @@ tcp_process(struct tcp_pcb *pcb)
       LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_process: Connection RESET\n"));
       LWIP_ASSERT("tcp_input: pcb->state != CLOSED", pcb->state != CLOSED);
       perqueue_get(recv_flags) |= TF_RESET;
-      pcb->flags &= ~TF_ACK_DELAY;
+      timer_del(&pcb->delayed_ack_timer);
       return ERR_RST;
     } else {
       LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_process: unacceptable reset seqno %"U32_F" rcv_nxt %"U32_F"\n",
@@ -716,9 +718,9 @@ tcp_process(struct tcp_pcb *pcb)
       /* If there's nothing left to acknowledge, stop the retransmit
          timer, otherwise reset it to start again */
       if(pcb->unacked == NULL)
-        pcb->rtime = -1;
+        timer_del(&pcb->retransmit_timer);
       else {
-        pcb->rtime = 0;
+        timer_mod(&pcb->retransmit_timer, pcb->rto * RTO_UNITS);
         pcb->nrtx = 0;
       }
 
@@ -936,13 +938,15 @@ tcp_receive(struct tcp_pcb *pcb)
       pcb->snd_wl1 = perqueue_get(seqno);
       pcb->snd_wl2 = perqueue_get(ackno);
       if (pcb->snd_wnd == 0) {
-        if (pcb->persist_backoff == 0) {
+        if (!timer_pending(&pcb->persist_timer)) {
           /* start persist timer */
           pcb->persist_cnt = 0;
           pcb->persist_backoff = 1;
+          timer_add(&pcb->persist_timer, tcp_persist_backoff[pcb->persist_backoff - 1] * RTO_UNITS);
         }
-      } else if (pcb->persist_backoff > 0) {
+      } else {
         /* stop persist timer */
+          timer_del(&pcb->persist_timer);
           pcb->persist_backoff = 0;
       }
       LWIP_DEBUGF(TCP_WND_DEBUG, ("tcp_receive: window update %"U16_F"\n", pcb->snd_wnd));
@@ -985,7 +989,7 @@ tcp_receive(struct tcp_pcb *pcb)
         /* Clause 3 */
         if (pcb->snd_wl2 + pcb->snd_wnd == right_wnd_edge){
           /* Clause 4 */
-          if (pcb->rtime >= 0) {
+          if (timer_pending(&pcb->retransmit_timer)) {
             /* Clause 5 */
             if (pcb->lastack == perqueue_get(ackno)) {
               found_dupack = 1;
@@ -1094,9 +1098,9 @@ tcp_receive(struct tcp_pcb *pcb)
       /* If there's nothing left to acknowledge, stop the retransmit
          timer, otherwise reset it to start again */
       if (pcb->unacked == NULL) {
-        pcb->rtime = -1;
+        timer_del(&pcb->retransmit_timer);
       } else {
-        pcb->rtime = 0;
+        timer_mod(&pcb->retransmit_timer, pcb->rto * RTO_UNITS);
       }
 
       pcb->polltmr = 0;
@@ -1540,7 +1544,7 @@ tcp_receive(struct tcp_pcb *pcb)
                     pbuf_realloc(next->p, next->len);
                   }
                   /* check if the remote side overruns our receive window */
-                  if ((u32_t)perqueue_get(tcplen) + perqueue_get(seqno) > pcb->rcv_nxt + (u32_t)pcb->rcv_wnd) {
+                  if (TCP_SEQ_GT((u32_t)perqueue_get(tcplen) + perqueue_get(seqno), pcb->rcv_nxt + (u32_t)pcb->rcv_wnd)) {
                     LWIP_DEBUGF(TCP_INPUT_DEBUG,
                                 ("tcp_receive: other end overran receive window"
                                  "seqno %"U32_F" len %"U16_F" right edge %"U32_F"\n",

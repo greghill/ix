@@ -890,7 +890,8 @@ tcp_send_empty_ack(struct tcp_pcb *pcb)
   LWIP_DEBUGF(TCP_OUTPUT_DEBUG,
               ("tcp_output: sending ACK for %"U32_F"\n", pcb->rcv_nxt));
   /* remove ACK flags from the PCB, as we send an empty ACK now */
-  pcb->flags &= ~(TF_ACK_DELAY | TF_ACK_NOW);
+  pcb->flags &= ~TF_ACK_NOW;
+  timer_del(&pcb->delayed_ack_timer);
 
   /* NB. MSS and window scale options are only sent on SYNs, so ignore them here */
 #if LWIP_TCP_TIMESTAMPS
@@ -1017,7 +1018,8 @@ tcp_output(struct tcp_pcb *pcb)
 
     if (pcb->state != SYN_SENT) {
       TCPH_SET_FLAG(seg->tcphdr, TCP_ACK);
-      pcb->flags &= ~(TF_ACK_DELAY | TF_ACK_NOW);
+      pcb->flags &= ~TF_ACK_NOW;
+      timer_del(&pcb->delayed_ack_timer);
     }
 
 #if TCP_OVERSIZE_DBGCHECK
@@ -1135,9 +1137,7 @@ tcp_output_segment(struct tcp_seg *seg, struct tcp_pcb *pcb)
 
   /* Set retransmission timer running if it is not currently enabled
      This must be set before checking the route. */
-  if (pcb->rtime == -1) {
-    pcb->rtime = 0;
-  }
+  timer_mod(&pcb->retransmit_timer, pcb->rto * RTO_UNITS);
 
   /* If we don't have a local IP address, we get one by
      calling ip_route(). */

@@ -567,6 +567,10 @@ pbuf_free(struct pbuf *p)
     SYS_ARCH_UNPROTECT(old_level);
     /* this pbuf is no longer referenced to? */
     if (ref == 0) {
+      if (p->mbuf) {
+        mbuf_free(p->mbuf);
+        p->mbuf = NULL;
+      }
       /* remember next pbuf in chain for next iteration */
       q = p->next;
       LWIP_DEBUGF( PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_free: deallocating %p\n", (void *)p));

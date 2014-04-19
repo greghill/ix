@@ -7,6 +7,11 @@ on_err() {
 }
 trap on_err ERR
 
+if [ "$UID" -ne 0 ]; then
+  echo "Must be root to run this script." 2>&1
+  exit 1;
+fi
+
 # set default values if not found in the environment
 foo=${BMOS_PATH:=~/epfl1/prg/me/bmos}
 foo=${ALL_IFS:="eth4 eth5 eth6 eth7 eth8 eth9 eth10 eth11 bond0"}
@@ -32,12 +37,33 @@ setup_linux() {
   service irqbalance start >/dev/null
   modprobe ixgbe
   ifdown $ALL_IFS 2>/dev/null
+  sysctl net.core.netdev_max_backlog=1000 > /dev/null
+  sysctl net.core.rmem_max=212992 > /dev/null
+  sysctl net.core.wmem_max=212992 > /dev/null
+  sysctl net.ipv4.tcp_adv_win_scale=1 > /dev/null
+  sysctl net.ipv4.tcp_app_win=31 > /dev/null
+  sysctl net.ipv4.tcp_congestion_control=cubic > /dev/null
+  sysctl net.ipv4.tcp_rmem='4096 87380 6291456' > /dev/null
+  sysctl net.ipv4.tcp_tso_win_divisor=3 > /dev/null
+  sysctl net.ipv4.tcp_wmem='4096 16384 4194304' > /dev/null
+}
+
+optimize_linux() {
+  sysctl net.core.netdev_max_backlog=30000 > /dev/null
+  sysctl net.core.rmem_max=16777216 > /dev/null
+  sysctl net.core.wmem_max=16777216 > /dev/null
+  sysctl net.ipv4.tcp_adv_win_scale=31 > /dev/null
+  sysctl net.ipv4.tcp_app_win=1 > /dev/null
+  sysctl net.ipv4.tcp_congestion_control=htcp > /dev/null
+  sysctl net.ipv4.tcp_rmem='262144 262144 6291456' > /dev/null
+  sysctl net.ipv4.tcp_tso_win_divisor=1 > /dev/null
+  sysctl net.ipv4.tcp_wmem='262144 262144 6291456' > /dev/null
 }
 
 setup_ix() {
   tear_down
-  (cd $BMOS_PATH/dune && make -j64 >/dev/null 2>&1)
-  (cd $BMOS_PATH/igb_stub && make -j64 >/dev/null)
+  sudo -u $SUDO_USER bash -c "(cd $BMOS_PATH/dune && make -j64 >/dev/null 2>&1)"
+  sudo -u $SUDO_USER bash -c "(cd $BMOS_PATH/igb_stub && make -j64 >/dev/null)"
   insmod $BMOS_PATH/dune/dune.ko
   insmod $BMOS_PATH/igb_stub/igb_stub.ko
 }
@@ -50,11 +76,11 @@ invalid_params() {
 print_help() {
   echo "Usage:"
   echo "  $0 none"
-  echo "  $0 linux [single|bond]"
+  echo "  $0 linux [single|bond] [opt]"
   echo "  $0 ix    [node0|node1|...]"
 }
 
-if [ $# -lt 2 ]; then
+if [ $# -lt 1 ]; then
   print_help
   exit
 fi
@@ -64,16 +90,22 @@ if [ -z $1 ]; then
   exit 1
 elif [ $1 = 'none' ]; then
   tear_down
-elif [ $1 = 'linux' -a "$2" = 'single' ]; then
+elif [[ $1 == 'linux' && $# -gt 1 && "$2" == 'single' && ( $# -lt 3 || "$3" == 'opt' ) ]]; then
   setup_linux
   if [ $IP = 'auto' ]; then
     ifup $SINGLE_NIC >/dev/null
   else
     ifconfig $SINGLE_NIC $IP
   fi
-elif [ $1 = 'linux' -a "$2" = 'bond' ]; then
+  if [[ $# -ge 3 && "$3" == 'opt' ]]; then
+    optimize_linux
+  fi
+elif [[ $1 == 'linux' && $# -gt 1 && "$2" == 'bond' && ( $# -lt 3 || "$3" == 'opt' ) ]]; then
   setup_linux
   ifup $BOND_SLAVES >/dev/null
+  if [[ $# -ge 3 && "$3" == 'opt' ]]; then
+    optimize_linux
+  fi
 elif [ $1 = 'ix' ]; then
   SYSFILE=/sys/devices/system/node/$2/hugepages/hugepages-2048kB/nr_hugepages
   if [ -f $SYSFILE ]; then

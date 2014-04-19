@@ -1,9 +1,10 @@
 
-\begin{figure*}
- \centering
-  \subfloat{\includegraphics[width=1\textwidth,clip]{figs/short-key.eps}}
- \vspace{.01in}
+%% put the key last to have correct numbering
+
+\begin{figure*}[t]
+
 \centering
+  \vspace*{0.3in}
  \subfloat[Multi-core scalability (n=1;s=64B)]{
   \label{fig:short:mcore}
    \includegraphics[width=.32\textwidth,clip]{figs/short-mcore.eps}}
@@ -15,7 +16,11 @@
  \subfloat[Different message sizes $s$ (core=8,n=1)]{
   \label{fig:short:size}
   \includegraphics[width=.32\textwidth,clip]{figs/short-size.eps}}
-
+ \centering
+  \vspace{-2.1in}
+  \subfloat{\includegraphics[width=1\textwidth,clip]{figs/short-key.eps}}
+ \vspace{1.5in}
+ \
 \caption{Short message performance.}
  \label{fig:short}
 

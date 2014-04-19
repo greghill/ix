@@ -363,6 +363,7 @@ int main(int argc, char **argv)
 		}
 		printf("%lld %lld %d %d %d ", total_connections, total_messages, active_connections, timeouts_connect, timeouts_recv);
 		printf("%ld %ld %ld %ld ", rx_bytes, rx_packets, tx_bytes, tx_packets);
+		printf("0 ");
 		for (i = 0; i < MAX_ERRSOURCE; i++) {
 			for (j = 0; j < MAX_ERRNO; j++) {
 				sum = 0;

@@ -13,6 +13,7 @@
 #include <ix/errno.h>
 #include <ix/log.h>
 #include <ix/cpu.h>
+#include <ix/kstats.h>
 
 #include <time.h>
 
@@ -129,11 +130,16 @@ static void timer_run_bucket(struct hlist_head *h)
 {
 	struct hlist_node *n, *tmp;
 	struct timer *t;
+#ifdef ENABLE_KSTATS
+	kstats_accumulate save;
+#endif
 
 	hlist_for_each_safe(h, n, tmp) {
 		t = hlist_entry(n, struct timer, link);
 		__timer_del(t);
+		KSTATS_PUSH(timer_handler, &save);
 		t->handler(t);
+		KSTATS_POP(&save);
 	}
 	h->head = NULL;
 }
@@ -142,13 +148,18 @@ static void timer_reinsert_bucket(struct hlist_head *h)
 {
 	struct hlist_node *pos, *tmp;
 	struct timer *t;
+#ifdef ENABLE_KSTATS
+	kstats_accumulate save;
+#endif
 
 	hlist_for_each_safe(h, pos, tmp) {
 		t = hlist_entry(pos, struct timer, link);
 		__timer_del(t);
 
 		if (timer_expired(t)) {
+			KSTATS_PUSH(timer_handler, &save);
 			t->handler(t);
+			KSTATS_POP(&save);
 			continue;
 		}
 

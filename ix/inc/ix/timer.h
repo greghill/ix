@@ -13,7 +13,7 @@ struct timer {
 };
 
 #define ONE_SECOND	1000000
-#define ONE_MS		10000
+#define ONE_MS		1000
 #define ONE_US		1
 /**
  * timer_init_entry - initializes a timer

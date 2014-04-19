@@ -7,20 +7,20 @@
 \vspace{-1em}
 \begin{center}
 \begin{small}
-\begin{tabular}{|l|c|c|}
+\begin{tabular}{|l|c|c|c|}
 \hline
-Workload &  Avg lat. & 99\% lat. \\
+Workload &  Avg lat. & 99\% lat. & Size\@5Gpbs\\
 \hline
-Linux(base)-Linux(base)  & 1\microsecond & 1\microsecond\\
-Linux(opt)-Linux(opt)    & 1\microsecond & 1\microsecond \\
-mTCP-mTCP                & 1\microsecond & 1\microsecond \\
-Linux(opt)-\ix           & 1\microsecond &  1\microsecond\\
-\ix-\ix                  & 1\microsecond & 1\microsecond\\
+Linux(base) & 60\microsecond & 0\microsecond & XXX\\
+Linux(opt)    & 0\microsecond &  0\microsecond & XXX \\
+mTCP    & 0\microsecond &  0\microsecond & XXX \\
+\ix          & 0\microsecond &  38\microsecond & XXX\\
+\ix-\ix                  & 0\microsecond &  0\microsecond & XXX\\
 \hline
 \end{tabular}
 \caption{Netpipe half-roundtrip latency (s=64B)}
 \vspace*{-2em}
-\label{table:pingpong}
+\label{tbl:pingpong}
 \end{small}
 \end{center}
 \end{table}

@@ -112,7 +112,7 @@ elif [ $CLIENT_SPEC = 'Linux-Libevent' ]; then
 elif [ $CLIENT_SPEC = 'Linux-Simple' ]; then
   THREADS=24
   CONNECTIONS_PER_THREAD=2
-  CLIENT_CMDLINE="./simple_client $SERVER_IP $SERVER_PORT $THREADS $CONNECTIONS_PER_THREAD \$MSG_SIZE \$MSG_PER_CONN"
+  CLIENT_CMDLINE="./simple_client $SERVER_IP $SERVER_PORT $THREADS $CONNECTIONS_PER_THREAD \$MSG_SIZE \$MSG_PER_CONN 0 0"
   DEPLOY_FILES="select_net.sh simple_client"
   CLIENT_NET="linux single"
 elif [ $CLIENT_SPEC = 'IX' ]; then
@@ -128,7 +128,9 @@ DIR=`dirname $0`
 . $DIR/bench-common.sh
 
 on_exit_ix() {
-  sudo kill -KILL `pidof ix` 2>/dev/null
+  PID=`pidof ix||echo 0`
+  if [ $PID -eq 0 ]; then return; fi
+  sudo kill -KILL $PID
 }
 
 on_exit_linux_rpc() {
