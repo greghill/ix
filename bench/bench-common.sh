@@ -44,8 +44,8 @@ prepare() {
   pids="$pids $!"
   for CLIENT_DESC in $CLIENTS; do
     IFS='|'
-    read -r HOST NIC <<< "$CLIENT_DESC"
-    ssh $HOST "sudo SERVER=0 NET='$CLIENT_NET' NIC=$NIC bash init.sh" &
+    read -r HOST NIC IX_IP <<< "$CLIENT_DESC"
+    ssh $HOST "sudo SERVER=0 NET='$CLIENT_NET' NIC=$NIC IX_IP=$IX_IP bash init.sh" &
     pids="$pids $!"
   done
   IFS=' '

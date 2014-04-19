@@ -15,6 +15,8 @@ fi
 # conf
 
 NOFILE=10000000
+SERVER_IP=192.168.21.1
+SERVER_MAC=A0:36:9F:27:3C:16
 
 if [ -d /sys/devices/system/cpu/cpu0/cpufreq ]; then
   for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
@@ -40,6 +42,10 @@ else
   export IP=auto
   export ALL_IFS=$NIC
   export SINGLE_NIC=$NIC
+  sudo -u $SUDO_USER bash -c 'cat > ix.cfg' <<EOF
+host_addr $IX_IP
+arp $SERVER_IP $SERVER_MAC
+EOF
 fi
 
 bash select_net.sh $NET

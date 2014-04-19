@@ -9,7 +9,8 @@ trap on_err ERR
 
 ### conf
 
-CLIENTS="icnals1|eth1"
+CLIENTS=
+CLIENTS="$CLIENTS icnals1|eth1|192.168.21.11"
 SERVER_IP=192.168.21.1
 TIME=10
 
