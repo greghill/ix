@@ -113,6 +113,7 @@ err:
 	return ret;
 }
 
+#if !SANDBOX_ENABLED
 static void main_loop(void)
 {
 	unsigned int i, pkts, tx_len;
@@ -150,6 +151,7 @@ static void main_loop(void)
 		}
 	}
 }
+#endif
 
 static void
 pgflt_handler(uintptr_t addr, uint64_t fec, struct dune_tf *tf)
@@ -198,6 +200,7 @@ static int init_this_cpu(unsigned int cpu)
 	return 0;
 }
 
+#if !SANDBOX_ENABLED
 static int parse_ip_addr(const char *string, uint32_t *addr)
 {
         unsigned char a, b, c, d;
@@ -209,6 +212,7 @@ static int parse_ip_addr(const char *string, uint32_t *addr)
 
         return 0;
 }
+#endif
 
 #ifdef ENABLE_PCAP
 static int parse_eth_addr(const char *string, struct eth_addr *mac)
@@ -226,6 +230,7 @@ static int parse_eth_addr(const char *string, struct eth_addr *mac)
 }
 #endif
 
+#if !SANDBOX_ENABLED
 static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
 {
 	unsigned int i;
@@ -245,6 +250,7 @@ static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
 		}
 	}
 }
+#endif
 
 static int get_rx_queue(struct eth_rx_queue **rx_queue)
 {
