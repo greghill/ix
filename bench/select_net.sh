@@ -13,7 +13,8 @@ if [ "$UID" -ne 0 ]; then
 fi
 
 # set default values if not found in the environment
-foo=${BMOS_PATH:=~/epfl1/prg/me/bmos}
+foo=${DUNE_PATH:=~}
+foo=${IGB_STUB_PATH:=~}
 foo=${ALL_IFS:="eth4 eth5 eth6 eth7 eth8 eth9 eth10 eth11 bond0"}
 foo=${BOND:=bond0}
 foo=${BOND_SLAVES:="eth4 eth5 eth6 eth7"}
@@ -62,10 +63,8 @@ optimize_linux() {
 
 setup_ix() {
   tear_down
-  sudo -u $SUDO_USER bash -c "(cd $BMOS_PATH/dune && make -j64 >/dev/null 2>&1)"
-  sudo -u $SUDO_USER bash -c "(cd $BMOS_PATH/igb_stub && make -j64 >/dev/null)"
-  insmod $BMOS_PATH/dune/dune.ko
-  insmod $BMOS_PATH/igb_stub/igb_stub.ko
+  insmod $DUNE_PATH/dune.ko
+  insmod $IGB_STUB_PATH/igb_stub.ko
 }
 
 invalid_params() {
