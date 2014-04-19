@@ -3,7 +3,7 @@
 set -eEu -o pipefail
 
 on_err() {
-  echo "${BASH_SOURCE[0]}: line ${BASH_LINENO[0]}: Failed at `date`"
+  echo "${BASH_SOURCE[1]}: line ${BASH_LINENO[0]}: Failed at `date`"
 }
 trap on_err ERR
 
