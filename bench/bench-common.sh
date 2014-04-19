@@ -1,7 +1,5 @@
 #!/bin/bash
 
-NOFILE=10000000
-
 bench_start() {
   name=$1
   dir=results/$(date +%Y-%m-%d-%H-%M-%S)/$name
@@ -39,38 +37,15 @@ prepare() {
 
   ### deploy
   # clients have shared file system
-  scp $DEPLOY_FILES $HOST: > /dev/null
+  scp $DEPLOY_FILES init.sh $HOST: > /dev/null
 
-  ### prepare network and run init script
-  INIT_SCRIPT="
-if [ -d /sys/devices/system/cpu/cpu0/cpufreq ]; then
-  for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
-    echo userspace > \$i
-  done
-  FREQ=`awk '{ if (\$1 - \$2 > 1000) print \$1; else print \$2 }' /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies`
-  for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed; do
-    echo \$FREQ > \$i
-  done
-fi
-"
-
-  sudo bash select_net.sh $SERVER_NET &
   pids=''
+  sudo SERVER=1 NET="$SERVER_NET" bash init.sh &
   pids="$pids $!"
-  sudo bash <<< "$INIT_SCRIPT"
-  sudo sysctl fs.nr_open=$NOFILE > /dev/null
-  if [ `ulimit -n` -lt $NOFILE ]; then
-    echo 'Add the following lines into /etc/security/limits.conf and re-login.'
-    echo "`whoami` soft nofile $NOFILE"
-    echo "`whoami` hard nofile $NOFILE"
-    exit 1
-  fi
   for CLIENT_DESC in $CLIENTS; do
     IFS='|'
     read -r HOST NIC <<< "$CLIENT_DESC"
-    ssh $HOST "sudo ALL_IFS=$NIC SINGLE_NIC=$NIC IP=auto bash select_net.sh $CLIENT_NET" &
-    pids="$pids $!"
-    ssh $HOST '/bin/bash' <<< "$INIT_SCRIPT" &
+    ssh $HOST "sudo SERVER=0 NET='$CLIENT_NET' NIC=$NIC bash init.sh" &
     pids="$pids $!"
   done
   IFS=' '
