@@ -21,7 +21,7 @@ if [ $# -lt 2 ]; then
   echo "              | Netpipe-10 | Netpipe-40"
   echo "              | Netpipe-10-Optimized | Netpipe-40-Optimized"
   echo "  CLIENT_SPEC = Linux-Libevent|Linux-Simple|Netpipe"
-  echo "              | Netpipe-Optimized"
+  echo "              | Netpipe-Optimized | IX"
   exit
 fi
 
@@ -128,8 +128,9 @@ elif [ $CLIENT_SPEC = 'Netpipe-Optimized' ]; then
   CLIENT_NET="linux single opt"
   NETPIPE=$[$NETPIPE+1]
 elif [ $CLIENT_SPEC = 'IX' ]; then
-  echo 'not implemented' >&2
-  exit 1
+  CLIENT_CMDLINE=" sudo ./ix -q -d 0000:01:00.0 -c 0 /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ./ix_client $SERVER_IP $SERVER_PORT 1 \$MSG_SIZE 999999999"
+  DEPLOY_FILES="select_net.sh ../ix/ix ../apps/tcp/ix_client ../dune/dune.ko ../igb_stub/igb_stub.ko"
+  CLIENT_NET="ix node0"
 else
   echo 'invalid parameters' >&2
   exit 1
@@ -205,9 +206,12 @@ run_single() {
   MSG_SIZE=$1
 
   $SERVER 16 $MSG_SIZE
-  ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then exit 1; fi; done"
+  if [ $CLIENT_SPEC != 'IX' ]; then
+    ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then exit 1; fi; done"
+  fi
   echo -ne "16\t$MSG_SIZE\t999999999\t" >> $OUTDIR/data
   python $DIR/launch.py --time $TIME --clients $CLIENT_HOSTS --client-cmdline "`eval echo $CLIENT_CMDLINE`" >> $OUTDIR/data
+  sleep 2
   $ON_EXIT
 }
 
