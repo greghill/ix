@@ -9,19 +9,36 @@ trap on_err ERR
 
 ### conf
 
+if [ $# -ge 3 ]; then
+  CLUSTER_ID=$3
+else
+  CLUSTER_ID="EPFL"
+fi
+
 CLIENTS=
-CLIENTS="$CLIENTS icnals1|eth1|192.168.21.11"
-SERVER_IP=192.168.21.1
+
+if [ $CLUSTER_ID = 'EPFL' ]; then
+  CLIENTS="$CLIENTS icnals1|eth1|192.168.21.11"
+  SERVER_IP=192.168.21.1
+elif [ $CLUSTER_ID = 'Stanford' ]; then
+  CLIENTS="$CLIENTS maverick-10|p7p1|10.79.6.21"
+  SERVER_IP=10.79.6.22
+else
+  echo 'invalid parameters' >&2
+  exit 1
+fi
+
 TIME=10
 
 if [ $# -lt 2 ]; then
-  echo "Usage: $0 SERVER_SPEC CLIENT_SPEC"
+  echo "Usage: $0 SERVER_SPEC CLIENT_SPEC [CLUSTER_ID]"
   echo "  SERVER_SPEC = IX-10-RPC|IX-10-Stream|IX-40-RPC|IX-40-Stream"
   echo "              | Linux-10-RPC|Linux-10-Stream|Linux-40-RPC|Linux-40-Stream"
   echo "              | Netpipe-10 | Netpipe-40 | mTCP-10-RPC | mTCP-10-Stream"
   echo "              | Netpipe-10-Optimized | Netpipe-40-Optimized"
   echo "  CLIENT_SPEC = Linux-Libevent|Linux-Simple|Netpipe"
   echo "              | Netpipe-Optimized | IX"
+  echo "  CLUSTER_ID  = EPFL|Stanford (default: EPFL)"
   exit
 fi
 

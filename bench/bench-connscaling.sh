@@ -9,33 +9,55 @@ trap on_err ERR
 
 ### conf
 
+if [ $# -ge 3 ]; then
+  CLUSTER_ID=$3
+else
+  CLUSTER_ID="EPFL"
+fi
+
 CLIENTS=
-CLIENTS="$CLIENTS icnals1|eth1"
-CLIENTS="$CLIENTS icnals2|eth1"
-CLIENTS="$CLIENTS icnals3|eth1"
-CLIENTS="$CLIENTS icnals4|eth1"
-CLIENTS="$CLIENTS icnals5|eth1"
-CLIENTS="$CLIENTS icnals6|eth1"
-CLIENTS="$CLIENTS icnals7|eth1"
-CLIENTS="$CLIENTS icnals8|eth1"
-CLIENTS="$CLIENTS icnals9|eth1"
-CLIENTS="$CLIENTS icnals10|eth1"
-CLIENTS="$CLIENTS icnals11|eth2"
-CLIENTS="$CLIENTS icnals12|eth2"
-CLIENTS="$CLIENTS icnals13|eth2"
-CLIENTS="$CLIENTS icnals14|eth2"
-CLIENTS="$CLIENTS icnals15|eth2"
-CLIENTS="$CLIENTS icnals16|eth2"
-CLIENTS="$CLIENTS icnals17|eth2"
-CLIENTS="$CLIENTS icnals18|eth2"
-SERVER_IP=192.168.21.1
+
+if [ $CLUSTER_ID = 'EPFL' ]; then
+  CLIENTS="$CLIENTS icnals1|eth1"
+  CLIENTS="$CLIENTS icnals2|eth1"
+  CLIENTS="$CLIENTS icnals3|eth1"
+  CLIENTS="$CLIENTS icnals4|eth1"
+  CLIENTS="$CLIENTS icnals5|eth1"
+  CLIENTS="$CLIENTS icnals6|eth1"
+  CLIENTS="$CLIENTS icnals7|eth1"
+  CLIENTS="$CLIENTS icnals8|eth1"
+  CLIENTS="$CLIENTS icnals9|eth1"
+  CLIENTS="$CLIENTS icnals10|eth1"
+  CLIENTS="$CLIENTS icnals11|eth2"
+  CLIENTS="$CLIENTS icnals12|eth2"
+  CLIENTS="$CLIENTS icnals13|eth2"
+  CLIENTS="$CLIENTS icnals14|eth2"
+  CLIENTS="$CLIENTS icnals15|eth2"
+  CLIENTS="$CLIENTS icnals16|eth2"
+  CLIENTS="$CLIENTS icnals17|eth2"
+  CLIENTS="$CLIENTS icnals18|eth2"
+  SERVER_IP=192.168.21.1
+elif [ $CLUSTER_ID = 'Stanford' ]; then
+  CLIENTS="$CLIENTS maverick-1|p3p1|10.79.6.11"
+  CLIENTS="$CLIENTS maverick-2|p3p1|10.79.6.13"
+  CLIENTS="$CLIENTS maverick-4|p3p1|10.79.6.15"
+  CLIENTS="$CLIENTS maverick-7|p3p1|10.79.6.18"
+  CLIENTS="$CLIENTS maverick-8|p3p1|10.79.6.19"
+  CLIENTS="$CLIENTS maverick-10|p7p1|10.79.6.21"
+  SERVER_IP=10.79.6.22
+else
+  echo 'invalid parameters' >&2
+  exit 1
+fi
+
 TIME=10
 
 if [ $# -lt 2 ]; then
-  echo "Usage: $0 SERVER_SPEC CLIENT_SPEC"
+  echo "Usage: $0 SERVER_SPEC CLIENT_SPEC [CLUSTER_ID]"
   echo "  SERVER_SPEC = IX-10-RPC|IX-10-Stream|IX-40-RPC|IX-40-Stream"
   echo "              | Linux-10-RPC|Linux-10-Stream|Linux-40-RPC|Linux-40-Stream"
   echo "  CLIENT_SPEC = Linux-Simple"
+  echo "  CLUSTER_ID  = EPFL|Stanford (default: EPFL)"
   exit
 fi
 
