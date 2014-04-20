@@ -225,9 +225,7 @@ void bsys_tcp_close(hid_t handle)
 	}
 
 	if (api->pcb) {
-		err_t err = tcp_close(api->pcb);
-		if (err != ERR_OK)
-			tcp_abort(api->pcb);
+		tcp_close_with_reset(api->pcb);
 	}
 
 	recvd = api->recvd;
