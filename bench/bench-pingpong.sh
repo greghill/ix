@@ -18,7 +18,7 @@ if [ $# -lt 2 ]; then
   echo "Usage: $0 SERVER_SPEC CLIENT_SPEC"
   echo "  SERVER_SPEC = IX-10-RPC|IX-10-Stream|IX-40-RPC|IX-40-Stream"
   echo "              | Linux-10-RPC|Linux-10-Stream|Linux-40-RPC|Linux-40-Stream"
-  echo "              | Netpipe-10 | Netpipe-40"
+  echo "              | Netpipe-10 | Netpipe-40 | mTCP-10-RPC | mTCP-10-Stream"
   echo "              | Netpipe-10-Optimized | Netpipe-40-Optimized"
   echo "  CLIENT_SPEC = Linux-Libevent|Linux-Simple|Netpipe"
   echo "              | Netpipe-Optimized | IX"
@@ -53,12 +53,24 @@ elif [ $SERVER_SPEC = 'Linux-10-RPC' ]; then
   SERVER_PORT=9876
   ON_EXIT=on_exit_linux_rpc
   CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
+elif [ $SERVER_SPEC = 'mTCP-10-RPC' ]; then
+  SERVER_NET="mtcp single"
+  SERVER=server_mtcp_rpc
+  SERVER_PORT=9876
+  ON_EXIT=on_exit_mtcp_rpc
+  CORES="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"
 elif [ $SERVER_SPEC = 'Linux-10-Stream' ]; then
   SERVER_NET="linux single"
   SERVER=server_linux_stream
   SERVER_PORT=9876
   ON_EXIT=on_exit_linux_stream
   CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
+elif [ $SERVER_SPEC = 'mTCP-10-Stream' ]; then
+  SERVER_NET="mtcp single"
+  SERVER=server_mtcp_stream
+  SERVER_PORT=9876
+  ON_EXIT=on_exit_mtcp_stream
+  CORES="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"
 elif [ $SERVER_SPEC = 'Linux-40-RPC' ]; then
   SERVER_NET="linux bond"
   SERVER=server_linux_rpc
@@ -158,8 +170,22 @@ on_exit_linux_rpc() {
   wait $PID 2>/dev/null || true
 }
 
+on_exit_mtcp_rpc() {
+  PID=`pidof pingpongs_mtcp||echo 0`
+  if [ $PID -eq 0 ]; then return; fi
+  kill $PID
+  wait $PID 2>/dev/null || true
+}
+
 on_exit_linux_stream() {
   PID=`pidof server||echo 0`
+  if [ $PID -eq 0 ]; then return; fi
+  kill $PID
+  wait $PID 2>/dev/null || true
+}
+
+on_exit_mtcp_stream() {
+  PID=`pidof server_mtcp||echo 0`
   if [ $PID -eq 0 ]; then return; fi
   kill $PID
   wait $PID 2>/dev/null || true
@@ -195,11 +221,25 @@ server_linux_rpc() {
   $DIR/pingpongs $MSG_SIZE `echo $CORES|cut -d',' -f-$CORE_COUNT` &
 }
 
+server_mtcp_rpc() {
+  CORE_COUNT=$1
+  MSG_SIZE=$2
+
+  $DIR/pingpongs_mtcp $MSG_SIZE `echo $CORES|cut -d',' -f-$CORE_COUNT` &
+}
+
 server_linux_stream() {
   CORE_COUNT=$1
   MSG_SIZE=$2
 
   $DIR/server `echo $CORES|cut -d',' -f-$CORE_COUNT` &
+}
+
+server_mtcp_stream() {
+  CORE_COUNT=$1
+  MSG_SIZE=$2
+
+  $DIR/server_mtcp `echo $CORES|cut -d',' -f-$CORE_COUNT` &
 }
 
 run_single() {
