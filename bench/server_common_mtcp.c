@@ -146,7 +146,7 @@ static void *start_worker(void *p)
                 close_mtcp_socket(worker, sctx_map, events[i].data.sockid);
             } else if (events[i].events & MTCP_EPOLLIN) {
                 // handle the read event and close the connection if there is a problem
-                if (0 >= mtcp_read_handler(sctx_map[events[i].data.sockid], events[i].data.sockid)) {
+                if (mtcp_read_handler(sctx_map[events[i].data.sockid], events[i].data.sockid) < 0 && errno != EAGAIN) {
                     close_mtcp_socket(worker, sctx_map, events[i].data.sockid);
                 }
             } else {
