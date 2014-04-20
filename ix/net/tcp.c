@@ -166,6 +166,14 @@ tcp_tmr(void)
   }
 }
 
+void tcp_close_with_reset(struct tcp_pcb *pcb)
+{
+	tcp_rst(pcb->snd_nxt, pcb->rcv_nxt, &pcb->local_ip, &pcb->remote_ip, pcb->local_port, pcb->remote_port, PCB_ISIPV6(pcb));
+	tcp_pcb_purge(pcb);
+	TCP_RMV_ACTIVE(pcb);
+	memp_free(MEMP_TCP_PCB, pcb);
+}
+
 /**
  * Closes the TX side of a connection held by the PCB.
  * For tcp_close(), a RST is sent if the application didn't receive all data
