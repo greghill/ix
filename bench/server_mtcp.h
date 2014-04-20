@@ -35,5 +35,4 @@ void init(void);
 int parse_cpus(char *cpus);
 int start_threads(void);
 int mtcp_read_handler(struct ctx *ctx, int sock_read);
-struct ctx *init_ctx(mctx_t mctx);
-void free_ctx(struct ctx *ctx);
+struct ctx *init_ctx(mctx_t mctx, struct ctx *existing);

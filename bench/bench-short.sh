@@ -44,6 +44,7 @@ elif [ $CLUSTER_ID = 'Stanford' ]; then
   CLIENTS="$CLIENTS maverick-7|p3p1|10.79.6.18"
   CLIENTS="$CLIENTS maverick-8|p3p1|10.79.6.19"
   CLIENTS="$CLIENTS maverick-10|p7p1|10.79.6.21"
+  CLIENTS="$CLIENTS maverick-14|p3p1|10.79.6.25"
   SERVER_IP=10.79.6.22
 else
   echo 'invalid parameters' >&2
@@ -93,7 +94,7 @@ elif [ $SERVER_SPEC = 'mTCP-10-RPC' ]; then
   SERVER=server_mtcp_rpc
   SERVER_PORT=9876
   ON_EXIT=on_exit_mtcp_rpc
-  CORES="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"
+  CORES="0,1,2,3,4,5"
 elif [ $SERVER_SPEC = 'Linux-10-Stream' ]; then
   SERVER_NET="linux single"
   SERVER=server_linux_stream
@@ -105,7 +106,7 @@ elif [ $SERVER_SPEC = 'mTCP-10-Stream' ]; then
   SERVER=server_mtcp_stream
   SERVER_PORT=9876
   ON_EXIT=on_exit_mtcp_stream
-  CORES="0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"
+  CORES="0,1,2,3,4,5"
 elif [ $SERVER_SPEC = 'Linux-40-RPC' ]; then
   SERVER_NET="linux bond"
   SERVER=server_linux_rpc
@@ -180,6 +181,7 @@ on_exit_mtcp_rpc() {
   if [ $PID -eq 0 ]; then return; fi
   kill $PID
   wait $PID 2>/dev/null || true
+  rm -f log_*
 }
 
 on_exit_linux_stream() {
@@ -194,6 +196,7 @@ on_exit_mtcp_stream() {
   if [ $PID -eq 0 ]; then return; fi
   kill $PID
   wait $PID 2>/dev/null || true
+  rm -f log_*
 }
 
 server_ix_rpc() {

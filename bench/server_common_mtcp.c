@@ -31,7 +31,7 @@ static int accept_conn(struct worker *worker, struct ctx **sctx_map, int sock_li
         mtcp_epoll_ctl(worker->mctx, worker->ep, MTCP_EPOLL_CTL_ADD, sock_accepted, &evctl);
         
         worker->total_connections++;
-        sctx_map[sock_accepted] = init_ctx(worker->mctx);
+        sctx_map[sock_accepted] = init_ctx(worker->mctx, sctx_map[sock_accepted]);
     }
     
     return sock_accepted;
@@ -41,8 +41,6 @@ static void close_mtcp_socket(struct worker *worker, struct ctx **sctx_map, int 
 {
     mtcp_epoll_ctl(worker->mctx, worker->ep, MTCP_EPOLL_CTL_DEL, sock, NULL);
     mtcp_close(worker->mctx, sock);
-    free_ctx(sctx_map[sock]);
-    sctx_map[sock] = NULL;
 }
 
 static void initialize_worker(struct worker *worker)
@@ -159,7 +157,7 @@ static void *start_worker(void *p)
         // accept connections if the flag is set
         if (do_accept) {
             while (1) {
-                if (accept_conn(worker, sctx_map, sock_listener) > 0) {
+                if (accept_conn(worker, sctx_map, sock_listener) < 0) {
                     break;
                 }
             }
