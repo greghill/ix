@@ -29,15 +29,17 @@ if [ -d /sys/devices/system/cpu/cpu0/cpufreq ]; then
 fi
 
 if [ $SERVER == "1" ]; then
-  sysctl fs.nr_open=$NOFILE > /dev/null
-  if [ `ulimit -n` -lt $NOFILE ]; then
-    echo 'Add the following lines into /etc/security/limits.conf and re-login.'
-    echo "`whoami` soft nofile $NOFILE"
-    echo "`whoami` hard nofile $NOFILE"
-    exit 1
+  if [ $USE_IX == "1" ]; then
+    sysctl fs.nr_open=$NOFILE > /dev/null
+    if [ `ulimit -n` -lt $NOFILE ]; then
+      echo 'Add the following lines into /etc/security/limits.conf and re-login.'
+      echo "`whoami` soft nofile $NOFILE"
+      echo "`whoami` hard nofile $NOFILE"
+      exit 1
+    fi
+    export DUNE_PATH=~/bmos/dune
+    export IGB_STUB_PATH=~/bmos/igb_stub
   fi
-  export DUNE_PATH=~/bmos/dune
-  export IGB_STUB_PATH=~/bmos/igb_stub
 else
   export IP=auto
   export ALL_IFS=$NIC

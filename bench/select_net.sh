@@ -34,10 +34,15 @@ tear_down() {
 }
 
 setup_linux() {
-  tear_down
-  service irqbalance start >/dev/null
-  modprobe ixgbe
-  ifdown $ALL_IFS 2>/dev/null
+  INTEL_10G_CARD=$(ifconfig -a | grep -i 90:e2:ba || true)
+  
+  if [ "$INTEL_10G_CARD" != "" ]; then
+    tear_down
+    service irqbalance start >/dev/null
+    modprobe ixgbe
+    ifdown $ALL_IFS 2>/dev/null
+  fi
+  
   sysctl net.core.netdev_max_backlog=1000 > /dev/null
   sysctl net.core.rmem_max=212992 > /dev/null
   sysctl net.core.wmem_max=212992 > /dev/null
@@ -67,6 +72,10 @@ setup_ix() {
   insmod $IGB_STUB_PATH/igb_stub.ko
 }
 
+setup_mtcp() {
+  echo "Setting up mTCP - nothing implemented yet"
+}
+
 invalid_params() {
   echo 'invalid parameters' >&2
   exit 1
@@ -77,6 +86,7 @@ print_help() {
   echo "  $0 none"
   echo "  $0 linux [single|bond] [opt]"
   echo "  $0 ix    [node0|node1|...]"
+  echo "  $0 mtcp"
 }
 
 if [ $# -lt 1 ]; then
@@ -113,6 +123,8 @@ elif [ $1 = 'ix' ]; then
   else
     invalid_params
   fi
+elif [ $1 = 'mtcp' ]; then
+  setup_mtcp
 elif [ $1 = '--help' ]; then
   print_help
 else
