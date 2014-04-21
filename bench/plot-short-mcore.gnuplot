@@ -17,5 +17,5 @@ set xlabel 'Number of CPU threads'
 set ylabel 'Messages/sec (x 10^{6})'
 set xrange [0:*]
 set yrange [0:*]
-set xtics ('0' 0)
-plot for [i=1:words(infile)] fig(word(infile,i)) using ($0+1):($4/10**6):xticlabel(1) title gen_title(i)
+set xtics ('0' 0, '1' 2, '2' 4, '3' 6, '4' 8, '5' 10, '6' 12, '7' 14, '8' 16)
+plot for [i=1:words(infile)] fig(word(infile,i)) using ($0+1):($4/10**6) title gen_title(i)
