@@ -1,5 +1,5 @@
 if (format eq 'eps') {
-  set terminal postscript eps enhanced size 3.2,1.4 font 'Times'
+  set terminal postscript eps enhanced size 3.1,2.1 font 'Times'
   unset key
   gen_title(i) = ''
 } else {

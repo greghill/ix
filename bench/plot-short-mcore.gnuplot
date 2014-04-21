@@ -1,5 +1,5 @@
 if (format eq 'eps') {
-  set terminal postscript eps enhanced lw 1 font 'Times'
+  set terminal postscript eps enhanced size 2.1,1.4 font 'Times'
   unset key
   gen_title(i) = ''
 } else {
@@ -10,11 +10,11 @@ set style data linespoints
 set output outfile
 set grid y
 set border 3
-set tics out nomirror font ',24'
+set tics out nomirror
 
 fig(infile) = "< awk '//{if ($2==64&&$3==1)print $0 }' ".infile.'| sort -nk1'
-set xlabel 'Number of CPU threads' font ',24'
-set ylabel 'Messages/sec (x 10^{6})' font ',24'
+set xlabel 'Number of CPU threads'
+set ylabel 'Messages/sec (x 10^{6})'
 set xrange [0:*]
 set yrange [0:*]
 set xtics ('0' 0)
