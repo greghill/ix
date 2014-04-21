@@ -2,7 +2,7 @@ s
 \section{Evaluation}
 \label{sec:eval}
 
-We evaluate the scalability of \ix and compare it the Linux baseline
+We evaluate the scalability of \ix and compare it to the Linux baseline
 and to mTCP, the state-of-the-art user-space TCP alternative available
 on the same hardware.  We first describe the experimental setup
 (\S\ref{sec:eval:setup}).  We then characterize the performance using
@@ -34,7 +34,7 @@ The server is connected to
 the switch via a 4x10GbE bond configured as a L2+L3
 hash via LACP~\cite{ieee802.3ad}.  Jumbo
 frames are never enabled.  Our baseline configuration in each machine
-is the Ubuntu 12.04.4 LTS distribution running the 3.11 Linux kernel.  Although
+is the Ubuntu 12.04.4 LTS distribution running the 3.11.10 Linux kernel.  Although
 the server has two sockets, our experiments pin IRQs\george{not really}, processes, and
 the IX dataplane onto a single socket and use memory from that socket;
 all NICs are attached to that socket via the PCIe root complex. 
@@ -55,7 +55,7 @@ Whenever both practical and relevant, we compare the performance of an
 (\texttt{Linux-opt}), and the performance of mTCP, a
 recently-published user-level TCP stack specifically designed for
 scalability~\cite{jeong2014mtcp}.  Unless specifically mentioned, all
-clients run an baseline Linux configuration.  
+clients run a baseline Linux configuration.
 
 The Linux server implementations use the
 \texttt{libevent} framework running on XXX threads to serve the
@@ -96,7 +96,7 @@ bandwidth.
 \input{figs/float-short}
 
 We then evaluate \ix's multi-core scalability in handling workloads
-with extremely connection churn by using the same benchmark used to evaluate
+with extreme connection churn by using the same benchmark used to evaluate
 Megapipe~\cite{han2012megapipe} and mTCP~\cite{jeong2014mtcp}:
 multiple clients connect to a single server listening on a single
 port, send a request of size $s$ and wait for an echo of a message of

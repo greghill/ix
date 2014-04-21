@@ -28,7 +28,7 @@ within a few tens of milliseconds~\cite{DBLP:journals/cacm/DeanB13}.
 
 Internally, such applications use a service-oriented architecture and
 consist of tens of distinct, well-defined services such as
-load-balancing and http proxies, web and application serving, content
+load-balancing and HTTP proxies, web and application serving, content
 distribution and streaming, memory caching, queuing services,
 relational databases and object
 storage~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07,Alonso:2010:WSC,Eriksen:2013:YSF}. 
@@ -102,7 +102,7 @@ timescale. Interrupt coalescing used to improve throughput, queuing
 latency due to device driver processing intervals, and protocol
 processing of incoming packets without necessarily immediately
 scheduling the receiving application frequently add several $ms$ of
-latency to to remote procedure calls (see measurements in \S\ref{sec:eval}).
+latency to remote procedure calls (see measurements in \S\ref{sec:eval}).
 
 % As a result, the remote procedure call latency observed by application
 % software is one to two orders of magnitude greater than the intrinsic
@@ -223,7 +223,7 @@ TCP stack and interrupt model maintains the latency challenges of the
 original system.
 
 \myparagraph{OS enhancements:} Tuning kernel-based stacks provides incremental
-benefits with superior ease of deployment.  Linux \texttt{SO\_REUSE}
+benefits with superior ease of deployment.  Linux \texttt{SO\_REUSEPORT}
 allows multi-threaded applications to accept incoming connections in
 parallel. Affinity-accept reduces overheads by considering the
 affinity of network flows to specific
