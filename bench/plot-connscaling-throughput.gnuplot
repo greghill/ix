@@ -1,11 +1,9 @@
 if (format eq 'eps') {
   set terminal postscript eps enhanced size 3.1,2.1 font 'Times'
-  unset key
-  gen_title(i) = ''
 } else {
   set terminal pngcairo size 1024,1024 lw 1 font 'Times'
-  gen_title(i) = word(title,i)
 }
+gen_title(i) = word(title,i)
 set style data linespoints
 set output outfile
 set grid y
