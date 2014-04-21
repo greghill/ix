@@ -44,6 +44,8 @@ elif [ $CLUSTER_ID = 'Stanford' ]; then
   CLIENTS="$CLIENTS maverick-7|p3p1|10.79.6.18"
   CLIENTS="$CLIENTS maverick-8|p3p1|10.79.6.19"
   CLIENTS="$CLIENTS maverick-10|p7p1|10.79.6.21"
+  CLIENTS="$CLIENTS maverick-12|p3p1|10.79.6.23"
+  CLIENTS="$CLIENTS maverick-14|p3p1|10.79.6.25"
   SERVER_IP=10.79.6.22
 else
   echo 'invalid parameters' >&2

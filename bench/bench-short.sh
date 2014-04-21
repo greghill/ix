@@ -37,6 +37,8 @@ if [ $CLUSTER_ID = 'EPFL' ]; then
   CLIENTS="$CLIENTS icnals17|eth2|192.168.21.27"
   CLIENTS="$CLIENTS icnals18|eth2|192.168.21.28"
   SERVER_IP=192.168.21.1
+  CLIENT_CORES=16
+  CLIENT_CONNECTIONS=50
 elif [ $CLUSTER_ID = 'Stanford' ]; then
   CLIENTS="$CLIENTS maverick-1|p3p1|10.79.6.11"
   CLIENTS="$CLIENTS maverick-2|p3p1|10.79.6.13"
@@ -44,8 +46,11 @@ elif [ $CLUSTER_ID = 'Stanford' ]; then
   CLIENTS="$CLIENTS maverick-7|p3p1|10.79.6.18"
   CLIENTS="$CLIENTS maverick-8|p3p1|10.79.6.19"
   CLIENTS="$CLIENTS maverick-10|p7p1|10.79.6.21"
+  CLIENTS="$CLIENTS maverick-12|p3p1|10.79.6.23"
   CLIENTS="$CLIENTS maverick-14|p3p1|10.79.6.25"
   SERVER_IP=10.79.6.22
+  CLIENT_CORES=24
+  CLIENT_CONNECTIONS=96
 else
   echo 'invalid parameters' >&2
   exit 1
@@ -142,7 +147,7 @@ if [ -z $CLIENT_SPEC ]; then
   echo 'missing parameter' >&2
   exit 1
 elif [ $CLIENT_SPEC = 'Linux-Libevent' ]; then
-  CLIENT_CMDLINE="./client $SERVER_IP $SERVER_PORT 16 50 \$MSG_SIZE \$MSG_PER_CONN"
+  CLIENT_CMDLINE="./client $SERVER_IP $SERVER_PORT $CLIENT_CORES $CLIENT_CONNECTIONS \$MSG_SIZE \$MSG_PER_CONN"
   DEPLOY_FILES="select_net.sh client"
   CLIENT_NET="linux single"
 elif [ $CLIENT_SPEC = 'Linux-Simple' ]; then
