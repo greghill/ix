@@ -5,6 +5,8 @@ if (format eq 'eps') {
 }
 gen_title(i) = word(title,i)
 set style data linespoints
+set style line 1 linecolor rgbcolor 'red'
+set style line 2 linecolor rgbcolor 'green'
 set output outfile
 set grid y
 set border 3
@@ -15,4 +17,4 @@ set ylabel 'Messages/sec (x 10^{6})'
 set xrange [*:*]
 set yrange [0:*]
 set logscale x
-plot for [i=1:words(infile)] word(infile,i) using 1:($4/10**6) title gen_title(i)
+plot for [i=1:words(infile)] word(infile,i) using 1:($4/10**6) title gen_title(i) linestyle i

@@ -7,6 +7,10 @@ if (format eq 'eps') {
   gen_title(i) = word(title,i)
 }
 set style data linespoints
+set style line 1 linecolor rgbcolor 'red'
+set style line 2 linecolor rgbcolor 'red'
+set style line 3 linecolor rgbcolor 'green'
+set style line 4 linecolor rgbcolor 'green'
 set output outfile
 set grid y
 set border 3
@@ -18,4 +22,4 @@ set ylabel 'Messages/sec (x 10^{6})'
 set xrange [0:*]
 set yrange [0:*]
 set xtics ('0' 0)
-plot for [i=1:words(infile)] fig(word(infile,i)) using ($0+1):($4/10**6):xticlabel(3) title gen_title(i)
+plot for [i=1:words(infile)] fig(word(infile,i)) using ($0+1):($4/10**6):xticlabel(3) title gen_title(i) linestyle i

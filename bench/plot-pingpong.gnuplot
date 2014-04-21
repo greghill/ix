@@ -11,6 +11,9 @@ sizefmt_M(v) = invpow2(v) >= 20 ? sprintf('%dM', v / 1024**2) : sizefmt_K(v)
 sizefmt_K(v) = invpow2(v) >= 10 ? sprintf('%dK', v / 1024**1) : sizefmt_0(v)
 sizefmt_0(v) = sprintf('%d', v)
 set style data linespoints
+set style line 1 linecolor rgbcolor 'red'
+set style line 2 linecolor rgbcolor 'green'
+set style line 3 linecolor rgbcolor 'green'
 set output outfile
 set grid y
 set border 3
@@ -28,4 +31,4 @@ do for [i=6:32:2] {
 }
 xtics = xtics.")"
 set xtics @xtics
-plot for [i=1:words(infile)] word(infile,i) using (invpow2($2)-5):(2*$4*$2*8/10**9) title gen_title(i)
+plot for [i=1:words(infile)] word(infile,i) using (invpow2($2)-5):(2*$4*$2*8/10**9) title gen_title(i) linestyle i
