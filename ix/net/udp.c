@@ -71,7 +71,7 @@ static void udp_mbuf_done(struct mbuf *pkt)
 	for (i = 0; i < pkt->nr_iov; i++)
 		mbuf_iov_free(&pkt->iovs[i]);
 
-	usys_udp_send_ret(pkt->done_data, 0);
+	usys_udp_sent(pkt->done_data);
 	mbuf_free(pkt);
 }
 
@@ -117,7 +117,7 @@ static int udp_output(struct mbuf *__restrict pkt,
  *
  * Returns the number of bytes sent, or < 0 if fail.
  */
-void bsys_udp_send(void __user *__restrict vaddr, size_t len,
+long bsys_udp_send(void __user *__restrict vaddr, size_t len,
 		   struct ip_tuple __user *__restrict id,
 		   unsigned long cookie)
 {
@@ -130,32 +130,24 @@ void bsys_udp_send(void __user *__restrict vaddr, size_t len,
 	int i;
 
 	/* validate user input */
-	if (unlikely(len > UDP_MAX_LEN)) {
-		usys_udp_send_ret(cookie, -RET_INVAL);
-		return;
-	}
-	if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple)))) {
-		usys_udp_send_ret(cookie, -RET_FAULT);
-		return;
-	}
-	if (unlikely(!uaccess_zc_okay(vaddr, len))) {
-		usys_udp_send_ret(cookie, -RET_FAULT);
-		return;
-	}
+	if (unlikely(len > UDP_MAX_LEN))
+		return -RET_INVAL;
+
+	if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple))))
+		return -RET_FAULT;
+
+	if (unlikely(!uaccess_zc_okay(vaddr, len)))
+		return -RET_FAULT;
 
 	addr = (void *) vm_lookup_phys(vaddr, PGSIZE_2MB);
-	if (unlikely(!addr)) {
-		usys_udp_send_ret(cookie, -RET_FAULT);
-		return;
-	}
+	if (unlikely(!addr))
+		return -RET_FAULT;
 
 	addr = (void *) ((uintptr_t) addr + PGOFF_2MB(vaddr));
 
 	pkt = mbuf_alloc_local();
-	if (unlikely(!pkt)) {
-		usys_udp_send_ret(cookie, -RET_NOBUFS);
-		return;
-	}
+	if (unlikely(!pkt))
+		return -RET_NOBUFS;
 
 	iovs = mbuf_mtod_off(pkt, struct mbuf_iov *,
 			     align_up(UDP_PKT_SIZE, sizeof(uint64_t)));
@@ -187,14 +179,16 @@ void bsys_udp_send(void __user *__restrict vaddr, size_t len,
 		for (i = 0; i < pkt->nr_iov; i++)
 			mbuf_iov_free(&pkt->iovs[i]);
 		mbuf_free(pkt);
-		usys_udp_send_ret(cookie, ret);
+		return ret;
 	}
+
+	return 0;
 }
 
-void bsys_udp_sendv(struct sg_entry __user *ents, unsigned int nrents,
+long bsys_udp_sendv(struct sg_entry __user *ents, unsigned int nrents,
 		    struct ip_tuple __user *id, unsigned long cookie)
 {
-	usys_udp_send_ret(cookie, -RET_NOSYS);
+	return -RET_NOSYS;
 }
 
 #define MAX_MBUF_PAGE_OFF	(PGSIZE_2MB - (PGSIZE_2MB % MBUF_LEN))
@@ -203,7 +197,7 @@ void bsys_udp_sendv(struct sg_entry __user *ents, unsigned int nrents,
  * bsys_udp_recv_done - inform the kernel done using a UDP packet buffer
  * @iomap: a pointer anywhere inside the mbuf
  */
-void bsys_udp_recv_done(void *iomap)
+long bsys_udp_recv_done(void *iomap)
 {
 	struct mempool *pool = &percpu_get(mbuf_mempool);
 	struct mbuf *m;
@@ -217,17 +211,18 @@ void bsys_udp_recv_done(void *iomap)
 		     off >= MAX_MBUF_PAGE_OFF)) {
 		log_err("udp: user tried to free an invalid mbuf"
 			"at address %p\n", addr);
-		return;
+		return -RET_FAULT;
 	}
 
 	m = (struct mbuf *) (PGADDR_2MB(addr) + (off / MBUF_LEN) * MBUF_LEN);
 
 	if (unlikely(m->done != (void *) 0xDEADBEEF)) {
 		log_err("udp: user tried to free an already free mbuf\n");
-		return;
+		return -RET_INVAL;
 	}
 
 	m->done = NULL;
 	mbuf_free(m);
+	return 0;
 }
 

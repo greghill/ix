@@ -29,7 +29,7 @@ struct sg_entry {
 
 #define MAX_SG_ENTRIES	30
 
-typedef unsigned long hid_t;
+typedef long hid_t;
 
 enum {
 	RET_OK		= 0, /* Successful                 */
@@ -40,6 +40,8 @@ enum {
 	RET_FAULT	= 5, /* Bad memory address         */
 	RET_NOSYS	= 6, /* System call does not exist */
 	RET_NOTSUP	= 7, /* Operation is not supported */
+	RET_BADH	= 8, /* An invalid handle was used */
+	RET_CLOSED	= 9, /* The conn is closed         */
 };
 
 
@@ -62,11 +64,24 @@ enum {
  * Batched system calls
  */
 
-typedef void (*bsysfn_t) (uint64_t, uint64_t, uint64_t, uint64_t);
+typedef long (*bsysfn_t) (uint64_t, uint64_t, uint64_t, uint64_t);
 
+/*
+ * batched system call descriptor format:
+ * sysnr: - the system call number
+ * arga-argd: parameters one through four
+ * argd: overwritten with the return code
+ */
 struct bsys_desc {
 	uint64_t sysnr;
 	uint64_t arga, argb, argc, argd;
+} __packed;
+
+struct bsys_ret {
+	uint64_t sysnr;
+	uint64_t cookie;
+	long ret;
+	uint64_t pad[2];
 } __packed;
 
 #define BSYS_DESC_NOARG(desc, vsysnr) \
@@ -276,11 +291,9 @@ ksys_tcp_close(struct bsys_desc *d, hid_t handle)
 
 enum {
 	USYS_UDP_RECV = 0,
-	USYS_UDP_SEND_RET,
+	USYS_UDP_SENT,
 	USYS_TCP_KNOCK,
 	USYS_TCP_RECV,
-	USYS_TCP_CONNECT_RET,
-	USYS_TCP_SEND_RET,
 	USYS_TCP_SENT,
 	USYS_TCP_DEAD,
 	USYS_NR,
@@ -289,6 +302,7 @@ enum {
 #ifdef __KERNEL__
 
 DECLARE_PERCPU(struct bsys_arr *, usys_arr);
+DECLARE_PERCPU(unsigned long, syscall_cookie);
 
 /**
  * usys_reset - reset the batched call array
@@ -323,18 +337,17 @@ static inline void usys_udp_recv(void *addr, size_t len, struct ip_tuple *id)
 }
 
 /**
- * usys_udp_send_done - Notifies the user that a UDP packet send completed
+ * usys_udp_sent - Notifies the user that a UDP packet send completed
  * @cookie: a user-level token for the request
- * @ret: zero if successful, otherwise fail.
  *
  * NOTE: Calling this function allows the user application to unpin memory
  * that was locked for zero copy transfer. Acknowledgements are always in
  * FIFO order.
  */
-static inline void usys_udp_send_ret(unsigned long cookie, ssize_t ret)
+static inline void usys_udp_sent(unsigned long cookie)
 {
 	struct bsys_desc *d = usys_next();
-	BSYS_DESC_2ARG(d, USYS_UDP_SEND_RET, cookie, ret);
+	BSYS_DESC_1ARG(d, USYS_UDP_SENT, cookie);
 }
 
 /**
@@ -362,35 +375,6 @@ usys_tcp_recv(hid_t handle, unsigned long cookie, void *addr, size_t len)
 {
 	struct bsys_desc *d = usys_next();
 	BSYS_DESC_4ARG(d, USYS_TCP_RECV, handle, cookie, addr, len);
-}
-
-/**
- * usys_tcp_connect_ret - indicates the outcome of a TCP connection request
- * @handle: the TCP flow handle
- * @cookie: a user-level tag for the flow
- * @ret: the return code
- */
-static inline void
-usys_tcp_connect_ret(hid_t handle, unsigned long cookie, int ret)
-{
-	struct bsys_desc *d = usys_next();
-	BSYS_DESC_3ARG(d, USYS_TCP_CONNECT_RET, handle, cookie, ret);
-}
-
-/**
- * usys_tcp_send_ret - indicates the outcome of a TCP transmit request
- * @handle: the TCP flow handle
- * @cookie: a user-level tag for the flow
- * @ret: the return code
- *
- * @ret is the number of bytes transferred if successful (could be zero),
- * otherwise a negative number if the request failed.
- */
-static inline void
-usys_tcp_send_ret(hid_t handle, unsigned long cookie, ssize_t ret)
-{
-	struct bsys_desc *d = usys_next();
-	BSYS_DESC_3ARG(d, USYS_TCP_SEND_RET, handle, cookie, ret);
 }
 
 /**
@@ -432,24 +416,24 @@ usys_tcp_dead(hid_t handle, unsigned long cookie)
 /* FIXME: could use Sparse to statically check */
 #define __user
 
-extern void bsys_udp_send(void __user *addr, size_t len,
+extern long bsys_udp_send(void __user *addr, size_t len,
 			  struct ip_tuple __user *id,
 			  unsigned long cookie);
-extern void bsys_udp_sendv(struct sg_entry __user *ents,
+extern long bsys_udp_sendv(struct sg_entry __user *ents,
 			   unsigned int nrents,
 			   struct ip_tuple __user *id,
 			   unsigned long cookie);
-extern void bsys_udp_recv_done(void *iomap);
+extern long bsys_udp_recv_done(void *iomap);
 
-extern void bsys_tcp_connect(struct ip_tuple __user *id,
+extern long bsys_tcp_connect(struct ip_tuple __user *id,
 			     unsigned long cookie);
-extern void bsys_tcp_accept(hid_t handle, unsigned long cookie);
-extern void bsys_tcp_reject(hid_t handle);
-extern void bsys_tcp_send(hid_t handle, void *addr, size_t len);
-extern void bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
-			   unsigned int nrents);
-extern void bsys_tcp_recv_done(hid_t handle, size_t len);
-extern void bsys_tcp_close(hid_t handle);
+extern long bsys_tcp_accept(hid_t handle, unsigned long cookie);
+extern long bsys_tcp_reject(hid_t handle);
+extern ssize_t bsys_tcp_send(hid_t handle, void *addr, size_t len);
+extern ssize_t bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
+			      unsigned int nrents);
+extern long bsys_tcp_recv_done(hid_t handle, size_t len);
+extern long bsys_tcp_close(hid_t handle);
 
 struct dune_tf;
 extern void do_syscall(struct dune_tf *tf, uint64_t sysnr);

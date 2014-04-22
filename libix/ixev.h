@@ -1,0 +1,117 @@
+/*
+ * ixev.h - a library that behaves mostly like libevent.
+ */
+
+#pragma once
+
+#include "ix.h"
+
+/* FIXME: we won't need recv depth when i get a chance to fix the kernel */
+#define IXEV_RECV_DEPTH	64
+#define IXEV_SEND_DEPTH	16
+
+struct ixev_ctx;
+
+/*
+ * FIXME: right now we only support some libevent features
+ * - add level triggered support (now only edge triggered)
+ * - add one fire events (now only persistent)
+ * - add timeout support for events
+ */
+
+/* IX event types */
+#define IXEVHUP		0x1 /* the connection was closed (or failed) */
+#define IXEVIN		0x2 /* new data is available for reading */
+#define IXEVOUT		0x4 /* more space is available for writing */
+
+struct ixev_conn_ops {
+	struct ixev_ctx * (*accept) (struct ip_tuple *id);
+	void		  (*release) (struct ixev_ctx *ctx);
+	void		  (*connect_ret) (struct ixev_ctx *ctx, long ret);
+};
+
+/*
+ * Use this callback to receive network event notifications
+ */
+typedef void (*ixev_handler_t)(struct ixev_ctx *ctx, unsigned int reason);
+
+/*
+ * Use this callback to decrement the refcount of the given
+ * memory. It is especially unsafe to initiate new I/O requests
+ * from this handler.
+ */
+typedef void (*ixev_put_fn)(void *arg);
+
+struct ixev_putcb {
+	ixev_put_fn	cb;	/* the decrement ref callback function */
+	void		*arg;	/* the argument to pass to the callback */
+};
+
+struct ixev_ctx {
+	hid_t		handle;			/* the IX flow handle */
+	unsigned long	user_data;		/* application data */
+	uint64_t	generation;		/* generation number */
+	ixev_handler_t	handler;		/* the event handler */
+	unsigned int	en_mask;		/* a mask of enabled events */
+	unsigned int	trig_mask;		/* a mask of triggered events */
+	uint16_t	recv_head;		/* received data SG head */
+	uint16_t	recv_tail;		/* received data SG tail */
+	uint16_t	send_count;		/* the current send SG count */
+	uint16_t	is_dead:1;		/* is the connection dead? */
+	size_t		send_len;		/* the number of outstanding send bytes */
+
+	struct bsys_desc *recv_done_desc;	/* the current recv_done bsys descriptor */
+	struct bsys_desc *sendv_desc;		/* the current sendv bsys descriptor */
+
+	struct sg_entry	recv[IXEV_RECV_DEPTH];	/* receieve SG array */
+	struct sg_entry send[IXEV_SEND_DEPTH];	/* send SG array */
+	struct ixev_putcb send_cb[IXEV_SEND_DEPTH]; /* callbacks to free memory */
+};
+
+static inline void ixev_check_hacks(struct ixev_ctx *ctx)
+{
+	/*
+	 * Temporary hack:
+	 *
+	 * FIXME: we need to flush commands in batches to limit our
+	 * command buffer size. Then this restriction can be lifted.
+	 */
+	if (unlikely(karr->len >= karr->max_len)) {
+		printf("ixev: ran out of command space\n");
+		exit(-1);
+	}
+}
+
+extern ssize_t ixev_recv(struct ixev_ctx *ctx, void *addr, size_t len);
+extern ssize_t ixev_send(struct ixev_ctx *ctx, void *addr, size_t len);
+extern ssize_t ixev_send_zc(struct ixev_ctx *ctx, void *addr, size_t len,
+			    struct ixev_putcb *cb);
+extern void ixev_close(struct ixev_ctx *ctx);
+
+/**
+ * ixev_dial - open a connection
+ * @ctx: a freshly allocated and initialized context
+ * @id: the address and port
+ * @cb: the completion callback
+ *
+ * The completion returns a handle, or <0 if there was
+ * an error.
+ */
+static inline void
+ixev_dial(struct ixev_ctx *ctx, struct ip_tuple *id)
+{
+	struct bsys_desc *d = __bsys_arr_next(karr);
+	ixev_check_hacks(ctx);
+
+	ksys_tcp_connect(d, id, (unsigned long) ctx);
+}
+
+extern void ixev_ctx_init(struct ixev_ctx *ctx);
+extern void ixev_wait(void);
+
+extern void ixev_set_handler(struct ixev_ctx *ctx, unsigned int mask,
+			     ixev_handler_t handler);
+
+extern int ixev_init_thread(void);
+extern int ixev_init(struct ixev_conn_ops *ops);
+

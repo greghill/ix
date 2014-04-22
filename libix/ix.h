@@ -8,14 +8,10 @@
 
 struct ix_ops {
 	void (*udp_recv)	(void *addr, size_t len, struct ip_tuple *id);
-	void (*udp_send_ret)	(unsigned long cookie, int64_t ret);
+	void (*udp_sent)	(unsigned long cookie);
 	void (*tcp_knock)	(hid_t handle, struct ip_tuple *id);
 	void (*tcp_recv)	(hid_t handle, unsigned long cookie,
 				 void *addr, size_t len);
-	void (*tcp_connect_ret)	(hid_t handle, unsigned long cookie,
-				 int ret);
-	void (*tcp_send_ret)	(hid_t handle, unsigned long cookie,
-				 ssize_t ret);
 	void (*tcp_sent)	(hid_t handle, unsigned long cookie,
 				 size_t win_size);
 	void (*tcp_dead)	(hid_t handle, unsigned long cookie);
@@ -115,6 +111,7 @@ static inline void ix_tcp_close(hid_t handle)
 extern void *ix_alloc_pages(int nrpages);
 extern void ix_free_pages(void *addr, int nrpages);
 
+extern void ix_handle_events(void);
 extern int ix_poll(void);
 extern int ix_init(struct ix_ops *ops, int batch_depth);
 

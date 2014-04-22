@@ -27,18 +27,14 @@ static void udp_recv(void *addr, size_t len, struct ip_tuple *src)
 	ix_udp_send(addr, len, dst, (unsigned long) addr);
 }
 
-static void udp_send_ret(unsigned long cookie, int64_t ret)
+static void udp_sent(unsigned long cookie)
 {
-	if (ret) {
-		printf("packet %lx had error %ld\n", cookie, ret);
-	}
-
 	ix_udp_recv_done((void *) cookie);
 }
 
 static struct ix_ops ops = {
-	.udp_recv     = udp_recv,
-	.udp_send_ret = udp_send_ret,
+	.udp_recv	= udp_recv,
+	.udp_sent	= udp_sent,
 };
 
 int main(int argc, char *argv[])
@@ -57,6 +53,7 @@ int main(int argc, char *argv[])
 
 	while (1) {
 		ix_poll();
+		karr->len = 0;
 	}
 
 	return 0;

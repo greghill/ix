@@ -25,6 +25,7 @@
 
 DEFINE_PERCPU(struct bsys_arr *, usys_arr);
 DEFINE_PERCPU(void *, usys_iomap);
+DEFINE_PERCPU(unsigned long, syscall_cookie);
 
 static const int usys_nr = div_up(sizeof(struct bsys_arr) +
 				  UARR_MIN_CAPACITY * sizeof(struct bsys_desc),
@@ -45,7 +46,7 @@ static bsysfn_t bsys_tbl[] = {
 
 static int bsys_dispatch_one(struct bsys_desc __user *d)
 {
-	uint64_t sysnr, arga, argb, argc, argd;
+	uint64_t sysnr, arga, argb, argc, argd, ret;
 
 	sysnr = uaccess_peekq(&d->sysnr);
 	arga = uaccess_peekq(&d->arga);
@@ -55,10 +56,19 @@ static int bsys_dispatch_one(struct bsys_desc __user *d)
 
 	if (unlikely(uaccess_check_fault()))
 		return -EFAULT;
-	if (unlikely(sysnr >= KSYS_NR))
-		return -ENOSYS;
+	if (unlikely(sysnr >= KSYS_NR)) {
+		ret = (uint64_t) -ENOSYS;
+		goto out;
+	}
 
-	bsys_tbl[sysnr](arga, argb, argc, argd);
+	ret = bsys_tbl[sysnr](arga, argb, argc, argd);
+
+out:
+	arga = percpu_get(syscall_cookie);
+	uaccess_pokeq(&d->arga, arga);
+	uaccess_pokeq(&d->argb, ret);
+	if (unlikely(uaccess_check_fault()))
+		return -EFAULT;
 
 	return 0;
 }
@@ -96,22 +106,22 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 
 	usys_reset();
 
+	KSTATS_PUSH(tx_reclaim, NULL);
+	percpu_get(tx_batch_cap) = eth_tx_reclaim(percpu_get(eth_tx));
+	KSTATS_POP(NULL);
+
+	KSTATS_PUSH(bsys, NULL);
+	ret = bsys_dispatch(d, nr);
+	KSTATS_POP(NULL);
+
 again:
 	KSTATS_PUSH(timer, NULL);
 	timer_run();
 	KSTATS_POP(NULL);
 
-	KSTATS_PUSH(tx_reclaim, NULL);
-	percpu_get(tx_batch_cap) = eth_tx_reclaim(percpu_get(eth_tx));
-	KSTATS_POP(NULL);
-
 	KSTATS_PUSH(rx_poll, NULL);
 	for_each_queue(i)
 		eth_rx_poll(percpu_get(eth_rx)[i]);
-	KSTATS_POP(NULL);
-
-	KSTATS_PUSH(bsys, NULL);
-	ret = bsys_dispatch(d, nr);
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(tx_xmit, NULL);
@@ -123,12 +133,16 @@ again:
 	percpu_get(tx_batch_pos) = 0;
 	KSTATS_POP(NULL);
 
-	if (!percpu_get(usys_arr)->len) {
-		nr = 0;
+	if (!nr && !percpu_get(usys_arr)->len) {
 		KSTATS_PUSH(idle, NULL);
 		/* FIXME: need to modify timer code to get the next event */
 		eth_rx_idle_wait(10 * ONE_MS);
 		KSTATS_POP(NULL);
+
+		KSTATS_PUSH(tx_reclaim, NULL);
+		percpu_get(tx_batch_cap) = eth_tx_reclaim(percpu_get(eth_tx));
+		KSTATS_POP(NULL);
+
 		goto again;
 	}
 
@@ -144,7 +158,26 @@ again:
  */
 static int sys_bcall(struct bsys_desc __user *d, unsigned int nr)
 {
-	return bsys_dispatch(d, nr);
+	int ret, i;
+
+	KSTATS_PUSH(tx_reclaim, NULL);
+	percpu_get(tx_batch_cap) = eth_tx_reclaim(percpu_get(eth_tx));
+	KSTATS_POP(NULL);
+
+	KSTATS_PUSH(bsys, NULL);
+	ret = bsys_dispatch(d, nr);
+	KSTATS_POP(NULL);
+
+	KSTATS_PUSH(tx_xmit, NULL);
+	i = eth_tx_xmit(percpu_get(eth_tx), percpu_get(tx_batch_pos),
+		        percpu_get(tx_batch));
+	if (unlikely(i != percpu_get(tx_batch_pos)))
+		panic("transmit failed\n");
+	percpu_get(tx_batch_len) = 0;
+	percpu_get(tx_batch_pos) = 0;
+	KSTATS_POP(NULL);
+
+	return ret;
 }
 
 /**

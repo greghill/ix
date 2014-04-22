@@ -19,7 +19,6 @@ __thread struct bsys_arr *karr;
  */
 int ix_poll(void)
 {
-	int i;
 	int ret;
 
 	ret = sys_bpoll(karr->descs, karr->len);
@@ -28,22 +27,28 @@ int ix_poll(void)
 		exit(-1);
 	}
 
-	karr->len = 0;
+	return uarr->len;
+}
+
+void ix_handle_events(void)
+{
+	int i;
 
 	for (i = 0; i < uarr->len; i++) {
 		struct bsys_desc d = uarr->descs[i];
 		usys_tbl[d.sysnr](d.arga, d.argb, d.argc, d.argd);
 	}
-
-	return uarr->len;
 }
 
 /**
- * ix_flush - flush pending commands
+ * ix_flush - send pending commands
  */
 void ix_flush(void)
 {
-	if (sys_bcall(karr->descs, karr->len)) {
+	int ret;
+
+	ret = sys_bcall(karr->descs, karr->len);
+	if (ret) {
 		printf("libix: encountered a fatal memory fault\n");
 		exit(-1);
 	}
@@ -77,11 +82,9 @@ int ix_init(struct ix_ops *ops, int batch_depth)
 
 	/* unpack the ops into a more efficient representation */
 	usys_tbl[USYS_UDP_RECV]		= (bsysfn_t) ops->udp_recv;
-	usys_tbl[USYS_UDP_SEND_RET]	= (bsysfn_t) ops->udp_send_ret;
+	usys_tbl[USYS_UDP_SENT]		= (bsysfn_t) ops->udp_sent;
 	usys_tbl[USYS_TCP_KNOCK]	= (bsysfn_t) ops->tcp_knock;
 	usys_tbl[USYS_TCP_RECV]		= (bsysfn_t) ops->tcp_recv;
-	usys_tbl[USYS_TCP_CONNECT_RET]	= (bsysfn_t) ops->tcp_connect_ret;
-	usys_tbl[USYS_TCP_SEND_RET]	= (bsysfn_t) ops->tcp_send_ret;
 	usys_tbl[USYS_TCP_SENT]		= (bsysfn_t) ops->tcp_sent;
 	usys_tbl[USYS_TCP_DEAD]		= (bsysfn_t) ops->tcp_dead;
 

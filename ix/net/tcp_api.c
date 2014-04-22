@@ -32,6 +32,7 @@ struct tcpapi_pcb {
 	struct pbuf *recvd;
 	struct pbuf *recvd_tail;
 	int queue;
+	bool accepted;
 };
 
 static DEFINE_PERQUEUE(struct mempool, pcb_mempool);
@@ -65,6 +66,8 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 	if (unlikely(api->alive > 1))
 		return NULL;
 
+	percpu_get(syscall_cookie) = api->cookie;
+
 	return api;
 }
 
@@ -82,7 +85,21 @@ static inline hid_t tcpapi_to_handle(struct tcpapi_pcb *pcb)
 	       ((uintptr_t) (perqueue_get(queue_id)) << 48);
 }
 
-void bsys_tcp_accept(hid_t handle, unsigned long cookie)
+static void recv_a_pbuf(struct tcpapi_pcb *api, struct pbuf *p)
+{
+	struct mbuf *pkt;
+	 /* Walk through the full receive chain */
+	do {
+		pkt = p->mbuf;
+		pkt->len = p->len; /* repurpose len for recv_done */
+		usys_tcp_recv(api->handle, api->cookie,
+			      mbuf_to_iomap(pkt, p->payload), p->len);
+
+		p = p->next;
+	} while (p);
+}
+
+long bsys_tcp_accept(hid_t handle, unsigned long cookie)
 {
 	/*
 	 * FIXME: this function is sort of a placeholder since we have no
@@ -91,40 +108,54 @@ void bsys_tcp_accept(hid_t handle, unsigned long cookie)
 	 */
 
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
+	struct pbuf *tmp;
 
 	log_debug("tcpapi: bsys_tcp_accept() - handle %lx, cookie %lx\n",
 		  handle, cookie);
 
 	if (unlikely(!api)) {
 		log_debug("tcpapi: invalid handle\n");
-		return;
+		return -RET_BADH;
 	}
 
 	if (api->id) {
 		mempool_free(&perqueue_get(id_mempool), api->id);
 		api->id = NULL;
 	}
+
+	api->cookie = cookie;
+	api->accepted = true;
+
+	tmp = api->recvd;
+	while (tmp) {
+		recv_a_pbuf(api, tmp);
+		tmp = tmp->tcp_api_next;
+	}
+
+	return RET_OK;
 }
 
-void bsys_tcp_reject(hid_t handle)
+long bsys_tcp_reject(hid_t handle)
 {
 	/*
 	 * FIXME: LWIP's synchronous handling of accepts
 	 * makes supporting this call impossible.
 	 */
 	log_err("tcpapi: bsys_tcp_reject() is not implemented\n");
+
+	return -RET_NOTSUP;
 }
 
-void bsys_tcp_send(hid_t handle, void *addr, size_t len)
+ssize_t bsys_tcp_send(hid_t handle, void *addr, size_t len)
 {
 	log_debug("tcpapi: bsys_tcp_send() - addr %p, len %lx\n",
 		  addr, len);
 
-	usys_tcp_send_ret(handle, 0, -ENOTSUP);
+	return -RET_NOTSUP;
 }
 
-void bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
-		    unsigned int nrents)
+ssize_t bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
+		       unsigned int nrents)
 {
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
 	int i;
@@ -135,26 +166,37 @@ void bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
 
 	if (unlikely(!api)) {
 		log_debug("tcpapi: invalid handle\n");
-		return;
+		return -RET_BADH;
 	}
 
-	if (unlikely(!api->alive)) {
-		usys_tcp_send_ret(handle, api->cookie, 0);
-		return;
-	}
+	if (unlikely(!api->alive))
+		return -RET_CLOSED;
 
-	if (unlikely(!uaccess_okay(ents, nrents * sizeof(struct sg_entry)))) {
-		usys_tcp_send_ret(handle, api->cookie, -RET_FAULT);
-		return;
-	}
+	if (unlikely(!uaccess_okay(ents, nrents * sizeof(struct sg_entry))))
+		return -RET_FAULT;
 
 	nrents = min(nrents, MAX_SG_ENTRIES);
 	for (i = 0; i < nrents; i++) {
 		err_t err;
 		void *base = (void *) uaccess_peekq((uint64_t *) &ents[i].base);
 		size_t len = uaccess_peekq(&ents[i].len);
+		bool buf_full = len > api->pcb->snd_buf;
 
-		if (unlikely(!uaccess_zc_okay(base, len)))
+		if (unlikely(!uaccess_okay(base, len)))
+			break;
+
+		/*
+		 * FIXME: hacks to deal with LWIP's send buffering
+		 * design when handling large send requests. LWIP
+		 * buffers send data but in IX we don't want any
+		 * buffering in the kernel at all. Thus, the real
+		 * limit here should be the TCP cwd. Unfortunately
+		 * tcp_out.c needs to be completely rewritten to
+		 * support this.
+		 */
+		if (buf_full)
+			len = api->pcb->snd_buf;
+		if (!len)
 			break;
 
 		/*
@@ -168,15 +210,17 @@ void bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
 			break;
 
 		len_xmited += len;
+		if (buf_full)
+			break;
 	}
 
 	if (len_xmited)
 		tcp_output(api->pcb);
 
-	usys_tcp_send_ret(handle, api->cookie, len_xmited);
+	return len_xmited;
 }
 
-void bsys_tcp_recv_done(hid_t handle, size_t len)
+long bsys_tcp_recv_done(hid_t handle, size_t len)
 {
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
 	struct pbuf *recvd, *next;
@@ -186,7 +230,7 @@ void bsys_tcp_recv_done(hid_t handle, size_t len)
 
 	if (unlikely(!api)) {
 		log_debug("tcpapi: invalid handle\n");
-		return;
+		return -RET_BADH;
 	}
 
 	recvd = api->recvd;
@@ -204,9 +248,10 @@ void bsys_tcp_recv_done(hid_t handle, size_t len)
 	}
 
 	api->recvd = recvd;
+	return RET_OK;
 }
 
-void bsys_tcp_close(hid_t handle)
+long bsys_tcp_close(hid_t handle)
 {
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
 	struct pbuf *recvd, *next;
@@ -215,7 +260,7 @@ void bsys_tcp_close(hid_t handle)
 
 	if (unlikely(!api)) {
 		log_debug("tcpapi: invalid handle\n");
-		return;
+		return -RET_BADH;
 	}
 
 	if (api->pcb) {
@@ -236,6 +281,7 @@ void bsys_tcp_close(hid_t handle)
 	}
 
 	mempool_free(&perqueue_get(pcb_mempool), api);
+	return RET_OK;
 }
 
 static void mark_dead(struct tcpapi_pcb *api)
@@ -248,7 +294,6 @@ static void mark_dead(struct tcpapi_pcb *api)
 static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 {
 	struct tcpapi_pcb *api;
-	struct mbuf *pkt;
 
 	log_debug("tcpapi: on_recv - arg %p, pcb %p, pbuf %p, err %d\n",
 		  arg, pcb, p, err);
@@ -272,16 +317,22 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 	}
 	p->tcp_api_next = NULL;
 
-	/* Walk through the full receive chain */
-	do {
-		pkt = p->mbuf;
-		pkt->len = p->len; /* repurpose len for recv_done */
-		usys_tcp_recv(api->handle, api->cookie,
-			      mbuf_to_iomap(pkt, p->payload), p->len);
+	/*
+	 * FIXME: This is a pretty annoying hack. LWIP accepts connections
+	 * synchronously while we have to wait for the app to accept the
+	 * connection. As a result, we have no choice but to assume the
+	 * connection will be accepted. Thus, we may start receiving data
+	 * packets before the app has allocated a recieve context and set
+	 * the appropriate cookie value. For now we wait for the app to
+	 * accept the connection before we allow receive events to be
+	 * sent. Clearly, the receive path needs to be rewritten.
+ 	 */
+	if (!api->accepted)
+		goto done;
 
-		p = p->next;
-	} while (p);
+	recv_a_pbuf(api, p);
 
+done:
 	return ERR_OK;
 }
 
@@ -334,6 +385,7 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	api->cookie = 0;
 	api->recvd = NULL;
 	api->recvd_tail = NULL;
+	api->accepted = false;
 
 	tcp_nagle_disable(pcb);
 	tcp_arg(pcb, api);
@@ -369,7 +421,7 @@ static err_t on_connected(void *arg, struct tcp_pcb *pcb, err_t err)
 
 	api = mempool_alloc(&perqueue_get(pcb_mempool));
 	if (unlikely(!api)) {
-		usys_tcp_connect_ret(0, (unsigned long) arg, -RET_FAULT);
+//		usys_tcp_connect_ret(0, (unsigned long) arg, -RET_FAULT);
 		return ERR_MEM;
 	}
 
@@ -378,17 +430,19 @@ static err_t on_connected(void *arg, struct tcp_pcb *pcb, err_t err)
 	api->cookie = (unsigned long) arg;
 	api->recvd = NULL;
 	api->recvd_tail = NULL;
+	api->accepted = true;
 
 	tcp_arg(pcb, api);
 
 	api->handle = tcpapi_to_handle(api);
-	usys_tcp_connect_ret(api->handle, api->cookie, RET_OK);
+	//usys_tcp_connect_ret(api->handle, api->cookie, RET_OK);
 
 	return ERR_OK;
 }
 
-void bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
+long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 {
+#if 0
 	err_t err;
 	struct ip_tuple tmp;
 	struct ip_addr addr;
@@ -422,6 +476,9 @@ connect_fail:
 	tcp_abort(pcb);
 pcb_fail:
 	usys_tcp_connect_ret(0, cookie, -RET_NOMEM);
+#endif
+
+	return -RET_NOTSUP;
 }
 
 int tcp_api_init(void)

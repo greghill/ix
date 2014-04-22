@@ -56,7 +56,7 @@ static inline void uaccess_pokeq(uint64_t *addr, uint64_t val)
 		     ASM_END_FIXUP
 		     ASM_REGISTER_FIXUP(1b, 3b) :
 		     "=m" (uaccess_fault) :
-		     "g" (val), "g" (addr) : "memory", "cc");
+		     "r" (val), "g" (addr) : "memory", "cc");
 }
 
 /**
