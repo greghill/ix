@@ -65,7 +65,7 @@ applications~\cite{provos2003libevent,libev,libuv}.  For example, the
 popular \texttt{libevent} library~\cite{provos2003libevent} provides a
 level of abstraction that exposes the paradigm to applications running
 on top of Linux, *BSD, and Windows.  Many web-scale applications, such
-as memcached~\cite{missing}, are built on top of libevent.  Others
+as memcached~\cite{missing}, are built on top of \texttt{libevent}.  Others
 such as nginx and node.js are built using similar frameworks.
 
 
@@ -73,7 +73,7 @@ such as nginx and node.js are built using similar frameworks.
 \label{sec:motivation:challenges}
 
 Although the event-based paradigm has several system-level benefits,
-such as lower context switching rates, its use in web-scale
+such as lower context switching rates~\cite{missing}, its use in web-scale
 applications poses many unique challenges to system software:
 
 \myparagraph{High packet rates:} The requests and, often times, the replies

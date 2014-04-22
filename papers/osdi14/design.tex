@@ -34,10 +34,10 @@ done before moving on to the next packet.  In contrast, a commodity OS is design
 with protocol processing decoupled from the application itself in
 order to enable flexibility in terms of resource scheduling and flow
 control. For example, a commodity OS relies on device and soft interrupts to context switch from application processing to protocol processing; 
-similarily, the OS will return \texttt{ACK} and
+similarily, the OS' networking stack will generate a TCP \texttt{ACK} and
 slide its receive window even though the application is not consuming
 data, up to some extent. Second, dataplanes are designed to operate in
-a \emph{flow-consistent, coherence-free, flow-consistent} manner.
+a \emph{flow-consistent, coherence-free} manner.
 Network flows are distributed into distinct queues via receive-side
 scaling (RSS)~\cite{DBLP:journals/computer/RegnierMIIMHNCF04} and each queue
 is served by a single core so that the common case processing of a
@@ -66,8 +66,8 @@ configuration, provisioning, scheduling, and monitoring, from the
 dataplane, which runs the networking stack and application logic.
 Like a conventional OS, our control plane multiplexes and schedule
 resources among dataplanes but in an coarse-grain manner in space and
-time: cores are dedicated to applications until revoked; memory is
-allocated in GB chunks; hardware queues are exclusively assigned to a
+time: cores are dedicated to applications until revoked\edb{is it an how}; memory is
+allocated in GB chunks\george{not true}; hardware queues are exclusively assigned to a
 single dataplane for long time periods. Each dataplane instance
 supports one, single address-space, application.  This is similar to
 the Exokernel approach of using library operating
@@ -110,7 +110,7 @@ packet, intermixing protocol processing and application logic as
 needed. Hence, there is no need for intermediate buffering between
 pipeline stages or between the application logic and network protocol
 stack. Since there is no socket layer at all, flow control is directly
-but safely exposed to the architecture, especially for outgoing
+but safely exposed to the applications, especially for outgoing
 packets (see \texttt{mbufs} discussion  above).
 
 We minimize overheads by processing packets in bounded batches.
@@ -144,11 +144,13 @@ information arriving from multiple network flows.
 %The approach extends to link-aggregation bonds to scale to multiple links.
 
 
-\myparagraph{Buffering at the NIC edge:} Since there is no
-intermediate buffering within the dataplane pipeline, buffering and
-therefore congestion will occur only at the NIC edge for incoming
-packets before they are processed and for outgoing packets before they
-are sent on the wire.  In effect, the NIC edge acts like the last-hop
+\myparagraph{Buffering at the NIC edge:} 
+
+The consequence of adaptive batching is the buildup of queues at the
+RX NIC edge -- before the packets are processed by the dataplane.
+Because of the dataplane's design, congestion occurs only at the NIC
+edge.  
+In effect, the NIC edge acts like the last-hop
 buffer in the network.  Like switches and routers, the NIC edge can
 monitor queue depths to detect congestion, signal the control plane to
 allocate additional resources (more hardware threads, increase clock

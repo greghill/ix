@@ -31,11 +31,11 @@ reporting multi-core scalability, we report results with
 hyperthreading enabled, and both hyperthreads of the cores are used.
 
 The server is connected to
-the switch via a 4x10GbE bond configured in as a L2+L3
-hash in the switch via LACP~\cite{ieee802.3ad}.  Jumbo
+the switch via a 4x10GbE bond configured as a L2+L3
+hash via LACP~\cite{ieee802.3ad}.  Jumbo
 frames are never enabled.  Our baseline configuration in each machine
 is the Ubuntu 12.04.4 LTS distribution running the 3.11 Linux kernel.  Although
-the server has two sockets, our experiments pin IRQs, processes, and
+the server has two sockets, our experiments pin IRQs\george{not really}, processes, and
 the IX dataplane onto a single socket and use memory from that socket;
 all NICs are attached to that socket via the PCIe root complex. 
 \edb{CONTREVERSIAL: We chose to limit execution to a single NUMA node to simplify the
@@ -57,15 +57,13 @@ recently-published user-level TCP stack specifically designed for
 scalability~\cite{jeong2014mtcp}.  Unless specifically mentioned, all
 clients run an baseline Linux configuration.  
 
-Typically, the client implementation uses the classic blocking
-paradigm to send and receive messages over a single, well-known
-socket.  In contrast, the Linux server implementations use the
+The Linux server implementations use the
 \texttt{libevent} framework running on XXX threads to serve the
 clients. The mTCP server implementation use the native mTCP API
 running on up to 8 cores (within each core, one hyperthread is
 dedicated to processing the network stack).  Finally, \ix server use
 the native \ix API running on up to 8 cores (using symmetrically both
-hyperthreads).
+hyperthreads).  For all experiments, we use the same Linux client code, generally also written using \texttt{libevent}.
 
 
 \subsection{High-bandwidth and low-latency}

@@ -31,7 +31,7 @@ To ensure the reliable application of \texttt{put} operations, the
 system relies on in-network TCP-proxies to aggregate requests, which
 introduces complexity and latency in the architecture.
 
-In a recent keynote, Google's Luiz Barroso identified three additional challenges
+In a recent keynote, \edb{too personal?}Google's Luiz Barroso identified three additional challenges
 for applications that must process large amounts of data in little
 time: energy-proportionality, tail-tolerance, and microsecond
 computing~\cite{luiz-isscc}.
@@ -86,10 +86,11 @@ and multi-queue. Probably two paragraphs}
 In this paper, we propose an architecture designed specifically for
 event-driven, web-scale applications.  Like a conventional commodity
 operating system, the kernel  ---including the entire network protocol-processing stack--- is protected from the application.  Unlike a
-conventional operating system, the networking stack is organized as
+conventional operating system, the networking stack is organized as a
 dataplane that minimizes overheads and latency by processing flow
 fragments to completion, interleaving (kernel-mode) networking
-protocol processing with (user-mode) application execution.
+protocol processing with (user-mode) application execution.  
+This model is similar to the use of coroutines in applications\cite{missing}.
 
 We introduce \ix, a specialized system software solution built for
 event-driven applications, including applications built for the
@@ -105,7 +106,7 @@ control plane and dataplane functions.  The control plane consists of a
 vanilla Linux deployment running the Dune
 framework~\cite{belay2012dune}.  The dataplane is a special-purpose
 library operating system that directly controls hardware I/O queues,
-runs the networking stack, and schedules the event callbacks of the
+runs the networking stack, and generates the event callbacks of the
 application.  Each dataplane instance exclusively controls a set of
 hardware I/O queues, and runs a single application, e.g. a web sever
 listening to \texttt{:80} and \texttt{:443}.  Unlike kernel-bypass
@@ -114,8 +115,8 @@ Like these designs however, \ix offers a zero-copy solution both
 directions, eliminating all packet copy overheads.  Finally, the \ix
 API and companion userlevel library meets the commutativity
 rule~\cite{DBLP:conf/sosp/ClementsKZMK13}. Furthermore, our
-implementation has a symmetrical design in which each hyperthread
-interleaves execution in kernel- and userspace, and executes in a
+implementation has a symmetrical design in which hardware queues are partitioned among all hyperthreads. 
+The hyperthreads each interleave execution in kernel- and userspace, and executes in a
 \emph{coherence-free} manner end-to-end in the common case.
 
 \christos{lots of good numbers} Our evaluation of \ix shows that, on comparable hardware, it
