@@ -82,13 +82,15 @@ determines how quickly this single ping-pong behavior can utilize 50\%
 of the available bandwidth on the link.
 
 Fig.~\ref{fig:pingpong} compares the performance of various
-configurations for different message sizes and Table~\ref{tbl:pingpong}
-additionally lists the average and 99\% latencies for 64B messages, as
-well as the minimal message size required to exceed 5Gbps of
-bandwidth.
+configurations for different message sizes and
+Table~\ref{tbl:pingpong} additionally lists the average and 99\%
+latencies for 64B messages, as well as the minimal message size
+required to exceed 5Gbps of bandwidth.  Going from Linux to \ix saves
+\twiddle 15\microsecond on each end.  When both ends are running \ix,
+the end-to-end latency is reduced by two-thirds to 17\microsecond.
+Similarily, the bandwidth increases much faster with \ix. \edb{TODO - Based on data}
 
-\edb{TODO -- commentary}
-
+\edb{THE LATENCY OF 17\microsecond IS UNDERWHELMING -- FAST PATHING IT SHOULD HELP}
 
 \subsection{Handling high TCP connection churn}
 \label{sec:eval:short}
