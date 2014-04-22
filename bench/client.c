@@ -26,8 +26,6 @@
 
 #define MAX_CORES 128
 
-#define BUFFER_SIZE 65536
-
 #define TIMEOUT_US 1000000l
 
 #define MAX_ERRSOURCE 2
@@ -242,8 +240,8 @@ static void *start_worker(void *p)
 
 	set_affinity(worker->cpu);
 
-	worker->buffer = malloc(BUFFER_SIZE);
-	for (i = 0; i < BUFFER_SIZE; i++)
+	worker->buffer = malloc(msg_size);
+	for (i = 0; i < msg_size; i++)
 		worker->buffer[i] = '0';
 
 	worker->base = event_base_new();
@@ -322,11 +320,6 @@ int main(int argc, char **argv)
 	connections = atoi(argv[4]);
 	msg_size = atoi(argv[5]);
 	messages_per_connection = strtol(argv[6], NULL, 10);
-
-	if (msg_size > BUFFER_SIZE) {
-		fprintf(stderr, "Error: MSG_SIZE (%d) is larger than maximum allowed (%d).\n", msg_size, BUFFER_SIZE);
-		return 1;
-	}
 
 	if (timer_calibrate_tsc()) {
 		fprintf(stderr, "Error: Timer calibration failed.\n");
