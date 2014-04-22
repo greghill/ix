@@ -284,9 +284,9 @@ run_single() {
 
 run() {
   run_single 16 64 1
-  #for i in {1..15}; do
-  #  run_single $i 64 1
-  #done
+  for i in {1..15}; do
+    run_single $i 64 1
+  done
   for i in 2 8 32 64 128 256 512 1024; do
     run_single 16 64 $i
   done
