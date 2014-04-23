@@ -2,7 +2,7 @@ s
 \section{Evaluation}
 \label{sec:eval}
 
-We evaluate the scalability of \ix and compare it the Linux baseline
+We evaluate the scalability of \ix and compare it to the Linux baseline
 and to mTCP, the state-of-the-art user-space TCP alternative available
 on the same hardware.  We first describe the experimental setup
 (\S\ref{sec:eval:setup}).  We then characterize the performance using
@@ -31,11 +31,11 @@ reporting multi-core scalability, we report results with
 hyperthreading enabled, and both hyperthreads of the cores are used.
 
 The server is connected to
-the switch via a 4x10GbE bond configured in as a L2+L3
-hash in the switch via LACP~\cite{ieee802.3ad}.  Jumbo
+the switch via a 4x10GbE bond configured as a L2+L3
+hash via LACP~\cite{ieee802.3ad}.  Jumbo
 frames are never enabled.  Our baseline configuration in each machine
-is the Ubuntu 12.04.4 LTS distribution running the 3.11 Linux kernel.  Although
-the server has two sockets, our experiments pin IRQs, processes, and
+is the Ubuntu 12.04.4 LTS distribution running the 3.11.10 Linux kernel.  Although
+the server has two sockets, our experiments pin IRQs\george{not really}, processes, and
 the IX dataplane onto a single socket and use memory from that socket;
 all NICs are attached to that socket via the PCIe root complex. 
 \edb{CONTREVERSIAL: We chose to limit execution to a single NUMA node to simplify the
@@ -55,17 +55,15 @@ Whenever both practical and relevant, we compare the performance of an
 (\texttt{Linux-opt}), and the performance of mTCP, a
 recently-published user-level TCP stack specifically designed for
 scalability~\cite{jeong2014mtcp}.  Unless specifically mentioned, all
-clients run an baseline Linux configuration.  
+clients run a baseline Linux configuration.
 
-Typically, the client implementation uses the classic blocking
-paradigm to send and receive messages over a single, well-known
-socket.  In contrast, the Linux server implementations use the
+The Linux server implementations use the
 \texttt{libevent} framework running on XXX threads to serve the
 clients. The mTCP server implementation use the native mTCP API
 running on up to 8 cores (within each core, one hyperthread is
 dedicated to processing the network stack).  Finally, \ix server use
 the native \ix API running on up to 8 cores (using symmetrically both
-hyperthreads).
+hyperthreads).  For all experiments, we use the same Linux client code, generally also written using \texttt{libevent}.
 
 
 \subsection{High-bandwidth and low-latency}
@@ -84,13 +82,15 @@ determines how quickly this single ping-pong behavior can utilize 50\%
 of the available bandwidth on the link.
 
 Fig.~\ref{fig:pingpong} compares the performance of various
-configurations for different message sizes and Table~\ref{tbl:pingpong}
-additionally lists the average and 99\% latencies for 64B messages, as
-well as the minimal message size required to exceed 5Gbps of
-bandwidth.
+configurations for different message sizes and
+Table~\ref{tbl:pingpong} additionally lists the average and 99\%
+latencies for 64B messages, as well as the minimal message size
+required to exceed 5Gbps of bandwidth.  Going from Linux to \ix saves
+\twiddle 15\microsecond on each end.  When both ends are running \ix,
+the end-to-end latency is reduced by two-thirds to 17\microsecond.
+Similarily, the bandwidth increases much faster with \ix. \edb{TODO - Based on data}
 
-\edb{TODO -- commentary}
-
+\edb{THE LATENCY OF 17\microsecond IS UNDERWHELMING -- FAST PATHING IT SHOULD HELP}
 
 \subsection{Handling high TCP connection churn}
 \label{sec:eval:short}
@@ -98,7 +98,7 @@ bandwidth.
 \input{figs/float-short}
 
 We then evaluate \ix's multi-core scalability in handling workloads
-with extremely connection churn by using the same benchmark used to evaluate
+with extreme connection churn by using the same benchmark used to evaluate
 Megapipe~\cite{han2012megapipe} and mTCP~\cite{jeong2014mtcp}:
 multiple clients connect to a single server listening on a single
 port, send a request of size $s$ and wait for an echo of a message of

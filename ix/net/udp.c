@@ -100,6 +100,9 @@ static int udp_output(struct mbuf *__restrict pkt,
 	udphdr->len = hton16(full_len);
 	udphdr->chksum = 0;
 
+	/* No TX checksum offload for UDP since only using context 0 for IP + TCP chekcusm */ 
+	pkt->ol_flags = 0;
+
 	pkt->len = UDP_PKT_SIZE;
 
 	if (eth_tx_xmit_batched(percpu_get(eth_tx), pkt))

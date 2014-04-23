@@ -120,6 +120,7 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 }
 
 /* FIXME: change when we integrate better with LWIP */
+/* NOTE: This function is only called for TCP */
 int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest, uint8_t ttl, uint8_t tos, uint8_t proto)
 {
 	int ret;
@@ -159,12 +160,15 @@ int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest, uint8_t
 	iphdr->proto = proto;
 	iphdr->src_addr.addr = src->addr;
 	iphdr->dst_addr.addr = dest->addr;
-	iphdr->chksum = chksum_internet((void *) iphdr, sizeof(struct ip_hdr));
-
+	
 	for (curp = p; curp; curp = curp->next) {
 		memcpy(payload, curp->payload, curp->len);
 		payload += curp->len;
 	}
+
+	/* Offload IP and TCP tx checksums */
+	pkt->ol_flags = PKT_TX_IP_CKSUM;
+	pkt->ol_flags |= PKT_TX_TCP_CKSUM;
 
 	ret = eth_tx_xmit_one(percpu_get(eth_tx), pkt, sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + p->tot_len);
 

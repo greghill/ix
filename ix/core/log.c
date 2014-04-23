@@ -17,12 +17,17 @@
 
 bool log_is_early_boot = true;
 
+int max_loglevel = LOG_DEBUG;
+
 void logk(int level, const char *fmt, ...)
 {
 	va_list ptr;
 	char buf[MAX_LOG_LEN];
 	time_t ts;
 	off_t off = 0;
+
+	if (level > max_loglevel)
+		return;
 
 	if (!log_is_early_boot) {
 		snprintf(buf, 9, "CPU %02d| ", percpu_get(cpu_id));

@@ -10,6 +10,7 @@
 #include <ix/log.h>
 #include <ix/cpu.h>
 #include <ix/queue.h>
+#include <ix/toeplitz.h>
 
 #include <net/ethernet.h>
 
@@ -20,11 +21,14 @@ struct rte_eth_dev *eth_dev[MAX_ETH_DEVICES];
 DEFINE_PERCPU(uint16_t, eth_rx_count);
 DEFINE_PERCPU(struct eth_rx_queue **, eth_rx);
 DEFINE_PERCPU(struct eth_tx_queue *, eth_tx);
+DEFINE_PERCPU(uint64_t, eth_rx_bitmap);
 
 DEFINE_PERCPU(int, tx_batch_cap);
 DEFINE_PERCPU(int, tx_batch_len);
 DEFINE_PERCPU(int, tx_batch_pos);
 DEFINE_PERCPU(struct mbuf *, tx_batch[ETH_DEV_TX_QUEUE_SZ]);
+
+static uint8_t rss_key[40];
 
 static const struct rte_eth_conf default_conf = {
         .rxmode = {
@@ -39,6 +43,7 @@ static const struct rte_eth_conf default_conf = {
 	.rx_adv_conf = {
 		.rss_conf = {
 			.rss_hf = ETH_RSS_IPV4_TCP,
+			.rss_key = rss_key,
 		},
 	},
         .txmode = {
@@ -172,6 +177,7 @@ int eth_dev_get_rx_queue(struct rte_eth_dev *dev, struct eth_rx_queue **rx_queue
 		goto err;
 
 	*rx_queue = dev->data->rx_queues[rx_queue_id];
+	(*rx_queue)->queue_idx = rx_queue_id;
 
 	return 0;
 
@@ -263,6 +269,7 @@ struct rte_eth_dev *eth_dev_alloc(size_t private_len)
 
 	memset(dev->data, 0, sizeof(struct rte_eth_dev_data));
 	dev->data->dev_conf = default_conf;
+	toeplitz_get_key(rss_key, sizeof(rss_key));
 
 	dev->data->dev_private = malloc(private_len);
 	if (!dev->data->dev_private) {

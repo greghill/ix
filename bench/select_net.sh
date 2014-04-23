@@ -3,7 +3,7 @@
 set -eEu -o pipefail
 
 on_err() {
-  echo "${BASH_SOURCE[0]}: line ${BASH_LINENO[0]}: Failed"
+  echo "${BASH_SOURCE[1]}: line ${BASH_LINENO[0]}: Failed at `date`"
 }
 trap on_err ERR
 
@@ -13,7 +13,8 @@ if [ "$UID" -ne 0 ]; then
 fi
 
 # set default values if not found in the environment
-foo=${BMOS_PATH:=~/epfl1/prg/me/bmos}
+foo=${DUNE_PATH:=~}
+foo=${IGB_STUB_PATH:=~}
 foo=${ALL_IFS:="eth4 eth5 eth6 eth7 eth8 eth9 eth10 eth11 bond0"}
 foo=${BOND:=bond0}
 foo=${BOND_SLAVES:="eth4 eth5 eth6 eth7"}
@@ -33,10 +34,15 @@ tear_down() {
 }
 
 setup_linux() {
-  tear_down
-  service irqbalance start >/dev/null
-  modprobe ixgbe
-  ifdown $ALL_IFS 2>/dev/null
+  INTEL_10G_CARD=$(ifconfig -a | grep -i 90:e2:ba || true)
+  
+  if [ "$INTEL_10G_CARD" != "" ]; then
+    tear_down
+    service irqbalance start >/dev/null
+    modprobe ixgbe
+    ifdown $ALL_IFS 2>/dev/null
+  fi
+  
   sysctl net.core.netdev_max_backlog=1000 > /dev/null
   sysctl net.core.rmem_max=212992 > /dev/null
   sysctl net.core.wmem_max=212992 > /dev/null
@@ -62,10 +68,12 @@ optimize_linux() {
 
 setup_ix() {
   tear_down
-  sudo -u $SUDO_USER bash -c "(cd $BMOS_PATH/dune && make -j64 >/dev/null 2>&1)"
-  sudo -u $SUDO_USER bash -c "(cd $BMOS_PATH/igb_stub && make -j64 >/dev/null)"
-  insmod $BMOS_PATH/dune/dune.ko
-  insmod $BMOS_PATH/igb_stub/igb_stub.ko
+  insmod $DUNE_PATH/dune.ko
+  insmod $IGB_STUB_PATH/igb_stub.ko
+}
+
+setup_mtcp() {
+  echo "Setting up mTCP - nothing implemented yet"
 }
 
 invalid_params() {
@@ -78,6 +86,7 @@ print_help() {
   echo "  $0 none"
   echo "  $0 linux [single|bond] [opt]"
   echo "  $0 ix    [node0|node1|...]"
+  echo "  $0 mtcp"
 }
 
 if [ $# -lt 1 ]; then
@@ -114,6 +123,8 @@ elif [ $1 = 'ix' ]; then
   else
     invalid_params
   fi
+elif [ $1 = 'mtcp' ]; then
+  setup_mtcp
 elif [ $1 = '--help' ]; then
   print_help
 else

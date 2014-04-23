@@ -58,11 +58,11 @@ def main():
 
   def check_and_cat(title, fd, r):
     if fd in r:
-      sys.stdout.write('\033[1m%s: \033[0m' % title)
-      sys.stdout.flush()
-      if cat(fd, sys.stdout):
-        sys.stdout.write('-closed-\n')
-        sys.stdout.flush()
+      sys.stderr.write('\033[1m%s: \033[0m' % title)
+      sys.stderr.flush()
+      if cat(fd, sys.stderr):
+        sys.stderr.write('-closed-\n')
+        sys.stderr.flush()
         fds.remove(fd)
       return 1
     return 0
@@ -76,7 +76,7 @@ def main():
         if clients[i].stdout in r:
           line = clients[i].stdout.readline()
           if len(line) == 0:
-            print '%s-stdout: -closed-' % i
+            print >>sys.stderr, '%s-stdout: -closed-' % i
             sys.exit(1)
           ret[i] = line
         if check_and_cat('%s-stderr' % i, clients[i].stderr, r):
@@ -92,22 +92,37 @@ def main():
 
     ret = get_stdout_from_all()
     for i in ret:
-      ret[i] = [int(x) for x in ret[i].split()]
+      try:
+        ret[i] = [int(x) for x in ret[i].split()]
+      except ValueError:
+        logging.error('%s: Malformed output: %s', i, ret[i])
+        sys.exit(1)
 
     return now, ret
 
   ret = get_stdout_from_all()
   for i in ret:
     if ret[i] != 'ok\n':
-      print '%s-stdout: %s' % (i, ret[i])
+      print >>sys.stderr, '%s-stdout: %s' % (i, ret[i])
       sys.exit(1)
 
   time.sleep(1)
 
-  start_time, start_data = get_data()
+  failed = False
+  try:
+    start_time, start_data = get_data()
+  except IOError, e:
+    if e.errno == 32: # EPIPE
+      failed = True
+    else:
+      raise
 
   while True:
-    r, _, _ = select.select(fds, [], [], start_time - time.time() + args.time)
+    if failed:
+      timeout = 1
+    else:
+      timeout = start_time - time.time() + args.time
+    r, _, _ = select.select(fds, [], [], timeout)
 
     if len(r) == 0:
       break
@@ -119,6 +134,10 @@ def main():
     sys.exit(1)
 
   logging.debug('loop done')
+
+  if failed:
+    logging.error('A client has failed and select did not catch it.')
+    sys.exit(1)
 
   stop_time, stop_data = get_data()
 

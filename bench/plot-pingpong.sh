@@ -14,7 +14,8 @@ SHORT_TITLES="$@"
 if [ -z "$SHORT_FILES" ]; then
   SHORT_FILES="$SHORT_FILES `nth 1 Netpipe-10/Netpipe`"
   SHORT_FILES="$SHORT_FILES `nth 1 IX-10-RPC/Linux-Simple`"
-  SHORT_TITLES="Linux-10Gbps IX-10Gbps"
+  SHORT_FILES="$SHORT_FILES `nth 1 IX-10-RPC/IX`"
+  SHORT_TITLES="Linux-10Gbps IX-10Gbps IX-10Gbps-IX"
 fi
 
 echo 'Using files:'

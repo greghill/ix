@@ -295,10 +295,29 @@ inet_cksum_pseudo_base(struct pbuf *p, u8_t proto, u16_t proto_len, u32_t acc)
   return (u16_t)~(acc & 0xffffUL);
 }
 
+/* Pseudo-header checksum to initialize checksum field in TCP header for TCP csum offload */
+static __inline unsigned short 
+in_pseudo(unsigned int sum, unsigned int b, unsigned int c) 
+{ 
+        __asm( 
+                "addl %1, %0\n" 
+                "adcl %2, %0\n" 
+                "adcl $0, %0" 
+                : "+r" (sum) 
+                : "g" (b), 
+                  "g" (c) 
+                : "cc" 
+        ); 
+        sum = (sum & 0xffff) + (sum >> 16); 
+        if (sum > 0xffff) 
+                sum -= 0xffff; 
+        return (sum); 
+} 
 /* inet_chksum_pseudo:
  *
- * Calculates the pseudo Internet checksum used by TCP and UDP for a pbuf chain.
- * IP addresses are expected to be in network byte order.
+ * This function has been modified for TCP checksum offload. 
+ * Calculates pseudo-header checksum to initialize as required to initialize chekcusm 
+ * field in TCP header for NIC offload to work.
  *
  * @param p chain of pbufs over that a checksum should be calculated (ip data part)
  * @param src source ip address (used for checksum of pseudo header)
@@ -311,20 +330,8 @@ u16_t
 inet_chksum_pseudo(struct pbuf *p, u8_t proto, u16_t proto_len,
        ip_addr_t *src, ip_addr_t *dest)
 {
-  u32_t acc;
-  u32_t addr;
+	return in_pseudo(ip4_addr_get_u32(src), ip4_addr_get_u32(dest), hton32(proto + p->tot_len));
 
-  addr = ip4_addr_get_u32(src);
-  acc = (addr & 0xffffUL);
-  acc += ((addr >> 16) & 0xffffUL);
-  addr = ip4_addr_get_u32(dest);
-  acc += (addr & 0xffffUL);
-  acc += ((addr >> 16) & 0xffffUL);
-  /* fold down to 16 bits */
-  acc = FOLD_U32T(acc);
-  acc = FOLD_U32T(acc);
-
-  return inet_cksum_pseudo_base(p, proto, proto_len, acc);
 }
 #if LWIP_IPV6
 /**

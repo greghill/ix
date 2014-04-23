@@ -1,5 +1,7 @@
 all: client server latency pingpongs simple_client
 
+all_mtcp: all server_mtcp pingpongs_mtcp
+
 server: server.c server_common.c server.h
 	gcc -O2 -Wall -g server.c server_common.c -o server -levent -pthread
 

@@ -9,14 +9,20 @@
 #include <ix/log.h>
 #include <ix/uaccess.h>
 #include <ix/ethdev.h>
+#include <ix/toeplitz.h>
 
 #include <lwip/tcp.h>
 
 #include "cfg.h"
 
 #define MAX_PCBS	65536
+#define ARG_IS_COOKIE	0x8000000000000000ul
 
 static DEFINE_PERQUEUE(struct tcp_pcb *, listen_pcb);
+/* FIXME: this should be probably per queue */
+static DEFINE_PERCPU(uint16_t, local_port);
+/* FIXME: this should be more adaptive to various configurations */
+#define PORTS_PER_CPU (65536 / 32)
 
 /*
  * FIXME: LWIP and IX have different lifetime rules so we have to maintain
@@ -264,9 +270,7 @@ long bsys_tcp_close(hid_t handle)
 	}
 
 	if (api->pcb) {
-		err_t err = tcp_close(api->pcb);
-		if (err != ERR_OK)
-			tcp_abort(api->pcb);
+		tcp_close_with_reset(api->pcb);
 	}
 
 	recvd = api->recvd;
@@ -284,8 +288,13 @@ long bsys_tcp_close(hid_t handle)
 	return RET_OK;
 }
 
-static void mark_dead(struct tcpapi_pcb *api)
+static void mark_dead(struct tcpapi_pcb *api, unsigned long cookie)
 {
+	if (!api) {
+		usys_tcp_dead(0, cookie);
+		return;
+	}
+
 	api->alive = false;
 	api->pcb = NULL;
 	usys_tcp_dead(api->handle, api->cookie);
@@ -304,7 +313,7 @@ static err_t on_recv(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 
 	/* Was the connection closed? */
 	if (!p) {
-		mark_dead(api);
+		mark_dead(api, api->cookie);
 		return ERR_OK;
 	}
 
@@ -339,13 +348,20 @@ done:
 static void on_err(void *arg, err_t err)
 {
 	struct tcpapi_pcb *api;
+	unsigned long cookie;
 
 	log_debug("tcpapi: on_err - arg %p err %d\n", arg, err);
 
-	api = (struct tcpapi_pcb *) arg;
+	if ((unsigned long) arg & ARG_IS_COOKIE) {
+		api = NULL;
+		cookie = (unsigned long) arg & ~ARG_IS_COOKIE;
+	} else {
+		api = (struct tcpapi_pcb *) arg;
+		cookie = api->cookie;
+	}
 
 	if (err == ERR_ABRT || err == ERR_RST || err == ERR_CLSD)
-		mark_dead(api);
+		mark_dead(api, cookie);
 }
 
 static err_t on_sent(void *arg, struct tcp_pcb *pcb, u16_t len)
@@ -412,22 +428,79 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 
 static err_t on_connected(void *arg, struct tcp_pcb *pcb, err_t err)
 {
-	struct tcpapi_pcb *api;
-
 	if (err != ERR_OK) {
-		/* FIXME: free memory */
+		log_err("tcpapi: connection failed, ret %d\n", err);
+		/* FIXME: free memory and mark handle dead */
 		return err;
 	}
 
+	return ERR_OK;
+}
+
+/* FIXME: we should maintain a bitmap to hold the available TCP ports */
+int get_local_port_and_set_queue(struct ip_tuple *id)
+{
+	int i;
+	uint32_t hash;
+	uint32_t queue_idx;
+
+	if (!percpu_get(local_port))
+		percpu_get(local_port) = percpu_get(cpu_id) * PORTS_PER_CPU;
+	while (1) {
+		percpu_get(local_port)++;
+		if (percpu_get(local_port) >= (percpu_get(cpu_id) + 1) * PORTS_PER_CPU)
+			percpu_get(local_port) = percpu_get(cpu_id) * PORTS_PER_CPU + 1;
+		hash = toeplitz_rawhash_addrport(id->src_ip, id->dst_ip, hton16(percpu_get(local_port)), hton16(id->dst_port));
+		queue_idx = hash & (ETH_RSS_RETA_MAX_QUEUE - 1);
+		if (percpu_get(eth_rx_bitmap) & (1 << queue_idx)) {
+			id->src_port = percpu_get(local_port);
+			for (i = 0; i < percpu_get(eth_rx_count); i++) {
+				if (percpu_get(eth_rx)[i]->queue_idx == queue_idx) {
+					set_current_queue(percpu_get(eth_rx)[i]);
+					break;
+				}
+			}
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
+long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
+{
+	err_t err;
+	struct ip_tuple tmp;
+	struct ip_addr addr;
+	struct tcp_pcb *pcb;
+	struct tcpapi_pcb *api;
+
+	log_debug("tcpapi: bsys_tcp_connect() - id %p, cookie %lx\n",
+		  id, cookie);
+
+        if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple)))) {
+                return -RET_FAULT;
+        }
+
+	tmp.src_ip = hton32(cfg_host_addr.addr);
+
+	if (unlikely(get_local_port_and_set_queue(&tmp))) {
+                return -RET_FAULT;
+	}
+
+	pcb = tcp_new();
+	if (unlikely(!pcb))
+		goto pcb_fail;
+	tcp_nagle_disable(pcb);
+
 	api = mempool_alloc(&perqueue_get(pcb_mempool));
 	if (unlikely(!api)) {
-//		usys_tcp_connect_ret(0, (unsigned long) arg, -RET_FAULT);
-		return ERR_MEM;
+		goto connect_fail;
 	}
 
 	api->pcb = pcb;
 	api->alive = true;
-	api->cookie = (unsigned long) arg;
+	api->cookie = cookie;
 	api->recvd = NULL;
 	api->recvd_tail = NULL;
 	api->accepted = true;
@@ -435,50 +508,30 @@ static err_t on_connected(void *arg, struct tcp_pcb *pcb, err_t err)
 	tcp_arg(pcb, api);
 
 	api->handle = tcpapi_to_handle(api);
-	//usys_tcp_connect_ret(api->handle, api->cookie, RET_OK);
 
-	return ERR_OK;
-}
-
-long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
-{
-#if 0
-	err_t err;
-	struct ip_tuple tmp;
-	struct ip_addr addr;
-	struct tcp_pcb *pcb;
-
-	log_debug("tcpapi: bsys_tcp_connect() - id %p, cookie %lx\n",
-		  id, cookie);
-
-        if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple)))) {
-                usys_tcp_connect_ret(0, cookie, -RET_FAULT);
-                return;
-        }
-
-	addr.addr = tmp.dst_ip;
-
-	pcb = tcp_new();
-	if (unlikely(!pcb))
-		goto pcb_fail;
-	tcp_nagle_disable(pcb);
-
-	tcp_arg(pcb, (void *) cookie);
 	tcp_recv(pcb, on_recv);
 	tcp_err(pcb, on_err);
 	tcp_sent(pcb, on_sent);
+
+	addr.addr = tmp.src_ip;
+
+	err = tcp_bind(pcb, &addr, tmp.src_port);
+	if (unlikely(err != ERR_OK))
+		goto connect_fail;
+
+	addr.addr = tmp.dst_ip;
 
 	err = tcp_connect(pcb, &addr, tmp.dst_port, on_connected);
 	if (unlikely(err != ERR_OK))
 		goto connect_fail;
 
+	return RET_OK;
+
 connect_fail:
 	tcp_abort(pcb);
 pcb_fail:
-	usys_tcp_connect_ret(0, cookie, -RET_NOMEM);
-#endif
 
-	return -RET_NOTSUP;
+	return -RET_NOMEM;
 }
 
 int tcp_api_init(void)

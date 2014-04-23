@@ -28,7 +28,7 @@ AGENTS:connscale
 -u 0.033
 
 # Use a pipeline for adequate load generation
--d 32
+-d 256
 
 # Scan QPS from 0.5% to peak, step size of 0.5%
---scan=10000:2000000:10000
+--scan=10000:4000000:10000

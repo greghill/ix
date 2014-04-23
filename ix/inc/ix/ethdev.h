@@ -974,6 +974,7 @@ struct rte_eth_dev_sriov {
 struct eth_rx_queue {
 	int (*poll) (struct eth_rx_queue *rx);
 	void *perqueue_offset;
+	int queue_idx;
 };
 
 /**
@@ -1059,6 +1060,10 @@ static inline int eth_tx_xmit_one(struct eth_tx_queue *tx,
 	mbuf->len = len;
 	mbuf->nr_iov = 0;
 
+#ifdef ENABLE_PCAP
+	pcap_write(mbuf);
+#endif
+
 	return !eth_tx_xmit_batched(tx, mbuf);
 }
 
@@ -1120,4 +1125,5 @@ extern struct rte_eth_dev *eth_dev[];
 DECLARE_PERCPU(uint16_t, eth_rx_count);
 DECLARE_PERCPU(struct eth_rx_queue **, eth_rx);
 DECLARE_PERCPU(struct eth_tx_queue *, eth_tx);
+DECLARE_PERCPU(uint64_t, eth_rx_bitmap);
 

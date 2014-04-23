@@ -1,7 +1,5 @@
 #!/bin/bash
 
-NOFILE=10000000
-
 bench_start() {
   name=$1
   dir=results/$(date +%Y-%m-%d-%H-%M-%S)/$name
@@ -23,6 +21,14 @@ bench_stop() {
 }
 
 prepare() {
+  if [ $# -le 1 ]; then
+    BUILD_IX=1
+    BUILD_TARGET_BENCH=
+  elif [ $# -ge 2 ]; then
+    BUILD_IX=$1
+    BUILD_TARGET_BENCH=$2
+  fi
+  
   CLIENT_COUNT=0
   CLIENT_HOSTS=
   for CLIENT_DESC in $CLIENTS; do
@@ -34,42 +40,25 @@ prepare() {
   IFS=' '
   CLIENT_HOSTS=${CLIENT_HOSTS:1}
 
-  ### make
-  $DIR/../make.sh
-
-  ### deploy
+  ## make
+  $DIR/../make.sh $BUILD_IX $BUILD_TARGET_BENCH
+  
+  ## deploy
   # clients have shared file system
-  scp $DEPLOY_FILES $HOST: > /dev/null
-
-  ### prepare network and run init script
-  INIT_SCRIPT="
-if [ -d /sys/devices/system/cpu/cpu0/cpufreq ]; then
-  for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
-    echo userspace > \$i
-  done
-  FREQ=`awk '{ if (\$1 - \$2 > 1000) print \$1; else print \$2 }' /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_frequencies`
-  for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_setspeed; do
-    echo \$FREQ > \$i
-  done
-fi
-"
-
-  sudo bash select_net.sh $SERVER_NET &
-  sudo bash <<< "$INIT_SCRIPT"
-  sudo sysctl fs.nr_open=$NOFILE > /dev/null
-  if [ `ulimit -n` -lt $NOFILE ]; then
-    echo 'Add the following lines into /etc/security/limits.conf and re-login.'
-    echo "`whoami` soft nofile $NOFILE"
-    echo "`whoami` hard nofile $NOFILE"
-    exit 1
-  fi
+  scp $DEPLOY_FILES init.sh $HOST: > /dev/null
+  
+  pids=''
+  sudo SERVER=1 NET="$SERVER_NET" USE_IX=$BUILD_IX bash init.sh &
+  pids="$pids $!"
   for CLIENT_DESC in $CLIENTS; do
     IFS='|'
-    read -r HOST NIC <<< "$CLIENT_DESC"
-    ssh $HOST "sudo ALL_IFS=$NIC SINGLE_NIC=$NIC IP=auto bash select_net.sh $CLIENT_NET" &
-    ssh $HOST '/bin/bash' <<< "$INIT_SCRIPT" &
+    read -r HOST NIC IX_IP <<< "$CLIENT_DESC"
+    ssh $HOST "sudo SERVER=0 NET='$CLIENT_NET' USE_IX=$BUILD_IX NIC=$NIC IX_IP=$IX_IP bash init.sh" &
+    pids="$pids $!"
   done
   IFS=' '
 
-  wait
+  for pid in $pids; do
+    wait $pid
+  done
 }

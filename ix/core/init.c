@@ -71,6 +71,7 @@ extern int virtual_init(void);
 extern int tcp_echo_server_init(int port);
 extern int sandbox_init(int argc, char *argv[]);
 extern void tcp_init(void);
+extern void toeplitz_init(void);
 
 volatile int uaccess_fault;
 
@@ -112,6 +113,7 @@ err:
 	return ret;
 }
 
+#if !SANDBOX_ENABLED
 static void main_loop(void)
 {
 	unsigned int i, pkts, tx_len;
@@ -149,6 +151,7 @@ static void main_loop(void)
 		}
 	}
 }
+#endif
 
 static void
 pgflt_handler(uintptr_t addr, uint64_t fec, struct dune_tf *tf)
@@ -197,6 +200,7 @@ static int init_this_cpu(unsigned int cpu)
 	return 0;
 }
 
+#if !SANDBOX_ENABLED
 static int parse_ip_addr(const char *string, uint32_t *addr)
 {
         unsigned char a, b, c, d;
@@ -208,6 +212,7 @@ static int parse_ip_addr(const char *string, uint32_t *addr)
 
         return 0;
 }
+#endif
 
 #ifdef ENABLE_PCAP
 static int parse_eth_addr(const char *string, struct eth_addr *mac)
@@ -225,6 +230,7 @@ static int parse_eth_addr(const char *string, struct eth_addr *mac)
 }
 #endif
 
+#if !SANDBOX_ENABLED
 static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
 {
 	unsigned int i;
@@ -244,6 +250,7 @@ static void main_loop_ping(struct ip_addr *dst, uint16_t id, uint16_t seq)
 		}
 	}
 }
+#endif
 
 static int get_rx_queue(struct eth_rx_queue **rx_queue)
 {
@@ -279,8 +286,10 @@ static int cpu_networking_init(int nb_rx_queues)
 		return -ENOMEM;
 	}
 
+	percpu_get(eth_rx_bitmap) = 0;
 	for (i = 0; i < nb_rx_queues; i++) {
 		ret = get_rx_queue(&percpu_get(eth_rx)[i]);
+		percpu_get(eth_rx_bitmap) |= 1 << percpu_get(eth_rx)[i]->queue_idx;
 		if (ret) {
 			log_err("init: failed to get an RX queue\n");
 			return ret;
@@ -501,6 +510,7 @@ static int parse_arguments(int argc, char *argv[])
 		{"dev", required_argument, 0, 'd'},
 		{"cpu", required_argument, 0, 'c'},
 		{"mac", required_argument, 0, 'm'},
+		{"quiet", no_argument, 0, 'q'},
 #ifdef ENABLE_PCAP
 		{"pcap-read", required_argument, 0, 'r'},
 		{"pcap-write", required_argument, 0, 'w'},
@@ -508,9 +518,9 @@ static int parse_arguments(int argc, char *argv[])
 		{NULL, 0, NULL, 0}
 	};
 #ifdef ENABLE_PCAP
-	static const char *optstring = "d:c:m:r:w:";
+	static const char *optstring = "d:c:m:qr:w:";
 #else
-	static const char *optstring = "d:c:m:";
+	static const char *optstring = "d:c:m:q";
 #endif
 
 	while ((c = getopt_long(argc, argv, optstring, long_options, NULL)) != -1) {
@@ -523,6 +533,9 @@ static int parse_arguments(int argc, char *argv[])
 			break;
 		case 'm':
 			arguments.mac = optarg;
+			break;
+		case 'q':
+			max_loglevel = LOG_WARN;
 			break;
 #ifdef ENABLE_PCAP
 		case 'r':
@@ -575,12 +588,12 @@ int main(int argc, char *argv[])
 	struct cpu_thread_params cpu_thread_params[MAX_QUEUES];
 	char *eth_pci_addr;
 
-	log_info("init: starting IX\n");
-
 	if (parse_arguments(argc, argv)) {
 		log_err("init: invalid arguments\n");
 		return -EINVAL;
 	}
+
+	log_info("init: starting IX\n");
 
 	ret = cpu_init();
 	if (ret) {
@@ -593,6 +606,8 @@ int main(int argc, char *argv[])
 		log_err("init: failed to initialize dune\n");
 		return ret;
 	}
+
+	toeplitz_init();
 
 	dune_register_pgflt_handler(pgflt_handler);
 

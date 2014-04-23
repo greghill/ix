@@ -3,24 +3,42 @@
 set -eEu -o pipefail
 
 on_err() {
-  echo "${BASH_SOURCE[0]}: line ${BASH_LINENO[0]}: Failed at `date`"
+  echo "${BASH_SOURCE[1]}: line ${BASH_LINENO[0]}: Failed at `date`"
 }
 trap on_err ERR
 
 ### conf
 
-CLIENTS="icnals1|eth1"
-SERVER_IP=192.168.21.1
+if [ $# -ge 3 ]; then
+  CLUSTER_ID=$3
+else
+  CLUSTER_ID="EPFL"
+fi
+
+CLIENTS=
+
+if [ $CLUSTER_ID = 'EPFL' ]; then
+  CLIENTS="$CLIENTS icnals1|eth1|192.168.21.11"
+  SERVER_IP=192.168.21.1
+elif [ $CLUSTER_ID = 'Stanford' ]; then
+  CLIENTS="$CLIENTS maverick-10|p7p1|10.79.6.21"
+  SERVER_IP=10.79.6.22
+else
+  echo 'invalid parameters' >&2
+  exit 1
+fi
+
 TIME=10
 
 if [ $# -lt 2 ]; then
-  echo "Usage: $0 SERVER_SPEC CLIENT_SPEC"
+  echo "Usage: $0 SERVER_SPEC CLIENT_SPEC [CLUSTER_ID]"
   echo "  SERVER_SPEC = IX-10-RPC|IX-10-Stream|IX-40-RPC|IX-40-Stream"
   echo "              | Linux-10-RPC|Linux-10-Stream|Linux-40-RPC|Linux-40-Stream"
-  echo "              | Netpipe-10 | Netpipe-40"
+  echo "              | Netpipe-10 | Netpipe-40 | mTCP-10-RPC | mTCP-10-Stream"
   echo "              | Netpipe-10-Optimized | Netpipe-40-Optimized"
   echo "  CLIENT_SPEC = Linux-Libevent|Linux-Simple|Netpipe"
-  echo "              | Netpipe-Optimized"
+  echo "              | Netpipe-Optimized | IX"
+  echo "  CLUSTER_ID  = EPFL|Stanford (default: EPFL)"
   exit
 fi
 
@@ -38,6 +56,8 @@ elif [ $SERVER_SPEC = 'IX-10-RPC' ]; then
   SERVER_PORT=8000
   ON_EXIT=on_exit_ix
   CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
+  BUILD_IX=1
+  BUILD_TARGET_BENCH=
   IX_PARAMS="-d 0000:42:00.1 -c \$IX_PARAMS_CORES"
 elif [ $SERVER_SPEC = 'IX-40-RPC' ]; then
   SERVER_NET="ix node0"
@@ -45,6 +65,8 @@ elif [ $SERVER_SPEC = 'IX-40-RPC' ]; then
   SERVER_PORT=8000
   ON_EXIT=on_exit_ix
   CORES="0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
+  BUILD_IX=1
+  BUILD_TARGET_BENCH=
   IX_PARAMS="-d 0000:04:00.0,0000:04:00.1,0000:05:00.0,0000:05:00.1 -c \$IX_PARAMS_CORES"
 elif [ $SERVER_SPEC = 'Linux-10-RPC' ]; then
   SERVER_NET="linux single"
@@ -52,30 +74,56 @@ elif [ $SERVER_SPEC = 'Linux-10-RPC' ]; then
   SERVER_PORT=9876
   ON_EXIT=on_exit_linux_rpc
   CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
+  BUILD_IX=0
+  BUILD_TARGET_BENCH=
+elif [ $SERVER_SPEC = 'mTCP-10-RPC' ]; then
+  SERVER_NET="mtcp"
+  SERVER=server_mtcp_rpc
+  SERVER_PORT=9876
+  ON_EXIT=on_exit_mtcp_rpc
+  CORES="0,1,2,3,4,5"
+  BUILD_IX=0
+  BUILD_TARGET_BENCH="all_mtcp"
 elif [ $SERVER_SPEC = 'Linux-10-Stream' ]; then
   SERVER_NET="linux single"
   SERVER=server_linux_stream
   SERVER_PORT=9876
   ON_EXIT=on_exit_linux_stream
   CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
+  BUILD_IX=0
+  BUILD_TARGET_BENCH=
+elif [ $SERVER_SPEC = 'mTCP-10-Stream' ]; then
+  SERVER_NET="mtcp"
+  SERVER=server_mtcp_stream
+  SERVER_PORT=9876
+  ON_EXIT=on_exit_mtcp_stream
+  CORES="0,1,2,3,4,5"
+  BUILD_IX=0
+  BUILD_TARGET_BENCH="all_mtcp"
 elif [ $SERVER_SPEC = 'Linux-40-RPC' ]; then
   SERVER_NET="linux bond"
   SERVER=server_linux_rpc
   SERVER_PORT=9876
   ON_EXIT=on_exit_linux_rpc
   CORES="0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
+  BUILD_IX=0
+  BUILD_TARGET_BENCH=
 elif [ $SERVER_SPEC = 'Linux-40-Stream' ]; then
   SERVER_NET="linux bond"
   SERVER=server_linux_stream
   SERVER_PORT=9876
   ON_EXIT=on_exit_linux_stream
   CORES="0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
+  BUILD_IX=0
+  BUILD_TARGET_BENCH=
 elif [ $SERVER_SPEC = 'IX-10-Stream' ]; then
   SERVER_NET="ix node1"
   SERVER=server_ix_stream
   SERVER_PORT=8000
   ON_EXIT=on_exit_ix
   CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
+  BUILD_IX=1
+  BUILD_TARGET_BENCH=
   IX_PARAMS="-d 0000:42:00.1 -c \$IX_PARAMS_CORES"
 elif [ $SERVER_SPEC = 'IX-40-Stream' ]; then
   SERVER_NET="ix node0"
@@ -83,23 +131,33 @@ elif [ $SERVER_SPEC = 'IX-40-Stream' ]; then
   SERVER_PORT=8000
   ON_EXIT=on_exit_ix
   CORES="0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
+  BUILD_IX=1
+  BUILD_TARGET_BENCH=
   IX_PARAMS="-d 0000:04:00.0,0000:04:00.1,0000:05:00.0,0000:05:00.1 -c \$IX_PARAMS_CORES"
 elif [ $SERVER_SPEC = 'Netpipe-10' ]; then
   SERVER_NET="linux single"
   ON_EXIT=on_exit_netpipe
   NETPIPE=$[$NETPIPE+1]
+  BUILD_IX=0
+  BUILD_TARGET_BENCH=
 elif [ $SERVER_SPEC = 'Netpipe-40' ]; then
   SERVER_NET="linux bond"
   ON_EXIT=on_exit_netpipe
   NETPIPE=$[$NETPIPE+1]
+  BUILD_IX=0
+  BUILD_TARGET_BENCH=
 elif [ $SERVER_SPEC = 'Netpipe-10-Optimized' ]; then
   SERVER_NET="linux single opt"
   ON_EXIT=on_exit_netpipe
   NETPIPE=$[$NETPIPE+1]
+  BUILD_IX=0
+  BUILD_TARGET_BENCH=
 elif [ $SERVER_SPEC = 'Netpipe-40-Optimized' ]; then
   SERVER_NET="linux bond opt"
   ON_EXIT=on_exit_netpipe
   NETPIPE=$[$NETPIPE+1]
+  BUILD_IX=0
+  BUILD_TARGET_BENCH=
 else
   echo 'invalid parameters' >&2
   exit 1
@@ -127,8 +185,9 @@ elif [ $CLIENT_SPEC = 'Netpipe-Optimized' ]; then
   CLIENT_NET="linux single opt"
   NETPIPE=$[$NETPIPE+1]
 elif [ $CLIENT_SPEC = 'IX' ]; then
-  echo 'not implemented' >&2
-  exit 1
+  CLIENT_CMDLINE=" sudo ./ix -q -d 0000:01:00.0 -c 0 /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ./ix_client $SERVER_IP $SERVER_PORT 1 \$MSG_SIZE 999999999"
+  DEPLOY_FILES="select_net.sh ../ix/ix ../apps/tcp/ix_client ../dune/dune.ko ../igb_stub/igb_stub.ko"
+  CLIENT_NET="ix node0"
 else
   echo 'invalid parameters' >&2
   exit 1
@@ -156,11 +215,27 @@ on_exit_linux_rpc() {
   wait $PID 2>/dev/null || true
 }
 
+on_exit_mtcp_rpc() {
+  PID=`pidof pingpongs_mtcp||echo 0`
+  if [ $PID -eq 0 ]; then return; fi
+  kill $PID
+  wait $PID 2>/dev/null || true
+  rm -f log_*
+}
+
 on_exit_linux_stream() {
   PID=`pidof server||echo 0`
   if [ $PID -eq 0 ]; then return; fi
   kill $PID
   wait $PID 2>/dev/null || true
+}
+
+on_exit_mtcp_stream() {
+  PID=`pidof server_mtcp||echo 0`
+  if [ $PID -eq 0 ]; then return; fi
+  kill $PID
+  wait $PID 2>/dev/null || true
+  rm -f log_*
 }
 
 on_exit_netpipe() {
@@ -193,6 +268,13 @@ server_linux_rpc() {
   $DIR/pingpongs $MSG_SIZE `echo $CORES|cut -d',' -f-$CORE_COUNT` &
 }
 
+server_mtcp_rpc() {
+  CORE_COUNT=$1
+  MSG_SIZE=$2
+
+  $DIR/pingpongs_mtcp $MSG_SIZE `echo $CORES|cut -d',' -f-$CORE_COUNT` &
+}
+
 server_linux_stream() {
   CORE_COUNT=$1
   MSG_SIZE=$2
@@ -200,13 +282,23 @@ server_linux_stream() {
   $DIR/server `echo $CORES|cut -d',' -f-$CORE_COUNT` &
 }
 
+server_mtcp_stream() {
+  CORE_COUNT=$1
+  MSG_SIZE=$2
+
+  $DIR/server_mtcp `echo $CORES|cut -d',' -f-$CORE_COUNT` &
+}
+
 run_single() {
   MSG_SIZE=$1
 
   $SERVER 16 $MSG_SIZE
-  ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then exit 1; fi; done"
+  if [ $CLIENT_SPEC != 'IX' ]; then
+    ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then exit 1; fi; done"
+  fi
   echo -ne "16\t$MSG_SIZE\t999999999\t" >> $OUTDIR/data
   python $DIR/launch.py --time $TIME --clients $CLIENT_HOSTS --client-cmdline "`eval echo $CLIENT_CMDLINE`" >> $OUTDIR/data
+  sleep 2
   $ON_EXIT
 }
 
@@ -219,10 +311,10 @@ run() {
 run_netpipe() {
   PARAMS="-r -n 100 -p 0 -l 64 -u $[2**25]"
   ./NPtcp $PARAMS > /dev/null 2>&1 &
-  ssh $HOST "./NPtcp $PARAMS -h $SERVER_IP 2> /dev/null && awk '//{printf(\"0\\t%d\\t999999999\\t%f 0 0 0 0 0\\n\",\$1,\$2*1024*1024/8/2/\$1)}' np.out" > $OUTDIR/data
+  ssh $HOST "./NPtcp $PARAMS -h $SERVER_IP > /dev/null 2>&1 && awk '//{printf(\"0\\t%d\\t999999999\\t%f 0 0 0 0 0\\n\",\$1,\$2*1024*1024/8/2/\$1)}' np.out" > $OUTDIR/data
 }
 
-prepare
+prepare $BUILD_IX $BUILD_TARGET_BENCH
 OUTDIR=`bench_start "pingpong/$SERVER_SPEC/$CLIENT_SPEC"`
 trap $ON_EXIT EXIT
 if [ $NETPIPE -eq 0 ]; then

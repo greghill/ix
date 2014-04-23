@@ -52,19 +52,19 @@ int mtcp_read_handler(struct ctx *ctx, int sock_read)
     return rdtot;
 }
 
-struct ctx *init_ctx(mctx_t mctx)
+struct ctx *init_ctx(mctx_t mctx, struct ctx* existing)
 {
-	struct ctx *ctx;
-	ctx = malloc(sizeof(struct ctx));
-	ctx->mctx = mctx;
+	struct ctx *ctx = existing;
+    
+    if (!ctx) {
+        ctx = malloc(sizeof(struct ctx));
+        ctx->buffer = malloc(msg_size);
+    }
+	
+    ctx->mctx = mctx;
 	ctx->bytes_left = msg_size;
-	ctx->buffer = malloc(msg_size);
+	
 	return ctx;
-}
-
-void free_ctx(struct ctx *ctx)
-{
-    free((void *)ctx);
 }
 
 int main(int argc, char **argv)
