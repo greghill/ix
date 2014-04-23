@@ -133,6 +133,10 @@ static void ixev_tcp_sent(hid_t handle, unsigned long cookie, size_t len)
 {
 	struct ixev_ctx *ctx = (struct ixev_ctx *) cookie;
 
+	/* if there is pending data, make sure we try again to send it */
+	if (ctx->send_count)
+		__ixev_sendv(ctx, ctx->send, ctx->send_count);
+
 	if (ctx->en_mask & IXEVOUT)
 		ctx->handler(ctx, IXEVOUT);
 	else
