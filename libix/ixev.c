@@ -15,7 +15,6 @@
 /* FIXME: implement automatic TCP Buffer Tuning, Jeffrey Semke et. al. */
 #define IXEV_SEND_WIN_SIZE	65536
 
-static __thread struct bsys_ret ksys_ret_tbl[CMD_BATCH_SIZE];
 static __thread uint64_t ixev_generation;
 static struct ixev_conn_ops ixev_global_ops;
 
@@ -459,7 +458,7 @@ static void ixev_handle_one_ret(struct bsys_ret *r)
  */
 void ixev_wait(void)
 {
-	int i, nr_rets;
+	int i;
 
 	/*
 	 * FIXME: don't use the low-level library,
@@ -469,12 +468,10 @@ void ixev_wait(void)
 	ix_poll();
 	ixev_generation++;
 
-	nr_rets = karr->len;
+	/* WARNING: return handlers should not enqueue new comamnds */
+	for (i = 0; i < karr->len; i++)
+		ixev_handle_one_ret((struct bsys_ret *) &karr->descs[i]);
 	karr->len = 0;
-	memcpy(ksys_ret_tbl, karr->descs, sizeof(struct bsys_ret) * nr_rets);
- 
-	for (i = 0; i < nr_rets; i++)
-		ixev_handle_one_ret(&ksys_ret_tbl[i]);
 
 	ix_handle_events();
 }
