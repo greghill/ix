@@ -12,31 +12,56 @@
 
 \section{Related Work}
 
-We organize the discussion topically, by first discussing prior work
-that inspired our key design decisions (\S\ref{sec:design}) and then
-the alternative approaches to solving the scalability challenges of
-web-scale applications, while avoiding redundant commentary already
-exposed in (\S\ref{sec:motivation:current}.
+We organize the discussion topically, while avoiding redundancy with
+the commentary already exposed in \S\ref{sec:motivation:current}.
 
 
-\paragraph{Separation of control and data plane.}
-
-The notion of architected separation between control and data plane is
-pervasise in networking protocols (e.g., BPG/OSFP vs. LPM- for
-routing) as it has allowed each to scale independently of each other.
-In systems, virtualization also separates the control and execution
-functions; type I hypervisors the control plane operates within a
-customized environment (e.g., Xen's
-dom0~\cite{DBLP:conf/sosp/BarhamDFHHHN03}) whereas the control plane
-of type II hypervisors runs as process on top of a commodity operating
+\myparagraph{Separation of control and data plane:} The notion of
+architected separation between control and data plane is pervasise in
+networking protocols (e.g., BPG/OSFP vs. LPM- for routing) as it has
+allowed each to scale independently of each other.  In systems,
+virtualization also separates the control and execution functions;
+type I hypervisors the control plane operates within a customized
+environment (e.g., Xen's dom0~\cite{DBLP:conf/sosp/BarhamDFHHHN03})
+whereas the control plane of type II hypervisors runs as process on
+top of a commodity operating
 system~\cite{DBLP:journals/tocs/BugnionDRSW12}.  Recently,
 Arrakis~\cite{peter2013arrakis,arrakisTR13} proposes to separate the
 networking stack into a distinct dataplane.  Our work most closely
-ressembles Arrakis, but with noticeable differences: Arrakis uses the
-Barrelfish multikernel as its control plane, whereas our work suggests
-that Linux using the Dune framework~\cite{belay2012dune} is an
-appropriate foundation.  \edb{TODO -- comparison with Arrakis}.
+ressembles Arrakis, but with noticeable differences: first, Arrakis
+uses the Barrelfish multikernel as its control plane and run-time
+layer, whereas the \ix control plane runs on a vanilla Linux
+foundation.  Second, Arrakis runs its own, homegrown, networking stack
+at userlevel, whereas \ix uses runs its networking stack protected
+from the application.
 
+\myparagraph{User-level networking stacks:} Our work shares the same
+motivation as mTCP~\cite{jeong2014mtcp} in providing highly-scable
+networking stack for web-scale applications, including in the presence
+of high connection count and churn.  Both also focus on bounding the
+latency of RPC, and were designed to use the same standard Intel NIC.
+mTCP has an asymmetrical model where the first hyperthread of each
+core runs the networking stack and the second one the application.
+Also, the application and networking stack share the same address
+space without protection.  \ix can use both hyperthreads symmetrically
+and protects the protocol stack.  \edb{PLACEHOLDER:} Our results show
+that, for the same workloads, \ix typically outperforms mTCP by 3x on
+CPU-bound workloads, and provides lower latency.
+ 
+\myparagraph{Hardware and protocol specialization:} Our work applies
+specialization in software to commodity servers and networking
+equipment.  Although our work shows that latencies and jitter can be
+substantially reduced, on the same hardware, by using \ix rather than
+standard Linux stacks or even userlevel stacks, we are still outside
+of the latency range enabled by specialized adapters that expose RDMA
+directly to applications.  Commercial Infiband RDMA adapters offer
+RDMA and remote procedure calls in
+$1-3$\microsecond~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH,mitchell:rdma,dragojevic14farm}.
+Our current evaluation of \ix suggests that there is still room for
+improvements.  Indeed, on the same hardware, we've measured UDP
+one-way latencies that were a fraction of the NetPIPE latencies,
+suggesing that the TCP codebase could be substantially optimized in
+future work.
 
 \paragraph{Native, zero-copy API.}
 
@@ -58,15 +83,8 @@ appropriate foundation.  \edb{TODO -- comparison with Arrakis}.
 
 \paragraph{Improvements to existing operating systems.}
 
-\paragraph{User-level TCP stacks.}
-
-\paragraph{Alternatives to TCP.}
-
 \paragraph{API design.}
 
-\paragraph{Hardware specializaton - Adapters.}
-
-\todo mention that the state of the art is in 1.2\microsecond, with research proposal suggesting substantially lower latencies.   We are ``only at 15\microsecond. 
 
 \paragraph{Hardware specialization - Dataplanes.}
 
