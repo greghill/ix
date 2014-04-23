@@ -90,6 +90,8 @@ static void ixev_tcp_dead(hid_t handle, unsigned long cookie)
 		ctx->handler(ctx, IXEVIN | IXEVHUP);
 	else
 		ctx->trig_mask |= IXEVHUP;
+
+	ctx->en_mask = 0;
 }
 
 static void ixev_tcp_recv(hid_t handle, unsigned long cookie,
