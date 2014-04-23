@@ -33,4 +33,6 @@ apps/udp/linux_server
 apps/udp/linux_client
 apps/udp/ix_server
 apps/udp/ix_client
+apps/event/pingpong
+apps/event/stream
 
