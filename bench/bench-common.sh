@@ -21,8 +21,11 @@ bench_stop() {
 }
 
 prepare() {
-  if [ $# -le 1 ]; then
+  if [ $# -lt 1 ]; then
     BUILD_IX=1
+    BUILD_TARGET_BENCH=
+  elif [ $# -eq 1 ]; then
+    BUILD_IX=$1
     BUILD_TARGET_BENCH=
   elif [ $# -ge 2 ]; then
     BUILD_IX=$1
