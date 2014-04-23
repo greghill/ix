@@ -9,6 +9,8 @@
 struct ix_ops {
 	void (*udp_recv)	(void *addr, size_t len, struct ip_tuple *id);
 	void (*udp_sent)	(unsigned long cookie);
+	void (*tcp_connected)	(hid_t handle, unsigned long cookie,
+				 long ret);
 	void (*tcp_knock)	(hid_t handle, struct ip_tuple *id);
 	void (*tcp_recv)	(hid_t handle, unsigned long cookie,
 				 void *addr, size_t len);

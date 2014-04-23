@@ -83,6 +83,7 @@ int ix_init(struct ix_ops *ops, int batch_depth)
 	/* unpack the ops into a more efficient representation */
 	usys_tbl[USYS_UDP_RECV]		= (bsysfn_t) ops->udp_recv;
 	usys_tbl[USYS_UDP_SENT]		= (bsysfn_t) ops->udp_sent;
+	usys_tbl[USYS_TCP_CONNECTED]	= (bsysfn_t) ops->tcp_connected;
 	usys_tbl[USYS_TCP_KNOCK]	= (bsysfn_t) ops->tcp_knock;
 	usys_tbl[USYS_TCP_RECV]		= (bsysfn_t) ops->tcp_recv;
 	usys_tbl[USYS_TCP_SENT]		= (bsysfn_t) ops->tcp_sent;
