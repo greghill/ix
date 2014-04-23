@@ -16,7 +16,6 @@
 #include "cfg.h"
 
 #define MAX_PCBS	65536
-#define ARG_IS_COOKIE	0x8000000000000000ul
 
 static DEFINE_PERQUEUE(struct tcp_pcb *, listen_pcb);
 /* FIXME: this should be probably per queue */
@@ -352,13 +351,8 @@ static void on_err(void *arg, err_t err)
 
 	log_debug("tcpapi: on_err - arg %p err %d\n", arg, err);
 
-	if ((unsigned long) arg & ARG_IS_COOKIE) {
-		api = NULL;
-		cookie = (unsigned long) arg & ~ARG_IS_COOKIE;
-	} else {
-		api = (struct tcpapi_pcb *) arg;
-		cookie = api->cookie;
-	}
+	api = (struct tcpapi_pcb *) arg;
+	cookie = api->cookie;
 
 	if (err == ERR_ABRT || err == ERR_RST || err == ERR_CLSD)
 		mark_dead(api, cookie);
