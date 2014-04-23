@@ -7,7 +7,7 @@
 #include "ix.h"
 
 /* FIXME: we won't need recv depth when i get a chance to fix the kernel */
-#define IXEV_RECV_DEPTH	64
+#define IXEV_RECV_DEPTH	128
 #define IXEV_SEND_DEPTH	16
 
 struct ixev_ctx;

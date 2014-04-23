@@ -42,11 +42,12 @@ static void stream_handler(struct ixev_ctx *ctx, unsigned int reason)
 		} else {
 			ret = ixev_send(ctx, &conn->data[conn->bytes_sent],
 				        conn->bytes_recvd);
-			if (ret <= 0) {
-				if (ret != -EAGAIN)
-					ixev_close(ctx);
+			if (ret == -EAGAIN) {
+				ixev_set_handler(ctx, IXEVOUT, &stream_handler);
 				return;
 			}
+			if (ret < 0)
+				return;
 
 			conn->bytes_recvd -= ret;
 			conn->bytes_sent += ret;

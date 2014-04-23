@@ -114,6 +114,9 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 	ret = bsys_dispatch(d, nr);
 	KSTATS_POP(NULL);
 
+	if (ret)
+		return ret;
+
 again:
 	KSTATS_PUSH(timer, NULL);
 	timer_run();
@@ -133,7 +136,7 @@ again:
 	percpu_get(tx_batch_pos) = 0;
 	KSTATS_POP(NULL);
 
-	if (!nr && !percpu_get(usys_arr)->len) {
+	if (!percpu_get(usys_arr)->len) {
 		KSTATS_PUSH(idle, NULL);
 		/* FIXME: need to modify timer code to get the next event */
 		eth_rx_idle_wait(10 * ONE_MS);
@@ -146,7 +149,7 @@ again:
 		goto again;
 	}
 
-	return ret;
+	return 0;
 }
 
 /**
