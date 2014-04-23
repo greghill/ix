@@ -205,10 +205,10 @@ stack, which communicate at relatively coarse grain with application
 threads. This amortizes switching overheads at the
 expense of \microsecond-scale latency.
 
-\myparagraph{Alternatives to TCP:} Some low-latency key-value stores rely on
+\myparagraph{Alternatives to TCP:} Some low-latency key-value stores or object managers rely on
 kernel-bypass and RDMA to offload protocol processing on dedicated
 Infiniband host channel
-adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH}.  Using
+adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH,mitchell:rdma,dragojevic14farm}.  Using
 commodity Ethernet networking, Facebook's memcached deployment uses
 UDP to avoid connection scalability
 limitations~\cite{nishtala2013scaling}. Even though UDP is running in

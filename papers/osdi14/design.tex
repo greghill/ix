@@ -57,7 +57,7 @@ the following question: {\it can the dataplane architecture be
 following key design principles:
 
 
-\myparagraph{Separation of control and data plane:} 
+\myparagraph{Separation and protection of control and data plane:} 
 % Software dataplanes are designed to operate on flows, not to
 % provision resources or manage them in an elastic and proportional
 % manner.
@@ -136,9 +136,9 @@ issue of the shared file descriptor namespace in multithreaded applications~\cit
 our design scales well with the increasing number of cores in modern
 servers. Our approach does not restrict the memory model for
 applications. Application logic can take advantage of coherent, shared
-memory to exchange information and synchronize between cores. For
-instance, this may be needed if the application must combine
-information arriving from multiple network flows.
+memory to exchange information and synchronize between cores. 
+\edb{TODO: e.g., for key-value storage; add the implication on outbound connections for multicore}
+
 
 % \christos{seems like an implementation detail to me}
 %The approach extends to link-aggregation bonds to scale to multiple links.
