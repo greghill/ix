@@ -7,14 +7,14 @@ and to mTCP, the state-of-the-art user-space TCP alternative available
 on the same hardware.  We first describe the experimental setup
 (\S\ref{sec:eval:setup}).  We then characterize the performance using
 a series of micro-benchmark: the popular NetPIPE ping-pong
-test~\cite{snell1996netpipe} in \S\ref{sec:eval:netpipe}; the short
+test~\cite{snell1996netpipe} (\S\ref{sec:eval:netpipe}); the short
 message transaction test previously used to evaluate
 MegaPipe~\cite{han2012megapipe} and mTCP~\cite{jeong2014mtcp} in
 \S\ref{sec:eval:short}; and the scalability of the system for large
-persistent connections in \S\ref{sec:eval:scale}.  Finally, we
+persistent connections (\S\ref{sec:eval:scale}).  Finally, we
 characterize the performance of the \ix system by running real-world
 applications such as memcached and XXX using the
-\texttt{libevent-}compatibility library.
+\texttt{libevent-}compatibility library(\S\ref{missing}).
 
 
 \subsection{Experimental setup}
@@ -30,9 +30,9 @@ socket (client or server) has 8 cores and 16 hyperthreads.  When
 reporting multi-core scalability, we report results with
 hyperthreading enabled, and both hyperthreads of the cores are used.
 
-The server is connected to
-the switch via a 4x10GbE bond configured as a L2+L3
-hash via LACP~\cite{ieee802.3ad}.  Jumbo
+For our experiments, the server is connected to
+the switch via either a single 10GbE link or via a 4x10GbE bond configured as a L2+L3
+hash via LACP~\cite{ieee802.3ad}. Jumbo
 frames are never enabled.  Our baseline configuration in each machine
 is the Ubuntu 12.04.4 LTS distribution running the 3.11.10 Linux kernel.  Although
 the server has two sockets, our experiments pin IRQs\george{not really}, processes, and
@@ -55,13 +55,14 @@ Whenever both practical and relevant, we compare the performance of an
 (\texttt{Linux-opt}), and the performance of mTCP, a
 recently-published user-level TCP stack specifically designed for
 scalability~\cite{jeong2014mtcp}.  Unless specifically mentioned, all
-clients run a baseline Linux configuration.
+clients run a baseline Linux configuration. 
 
 The Linux server implementations use the
 \texttt{libevent} framework running on XXX threads to serve the
 clients. The mTCP server implementation use the native mTCP API
 running on up to 8 cores (within each core, one hyperthread is
-dedicated to processing the network stack).  Finally, \ix server use
+dedicated to processing the network stack).  We downloaded and installed mTCP \edb{vXXX} from the public-domain implementation~\cite{missing}, but re-wrote the benchmarks as they were not part of the distribution.
+Finally, \ix server use
 the native \ix API running on up to 8 cores (using symmetrically both
 hyperthreads).  For all experiments, we use the same Linux client code, generally also written using \texttt{libevent}.
 
