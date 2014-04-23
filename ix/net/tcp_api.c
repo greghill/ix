@@ -422,12 +422,16 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 
 static err_t on_connected(void *arg, struct tcp_pcb *pcb, err_t err)
 {
+	struct tcpapi_pcb *api = (struct tcpapi_pcb *) arg;
+
 	if (err != ERR_OK) {
 		log_err("tcpapi: connection failed, ret %d\n", err);
 		/* FIXME: free memory and mark handle dead */
+		usys_tcp_connected(api->handle, api->cookie, RET_CONNREFUSED);
 		return err;
 	}
 
+	usys_tcp_connected(api->handle, api->cookie, RET_OK);
 	return ERR_OK;
 }
 

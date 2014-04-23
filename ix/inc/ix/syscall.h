@@ -41,7 +41,8 @@ enum {
 	RET_NOSYS	= 6, /* System call does not exist */
 	RET_NOTSUP	= 7, /* Operation is not supported */
 	RET_BADH	= 8, /* An invalid handle was used */
-	RET_CLOSED	= 9, /* The conn is closed         */
+	RET_CLOSED	= 9, /* The connection is closed   */
+	RET_CONNREFUSED = 10, /* Connection refused        */
 };
 
 
@@ -292,6 +293,7 @@ ksys_tcp_close(struct bsys_desc *d, hid_t handle)
 enum {
 	USYS_UDP_RECV = 0,
 	USYS_UDP_SENT,
+	USYS_TCP_CONNECTED,
 	USYS_TCP_KNOCK,
 	USYS_TCP_RECV,
 	USYS_TCP_SENT,
@@ -348,6 +350,20 @@ static inline void usys_udp_sent(unsigned long cookie)
 {
 	struct bsys_desc *d = usys_next();
 	BSYS_DESC_1ARG(d, USYS_UDP_SENT, cookie);
+}
+
+/**
+ * usys_tcp_connected - Notifies the user that an outgoing connection attempt
+ *			has completed. (not necessarily successfully)
+ * @handle: the TCP flow handle
+ * @cookie: a user-level token
+ * @ret: the result (return code)
+ */
+static inline void
+usys_tcp_connected(hid_t handle, unsigned long cookie, long ret)
+{
+	struct bsys_desc *d = usys_next();
+	BSYS_DESC_3ARG(d, USYS_TCP_CONNECTED, handle, cookie, ret);
 }
 
 /**
