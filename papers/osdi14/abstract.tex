@@ -1,6 +1,36 @@
+
+
 \begin{abstract}
 
-\edb{TODO} Lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum
-lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum
-lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum lorem ipsum
+Web-scale applications are redefining the requirements of system
+software, and in particular in the way system software implements the
+TCP/IP networking stack.  The classic requirements to provide moderate
+connection scalability, but high streaming performance with minimized
+CPU occupancy is being replaced by new requirements that include
+dealing with very high packet rates, enabling latency-sensitive
+applications to respond within microseconds, both in the average and
+the tail latency case, the ability to support hundreds of thousands of
+connections, possibly with high churn, and elastically manage system
+resources.  The conventional wisdom is that such requirements are best addressed
+outside of commodity operating system, either at userlevel or offloaded into
+intelligent hardware.  
+
+We present IX, a dataplane operating system specifically designed for
+web-scale, event-driven applications.  IX addresses these new
+application requirements through a novel architecture that uses
+virtualization hardware to separate control plane from the dataplanes,
+and to offer protection to the dataplane, a kernel that exposes a
+native, zero-copy API that safely but explicitly exposes flow control
+to untrusted software, and a compatiblility library that exposes an
+API similar to libevent to legacy applications.  IX is designed to
+scale on multicore hardware through a coherency-free,
+run-to-completion execution model.
+
+Our evaluation using microbenchmarks shows that IX outperforms Linux
+on nearly all benchmarks by one order of magnitude, and a
+state-of-the-art user-space networking stack by a factor of three.
+Our evaluation using real-world applications simmilar gains, and that
+the porting effort is minimal.
+
+
 \end{abstract}
