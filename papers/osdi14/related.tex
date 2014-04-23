@@ -18,22 +18,21 @@ the commentary already exposed in \S\ref{sec:motivation:current}.
 
 \myparagraph{Separation of control and data plane:} The notion of
 architected separation between control and data plane is pervasise in
-networking protocols (e.g., BPG/OSFP vs. LPM- for routing) as it has
-allowed each to scale independently of each other.  In systems,
-virtualization also separates the control and execution functions;
-type I hypervisors the control plane operates within a customized
-environment (e.g., Xen's dom0~\cite{DBLP:conf/sosp/BarhamDFHHHN03})
-whereas the control plane of type II hypervisors runs as process on
-top of a commodity operating
-system~\cite{DBLP:journals/tocs/BugnionDRSW12}.  Recently,
-Arrakis~\cite{peter2013arrakis,arrakisTR13} proposes to separate the
-networking stack into a distinct dataplane.  Our work most closely
-ressembles Arrakis, but with noticeable differences: first, Arrakis
-uses the Barrelfish multikernel as its control plane and run-time
-layer, whereas the \ix control plane runs on a vanilla Linux
-foundation.  Second, Arrakis runs its own, homegrown, networking stack
-at userlevel, whereas \ix uses runs its networking stack protected
-from the application.
+the design of networking protocols and devices.  In systems,
+virtualization also separates the control and execution functions. For
+example, a type-2
+hypervisors~\cite{DBLP:journals/tocs/BugnionDRSW12,misc/kivity07kvm}
+use a Linux environment for control, and a separate virtualization
+module for execution.  We leverage Dune and the same virtualization
+hardware to run the \ix as a process of the control plane.
+Arrakis~\cite{peter2013arrakis,arrakisTR13} recently proposed to
+separate the networking stack into a distinct dataplane.  Our work
+most closely ressembles Arrakis, but with noticeable differences:
+first, Arrakis uses the Barrelfish multikernel as its control plane
+and run-time layer, whereas the \ix control plane runs on a vanilla
+Linux foundation.  Second, Arrakis runs its own, homegrown, networking
+stack at userlevel, whereas \ix uses runs its networking stack
+protected from the application.
 
 \myparagraph{User-level networking stacks:} Our work shares the same
 motivation as mTCP~\cite{jeong2014mtcp} in providing highly-scable
