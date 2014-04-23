@@ -445,7 +445,7 @@ static void ixev_handle_one_ret(struct bsys_ret *r)
 		break;
 
 	default:
-		if (ret)
+		if (unlikely(ret))
 			ixev_bad_ret(ctx, sysnr, ret);
 	}
 }
