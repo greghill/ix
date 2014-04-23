@@ -27,7 +27,7 @@ struct ixev_ctx;
 struct ixev_conn_ops {
 	struct ixev_ctx * (*accept) (struct ip_tuple *id);
 	void		  (*release) (struct ixev_ctx *ctx);
-	void		  (*connect_ret) (struct ixev_ctx *ctx, long ret);
+	void		  (*dialed) (struct ixev_ctx *ctx, long ret);
 };
 
 /*

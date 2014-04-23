@@ -66,6 +66,13 @@ __ixev_close(struct ixev_ctx *ctx)
 	ksys_tcp_close(d, ctx->handle);
 }
 
+static void ixev_tcp_connected(hid_t handle, unsigned long cookie, long ret)
+{
+	struct ixev_ctx *ctx = (struct ixev_ctx *) cookie;
+
+	ixev_global_ops.dialed(ctx, ret);
+}
+
 static void ixev_tcp_knock(hid_t handle, struct ip_tuple *id)
 {
 	struct ixev_ctx *ctx = ixev_global_ops.accept(id);
@@ -145,6 +152,7 @@ static void ixev_tcp_sent(hid_t handle, unsigned long cookie, size_t len)
 }
 
 static struct ix_ops ixev_ops = {
+	.tcp_connected	= ixev_tcp_connected,
 	.tcp_knock	= ixev_tcp_knock,
 	.tcp_dead	= ixev_tcp_dead,
 	.tcp_recv	= ixev_tcp_recv,
@@ -438,7 +446,16 @@ static void ixev_handle_one_ret(struct bsys_ret *r)
 	switch (sysnr) {
 	case KSYS_TCP_CONNECT:
 		ctx->handle = ret;
-		ixev_global_ops.connect_ret(ctx, ret);
+		/*
+		 * FIXME: need to propogate this error to the app, but we
+		 * can't safely do so here because the app might make an
+		 * unsafe batched call during return processing. We need
+		 * a mechanism to defer failure reporting until after
+		 * return processing.
+		 */
+		if (unlikely(ret)) {
+			printf("ixev: connect failed with %ld\n", ret);
+		}
 		break;
 
 	case KSYS_TCP_SENDV:

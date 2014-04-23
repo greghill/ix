@@ -523,7 +523,7 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 	if (unlikely(err != ERR_OK))
 		goto connect_fail;
 
-	return RET_OK;
+	return api->handle;
 
 connect_fail:
 	tcp_abort(pcb);
