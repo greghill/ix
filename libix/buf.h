@@ -11,15 +11,22 @@
 #include <string.h>
 
 
-#define IX_MTU	1460
+#define BUF_SIZE	1460 * 4
 
 extern __thread struct mempool ixev_buf_pool;
 
 struct ixev_buf {
 	uint32_t len;
 	uint32_t pad;
-	char payload[IX_MTU];
+	struct ixev_ref ref;
+	char payload[BUF_SIZE];
 };
+
+static inline void ixev_buf_release(struct ixev_ref *ref)
+{
+	struct ixev_buf *buf = container_of(ref, struct ixev_buf, ref);
+	mempool_free(&ixev_buf_pool, buf);
+}
 
 /**
  * ixev_buf_alloc - allocates a buffer
@@ -36,6 +43,7 @@ static inline struct ixev_buf *ixev_buf_alloc(void)
 		return NULL;
 
 	buf->len = 0;
+	buf->ref.cb = &ixev_buf_release;
 
 	return buf;
 }
@@ -51,7 +59,7 @@ static inline struct ixev_buf *ixev_buf_alloc(void)
  */
 static inline size_t ixev_buf_store(struct ixev_buf *buf, void *addr, size_t len)
 {
-	size_t avail = min(len, IX_MTU - buf->len);
+	size_t avail = min(len, BUF_SIZE - buf->len);
 
 	if (!avail)
 		return 0;
@@ -70,17 +78,7 @@ static inline size_t ixev_buf_store(struct ixev_buf *buf, void *addr, size_t len
  */
 static inline bool ixev_is_buf_full(struct ixev_buf *buf)
 {
-	return buf->len == IX_MTU;
+	return buf->len == BUF_SIZE;
 }
 
-/**
- * ixev_buf_put - decrements the refcount of a buffer
- * @buf: the buffer
- *
- * Frees the buffer if the refcount reaches zero.
- */
-static inline void ixev_buf_release(struct ixev_buf *buf)
-{
-	mempool_free(&ixev_buf_pool, buf);
-}
 

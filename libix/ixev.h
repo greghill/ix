@@ -11,6 +11,8 @@
 #define IXEV_SEND_DEPTH	16
 
 struct ixev_ctx;
+struct ixev_ref;
+struct ixev_buf;
 
 /*
  * FIXME: right now we only support some libevent features
@@ -36,15 +38,14 @@ struct ixev_conn_ops {
 typedef void (*ixev_handler_t)(struct ixev_ctx *ctx, unsigned int reason);
 
 /*
- * Use this callback to decrement the refcount of the given
- * memory. It is especially unsafe to initiate new I/O requests
- * from this handler.
+ * Use this callback to free memory after zero copy sends
  */
-typedef void (*ixev_put_fn)(void *arg);
+typedef void (*ixev_sent_cb_t)(struct ixev_ref *ref);
 
-struct ixev_putcb {
-	ixev_put_fn	cb;	/* the decrement ref callback function */
-	void		*arg;	/* the argument to pass to the callback */
+struct ixev_ref {
+	ixev_sent_cb_t	cb;	  /* the decrement ref callback function */
+	size_t		send_pos; /* the number of bytes sent before safe to free */
+	struct ixev_ref	*next;    /* the next ref in the sequence */
 };
 
 struct ixev_ctx {
@@ -58,14 +59,18 @@ struct ixev_ctx {
 	uint16_t	recv_tail;		/* received data SG tail */
 	uint16_t	send_count;		/* the current send SG count */
 	uint16_t	is_dead:1;		/* is the connection dead? */
-	size_t		send_len;		/* the number of outstanding send bytes */
+
+	size_t		send_total;		/* the total requested bytes */
+	size_t		sent_total;		/* the total completed bytes */
+	struct ixev_ref	*ref_head;		/* list head of references */
+	struct ixev_ref *ref_tail;		/* list tail of references */
+	struct ixev_buf *cur_buf;		/* current buffer */
 
 	struct bsys_desc *recv_done_desc;	/* the current recv_done bsys descriptor */
 	struct bsys_desc *sendv_desc;		/* the current sendv bsys descriptor */
 
 	struct sg_entry	recv[IXEV_RECV_DEPTH];	/* receieve SG array */
 	struct sg_entry send[IXEV_SEND_DEPTH];	/* send SG array */
-	struct ixev_putcb send_cb[IXEV_SEND_DEPTH]; /* callbacks to free memory */
 };
 
 static inline void ixev_check_hacks(struct ixev_ctx *ctx)
@@ -84,8 +89,9 @@ static inline void ixev_check_hacks(struct ixev_ctx *ctx)
 
 extern ssize_t ixev_recv(struct ixev_ctx *ctx, void *addr, size_t len);
 extern ssize_t ixev_send(struct ixev_ctx *ctx, void *addr, size_t len);
-extern ssize_t ixev_send_zc(struct ixev_ctx *ctx, void *addr, size_t len,
-			    struct ixev_putcb *cb);
+extern ssize_t ixev_send_zc(struct ixev_ctx *ctx, void *addr, size_t len);
+extern void ixev_add_sent_cb(struct ixev_ctx *ctx, struct ixev_ref *ref);
+
 extern void ixev_close(struct ixev_ctx *ctx);
 
 /**

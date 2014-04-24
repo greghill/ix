@@ -15,7 +15,7 @@ enum {
 	STREAM_MODE_SEND,
 };
 
-struct pp_conn {
+struct stream_conn {
 	struct ixev_ctx ctx;
 	int mode;
 	size_t bytes_recvd;
@@ -25,7 +25,7 @@ struct pp_conn {
 
 static void stream_handler(struct ixev_ctx *ctx, unsigned int reason)
 {
-	struct pp_conn *conn = container_of(ctx, struct pp_conn, ctx);
+	struct stream_conn *conn = container_of(ctx, struct stream_conn, ctx);
 	ssize_t ret;
 
 	while (1) {
@@ -67,7 +67,7 @@ static void stream_handler(struct ixev_ctx *ctx, unsigned int reason)
 static struct ixev_ctx *stream_accept(struct ip_tuple *id)
 {
 	/* NOTE: we accept everything right now, did we want a port? */
-	struct pp_conn *conn = malloc(sizeof(struct pp_conn));
+	struct stream_conn *conn = malloc(sizeof(struct stream_conn));
 	if (!conn)
 		return NULL;
 
@@ -80,7 +80,7 @@ static struct ixev_ctx *stream_accept(struct ip_tuple *id)
 
 static void stream_release(struct ixev_ctx *ctx)
 {
-	struct pp_conn *conn = container_of(ctx, struct pp_conn, ctx);
+	struct stream_conn *conn = container_of(ctx, struct stream_conn, ctx);
 
 	free(conn);
 }

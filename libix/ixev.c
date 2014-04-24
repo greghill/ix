@@ -140,6 +140,16 @@ static void ixev_tcp_recv(hid_t handle, unsigned long cookie,
 static void ixev_tcp_sent(hid_t handle, unsigned long cookie, size_t len)
 {
 	struct ixev_ctx *ctx = (struct ixev_ctx *) cookie;
+	struct ixev_ref *ref = ctx->ref_head;
+
+	ctx->sent_total += len;
+
+	while (ref && ref->send_pos <= ctx->sent_total) {
+		ref->cb(ref);
+		ref = ref->next;
+	}
+
+	ctx->ref_head = ref;
 
 	/* if there is pending data, make sure we try again to send it */
 	if (ctx->send_count)
@@ -203,35 +213,40 @@ ssize_t ixev_recv(struct ixev_ctx *ctx, void *buf, size_t len)
 	return pos;
 }
 
-static ssize_t
-__ixev_send_zc(struct ixev_ctx *ctx, void *buf,
-	       size_t actual_len, struct ixev_putcb *cb)
+static struct sg_entry *ixev_next_entry(struct ixev_ctx *ctx)
 {
-	struct sg_entry *ent;
-
-	if (ctx->send_count >= IXEV_SEND_DEPTH)
-		return -EAGAIN;
-
-	ent = &ctx->send[ctx->send_count];
-	ent->base = buf;
-	ent->len = actual_len;
-
-	if (cb)
-		ctx->send_cb[ctx->send_count] = *cb;
-	else
-		ctx->send_cb[ctx->send_count].cb = NULL;
+	struct sg_entry *ent = &ctx->send[ctx->send_count];
 
 	ctx->send_count++;
 	__ixev_sendv(ctx, ctx->send, ctx->send_count);
 
-	return actual_len;
+	return ent;
 }
 
-static void __ixev_send_release(void *arg)
+static void ixev_update_send_stats(struct ixev_ctx *ctx, size_t len)
 {
-	struct ixev_buf *buf = (struct ixev_buf *) arg;
+	ctx->send_total += len;
+}
 
-	ixev_buf_release(buf);
+static void __ixev_add_sent_cb(struct ixev_ctx *ctx, struct ixev_ref *ref)
+{
+	ref->next = NULL;
+
+	if (!ctx->ref_head) {
+		ctx->ref_head = ref;
+		ctx->ref_tail = ref;
+	} else {
+		ctx->ref_tail->next = ref;
+		ctx->ref_tail = ref;
+	}
+}
+
+static size_t ixev_window_len(struct ixev_ctx *ctx, size_t len)
+{
+	size_t win_left = IXEV_SEND_WIN_SIZE -
+			  ctx->send_total + ctx->sent_total;
+
+	return min(win_left, len);
 }
 
 /*
@@ -247,65 +262,57 @@ static void __ixev_send_release(void *arg)
  */
 ssize_t ixev_send(struct ixev_ctx *ctx, void *addr, size_t len)
 {
-	size_t actual_len = min(IXEV_SEND_WIN_SIZE - ctx->send_len, len);
-	struct ixev_putcb *send_cb;
+	size_t actual_len = ixev_window_len(ctx, len);
 	struct sg_entry *ent;
 	char *caddr = (char *) addr;
 	ssize_t ret, so_far = 0;
-	struct ixev_putcb cb;
 
 	if (ctx->is_dead)
 		return -EIO;
 
-	cb.cb = &__ixev_send_release;
-
 	if (!actual_len)
 		return -EAGAIN;
 
-	if (!ctx->send_count)
-		goto cold_path;
-
-	send_cb = &ctx->send_cb[ctx->send_count - 1];
-
 	/* hot path: is there already a buffer? */
-	if (send_cb->cb == &__ixev_send_release) {
-		struct ixev_buf *buf = (struct ixev_buf *) send_cb->arg;
-
+	if (ctx->send_count && ctx->cur_buf) {
+		ret = ixev_buf_store(ctx->cur_buf, caddr, actual_len);
 		ent = &ctx->send[ctx->send_count - 1];
-		ret = ixev_buf_store(buf, caddr, actual_len);
-		actual_len -= ret;
 		ent->len += ret;
+
+		actual_len -= ret;
 		caddr += ret;
 		so_far += ret;
+
+		ctx->cur_buf->ref.send_pos = ctx->send_total + so_far;
 	}
 
-cold_path:
 	/* cold path: allocate and fill new buffers */
 	while (actual_len) {
-		struct ixev_buf *buf = ixev_buf_alloc();
-		if (!buf) {
-			if (so_far)
-				goto out;
-			return -EAGAIN;
-		}
+		if (ctx->send_count >= IXEV_SEND_DEPTH)
+			goto out;
 
-		ret = ixev_buf_store(buf, caddr, actual_len);
+		ctx->cur_buf = ixev_buf_alloc();
+		if (unlikely(!ctx->cur_buf))
+			goto out;
 
-		cb.arg = (void *) buf;
-		ret = __ixev_send_zc(ctx, buf->payload, ret, &cb);
-		if (ret <= 0) {
-			if (so_far)
-				goto out;
-			return ret;
-		}
+		ret = ixev_buf_store(ctx->cur_buf, caddr, actual_len);
+		ent = ixev_next_entry(ctx);
+		ent->base = ctx->cur_buf->payload;
+		ent->len = ret;
 
 		actual_len -= ret;
 		caddr += ret;
 		so_far += ret;
+
+		__ixev_add_sent_cb(ctx, &ctx->cur_buf->ref);
+		ctx->cur_buf->ref.send_pos = ctx->send_total + so_far;
 	}
 
 out:
-	ctx->send_len += so_far;
+	if (!so_far)
+		return -EAGAIN;
+
+	ixev_update_send_stats(ctx, so_far);
 	return so_far;
 }
 
@@ -314,31 +321,46 @@ out:
  * @ctx: the context
  * @addr: the address of the data
  * @len: the length of the data
- * @cb: the completion callback when references to the data are dropped
  *
- * The callback could be NULL. Since TCP is a stream protocol, a possible
- * pattern is to batch up several requests then free all the memory
- * with a callback attached to the last request in the series.
+ * Note that the data buffer must be properly reference counted. Use
+ * ixev_add_sent_cb() to register a completion callback after the data
+ * has been fully accepted by ixev_send_zc().
  *
  * Returns the number of bytes sent, or <0 if there was an error.
  */
-ssize_t ixev_send_zc(struct ixev_ctx *ctx, void *addr, size_t len,
-		     struct ixev_putcb *cb)
+ssize_t ixev_send_zc(struct ixev_ctx *ctx, void *addr, size_t len)
 {
-	ssize_t ret;
-	size_t actual_len = min(IXEV_SEND_WIN_SIZE - ctx->send_len, len);
+	struct sg_entry *ent;
+	size_t actual_len = ixev_window_len(ctx, len);
 
 	if (ctx->is_dead)
 		return -EIO;
 	if (!actual_len)
 		return -EAGAIN;
+	if (ctx->send_count >= IXEV_SEND_DEPTH)
+		return -EAGAIN;
 
-	ret = __ixev_send_zc(ctx, addr, actual_len, cb);
-	if (ret <= 0)
-		return ret;
+	ctx->cur_buf = NULL;
+	
+	ent = ixev_next_entry(ctx);
+	ent->base = addr;
+	ent->len = actual_len;
 
-	ctx->send_len += actual_len;
+	ixev_update_send_stats(ctx, actual_len);
 	return actual_len;
+}
+
+/**
+ * ixev_add_sent_cb - registers a callback for when all current sends complete
+ * @ctx: the context
+ * @ref: the callback handle
+ *
+ * This function is intended for freeing references to zero-copy memory.
+ */
+void ixev_add_sent_cb(struct ixev_ctx *ctx, struct ixev_ref *ref)
+{
+	ref->send_pos = ctx->send_total;
+	__ixev_add_sent_cb(ctx, ref);
 }
 
 /**
@@ -363,11 +385,15 @@ void ixev_ctx_init(struct ixev_ctx *ctx)
 	ctx->recv_head = 0;
 	ctx->recv_tail = 0;
 	ctx->send_count = 0;
-	ctx->send_len = 0;
 	ctx->recv_done_desc = NULL;
 	ctx->sendv_desc = NULL;
 	ctx->generation = 0;
 	ctx->is_dead = false;
+
+	ctx->send_total = 0;
+	ctx->sent_total = 0;
+	ctx->ref_head = NULL;
+	ctx->cur_buf = NULL;
 }
 
 static void ixev_bad_ret(struct ixev_ctx *ctx, uint64_t sysnr, long ret)
@@ -385,10 +411,8 @@ static void ixev_shift_sends(struct ixev_ctx *ctx, int shift)
 
 	ctx->send_count -= shift;
 
-	for (i = 0; i < ctx->send_count; i++) {
+	for (i = 0; i < ctx->send_count; i++)
 		ctx->send[i] = ctx->send[i + shift];
-		ctx->send_cb[i] = ctx->send_cb[i + shift];
-	}
 }
 
 static void ixev_handle_sendv_ret(struct ixev_ctx *ctx, long ret)
@@ -400,19 +424,14 @@ static void ixev_handle_sendv_ret(struct ixev_ctx *ctx, long ret)
 		return;
 	}
 
-	ctx->send_len -= ret;
-
 	for (i = 0; i < ctx->send_count; i++) {
 		struct sg_entry *ent = &ctx->send[i];
-		struct ixev_putcb *cb = &ctx->send_cb[i];
 		if (ret < ent->len) {
 			ent->len -= ret;
 			ent->base = (char *) ent->base + ret;
 			break;
 		}
 
-		if (cb->cb)
-			cb->cb(cb->arg);
 		ret -= ent->len;
 	}
 
@@ -421,17 +440,16 @@ static void ixev_handle_sendv_ret(struct ixev_ctx *ctx, long ret)
 
 static void ixev_handle_close_ret(struct ixev_ctx *ctx, long ret)
 {
-	int i;
+	struct ixev_ref *ref = ctx->ref_head;
 
 	if (unlikely(ret < 0)) {
 		printf("ixev: failed to close handle, ret = %ld\n", ret);
 		return;
 	}
 
-	for (i = 0; i < ctx->send_count; i++) {
-		struct ixev_putcb *cb = &ctx->send_cb[i];
-		if (cb->cb)
-			cb->cb(cb->arg);
+	while (ref) {
+		ref->cb(ref);
+		ref = ref->next;
 	}
 
 	ixev_global_ops.release(ctx);

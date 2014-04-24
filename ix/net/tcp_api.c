@@ -185,7 +185,7 @@ ssize_t bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
 		err_t err;
 		void *base = (void *) uaccess_peekq((uint64_t *) &ents[i].base);
 		size_t len = uaccess_peekq(&ents[i].len);
-		bool buf_full = len > api->pcb->snd_buf;
+		bool buf_full = len > min(api->pcb->snd_buf, 0xFFFF);
 
 		if (unlikely(!uaccess_okay(base, len)))
 			break;
@@ -200,7 +200,7 @@ ssize_t bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
 		 * support this.
 		 */
 		if (buf_full)
-			len = api->pcb->snd_buf;
+			len = min(api->pcb->snd_buf, 0xFFFF);
 		if (!len)
 			break;
 
