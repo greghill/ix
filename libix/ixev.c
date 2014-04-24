@@ -471,7 +471,7 @@ static void ixev_handle_one_ret(struct bsys_ret *r)
 		 * a mechanism to defer failure reporting until after
 		 * return processing.
 		 */
-		if (unlikely(ret)) {
+		if (unlikely(ret < 0)) {
 			printf("ixev: connect failed with %ld\n", ret);
 		}
 		break;
