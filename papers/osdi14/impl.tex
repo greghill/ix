@@ -2,18 +2,20 @@
 \section{Implementation}
 \label{sec:impl}
 
-We now describe the implementation of the \ix prototype. We start with
-an overview of the system itself, including the separation of control
-plane and dataplane, the use of virtualization hardware for
+We now describe the implementation of the \ix prototype.  We start
+with an overview of the system itself, including the separation of
+control plane and dataplane, the use of virtualization hardware for
 protection, and resource allocation (\S\ref{sec:impl:overview}). We
-then describe salient aspects of our system, including the internals
-of the \ix kernel and in particular its pipeline
-(\S\ref{sec:impl:kernel}), the native API at the kernel/user boundary
-(\S\ref{sec:impl:api}), our approach to compatibility
-(\S\ref{sec:impl:libix}), and finally our approach to flow control and
-congestion management (\S\ref{sec:impl:net}).  We close with a
-discussion of our approach, its current implementation restrictions,
-and directions for future work (\S\ref{sec:impl:discussion}).
+then describe salient aspects of our system, including the control
+plane's approach to global resource management
+(\S\ref{sec:impl:gresource}), the internals of the \ix kernel and in
+particular its pipeline (\S\ref{sec:impl:kernel}), the native API at
+the kernel/user boundary (\S\ref{sec:impl:api}), the implementation of the networking stack (\S\ref{sec:impl:stack}), 
+the implications on congestion management and flow control (\S\ref{sec:impl:net}), the benefits and consequences of coherence-free execution (\S\ref{sec:impl:cohfree}), and finally our approach to
+compatibility (\S\ref{sec:impl:libix}).  We
+close with a discussion of our approach, its current implementation
+restrictions, and directions for future work
+(\S\ref{sec:impl:discussion}).
 
 \subsection{System Architecture}
 \label{sec:impl:overview}
@@ -54,6 +56,7 @@ and runs the network protocol processing stack, and then launches and
 runs a single, event-driven application at userlevel.
 
 \subsection{Global Resource Management}
+\label{sec:impl:gresource}
 
 The implementation separates global resource mechanisms from policies
 as follows: the mechanisms are implemented by an enhanced version of
@@ -108,7 +111,12 @@ underutilized.
 \subsection{The \ix Kernel}
 \label{sec:impl:kernel}
 
-The \ix kernel merges two distinct functions, as it is both an
+The \ix kernel consists of 37 KSLOC (according to SLOCcount
+2.26~\cite{url:sloccount}), of which 43\% is derived from the Intel device
+driver, 23\% from the lwIP TCP stack, and 16\% from the Dune library
+and sandboxing module.  All three existing code bases are highly
+modified for the purpose; the rest is approximately 7KSLOC of new
+code.  The \ix kernel merges two distinct functions, as it is both an
 operating system and a dataplane.
 
 \input{figs/float-queues-cores}
@@ -168,6 +176,7 @@ descriptor ring.
 \todo discuss shared mbufs (read-only mappings)
 
 \subsection{Protocol Stack and Device Driver}
+\label{sec:impl:stack}
 
 The \ix kernel includes a complete network protocol stack with
 RFC-compliant support for TCP, UDP, ARP, ICMP and LACP.  It however
@@ -175,9 +184,9 @@ explicitly lacks a complete IP-layer and is therefore only a capable
 networking endpoint, but not of handling routing, bridging or
 filtering functions.  It also totally lacks a socket layer and its
 associated API and semantics.  For our implementation of TCP, we chose
-to LWIP~\cite{} as a starting point for our code base because of its
+to lwIP~\cite{dunkels2001design} as a starting point for our code base because of its
 modularity and is maturity as a compliant, feature-rich networking
-stack.  LWIP was however designed with memory-efficiency in mind,
+stack.  lwIP was however designed with memory-efficiency in mind,
 primarily for embedded environments.  We radically changed the data
 structures that organize protocol control blocks for scalability, as
 well as for finer-grain, precise timer management.  However, we did
@@ -200,7 +209,7 @@ form of paravirtualization~\cite{DBLP:conf/sosp/BarhamDFHHHN03}.
 
 
 
-\subsection{Congestion management and flow control}
+\subsection{Network Behavior}
 \label{sec:impl:net}
 
 Unlike a traditional in-kernel stack, which decouples protocol
@@ -213,26 +222,16 @@ First, the \ix dataplane centralizes all congestion management
 mechanisms and policies at the NIC edge of the system, i.e., before
 the packets are processed by the other stages of the pipeline, so that
 no other part of the system may necessarily allocate or buffer the
-packet.  Unlike a traditional implementation of POSIX sockets, where
-the protocol layer may buffer out-of-order packets, the upper layer
-can temporarily refuse packets, and the packets are ultimately copied
-into userspace, \ix always delivers streams to applications without
-copying in a read-only portion of the address space, and drops
-out-of-order packets.
-
-The implementation mechanism for congestion management is trivial - we
-start by moving all incoming packets from the hardware ring into a
-corresponding in-memory queue, but only process a bounded batch of
-packets at each iteration.  The pipeline then processes the buffer up
-to the point where it is either dropped or passed to userspace.  This
-has a number of benefits.  First, we make use of extensive DRAM
-resources to handle bursty congestion that can occur on an 10GbE
-fabric, if the application is under-provisioned in terms of CPU
-resources, or is going through an atypically expensive operation such
-as garbage collection.  Second, the resulting in-memory queue can
-serve as the basis for extensive monitoring of service-level agreement
-expressed in terms of queuing delays.  Third, it provides a convenient
-location to implement congestion management policies such as
+packet: during the first stage of its pipeline, \ix moves all incoming
+packets from the hardware ring into a corresponding in-memory queue,
+but only process a bounded batch of packets at each iteration.  The
+pipeline then processes the buffer up to the point where it is either
+dropped or passed to userspace.  This has a number of benefits.
+First, we make use of extensive DRAM resources to handle bursty
+congestion.  Second, the resulting in-memory queue can serve as the
+basis for extensive monitoring of service-level agreement expressed in
+terms of queuing delays.  Third, it provides a convenient location to
+implement congestion management policies such as
 ECN~\cite{ramakrishnan2001addition} or
 RED~\cite{DBLP:journals/ton/FloydJ93}.
 
@@ -249,8 +248,41 @@ corresponding event with the number of bytes actually sent, and a
 second corresponding event to the numbers of bytes acknowledged by
 the peer.  These two events together provide a direct view of the
 sliding window to application and provide the foundation for zero-copy,
-non-blocking operations.  In contrast here also, traditional stacks
+non-blocking operations.  In contrast, here also, traditional stacks
 buffer and copy on the send side.
+
+\subsection{Coherency-free Execution}
+\label{sec:impl:cohfree}
+
+According to the commutatity rule, system call implementations can
+only be coherence-free if the the API itself is
+commutative~\cite{DBLP:conf/sosp/ClementsKZMK13}.  Our API is
+commutative: events are processed independently on each elastic thread
+and flows are identified by cookies rather than a single file
+descriptor snamespace.  Our implementation is free of any
+cache-coherency traffic in the common case: each elastic thread
+manages its own memory pools and \ix relies on flow-consistent hashing
+by the NIC hardeware to ensure that each elastic thread operates on a
+disjoint subset of the TCP flows.  There are only a few exceptions to
+that rule: for example, the ARP table is shared by all corees and
+protected by RCU locks~\cite{mckenney1998read}, which means that
+updates are not coherency-free.
+
+Coherency-free execution is only possible when flows are consistently
+handled by the same elastic thread for both input and output.  For
+accepted connection, the RSS hardware ensures isolation and
+application cannot legally share a flow descriptor cookie across core.
+For outbound connections, the issue is trickier: \ix selects the
+source emphemeral port based on the requesting elastic thread. Since
+the Toeplitz hash function cannot be reversed, \ix simply probes the
+ephemeral namespace and computes the Toepliz hash until a match is
+found.  We note two side-effects: first, connections between and \ix
+client and a server will be replicated for each elastic thread; second
+the ephemeral ports no longer form a namespace, and an \ix client can
+easily open millions of connections (to distinct servers).
+
+
+
 
 
 \subsection{LibEvent Compatibility}
