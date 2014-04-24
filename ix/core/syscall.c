@@ -77,6 +77,9 @@ static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
 {
 	unsigned long i;
 	int ret;
+#ifdef ENABLE_KSTATS
+	kstats_accumulate save;
+#endif
 
 	if (!nr)
 		return 0;
@@ -84,7 +87,9 @@ static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
 		return -EFAULT;
 
 	for (i = 0; i < nr; i++) {
+		KSTATS_PUSH(bsys_dispatch_one, &save);
 		ret = bsys_dispatch_one(&d[i]);
+		KSTATS_POP(&save);
 		if (unlikely(ret))
 			return ret;
 	}

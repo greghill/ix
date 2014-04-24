@@ -10,6 +10,7 @@
 #include <ix/uaccess.h>
 #include <ix/ethdev.h>
 #include <ix/toeplitz.h>
+#include <ix/kstats.h>
 
 #include <lwip/tcp.h>
 
@@ -115,6 +116,8 @@ long bsys_tcp_accept(hid_t handle, unsigned long cookie)
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
 	struct pbuf *tmp;
 
+	KSTATS_VECTOR(bsys_tcp_accept);
+
 	log_debug("tcpapi: bsys_tcp_accept() - handle %lx, cookie %lx\n",
 		  handle, cookie);
 
@@ -146,6 +149,9 @@ long bsys_tcp_reject(hid_t handle)
 	 * FIXME: LWIP's synchronous handling of accepts
 	 * makes supporting this call impossible.
 	 */
+
+	KSTATS_VECTOR(bsys_tcp_reject);
+
 	log_err("tcpapi: bsys_tcp_reject() is not implemented\n");
 
 	return -RET_NOTSUP;
@@ -153,6 +159,8 @@ long bsys_tcp_reject(hid_t handle)
 
 ssize_t bsys_tcp_send(hid_t handle, void *addr, size_t len)
 {
+	KSTATS_VECTOR(bsys_tcp_send);
+
 	log_debug("tcpapi: bsys_tcp_send() - addr %p, len %lx\n",
 		  addr, len);
 
@@ -165,6 +173,8 @@ ssize_t bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
 	int i;
 	size_t len_xmited = 0;
+
+	KSTATS_VECTOR(bsys_tcp_sendv);
 
 	log_debug("tcpapi: bsys_tcp_sendv() - handle %lx, ents %p, nrents %ld\n",
 		  handle, ents, nrents);
@@ -230,6 +240,8 @@ long bsys_tcp_recv_done(hid_t handle, size_t len)
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
 	struct pbuf *recvd, *next;
 
+	KSTATS_VECTOR(bsys_tcp_recv_done);
+
 	log_debug("tcpapi: bsys_tcp_recv_done - handle %lx, len %ld\n",
 		  handle, len);
 
@@ -260,6 +272,8 @@ long bsys_tcp_close(hid_t handle)
 {
 	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
 	struct pbuf *recvd, *next;
+
+	KSTATS_VECTOR(bsys_tcp_close);
 
 	log_debug("tcpapi: bsys_tcp_close - handle %lx\n", handle);
 
@@ -472,6 +486,8 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 	struct ip_addr addr;
 	struct tcp_pcb *pcb;
 	struct tcpapi_pcb *api;
+
+	KSTATS_VECTOR(bsys_tcp_connect);
 
 	log_debug("tcpapi: bsys_tcp_connect() - id %p, cookie %lx\n",
 		  id, cookie);
