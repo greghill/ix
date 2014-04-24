@@ -492,6 +492,8 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 	log_debug("tcpapi: bsys_tcp_connect() - id %p, cookie %lx\n",
 		  id, cookie);
 
+	percpu_get(syscall_cookie) = cookie;
+
         if (unlikely(copy_from_user(id, &tmp, sizeof(struct ip_tuple)))) {
                 return -RET_FAULT;
         }
