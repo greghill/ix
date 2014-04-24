@@ -34,7 +34,7 @@ done before moving on to the next packet.  In contrast, a commodity OS is design
 with protocol processing decoupled from the application itself in
 order to enable flexibility in terms of resource scheduling and flow
 control. For example, a commodity OS relies on device and soft interrupts to context switch from application processing to protocol processing; 
-similarily, the OS' networking stack will generate a TCP \texttt{ACK} and
+similarly, the OS' networking stack will generate a TCP \texttt{ACK} and
 slide its receive window even though the application is not consuming
 data, up to some extent. Second, dataplanes are designed to operate in
 a \emph{flow-consistent, coherence-free} manner.
