@@ -5,6 +5,7 @@
 
 
 DEF_KSTATS(none);
+DEF_KSTATS(slow);
 DEF_KSTATS(idle);
 DEF_KSTATS(user);
 DEF_KSTATS(timer);
