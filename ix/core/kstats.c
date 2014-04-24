@@ -65,7 +65,7 @@ void kstats_leave(kstats_accumulate *saved_accu)
   }
 }
 
-static void kstats_printone(kstats_distr *d, const char *name, long sum_lat)
+static void kstats_printone(kstats_distr *d, const char *name, long total_cycles)
 {
   if (d->count) { 
     log_info("kstat: %2d %-30s %9lu %2d%% latency %7lu | %7lu | %7lu "
@@ -73,7 +73,7 @@ static void kstats_printone(kstats_distr *d, const char *name, long sum_lat)
 	   percpu_get(cpu_id),
 	   name,
 	   d->count,
-	   100 * d->tot_lat / sum_lat,
+	   100 * d->tot_occ / total_cycles,
 	   d->min_lat,
 	   d->tot_lat/d->count,
 	   d->max_lat,
