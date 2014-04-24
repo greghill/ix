@@ -36,5 +36,5 @@ if [ $BUILD_IX -eq 1 ]; then
   make -C $DIR/igb_stub $PARAMS $COMMON_TARGET
   make -C $DIR/ix       $PARAMS $COMMON_TARGET
   make -C $DIR/libix    $PARAMS $COMMON_TARGET
-  make -C $DIR/apps/tcp $PARAMS $COMMON_TARGET
+  make -C $DIR/apps/event $PARAMS $COMMON_TARGET
 fi

@@ -12,20 +12,25 @@ if [ "$UID" -ne 0 ]; then
   exit 1;
 fi
 
+# set defaults values from configuration file, if it exists
+if [ -f ~/.select_net.conf ]; then
+  . ~/.select_net.conf
+fi
+
 # set default values if not found in the environment
-foo=${DUNE_PATH:=~}
-foo=${IGB_STUB_PATH:=~}
-foo=${ALL_IFS:="eth4 eth5 eth6 eth7 eth8 eth9 eth10 eth11 bond0"}
-foo=${BOND:=bond0}
-foo=${BOND_SLAVES:="eth4 eth5 eth6 eth7"}
-foo=${SINGLE_NIC:=eth11}
-foo=${IP:=192.168.21.1}
-foo=${PAGE_COUNT_2MB:=10000}
+foo=${DUNE_PATH:=$DEF_DUNE_PATH}
+foo=${IGB_STUB_PATH:=$DEF_IGB_STUB_PATH}
+foo=${ALL_IFS:=$DEF_ALL_IFS}
+foo=${BOND_SLAVES:=$DEF_BOND_SLAVES}
+foo=${SINGLE_NIC:=$DEF_SINGLE_NIC}
+foo=${IP:=$DEF_IP}
+foo=${PAGE_COUNT_2MB:=$DEF_PAGE_COUNT_2MB}
+foo=${NIC_MODULE:=$DEF_NIC_MODULE}
 
 tear_down() {
   service irqbalance stop >/dev/null 2>&1 || true
   ifdown $ALL_IFS 2>/dev/null
-  modprobe -r ixgbe
+  modprobe -r $NIC_MODULE
   rmmod dune 2>/dev/null || true
   rmmod igb_stub 2>/dev/null || true
   for i in /sys/devices/system/node/node*/hugepages/hugepages-2048kB/nr_hugepages; do
@@ -34,15 +39,11 @@ tear_down() {
 }
 
 setup_linux() {
-  INTEL_10G_CARD=$(ifconfig -a | grep -i 90:e2:ba || true)
-  
-  if [ "$INTEL_10G_CARD" != "" ]; then
-    tear_down
-    service irqbalance start >/dev/null
-    modprobe ixgbe
-    ifdown $ALL_IFS 2>/dev/null
-  fi
-  
+  tear_down
+  service irqbalance start >/dev/null
+  modprobe $NIC_MODULE
+  ifdown $ALL_IFS 2>/dev/null
+
   sysctl net.core.netdev_max_backlog=1000 > /dev/null
   sysctl net.core.rmem_max=212992 > /dev/null
   sysctl net.core.wmem_max=212992 > /dev/null
