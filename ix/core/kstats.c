@@ -38,7 +38,7 @@ void kstats_enter(kstats_distr *n, kstats_accumulate *saved_accu)
 void kstats_leave(kstats_accumulate *saved_accu)
 {
   kstats_accumulate *acc = &percpu_get(_kstats_accumulate);
-  uint64_t now = rdtscp(NULL);
+  uint64_t now = rdtsc();
   uint64_t diff_lat = now - acc->start_lat;
   uint64_t diff_occ = now - acc->start_occ + acc->accum_time;
   kstats_distr *cur = acc->cur;
