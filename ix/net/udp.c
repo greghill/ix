@@ -9,6 +9,7 @@
 #include <ix/syscall.h>
 #include <ix/uaccess.h>
 #include <ix/vm.h>
+#include <ix/kstats.h>
 
 #include <asm/chksum.h>
 
@@ -132,6 +133,8 @@ long bsys_udp_send(void __user *__restrict vaddr, size_t len,
 	int ret;
 	int i;
 
+	KSTATS_VECTOR(bsys_udp_send);
+
 	/* validate user input */
 	if (unlikely(len > UDP_MAX_LEN))
 		return -RET_INVAL;
@@ -191,6 +194,8 @@ long bsys_udp_send(void __user *__restrict vaddr, size_t len,
 long bsys_udp_sendv(struct sg_entry __user *ents, unsigned int nrents,
 		    struct ip_tuple __user *id, unsigned long cookie)
 {
+	KSTATS_VECTOR(bsys_udp_sendv);
+
 	return -RET_NOSYS;
 }
 
@@ -207,6 +212,8 @@ long bsys_udp_recv_done(void *iomap)
 	void *addr = iomap_to_mbuf(pool, iomap);
 	size_t off = PGOFF_2MB(addr);
 	
+	KSTATS_VECTOR(bsys_udp_recv_done);
+
 	/* validate the address */
 	if (unlikely((uintptr_t) addr < (uintptr_t) pool->buf ||
 		     (uintptr_t) addr >=

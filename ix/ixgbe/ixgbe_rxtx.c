@@ -179,10 +179,13 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		rxdp->read.hdr_addr = cpu_to_le32(maddr);
 		rxdp->read.pkt_addr = cpu_to_le32(maddr);
 
-		if (likely(valid_checksum))
+		if (likely(valid_checksum)) {
+			KSTATS_PUSH(eth_input, &save);
 			eth_input(rx, b);
-		else
+			KSTATS_POP(&save);
+		} else {
 			mbuf_free(b);
+		}
 
 		rxq->pos++;
 		nb_descs++;
