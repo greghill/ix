@@ -7,7 +7,7 @@ struct ctx {
 int mtcp_read_handler(struct ctx *ctx, int sock_read)
 {
     int rd, rdtot, wr, wrtot;
-    char buf[4096];
+    char buf[8192];
     
     rd = mtcp_read(ctx->mctx, sock_read, buf, sizeof(buf));
     rdtot = rd;
@@ -23,7 +23,7 @@ int mtcp_read_handler(struct ctx *ctx, int sock_read)
             } else if (wr == -1 && errno == EAGAIN) {
                 continue;
             } else {
-                perror("write");
+                perror("read");
                 exit(1);
             }
         }
