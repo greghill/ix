@@ -498,8 +498,6 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
                 return -RET_FAULT;
         }
 
-	tmp.src_ip = hton32(cfg_host_addr.addr);
-
 	if (unlikely(get_local_port_and_set_queue(&tmp))) {
                 return -RET_FAULT;
 	}
@@ -529,13 +527,13 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 	tcp_err(pcb, on_err);
 	tcp_sent(pcb, on_sent);
 
-	addr.addr = tmp.src_ip;
+	addr.addr = hton32(cfg_host_addr.addr);
 
 	err = tcp_bind(pcb, &addr, tmp.src_port);
 	if (unlikely(err != ERR_OK))
 		goto connect_fail;
 
-	addr.addr = tmp.dst_ip;
+	addr.addr = hton32(tmp.dst_ip);
 
 	err = tcp_connect(pcb, &addr, tmp.dst_port, on_connected);
 	if (unlikely(err != ERR_OK))
