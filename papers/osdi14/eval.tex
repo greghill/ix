@@ -22,7 +22,7 @@ applications such as memcached and XXX using the
 
 \edb{Describes EPFL setup:}
 Our experimental setup consists of a cluster of 19 clients and one
-server connected by an HP 5820AF-24XG low-latency 10GbE switch.  The client
+server connected by an HP 5820AF-24XG 10GbE switch.  The client
 machines are a mix of dual Xenon E5-2637 running at 3.5 Ghz and single Xenon E5-2650 running at 2.6 Ghz with a single, Intel
 82599EB 10GbE NIC connecting to the switch.  The server is a dual-Xeon E5-2665
 running at 2.4 Ghz with 256 GB of DRAM with four Intel 2P X520 NICs.  Each
@@ -83,15 +83,25 @@ determines how quickly this single ping-pong behavior can utilize 50\%
 of the available bandwidth on the link.
 
 Fig.~\ref{fig:pingpong} compares the performance of various
-configurations for different message sizes and
-Table~\ref{tbl:pingpong} additionally lists the average and 99\%
-latencies for 64B messages, as well as the minimal message size
-required to exceed 5Gbps of bandwidth.  Going from Linux to \ix saves
-\twiddle 15\microsecond on each end.  When both ends are running \ix,
-the end-to-end latency is reduced by two-thirds to 17\microsecond.
-Similarily, the bandwidth increases much faster with \ix. \edb{TODO - Based on data}
+configurations for different message sizes.  As expected, the
+bandwidth increases with the message size, and rises to half of the
+maximum bandwidth with messages as small as XXXKB for \ix-\ix.  At the
+other end of the spectrum, two Linux machines need to exchange
+messages of at least XXXKB to reach the same bandwdith.  mTCP behaves
+\edb{TODO}.
 
-\edb{THE LATENCY OF 17\microsecond IS UNDERWHELMING -- FAST PATHING IT SHOULD HELP}
+Table~\ref{tbl:pingpong} lists the average and 99\% latencies for 64B
+messages for the same benchmark.  The impact of the \ix dataplane
+model is evident: for the hardware, the one-way latency between \ix
+systems is as low as 7.3\microsecond on our hardware\footnote{Our
+HP switch is ``well-amortized'' by 2014, which likely impacts
+  performance; we performed the same benchmark on a low-latency Arista
+  switch and measured 5.6\microsecond between a pair of comparable
+  (but not identical servers). We have a low-latency switch on order
+  that will be used for the results of the camera-ready.}.  In
+contrast, the software overhead of Linux add XXX\microsecond over \ix.
+mTCP ... \edb{TODO}
+
 
 \subsection{Handling high TCP connection churn}
 \label{sec:eval:short}
@@ -159,13 +169,26 @@ delivers XXX\% of its own peak throughput\footnote{Unexplained
 \subsection{Application performance -- memcache}
 \label{sec:eval:memcache}
 
-\todo Compare apples-to-apples with Megapipe, and mTCP in terms of microbenchmarks.
+\input{figs/float-mutilate}
 
-\todo Baseline comparison of state-of-the art systems include:  Linux (some recent version, with SO\_REUSEPORT); Megapipe (if possible), mTCP (if possible). 
+We now validate the performance benefits of the protected dataplane
+design on memcached -- a real,world, widely deployed, in-memory
+key-value store built on top of the libevent framework.  We use the
+mutilate~\cite{misc:mutilate} load-generator and tool to measure
+average and 99\% latency as a function of the throughput delivered by
+the server~\cite{Leverich:RHSU:2014}.
 
-\todo Microbenchmark: short TCP transactions (echo server, as defined in megapipe).   Goal is to beat mTCP (and therefore all others) hands down.
+Fig.~\ref{fig:mutilate} reports the latencies as a function of the
+number of queries per second.  The peak QPS is measured using \ix at
+XXX, which maps to a bandwidth leaving the server of XXX Gbps, or XX\%
+of the theoretical wire rate of the machine.  We report the nubmers
+for Linux and \ix for XXX and YYY established, concurrent
+connections served by the 18 clients.
 
-\todo Benchmark: memcached - compare with FB results (?)
+Our results show that \edb{TODO}.....
+
+\subsection{Web serving performance}
+
 
 \todo Benchmark: lightttpd -- used by Affinity-Accept and mTCP.  
 
@@ -176,4 +199,4 @@ delivers XXX\% of its own peak throughput\footnote{Unexplained
 %%%%% very optimistic
 %%%%%
 
-\input{eval-mtier}
+%\input{eval-mtier}
