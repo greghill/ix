@@ -34,6 +34,26 @@ Linux foundation.  Second, Arrakis runs its own, homegrown, networking
 stack at userlevel, whereas \ix uses runs its networking stack
 protected from the application.
 
+\myparagraph{Library operating systems:}
+In an Exokernel, the role of the kernel is limited to the same
+multiplexing of hardware resources, and all abstractions are
+implemented by library operating systems linked with
+applications~\cite{DBLP:conf/sosp/EnglerKO95}; the authors observe
+that applications are best suited to implement abstractions, as an
+application of the end-to-end
+principle~\cite{DBLP:journals/tocs/SaltzerRC84}.  Disco proposed to
+use hardware virtualization to run specialized operating systems
+running a single application~\cite{DBLP:journals/tocs/BugnionDGR97}, a
+case also made more recently by Unikernels in the context of
+XXX~\cite{DBLP:conf/asplos/MadhavapeddyMRSSGSHC13}.  \ix builts on
+these notions: the control plane merely multiplexes hardware resource
+among dataplane; the \ix kernel is a single-application operating
+system using hardware virtualization for protection; finally, \ix
+applies the end-to-end principle by safely exposing TCP flow control
+to applications without the need for additional abstractions.
+
+
+
 \myparagraph{User-level networking stacks:} Our work shares the same
 motivation as mTCP~\cite{jeong2014mtcp} in providing highly-scable
 networking stack for web-scale applications, including in the presence
@@ -111,6 +131,7 @@ Stuff to cite (that is not otherwise cited) ... that we should either incorporat
 
 
 \begin{enumerate}
+
 \oldcite{Alizadeh DCTCP}{DBLP:conf/sigcomm/AlizadehGMPPPSS10}
 \oldcite{Libra JVM}{DBLP:conf/vee/AmmonsABSGKKRHW07}
 \oldcite{Scheduler activations}{DBLP:journals/tocs/AndersonBLL92}
@@ -119,11 +140,13 @@ Stuff to cite (that is not otherwise cited) ... that we should either incorporat
 \oldcite{Multikernel}{DBLP:conf/sosp/BaumannBDHIPRSS09}
 \oldcite{RadixVM}{DBLP:conf/eurosys/ClementsKZ13}
 \oldcite{TCP Onloading}{openonload}
-\oldcite{Unikernel - case for single app OS}{DBLP:conf/asplos/MadhavapeddyMRSSGSHC13}
 \oldcite{Waldspurger - CPU balloning}{DBLP:conf/osdi/Waldspurger02}
 \oldcite{Drepper - cost of virtualization}{DBLP:journals/queue/Drepper08}
-\oldcite{Disco}{DBLP:journals/tocs/BugnionDGR97}
-\oldcite{Salzer -E2E principle}{DBLP:journals/tocs/SaltzerRC84}
+\oldcite{Thialfi}{DBLP:conf/sosp/AdyaCMP11}
+\oldcite{Cavium Octeon}{cavium-octeon}
+\oldcite{Fan 2013 Mem Cache 3}{fan2013memc3}
+\oldcite{Case against userlevel networking}{magoutis2004case}
+
 \end{enumerate}
 
 

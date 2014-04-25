@@ -38,6 +38,7 @@ is the Ubuntu 12.04.4 LTS distribution running the 3.11.10 Linux kernel.  Althou
 the server has two sockets, our experiments pin IRQs\george{not really}, processes, and
 the IX dataplane onto a single socket and use memory from that socket;
 all NICs are attached to that socket via the PCIe root complex. 
+
 \edb{CONTREVERSIAL: We chose to limit execution to a single NUMA node to simplify the
   analysis because of the asymmetrical nature of our hardware, to
   model the experimental setup after the one used in recent related
@@ -57,11 +58,15 @@ recently-published user-level TCP stack specifically designed for
 scalability~\cite{jeong2014mtcp}.  Unless specifically mentioned, all
 clients run a baseline Linux configuration. 
 
-The Linux server implementations use the
-\texttt{libevent} framework running on XXX threads to serve the
-clients. The mTCP server implementation use the native mTCP API
-running on up to 8 cores (within each core, one hyperthread is
-dedicated to processing the network stack).  We downloaded and installed mTCP \edb{vXXX} from the public-domain implementation~\cite{missing}, but re-wrote the benchmarks as they were not part of the distribution.
+The Linux server implementations use the \texttt{libevent} framework
+running on XXX threads to serve the clients. The mTCP server
+implementation use the native mTCP API running on up to 8 cores
+(within each core, one hyperthread is dedicated to processing the
+network stack).  We downloaded and installed mTCP
+from the public-domain implementation~\cite{url:mtcp}, but re-wrote the
+benchmarks as they were not part of the distribution.  To run mTCP, we
+switch to a kernel-2.6.36, as this is the most recent supported kernel
+version.
 Finally, \ix server use
 the native \ix API running on up to 8 cores (using symmetrically both
 hyperthreads).  For all experiments, we use the same Linux client code, generally also written using \texttt{libevent}.
