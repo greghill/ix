@@ -8,7 +8,11 @@
 
 #include "ixev.h"
 
-#define BUFSIZE	64
+#define TSC_RATE        3100000000
+#define BUFSIZE		64
+
+static unsigned long tsc;
+static unsigned long count;
 
 enum {
 	CLIENT_MODE_RECV,
@@ -37,9 +41,14 @@ static void main_handler(struct ixev_ctx *ctx, unsigned int reason)
 {
 	ssize_t ret;
 
+	if (rdtsc() - tsc > TSC_RATE) {
+		printf("count is %ld / s\n", count);
+		count = 0;
+		tsc = rdtsc();
+	}
 	while (1) {
 		if (c->mode == CLIENT_MODE_SEND) {
-			ret = ixev_send(ctx, &c->data[c->bytes_sent], BUFSIZE - c->bytes_sent);
+			ret = ixev_send_zc(ctx, &c->data[c->bytes_sent], BUFSIZE - c->bytes_sent);
 			if (ret <= 0) {
 				if (ret != -EAGAIN)
 					client_die();
@@ -65,6 +74,7 @@ static void main_handler(struct ixev_ctx *ctx, unsigned int reason)
 			if (c->bytes_recvd < BUFSIZE)
 				return;
 
+			count++;
 			c->bytes_sent = 0;
 			ixev_set_handler(ctx, IXEVOUT, &main_handler);
 			c->mode = CLIENT_MODE_SEND;
@@ -92,6 +102,7 @@ static void client_dialed(struct ixev_ctx *ctx, long ret)
 	c->bytes_sent = 0;
 
 	ixev_set_handler(ctx, IXEVOUT, &main_handler);
+	tsc = rdtsc();
 	main_handler(&c->ctx, IXEVOUT);
 }
 
