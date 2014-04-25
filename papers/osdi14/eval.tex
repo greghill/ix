@@ -97,10 +97,10 @@ Table~\ref{tbl:pingpong} lists the average and 99\% latencies for 64B
 messages for the same benchmark.  The impact of the \ix dataplane
 model is evident: for the hardware, the one-way latency between \ix
 systems is as low as 7.3\microsecond on our hardware\footnote{Our HP
-  switch is ``well-amortized'' by 2014, which likely impacts
-  performance; we performed the same benchmark on a low-latency Arista
+  switch is well-amortized by now, which likely impacts
+  performance; we performed the same benchmark on a current, low-latency Arista
   switch and measured 5.6\microsecond between a pair of comparable
-  (but not identical servers). We have a low-latency switch on order
+  (but not identical) servers running \ix. We have a low-latency switch on order
   that will be used for the results of the camera-ready.}.  In
 contrast, the software overhead of Linux add 16\microsecond over
 \ix. As for mTCP, its asynchronous model is optimized to bound latency
