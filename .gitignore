@@ -35,4 +35,5 @@ apps/udp/ix_server
 apps/udp/ix_client
 apps/event/pingpong
 apps/event/stream
-
+ix/core/profiler_funcinfo_init.h
+*.generated.S

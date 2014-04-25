@@ -18,6 +18,7 @@
 #include <ix/syscall.h>
 #include <ix/kstats.h>
 #include <ix/queue.h>
+#include <ix/profiler.h>
 
 #include <net/ip.h>
 #include <net/icmp.h>
@@ -701,6 +702,8 @@ int main(int argc, char *argv[])
 			log_err("init: failed to initialize networking for cpu\n");
 			return ret;
 		}
+
+		profiler_init();
 	}
 
 	ret = net_init();

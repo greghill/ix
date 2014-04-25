@@ -38,10 +38,22 @@ endef
 
 include $(patsubst %, %/dir.mk, $(DIRS))
 
-OBJS=$(subst .c,.o,$(SRCS))
-OBJS+=$(subst .S,.o,$(ASM_SRCS))
+%.generated.S: %.c
+	$(CC) $(CFLAGS) -o $@ -S $<
 
 all: ix
+
+ifneq ($(ENABLE_PROFILER),)
+CFLAGS += -DENABLE_PROFILER
+OBJS=$(subst .c,.generated.S,$(SRCS))
+DEPENDENCY = core/profiler_funcinfo_init.h
+core/profiler_funcinfo_init.h: $(OBJS)
+	python core/profiler_instrument.py -o core/profiler_funcinfo_init.h $(subst .c,.generated.S,$(SRCS))
+OBJS+=core/profiler.o
+else
+OBJS=$(subst .c,.o,$(SRCS))
+endif
+OBJS+=$(subst .S,.o,$(ASM_SRCS))
 
 depend: .depend
 
@@ -52,7 +64,7 @@ ifneq ($(MAKECMDGOALS),clean)
 include .depend
 endif
 
-ix: $(OBJS) ix.ld
+ix: $(DEPENDENCY) $(OBJS) ix.ld
 	$(LD) $(LDFLAGS) -o ix $(OBJS) $(LDLIBS)
 
 clean:
