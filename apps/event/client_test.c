@@ -37,34 +37,38 @@ static void main_handler(struct ixev_ctx *ctx, unsigned int reason)
 {
 	ssize_t ret;
 
-	if (c->mode == CLIENT_MODE_SEND) {
-		ret = ixev_send(ctx, &c->data[c->bytes_sent], BUFSIZE - c->bytes_sent);
-		if (ret <= 0) {
-			if (ret != -EAGAIN)
-				client_die();
-			return;
+	while (1) {
+		if (c->mode == CLIENT_MODE_SEND) {
+			ret = ixev_send(ctx, &c->data[c->bytes_sent], BUFSIZE - c->bytes_sent);
+			if (ret <= 0) {
+				if (ret != -EAGAIN)
+					client_die();
+				return;
+			}
+
+			c->bytes_sent += ret;
+			if (c->bytes_sent < BUFSIZE)
+				return;
+
+			c->bytes_recvd = 0;
+			ixev_set_handler(ctx, IXEVIN, &main_handler);
+			c->mode = CLIENT_MODE_RECV;
+		} else {
+			ret = ixev_recv(ctx, &c->data[c->bytes_recvd], BUFSIZE - c->bytes_recvd);
+			if (ret <= 0) {
+				if (ret != -EAGAIN)
+					client_die();
+				return;
+			}
+
+			c->bytes_recvd += ret;
+			if (c->bytes_recvd < BUFSIZE)
+				return;
+
+			c->bytes_sent = 0;
+			ixev_set_handler(ctx, IXEVOUT, &main_handler);
+			c->mode = CLIENT_MODE_SEND;
 		}
-
-		c->bytes_sent += ret;
-		if (c->bytes_sent < BUFSIZE)
-			return;
-
-		c->bytes_recvd = 0;
-		ixev_set_handler(ctx, IXEVIN, &main_handler);
-	} else {
-		ret = ixev_recv(ctx, &c->data[c->bytes_recvd], BUFSIZE - c->bytes_recvd);
-		if (ret <= 0) {
-			if (ret != -EAGAIN)
-				client_die();
-			return;
-		}
-
-		c->bytes_recvd += ret;
-		if (c->bytes_recvd < BUFSIZE)
-			return;
-
-		c->bytes_sent = 0;
-		ixev_set_handler(ctx, IXEVOUT, &main_handler);
 	}
 }
 
