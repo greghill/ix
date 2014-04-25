@@ -1,2 +1,28 @@
 
 \section{Conclusion}
+
+We have presented \ix, a dataplane operating system for event-driven,
+web-scale applications.  Although event-driven applications have
+become the norm in web-scale applications, they typically run on
+commodity operating system and networking stacks designed and
+optimised for the thread-oriented applications.  In contrast, our
+architecture leverages hardware virtualization to separate the control
+plane, the \ix kernel instances, and the event-driven applications
+running on top of \ix.  The system is designed to ensure high packet
+rates, to offer micro-second latency response times to clients
+including in high occupancy situations, to scale to hundreds of
+thousands of TCP connections, and to allow for an coarse-grain, yet
+elastic allocation of hardware resources.
+
+Our evaluation on stressful micro-benchmarks shows that \ix can
+deliver wire-rate performance in most situations and typically
+outperforms Linux 3.3 by an order of magnitude and mTCP, a
+state-of-the-art userlevel TCP stack, by a factor of three.  Our
+latency-sensitive benchmarks indicate that it can deliver one-way
+messages in \twiddle 7\microsecond.  Our evaluation with memcached, a
+real-world key-value store shows that \ix can deliver XXXx queries per
+second -- corresponding to XXX\% of the maximal wire rate at 4x10GbE -- with
+latencies measured at the 99th percentile as low as XXX when operating
+at 80\% of capacity. 
+
+
