@@ -90,22 +90,23 @@ of the available bandwidth on the link.
 Fig.~\ref{fig:pingpong} compares the performance of various
 configurations for different message sizes.  As expected, the
 bandwidth increases with the message size, and rises to half of the
-maximum bandwidth with messages as small as XXXKB for \ix-\ix.  At the
-other end of the spectrum, two Linux machines need to exchange
-messages of at least XXXKB to reach the same bandwdith.  mTCP behaves
-\edb{TODO}.
+maximum bandwidth with messages as small as XXXKB for \ix-\ix.  The performance of Linux-Linux and Linux-mTCP is similar, with messages of at least XXXKB required to reach the same bandwidth.
+
 
 Table~\ref{tbl:pingpong} lists the average and 99\% latencies for 64B
 messages for the same benchmark.  The impact of the \ix dataplane
 model is evident: for the hardware, the one-way latency between \ix
-systems is as low as 7.3\microsecond on our hardware\footnote{Our
-HP switch is ``well-amortized'' by 2014, which likely impacts
+systems is as low as 7.3\microsecond on our hardware\footnote{Our HP
+  switch is ``well-amortized'' by 2014, which likely impacts
   performance; we performed the same benchmark on a low-latency Arista
   switch and measured 5.6\microsecond between a pair of comparable
   (but not identical servers). We have a low-latency switch on order
   that will be used for the results of the camera-ready.}.  In
-contrast, the software overhead of Linux add XXX\microsecond over \ix.
-mTCP ... \edb{TODO}
+contrast, the software overhead of Linux add 16\microsecond over
+\ix. As for mTCP, its asynchronous model is optimized to bound latency
+distributions, but not necessarily to deliver the lowest possible
+latencies; consequently, mTCP's latency is worst than Linux itself.
+
 
 
 \subsection{Handling high TCP connection churn}
