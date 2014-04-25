@@ -462,7 +462,8 @@ int get_local_port_and_set_queue(struct ip_tuple *id)
 		percpu_get(local_port)++;
 		if (percpu_get(local_port) >= (percpu_get(cpu_id) + 1) * PORTS_PER_CPU)
 			percpu_get(local_port) = percpu_get(cpu_id) * PORTS_PER_CPU + 1;
-		hash = toeplitz_rawhash_addrport(id->src_ip, id->dst_ip, hton16(percpu_get(local_port)), hton16(id->dst_port));
+		hash = toeplitz_rawhash_addrport(hton32(id->src_ip), hton32(id->dst_ip),
+						 hton16(percpu_get(local_port)), hton16(id->dst_port));
 		queue_idx = hash & (ETH_RSS_RETA_MAX_QUEUE - 1);
 		if (percpu_get(eth_rx_bitmap) & (1 << queue_idx)) {
 			id->src_port = percpu_get(local_port);
@@ -498,6 +499,8 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
                 return -RET_FAULT;
         }
 
+	tmp.src_ip = cfg_host_addr.addr;
+
 	if (unlikely(get_local_port_and_set_queue(&tmp))) {
                 return -RET_FAULT;
 	}
@@ -527,7 +530,7 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 	tcp_err(pcb, on_err);
 	tcp_sent(pcb, on_sent);
 
-	addr.addr = hton32(cfg_host_addr.addr);
+	addr.addr = hton32(tmp.src_ip);
 
 	err = tcp_bind(pcb, &addr, tmp.src_port);
 	if (unlikely(err != ERR_OK))
