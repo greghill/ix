@@ -2,34 +2,28 @@
 
 \begin{abstract}
 
-Web-scale applications are redefining the requirements of system
-software, and in particular in the way system software implements the
-TCP/IP networking stack.  The classic requirements to provide moderate
-connection scalability, but high streaming performance with minimized
-CPU occupancy is being replaced by new requirements that include
-dealing with very high packet rates, enabling latency-sensitive
-applications to respond within microseconds, both in the average and
-the tail latency case, the ability to support hundreds of thousands of
-connections, possibly with high churn, and elastically manage system
-resources.  The conventional wisdom is that such requirements are best addressed
-outside of commodity operating system, either at userlevel or offloaded into
-intelligent hardware.  
+  Web-scale applications are placing aggressive demands on the
+  implementation of the TPC/IP networking stack in modern systems,
+  such as high packet rates, microsecond-scale tail latencies, support
+  for hundreds of thousands of connections, and elastic use of system
+  resources. The conventional wisdom is that such requirements are
+  best addressed outside the operating system, in a user-level
+  implentation of networking stack.
 
-We present IX, a dataplane operating system specifically designed for
-web-scale, event-driven applications.  IX addresses these new
-application requirements through a novel architecture that uses
-virtualization hardware to separate control plane from the dataplanes,
-and to offer protection to the dataplane.  The IX kernel exposes a
-native, zero-copy API that safely but explicitly exposes flow control
-to untrusted software.  IX is designed to scale on multicore hardware
-through a coherency-free, run-to-completion execution model.
+  We present {\it IX}, a {\it dataplane operating system} specifically
+  designed for web-scale, event-driven applications.  The IX
+  architecture separates control plane from the dataplanes and
+  provides a native, zero-copy API that explicitly exposes flow
+  control to applications. However, IX uses hardware virtualization to
+  offer the same protection model as commodity operating systems. IX
+  optimizes for both bandwidth and latency by processing bounded
+  batches of packets to completion and by eliminating coherence
+  traffic and synchronization on multi-core hardware. 
 
-In userspace, a compatiblility library exposes an API similar to
-libevent to legacy applications.  Our evaluation using microbenchmarks
-on that stack show that IX outperforms Linux on nearly all benchmarks
-by one order of magnitude, and a state-of-the-art user-space
-networking stack by a factor of XXX.  Our evaluation using real-world
-applications simmilar gains, and that the porting effort is minimal.
-
+  We demonstrate that IX outperforms Linux by X for packet rate and by
+  Y for latency. IX also outperforms a state-of-the-art, user-space
+  networking stack by  X for packet rate and by Y for latency. We also
+  show that IX efficiently supports Z connections and improve the
+  overall performance of real-world applications by a factor of W. 
 
 \end{abstract}
