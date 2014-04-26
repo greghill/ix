@@ -170,12 +170,14 @@ elif [ $CLIENT_SPEC = 'Linux-Libevent' ]; then
   CLIENT_CMDLINE="./client $SERVER_IP $SERVER_PORT 1 1 \$MSG_SIZE 999999999"
   DEPLOY_FILES="select_net.sh client"
   CLIENT_NET="linux single"
+  KILL_CLIENT="killall -KILL client 2> /dev/null || true"
 elif [ $CLIENT_SPEC = 'Linux-Simple' ]; then
   THREADS=1
   CONNECTIONS_PER_THREAD=1
   CLIENT_CMDLINE="./simple_client $SERVER_IP $SERVER_PORT $THREADS $CONNECTIONS_PER_THREAD \$MSG_SIZE 999999999 0 0"
   DEPLOY_FILES="select_net.sh simple_client"
   CLIENT_NET="linux single"
+  KILL_CLIENT="killall -KILL simple_client 2> /dev/null || true"
 elif [ $CLIENT_SPEC = 'Netpipe' ]; then
   DEPLOY_FILES="select_net.sh NPtcp"
   CLIENT_NET="linux single"
@@ -188,6 +190,7 @@ elif [ $CLIENT_SPEC = 'IX' ]; then
   CLIENT_CMDLINE=" sudo ./ix -q -d 0000:01:00.0 -c 0 /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ./client_test $SERVER_IP $SERVER_PORT \$MSG_SIZE"
   DEPLOY_FILES="select_net.sh ../ix/ix ../apps/event/client_test ../dune/dune.ko ../igb_stub/igb_stub.ko"
   CLIENT_NET="ix node0"
+  KILL_CLIENT="sudo killall -KILL ix 2> /dev/null || true"
 else
   echo 'invalid parameters' >&2
   exit 1
@@ -202,13 +205,23 @@ fi
 
 . $DIR/bench-common.sh
 
+on_exit_common() {
+  if [ -z "$KILL_CLIENT" ]; then return; fi
+  IFS=',' read -ra HOSTS <<< $CLIENT_HOSTS
+  for HOST in "${HOSTS[@]}"; do
+    ssh $HOST "$KILL_CLIENT"
+  done
+}
+
 on_exit_ix() {
+  on_exit_common
   PID=`pidof ix||echo 0`
   if [ $PID -eq 0 ]; then return; fi
   sudo kill -KILL $PID
 }
 
 on_exit_linux_rpc() {
+  on_exit_common
   PID=`pidof pingpongs||echo 0`
   if [ $PID -eq 0 ]; then return; fi
   kill $PID
@@ -216,6 +229,7 @@ on_exit_linux_rpc() {
 }
 
 on_exit_mtcp_rpc() {
+  on_exit_common
   PID=`pidof pingpongs_mtcp||echo 0`
   if [ $PID -eq 0 ]; then return; fi
   kill $PID
@@ -224,6 +238,7 @@ on_exit_mtcp_rpc() {
 }
 
 on_exit_linux_stream() {
+  on_exit_common
   PID=`pidof server||echo 0`
   if [ $PID -eq 0 ]; then return; fi
   kill $PID
@@ -231,6 +246,7 @@ on_exit_linux_stream() {
 }
 
 on_exit_mtcp_stream() {
+  on_exit_common
   PID=`pidof server_mtcp||echo 0`
   if [ $PID -eq 0 ]; then return; fi
   kill $PID
@@ -239,6 +255,7 @@ on_exit_mtcp_stream() {
 }
 
 on_exit_netpipe() {
+  on_exit_common
   PID=`pidof NPtcp||echo 0`
   if [ $PID -eq 0 ]; then return; fi
   kill $PID
