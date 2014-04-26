@@ -48,16 +48,17 @@ while other requests are issued in a parallel, fan-out manner.
 % from the massive data sets and the users' behaviors via machine
 % learning~\cite{missing}.
 
-Each node for these services responds to external requests such as new
-incoming connections, data requests from existing connections, or
-replies to requests made to a downstream service.  The most efficient
-implementations use event-driven frameworks in which the service
-logic interacts with the framework exclusively via non-blocking
-calls~\cite{DBLP:conf/usenix/PaiDZ99,missing,missing}. This is in contrast with the classic thread-oriented
-programming paradigm, in which sessions are divided among a large pool
-of (kernel) threads, which block while waiting for incoming traffic or
-outstanding replies. For example, event-oriented nginx HTTP server
-and proxy~\cite{reese2008nginx} outperforms the thread-oriented Apache
+Each node for these services responds to requests such as new incoming
+connections, data requests from existing connections, or replies to
+requests made to a downstream service.  The most efficient
+implementations use event-driven frameworks in which the service logic
+interacts with the framework exclusively via non-blocking
+calls~\cite{DBLP:conf/usenix/PaiDZ99,missing,missing}. This is in
+contrast with the classic thread-oriented programming paradigm, in
+which sessions are divided among a large pool of (kernel) threads,
+which block while waiting for incoming traffic or outstanding
+replies. For example, event-oriented nginx HTTP server and
+proxy~\cite{reese2008nginx} outperforms the thread-oriented Apache
 server~\cite{misc:apache}.
 
 High-level libraries simplify the development of event-driven
@@ -124,7 +125,7 @@ unlikely to result into end-to-end application gains.
 multi-core servers, it is desirable to efficiently support both a
 large number of concurrent connections per server, as well as high
 churn in these connections.  Ideally, the only limitation to a
-server's concurrent connection count should be its memory capacity and
+server's concurrent connection count should be its memory capacity, and
 the packet rate and tail latency should be independent of the number
 of concurrent connections or the rate of churn.
  
@@ -138,16 +139,16 @@ resulting in deployments that use UDP datagrams for \texttt{get}
 operations and an aggregation proxy for \texttt{put}
 operations~\cite{nishtala2013scaling}.
 
-\myparagraph{Resource elasticity:} The load of web-scale applications varies
-significantly due to diurnal patterns and unexpected spikes in user
-traffic. Ideally, each service node will use the minimum amount of
-resources (cores, memory, or IOPS) needed to satisfy packet rate and
-tail latency requirements at any point in time. The remaining
+\myparagraph{Resource elasticity:} The load of web-scale applications
+varies significantly due to diurnal patterns and unexpected spikes in
+user traffic. Ideally, each service node will use the minimum amount
+of resources (cores, memory, or IOPS) needed to satisfy packet rate
+and tail latency requirements at any point in time. The remaining
 resources can be allocated to other applications in a shared
 datacenter (e.g., background
 analytics)~\cite{Hindman:2011:MPF,DBLP:conf/asplos/DelimitrouK14,Leverich:RHSU:2014}
 or placed into low power modes in order to achieve energy
-proportionality~\cite{DBLP:journals/computer/BarrosoH07}.
+proportionality~\cite{DBLP:journals/computer/BarrosoH07, Lo:2014:TWE}.
 %\christos{keeping this simple since we will not do much in this paper}
 
 % Datacenters for web-scale applications are
