@@ -324,6 +324,7 @@ struct settings {
     char *hash_algorithm;     /* Hash algorithm in use */
     int lru_crawler_sleep;  /* Microsecond sleep between items */
     uint32_t lru_crawler_tocrawl; /* Number of items to crawl per run */
+    bool thread_affinity;
 };
 
 extern struct stats stats;
