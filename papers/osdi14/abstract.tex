@@ -4,11 +4,11 @@
 
   Web-scale applications are placing aggressive demands on the
   implementation of the TPC/IP networking stack in modern systems,
-  such as high packet rates, microsecond-scale tail latencies, support
+  such as high packet rates, microsecond-scale tail latency, support
   for hundreds of thousands of connections, and elastic use of system
   resources. The conventional wisdom is that such requirements are
   best addressed outside the operating system, in a user-level
-  implentation of networking stack.
+  implentation of the networking stack.
 
   We present {\it IX}, a {\it dataplane operating system} specifically
   designed for web-scale, event-driven applications.  The IX
@@ -18,12 +18,13 @@
   offer the same protection model as commodity operating systems. IX
   optimizes for both bandwidth and latency by processing bounded
   batches of packets to completion and by eliminating coherence
-  traffic and synchronization on multi-core hardware. 
+  traffic and synchronization on multi-core systems. 
 
   We demonstrate that IX outperforms Linux by X for packet rate and by
   Y for latency. IX also outperforms a state-of-the-art, user-space
-  networking stack by  X for packet rate and by Y for latency. We also
-  show that IX efficiently supports Z connections and improve the
-  overall performance of real-world applications by a factor of W. 
+  networking stack by X for packet rate and by Y for
+  latency. Moreover, we show that IX efficiently supports Z
+  connections and improves the overall performance of real-world
+  applications by a factor of W.
 
 \end{abstract}
