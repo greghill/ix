@@ -2,19 +2,20 @@
 \section{Evaluation}
 \label{sec:eval}
 
-We evaluate the scalability of \ix and compare it to the Linux baseline
-and to mTCP, the state-of-the-art user-space TCP alternative available
-on the same hardware.  We first describe the experimental setup
-(\S\ref{sec:eval:setup}).  We then characterize the performance using
-a series of micro-benchmark: the popular NetPIPE ping-pong
-test~\cite{snell1996netpipe} (\S\ref{sec:eval:netpipe}); the short
-message transaction test previously used to evaluate
-MegaPipe~\cite{han2012megapipe} and mTCP~\cite{jeong2014mtcp} in
-\S\ref{sec:eval:short}; and the scalability of the system for large
-persistent connections (\S\ref{sec:eval:scale}).  Finally, we
-characterize the performance of the \ix system by running real-world
-applications such as memcached and XXX using \ix's
-\texttt{libevent-}compatibility library.
+We evaluate the scalability of \ix and compare it to the Linux
+baseline running a 3.11.10 kernel, and whenever possible to mTCP.  We
+selected mTCP as it is the state-of-the-art user-space TCP alternative
+available on the same hardware~\cite{jeong2014mtcp}.  We first
+describe the experimental setup (\S\ref{sec:eval:setup}).  We then
+characterize the performance using a series of micro-benchmark: the
+popular NetPIPE ping-pong test~\cite{snell1996netpipe}
+(\S\ref{sec:eval:netpipe}); the short message transaction test
+previously used to evaluate MegaPipe and mTCP
+in~\cite{han2012megapipe,jeong2014mtcp} (\S\ref{sec:eval:short}); and
+the scalability of the system for large persistent connections
+(\S\ref{sec:eval:scale}).  Finally, we characterize the performance of
+the \ix system by running memcached -- a real-world massively deployed
+application (\S\ref{sec:eval:memcached}).
 
 
 \subsection{Experimental setup}
@@ -29,19 +30,16 @@ socket (client or server) has 8 cores and 16 hyperthreads.  When
 reporting multi-core scalability, we report results with
 hyperthreading enabled, and both hyperthreads of the cores are used.
 
-For our experiments, the server is connected to
-the switch via either a single 10GbE link or via a 4x10GbE bond configured as a L2+L3
-hash via LACP~\cite{ieee802.3ad}. Jumbo
-frames are never enabled.  Our baseline configuration in each machine
-is the Ubuntu 12.04.4 LTS distribution running the 3.11.10 Linux kernel.  Although
-the server has two sockets, our experiments pin IRQs\george{not really}, processes, and
-the IX dataplane onto a single socket and use memory from that socket;
-all NICs are attached to that socket via the PCIe root complex. 
-
-\edb{CONTREVERSIAL: We chose to limit execution to a single NUMA node to simplify the
-  analysis because of the asymmetrical nature of our hardware, to
-  model the experimental setup after the one used in recent related
-  work~\cite{jeong2014mtcp}, and also as we are practically never CPU-bound in our tests}
+For our experiments, the server is connected to the switch via either
+a single 10GbE link or via a 4x10GbE bond configured as a L2+L3 hash
+via LACP~\cite{ieee802.3ad}. Jumbo frames are never enabled.  Our
+baseline configuration in each machine is the Ubuntu 12.04.4 LTS
+distribution running the 3.11.10 Linux kernel.  Although the server
+has two sockets, our experiments use only the CPU and memory resources
+of the socket to which the NIC are attached.  
+\edb{CONTREVERSIAL: We made this deliberate decision to eliminate NUMA
+  imbalances from our experiments, and to most closely reproduce the
+  setup used in ~\cite{jeong2014mtcp}}
 
 %\christos{We should organize the eval in the following way: first
 %  micro-benchmarks that showcase each of the advantages (high packet
@@ -174,7 +172,7 @@ delivers XXX\% of its own peak throughput\footnote{Unexplained
 
 
 \subsection{Application performance -- memcache}
-\label{sec:eval:memcache}
+\label{sec:eval:memcached}
 
 \input{figs/float-mutilate}
 
