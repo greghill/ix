@@ -161,8 +161,8 @@ although the elastic threads share the same address space, there is no
 communication, synchronization, or cache-coherency traffic between the
 elastic threads during common case operations.  This is a stronger
 requirement than lock-free synchronization, which requires expensive
-atomic instructions~\cite{missing}, even when a single thread uses a
-particular lock in the common case.  This was made possible because of
+atomic instructions~\cite{DBLP:conf/sosp/DavidGT13}, even when a single thread uses a
+particular lock in the normal case.  This was made possible because of
 conscious design and implementation decisions, including one with an
 important tradeoff.
 

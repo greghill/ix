@@ -63,12 +63,12 @@ following key design principles:
 Our design separates the control function, responsible for resource
 configuration, provisioning, scheduling, and monitoring, from the
 dataplane, which runs the networking stack and application logic.
-Like a conventional OS, our control plane multiplexes and schedule
+Like a conventional OS, our control plane multiplexes and schedules
 resources among dataplanes but in an coarse-grain manner in space and
-time: cores are dedicated to applications until revoked\edb{is it an
-  how}; memory is allocated in GB chunks\george{not true}; hardware
-queues are exclusively assigned to a single dataplane for long time
-periods. Each dataplane runs a single application in a single address
+time: cores are dedicated to applications until revoked, memory is
+allocated is superpage granularity and pinned; memory hardware
+queues are exclusively assigned to a single dataplane until explicitly revoked. 
+Each dataplane runs a single application in a single address
 space.  This is similar to the Exokernel approach of using library
 operating systems~\cite{DBLP:conf/sosp/EnglerKO95}, but with the
 additional protection between applications and the control plane using
@@ -113,8 +113,8 @@ pipeline stage on a small batch of packets or commands in order to
 fully amortize instruction caching effects and the overhead of PCIe
 transfers.  To minimize the impact on latency, and improve utilization
 on the outgoing wire, we adaptively batch and only in the presence of
-congestion. We experimentally find that batching up to \george{XXX}
-packets is sufficient to amortize all per-packet overheads.
+congestion. We experimentally find that bounding batches to 128
+packets is sufficient to amortize all noticeable per-packet overheads.
 
 \input{figs/float-queues-cores}
 

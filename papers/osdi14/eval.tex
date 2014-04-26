@@ -13,14 +13,13 @@ MegaPipe~\cite{han2012megapipe} and mTCP~\cite{jeong2014mtcp} in
 \S\ref{sec:eval:short}; and the scalability of the system for large
 persistent connections (\S\ref{sec:eval:scale}).  Finally, we
 characterize the performance of the \ix system by running real-world
-applications such as memcached and XXX using the
-\texttt{libevent-}compatibility library(\S\ref{missing}).
+applications such as memcached and XXX using \ix's
+\texttt{libevent-}compatibility library.
 
 
 \subsection{Experimental setup}
 \label{sec:eval:setup}
 
-\edb{Describes EPFL setup:}
 Our experimental setup consists of a cluster of 19 clients and one
 server connected by an HP 5820AF-24XG 10GbE switch.  The client
 machines are a mix of dual Xenon E5-2637 running at 3.5 Ghz and single Xenon E5-2650 running at 2.6 Ghz with a single, Intel
@@ -50,6 +49,11 @@ all NICs are attached to that socket via the PCIe root complex.
 %  subsection should indicate the aspect evaluated. Then there should
 %  a subsection on full app eval (memcache hopefully).}
 
+\input{figs/float-pingpong}
+\input{tbl-pingpong}
+
+\input{figs/float-short}
+
 Whenever both practical and relevant, we compare the performance of an
 \ix server with a baseline out-of-the-box Linux configuration
 ((\texttt{Linux-base}), an optimized configuration of Linux
@@ -75,8 +79,6 @@ hyperthreads).  For all experiments, we use the same Linux client code, generall
 \subsection{High-bandwidth and low-latency}
 \label{sec:eval:netpipe}
 
-\input{figs/float-pingpong}
-\input{tbl-pingpong}
 
 We start the evaluation with the popular NetPIPE ping-pong
 benchmark~\cite{snell1996netpipe} that exchanges a fixed-size message
@@ -86,6 +88,7 @@ message size (64B), this benchmark determines the one-way latency for
 short message communication.  With increasingly larger messages, it
 determines how quickly this single ping-pong behavior can utilize 50\%
 of the available bandwidth on the link.
+
 
 Fig.~\ref{fig:pingpong} compares the performance of various
 configurations for different message sizes.  As expected, the
@@ -112,7 +115,6 @@ latencies; consequently, mTCP's latency is worst than Linux itself.
 \subsection{Handling high TCP connection churn}
 \label{sec:eval:short}
 
-\input{figs/float-short}
 
 We then evaluate \ix's multi-core scalability in handling workloads
 with extreme connection churn by using the same benchmark used to evaluate
@@ -144,20 +146,19 @@ single-link configuration.
 
 
 \subsection{Connection Scalability}
-
 \input{figs/float-connscaling}
+
 \label{sec:eval:scale}
 
 We now evaluate \ix's scalability when handling a large number of
 concurrent connections. In this benchmark, each client machine runs
 $n$ threads, with each thread independently performing a 64B remote
 procedure call to the server.  Each RPC randomly chooses among $m$
-open sockets to perform the RPC.  In our setup with 18 clients, the
-server must multiplex among $18 \times n \times m$ open connections.
-We experimentally set $n \leq 24$ to maximize throughput.  The 19th
-client performs RPC at a low rate on a single connection to measure
-latency.  We report the throughput in message per second and the
-round-trip latency for varying number of total established connections.
+open sockets to perform the RPC.  In our setup with 19 clients, the
+server must multiplex among $19 \times n \times m$ open connections.
+We experimentally set $n \leq 24$ to maximize throughput.  We report
+the maximal throughput in messages per second for varying number of
+total established connections.
 
 Fig.~\ref{fig:connscaling} shows the results.  As expected, throughput
 increases with the degree of concurrency, but then decreases with
