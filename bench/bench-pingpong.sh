@@ -185,8 +185,8 @@ elif [ $CLIENT_SPEC = 'Netpipe-Optimized' ]; then
   CLIENT_NET="linux single opt"
   NETPIPE=$[$NETPIPE+1]
 elif [ $CLIENT_SPEC = 'IX' ]; then
-  CLIENT_CMDLINE=" sudo ./ix -q -d 0000:01:00.0 -c 0 /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ./ix_client $SERVER_IP $SERVER_PORT 1 \$MSG_SIZE 999999999"
-  DEPLOY_FILES="select_net.sh ../ix/ix ../apps/tcp/ix_client ../dune/dune.ko ../igb_stub/igb_stub.ko"
+  CLIENT_CMDLINE=" sudo ./ix -q -d 0000:01:00.0 -c 0 /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ./client_test $SERVER_IP $SERVER_PORT \$MSG_SIZE"
+  DEPLOY_FILES="select_net.sh ../ix/ix ../apps/event/client_test ../dune/dune.ko ../igb_stub/igb_stub.ko"
   CLIENT_NET="ix node0"
 else
   echo 'invalid parameters' >&2
