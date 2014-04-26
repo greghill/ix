@@ -2,18 +2,15 @@
 \section{Implementation}
 \label{sec:impl}
 
-\input{tbl-api}
-\input{figs/float-queues-cores}
 
+
+\input{tbl-api}
 
 
 We now describe the implementation of the \ix prototype.  We start
 with an overview of the \ix kernel (\S\ref{sec:impl:kernel}), describe
-the environment surrounding \ix (\S\ref{sec:impl:env}), and explain
-what makes \ix more efficient (\S\ref{sec:impl:better}).
-We close with a
-discussion of our approach, its current implementation restrictions,
-and directions for future work (\S\ref{sec:impl:discussion}).
+the environment surrounding \ix (\S\ref{sec:impl:env}), and how \ix is
+implemented as a coherency-free kernel (\S\ref{sec:impl:cohfree}).
 
 
 %the benefits of having \ix run as a guest
@@ -77,12 +74,22 @@ Applications can then hold on to message buffers and release them via
 a batched system call.  \ix also differs in directly exposing flow
 control conditions to application: the \texttt{sendv} batched system
 call does not synchronously return the number of bytes sent; instead,
-the \texttt{Recv} event condition provides that infromation in a
-subsequent step.
+the \texttt{Recv} event condition provides that information in a
+subsequent step.  
 
-\adam{I think we should talk a little more about the mechansims behind batching
-and event conditions because they are unusual compared to previous systems.}
-
+\myparagraph{Security model:} Applications are
+untrusted and can not access kernel memory (except for message
+buffers) or network hardware.  No sequence of batched system calls or
+other user-level actions can be used to violate correct adherence to
+TCP and other network specifications.  Furthermore, the dataplane can
+be used to enforce network security policies (e.g., iptables or Amazon
+Security Groups) or to implement the network virtualization functions
+typically done in a hypervisor~\cite{nsdi:nsx}.  However, and as a
+consequence of the zero-copy model, applications have read-only access
+to entire message buffers, including protocol headers.  Flow control
+and receive buffer management is, however, entrusted to the user
+runtime. Applications could misuse this ability to use up all of their
+available memory, but it would only harm its own \ix instance.
 
 \subsection{The environment}
 \label{sec:impl:env}
@@ -103,7 +110,7 @@ while control plane functions, including the control and monitoring of
 dataplane, is performed by scripts and daemons of the host
 environments.  This provides protection between control and
 dataplanes. Within each dataplane, \ix further protects itself from
-the untrusted application through virtual memory andby running it at
+the untrusted application through virtual memory and by running it at
 userlevel.
 
 \myparagraph{Application compatibility:} We extended the Dune
@@ -113,24 +120,22 @@ and background threads.  Although elastic threads could directly use
 the native API of Table~\ref{tbl:api}, this would require a
 substantial effort; the userlevel library therefore also includes a
 compatibility mechanism that exposes the near-identical API as
-\texttt{libevent} as the expense of \edb{TODO TODO TODO}.  Both
-elastic and background threads can also issue arbitrary POSIX system
+\texttt{libevent}.  Both elastic and background threads can also issue arbitrary POSIX system
 calls; those are merely intermediated by \ix, and handled by the
 underlying OS.  Elastic threads are expected to \emph{not} issue blocking
 system because of the adverse impact on network behavior and
 performance.
 
 \myparagraph{Resource management:}
-We rely on Linux's abilty to allocate resources at a coarse grain to
+We rely on Linux's ability to allocate resources at a coarse grain to
 demanding applications, in our case the Dune processes.  For example,
 core allocation can be precisely controlled through real-time
 priorities and \texttt{cpumasks}; memory can be allocated in 2MB and
 1GB chunks from specified NUMA nodes; PCI devices, virtual functions,
 and NIC hardware queues alike can be assigned to specified \ix
 kernels, etc.  This explicitly favors scalability and performance by
-muliplexing resources in space among the various dataplanes, but not
-in time at a fine granularity.  For example, elastic threads are
-guaranteed exclusive access to the underyling hyperthread until that
+multiplexing resources in space among the various dataplanes, but not
+in time at a fine granularity.  For example, elastic threads are scheduled exclusively onto a CPU
 allocation is explicitly revoked, using a protocol similar to the one
 used in Exokernels~\cite{DBLP:conf/sosp/EnglerKO95}.  
 
@@ -148,156 +153,59 @@ signals some sustained congestion or violation of its service-level
 agreements, or conversely when the allocated CPU resources are
 underutilized.
 
-%\input{figs/float-queue-takeover}
+\subsection{Coherency-free Execution}
+\label{sec:impl:cohfree}
 
-\subsection{What Makes \ix More Efficient?}
-\label{sec:impl:better}
+The \ix kernel implements a \emph{coherency-free} execution model:
+although the elastic threads share the same address space, there is no
+communication, synchronization, or cache-coherency traffic between the
+elastic threads during common case operations.  This is a stronger
+requirement than lock-free synchronization, which requires expensive
+atomic instructions~\cite{missing}, even when a single thread uses a
+particular lock in the common case.  This was made possible because of
+conscious design and implementation decisions, including one with an
+important tradeoff.
 
-\adam{To me this doesn't seem like implementation... perhaps we can move this section to discussion. I like talking about this
-from a lesson's learned perspective and it follows naturally to discuss perfomrance after the evalation.}
-
-Some critical design and implementation decisions have a significant
-impact on performance.
-
-\myparagraph{Coherency-free Execution:}
-According to the commutatity rule, system call implementations can
-only be coherence-free if the the API itself is
-commutative~\cite{DBLP:conf/sosp/ClementsKZMK13}.  Our API is
-commutative: events are processed independently on each elastic thread
-and flows are identified by cookies rather than a single file
-descriptor snamespace.  Our implementation is free of any
-cache-coherency traffic in the common case: each elastic thread
-manages its own memory pools and \ix relies on flow-consistent hashing
-by the NIC hardeware to ensure that each elastic thread operates on a
-disjoint subset of the TCP flows. \adam{these aren't exceptions in my view.
-coherence traffic on the cold path is necessary and expected.}  There are only a few exceptions to
-that rule: for example, the ARP table is shared by all corees and
-protected by RCU locks~\cite{mckenney1998read}, which means that
-updates are not coherency-free.
-\adam{lesson learned: coherence free is great for scalability but there
-are other architectural bottlenecks to consider too like device access
-over PCI. For example, by batching TX ring tail updates, we greatly
-improved scalability. Also, lock-free data structures are not
-good enough.}
-
-\myparagraph{Redundant outbound connections:} Coherency-free execution is only possible when flows are consistently
-handled by the same elastic thread for both input and output.  For
-accepted connection, the RSS hardware ensures isolation and
-application cannot legally share a flow descriptor cookie across core.
-For outbound connections, the issue is trickier: \ix selects the
-source emphemeral port based on the requesting elastic thread. Since
-the Toeplitz hash function cannot be reversed, \ix simply probes the
-ephemeral namespace and computes the Toepliz hash until a match is
-found.  We note two side-effects: first, connections between and \ix
-client and a server will be replicated for each elastic thread; second
-the ephemeral ports no longer form a namespace, and an \ix client can
-easily open millions of connections (to distinct servers).
-\adam{Lesson learned: RSS is a bad design for affinity of outgoing
-connections. An alternative might be to use flow director as described
-in affinity accept.}
-
-\myparagraph{Coupling of networking stack and application:}
-A traditional in-kernel stack decouples protocol processing, which
-occurs at interrupt level, from the applications which are scheduled
-by the OS.  \ix keeps maintains a strongly coupling: elastic threads
-intermixing protocol procesing with the non-blocking execution of the
-application, and interrupts are only used as watchdogs to detect
-non-cooperating applications.  This has a number of performance
-benefits, notably replacing context switching with low-overhad system
-call transitions.  It also removes unncessary abstractions, such as
-the buffering in the socket layer.
-\adam{Lesson learned: coupling causes application code to get scheduled in a way
-that makes it more efficient. Just considering kernel versus user time of
-existing systems shows an incomplete picture.}
-
-\myparagraph{Zero-copy:} \ix exposes incoming message buffers directly
-to applcations in a read-only portion of the address
-space. Application can hold on to them until they acknowledge completion (\texttt{recv\_done}).
-Similarly, \ix never copies outgoing payloads into its memory, but
-instead expects the application to keep the content unmodified until
-acknowledgements have been confirmed.  This obviously eliminate a
-major source of data movement overhead for streaming applications.
-But the approach also helps workloads with small packets as it
-eliminates many memory management corner cases.
-\adam{Lesson learned: A zero-copy architecture helps even
-when high-level API's are not zero-copy. The key factor is cache efficiency.
-By allowing the compatibility library to perform
-copies instead of the kernel we get improved temporal locality, as buffers are accessed
-immediately after they are copied.}
-
-\myparagraph{Bounded, adaptive batching:} During the first stage of
-its pipeline, \ix moves all incoming packets from the hardware ring
-into a corresponding in-memory queue, but only process a bounded batch
-of packets in all subsequent steps.  This design has a number of
-benefits: (i) it ensures that \ix can sustain instaneous congestion by
-making use of the extensive DRAM resource available; (ii) the
-resulting in-memory queue can serve as the basis for extensive
-monitoring of service-level agreement expressed in terms of queuing
-delays, and provides a convenient location to implement congestion
-management policies such as ECN~\cite{ramakrishnan2001addition} or
-RED~\cite{DBLP:journals/ton/FloydJ93}; (iii) it offers simulatenously
-low-latency reponse times when the queues are shallow and high
-throughput when the queues are deeper.  In our system, we determined
-experimentally that a bound as low as \george{XXX} sufficiently
-amortizes overheads, even in network-intensive, CPU-bound situations.
-
-\myparagraph{Flow control:} Bounded batching has an additional benefit
-in terms of flow control, as acknowledgments are sent by the
-networking stack only when packets are processed by the dataplane.
-Congestion in the NIC edge therefore leads to shrinking windows in
-peers.  In contrast, traditional stacks acknowledge packets well
-before they are processed by application and buffer in the socket
-layer.  When sending, flow control is safely, but directly exposed to
-user-space applications, providing a direct view of the sliding
-window, which they can use to improve their own QoS, e.g., when mixing
-elephant and mice flows in a key-value store.
-\adam{Lesson learned: There's no reason to provide flow control
-in the kernel as applications can make better decisions directly.}
+\myparagraph{A commutative API:} According to the commutativity rule,
+system call implementations can only be coherence-free if the API
+itself is commutative~\cite{DBLP:conf/sosp/ClementsKZMK13}.  The \ix
+API is commutative: events are processed independently on each elastic
+thread; cookies identify flows but cannot be exchanged between
+threads, and there is no file descriptor namespace.
 
 
-\subsection{Discussion}
-\label{sec:impl:discussion}
+\myparagraph{Memory management:} Each elastic thread manages its own
+memory pools, hardware queues, event condition queue, and batched
+system call queue; no synchronization is required to access any of
+them.
 
-We now move to a discussion of certain open issues, tradeoffs,
-implementation limitations of our prototype, and discussion of future
-work.
+\myparagraph{Flow-consistent hashing:} \ix relies on flow-consistent
+hashing by the NIC hardeware to ensure that each elastic thread
+operates on a disjoint subset of the TCP flows.  The coherency-free
+implementation for accepted flows naturally follows the hardware's
+decision.  The solution is more complex in the reverse: for outbound
+connections, \ix selects the source ephemeral port based on the
+requesting elastic thread. Since the Toeplitz hash function cannot be
+reversed, \ix simply probes the ephemeral range and computes the
+Toepliz hash until a match is found.  Consequently, communication
+between an \ix client and a server may required up to one flow per
+elastic thread.  As a side effect of the implementation, ephemeral
+source port no longer form namespaces, which allows an \ix client to
+support millions of outgoing connections.
 
-\myparagraph{The \ix TCP stack:} 
-The \ix kernel includes a complete network protocol stack with
-RFC-compliant support for TCP, UDP, ARP, ICMP and LACP.  It however
-explicitly lacks a complete IP-layer and is therefore only a capable
-networking endpoint, but not of handling routing, bridging or
-filtering functions.  It also totally lacks a socket layer and its
-associated API and semantics.  For our implementation of TCP, we chose
-to lwIP~\cite{dunkels2001design} as a starting point for our code base because of its
-modularity and is maturity as a compliant, feature-rich networking
-stack.  lwIP was however designed with memory-efficiency in mind,
-primarily for embedded environments.  We radically changed the data
-structures that organize protocol control blocks for scalability, as
-well as for finer-grain, precise timer management.  However, we did
-not (yet) attempt to optimize the code paths for performance, and
-consequently believe that our results have room for improvement.
+\myparagraph{Arrays vs. bounded buffers:}
+The implementation of event conditions and batched system calls
+benefits directly from the explicit, cooperative control flow
+transfers between \ix and the application.  Since there is no concurrent
+execution by producer and consumer, event conditions and batched
+system calls are implemented as arrays without relying on lock-free
+synchronization primitives based on atomics. 
 
-\myparagraph{Limitations of the prototype:} 
-The \ix prototype is architected to support any stateless offload NIC
-with multiple queues and support for flow-consistent hashing in
-hardware (e.g., RSS).  However, we've only ported the Intel XXX
-driver, using DPDK~\cite{intel:dpdk} as a starting code base.  We
-avoided adding to \ix a Linux driver compatibilty, explicitly trading
-off higer portability costs for higher performance.  Because of
-restrictions in the use of VT-d in particular in the area of
-\adam{XXXX}, the device operates without an IOMMU.  Instead, the
-driver directly populates descriptors with host-physical addresses,
-which are provided by by Dune framework as a form of
-paravirtualization~\cite{DBLP:conf/sosp/BarhamDFHHHN03}.  Finally, \ix
-is designed and implemented to suppor the dynamic addition and removal
-of elastic threads, and the associated run-time rebalancing of
-hardware queues; we've however only tested static configurations to
-date.
-course of its implementation.
 
-\myparagraph{Challenges in API design:}
-
-adam{TODO}
-
+\myparagraph{Use RCU locks when necessary:}
+\ix does have a small number of shared structures, including some that
+require synchronization on updates.  For example, the ARP table is
+shared by all elastic threads and protected by RCU
+locks~\cite{mckenney1998read}, which means that reads are
+coherency-free.  Updates, which are rare, are not.
 

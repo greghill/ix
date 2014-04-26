@@ -80,7 +80,7 @@ applications poses many unique challenges to system software:
 \myparagraph{High packet rates:} The requests and, often times, the replies
 between services in web-scale applications are quite small. In the
 memcached service at Facebook, for example, the vast majority of
-requests use keys shorter than 50 bytes and involve values shorter
+requests uses keys shorter than 50 bytes and involve values shorter
 than 500 bytes~\cite{Atikoglu:2012:WAL}. As a result, each service
 node must ideally scale to extremely high packet rates, measured in
 millions of packets per second on 10 GbE or 40 GbE network interfaces (NICs).
@@ -102,7 +102,7 @@ system software is designed to operate at a totally different
 timescale. Interrupt coalescing used to improve throughput, queuing
 latency due to device driver processing intervals, and protocol
 processing of incoming packets without necessarily immediately
-scheduling the receiving application frequently add several $ms$ of
+scheduling the receiving application frequently add several hundred \microsecond of
 latency to remote procedure calls (see measurements in \S\ref{sec:eval}).
 
 % As a result, the remote procedure call latency observed by application
@@ -197,9 +197,8 @@ the requirements for web-scale applications. However, no
 proposal meets all requirements on commodity hardware. 
 
 \myparagraph{User-space networking stacks:} Systems such as
-OpenOnload~\cite{openonload} or mTCP~\cite{jeong2014mtcp} run the
-entire networking stack in user-space, offering either low latency
-(OpenOnload) or connection scalability (mTCP) at the expense of
+OpenOnload~\cite{openonload}, mTCP~\cite{jeong2014mtcp} or Sandstorm~\cite{marinos2013network} run the
+entire networking stack in user-space, offering either low latency or connection scalability at the expense of
 protection. There are still tradeoffs between packet rate and
 latency. For instance, mTCP uses dedicated threads for the TCP
 stack, which communicate at relatively coarse grain with application
@@ -219,9 +218,8 @@ applications.
 \myparagraph{Alternatives to POSIX API:} MegaPipe~\cite{han2012megapipe}
 replaces the POSIX API with lightweight sockets implemented with
 in-memory command rings. This substantially reduces software overheads
-and increases packet rates. However, the pragmatic use of the kernel
-TCP stack and interrupt model maintains the latency challenges of the
-original system.
+and increases packet rates, and uses the kernel's existing networking stack.
+
 
 \myparagraph{OS enhancements:} Tuning kernel-based stacks provides incremental
 benefits with superior ease of deployment.  Linux \texttt{SO\_REUSEPORT}
