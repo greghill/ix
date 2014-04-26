@@ -22,8 +22,8 @@ AGENTS:standard
 # Use 1M records
 -r 1000000
 
-# Scan QPS from 0.5% to peak, step size of 0.5%
-#--scan=10000:2000000:10000
+# Scan QPS from 5% to peak, step size of 5%
+--scan=100000:2000000:100000
 
 # Inter-arrival time, key size, value size, and update ratio
 # These are taken from the Facebook paper

@@ -31,8 +31,8 @@ fi
 
 # Extract the agent profile from the experiment definition
 AGENT_PROFILE=$(cat $(dirname $0)/$2.experiment | grep "^AGENTS:" | sed s/AGENTS://)
-AGENT_LIST="$(dirname $0)/${AGENT_PROFILE}_agentlist.sh"
-AGENT_RUN="$(dirname $0)/${AGENT_PROFILE}_agentrun.sh"
+AGENT_LIST="$(dirname $0)/${AGENT_SUBDIR}${AGENT_PROFILE}_agentlist.sh"
+AGENT_RUN="$(dirname $0)/${AGENT_SUBDIR}${AGENT_PROFILE}_agentrun.sh"
 
 # Ensure the agent profile exists
 if [ ! -e $AGENT_LIST ]

@@ -28,5 +28,5 @@ AGENTS:standard
 # Update ratio of 3.3%, from the Facebook paper
 -u 0.033
 
-# Scan QPS from 0.5% to peak, step size of 0.5%
---scan=2250:450000:2250
+# Scan QPS from 5% to peak, step size of 5%
+--scan=22500:450000:22500
