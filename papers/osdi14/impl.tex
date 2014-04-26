@@ -78,7 +78,10 @@ a batched system call.  \ix also differs in directly exposing flow
 control conditions to application: the \texttt{sendv} batched system
 call does not synchronously return the number of bytes sent; instead,
 the \texttt{Recv} event condition provides that infromation in a
-subsequent step. 
+subsequent step.
+
+\adam{I think we should talk a little more about the mechansims behind batching
+and event conditions because they are unusual compared to previous systems.}
 
 
 \subsection{The environment}
@@ -150,6 +153,9 @@ underutilized.
 \subsection{What Makes \ix More Efficient?}
 \label{sec:impl:better}
 
+\adam{To me this doesn't seem like implementation... perhaps we can move this section to discussion. I like talking about this
+from a lesson's learned perspective and it follows naturally to discuss perfomrance after the evalation.}
+
 Some critical design and implementation decisions have a significant
 impact on performance.
 
@@ -163,10 +169,16 @@ descriptor snamespace.  Our implementation is free of any
 cache-coherency traffic in the common case: each elastic thread
 manages its own memory pools and \ix relies on flow-consistent hashing
 by the NIC hardeware to ensure that each elastic thread operates on a
-disjoint subset of the TCP flows.  There are only a few exceptions to
+disjoint subset of the TCP flows. \adam{these aren't exceptions in my view.
+coherence traffic on the cold path is necessary and expected.}  There are only a few exceptions to
 that rule: for example, the ARP table is shared by all corees and
 protected by RCU locks~\cite{mckenney1998read}, which means that
 updates are not coherency-free.
+\adam{lesson learned: coherence free is great for scalability but there
+are other architectural bottlenecks to consider too like device access
+over PCI. For example, by batching TX ring tail updates, we greatly
+improved scalability. Also, lock-free data structures are not
+good enough.}
 
 \myparagraph{Redundant outbound connections:} Coherency-free execution is only possible when flows are consistently
 handled by the same elastic thread for both input and output.  For
@@ -180,6 +192,9 @@ found.  We note two side-effects: first, connections between and \ix
 client and a server will be replicated for each elastic thread; second
 the ephemeral ports no longer form a namespace, and an \ix client can
 easily open millions of connections (to distinct servers).
+\adam{Lesson learned: RSS is a bad design for affinity of outgoing
+connections. An alternative might be to use flow director as described
+in affinity accept.}
 
 \myparagraph{Coupling of networking stack and application:}
 A traditional in-kernel stack decouples protocol processing, which
@@ -191,6 +206,9 @@ non-cooperating applications.  This has a number of performance
 benefits, notably replacing context switching with low-overhad system
 call transitions.  It also removes unncessary abstractions, such as
 the buffering in the socket layer.
+\adam{Lesson learned: coupling causes application code to get scheduled in a way
+that makes it more efficient. Just considering kernel versus user time of
+existing systems shows an incomplete picture.}
 
 \myparagraph{Zero-copy:} \ix exposes incoming message buffers directly
 to applcations in a read-only portion of the address
@@ -201,6 +219,11 @@ acknowledgements have been confirmed.  This obviously eliminate a
 major source of data movement overhead for streaming applications.
 But the approach also helps workloads with small packets as it
 eliminates many memory management corner cases.
+\adam{Lesson learned: A zero-copy architecture helps even
+when high-level API's are not zero-copy. The key factor is cache efficiency.
+By allowing the compatibility library to perform
+copies instead of the kernel we get improved temporal locality, as buffers are accessed
+immediately after they are copied.}
 
 \myparagraph{Bounded, adaptive batching:} During the first stage of
 its pipeline, \ix moves all incoming packets from the hardware ring
@@ -228,6 +251,8 @@ layer.  When sending, flow control is safely, but directly exposed to
 user-space applications, providing a direct view of the sliding
 window, which they can use to improve their own QoS, e.g., when mixing
 elephant and mice flows in a key-value store.
+\adam{Lesson learned: There's no reason to provide flow control
+in the kernel as applications can make better decisions directly.}
 
 
 \subsection{Discussion}
