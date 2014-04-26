@@ -9,10 +9,10 @@
 #include "ixev.h"
 
 #define TSC_RATE        3100000000
-#define BUFSIZE		64
 
 static unsigned long tsc;
 static unsigned long count;
+static unsigned int msg_size;
 
 enum {
 	CLIENT_MODE_RECV,
@@ -25,7 +25,7 @@ struct client_conn {
 	int mode;
 	size_t bytes_recvd;
 	size_t bytes_sent;
-	char data[BUFSIZE];
+	char *data;
 };
 
 static struct client_conn *c;
@@ -48,7 +48,7 @@ static void main_handler(struct ixev_ctx *ctx, unsigned int reason)
 	}
 	while (1) {
 		if (c->mode == CLIENT_MODE_SEND) {
-			ret = ixev_send_zc(ctx, &c->data[c->bytes_sent], BUFSIZE - c->bytes_sent);
+			ret = ixev_send_zc(ctx, &c->data[c->bytes_sent], msg_size - c->bytes_sent);
 			if (ret <= 0) {
 				if (ret != -EAGAIN)
 					client_die();
@@ -56,14 +56,14 @@ static void main_handler(struct ixev_ctx *ctx, unsigned int reason)
 			}
 
 			c->bytes_sent += ret;
-			if (c->bytes_sent < BUFSIZE)
+			if (c->bytes_sent < msg_size)
 				return;
 
 			c->bytes_recvd = 0;
 			ixev_set_handler(ctx, IXEVIN, &main_handler);
 			c->mode = CLIENT_MODE_RECV;
 		} else {
-			ret = ixev_recv(ctx, &c->data[c->bytes_recvd], BUFSIZE - c->bytes_recvd);
+			ret = ixev_recv(ctx, &c->data[c->bytes_recvd], msg_size - c->bytes_recvd);
 			if (ret <= 0) {
 				if (ret != -EAGAIN)
 					client_die();
@@ -71,7 +71,7 @@ static void main_handler(struct ixev_ctx *ctx, unsigned int reason)
 			}
 
 			c->bytes_recvd += ret;
-			if (c->bytes_recvd < BUFSIZE)
+			if (c->bytes_recvd < msg_size)
 				return;
 
 			count++;
@@ -131,8 +131,8 @@ int main(int argc, char *argv[])
 	if (!c)
 		exit(-1);
 
-	if (argc != 3) {
-		fprintf(stderr, "Usage: IP PORT\n");
+	if (argc != 4) {
+		fprintf(stderr, "Usage: IP PORT MSG_SIZE\n");
 		return -1;
 	}
 
@@ -142,6 +142,11 @@ int main(int argc, char *argv[])
 	}
 
 	c->id.dst_port = atoi(argv[2]);
+
+	msg_size = atoi(argv[3]);
+	c->data = malloc(msg_size);
+	if (!c->data)
+		exit(-1);
 
 	ixev_init(&stream_conn_ops);
 
