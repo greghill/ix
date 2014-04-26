@@ -4,58 +4,64 @@
 
 %\edb{Not updated in a while....}
 
-\christos{State of the world: bring up apps from search to social nets
-to ecommerce. Large-scale and centered around networking}
-Web-scale applications are redefining the requirements of system
-software.  A single application can consist of hundreds of software
-components deployed on tens of thousands of machines per datacenter,
-and on multiple datacenters.  For example, Amazon routinely accesses
-150 distinct services to render a single
-page~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07}.  
+Web-scale applications such as search, social networking, and
+e-commerce platforms, are redefining the requirements on system
+software. A single application can consist of hundreds of software
+services, deployed on thousands of servers. For example, Amazon
+routinely accesses 150 distinct services to render each page request
+from external users~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07}. Such
+applications need TCP/IP networking stack implementations that go well
+beyond the classical requirements of high streaming performance and
+moderate connection scalability. The new requirements include high
+packet rates for the short messages~\cite{Atikoglu:2012:WAL,other?},
+microsecond-level reponses to remote requests with tight tail latency
+guarantees~\cite{DBLP:journals/cacm/DeanB13}, and support for hundreds
+of thousands of connections with high connection
+churn~\cite{nishtala2013scaling,other?}. It is also desirable to be
+elastic in resource usage, allowing other applications to use the
+available cores and memory in a shared
+datacenter~\cite{nishtala2013scaling} or enabling cost reduction
+through power management~\cite{DBLP:journals/computer/BarrosoH07}.
 
-\christos{requirements paragraph: high packet rate, low tail latency,
-  high connection count and connection churn, elasticity,
-  protection. We should list them all even if we don't do much with
-  some in this paper (e.g., elasticity)}
 
-\christos{1-2 paragraphs on how mainstream approaches fail many 
-of these requirements. A trimmed down version of what is shown below. }
-At massive scale, these interactions constrain applications.  For
-example, latency considerations force Facebook to restrict the number
-of sequential data accesses to fewer than 150 per rendered web
-page~\cite{rumble2011s}.  Also at Facebook, connection scalability
-limitations have led the deployment of a UDP-based memcached service
-tier~\cite{nishtala2013scaling} for \texttt{get} operations, which
-therefore forgoes all of the benefits of the standard TCP-based model.
-To ensure the reliable application of \texttt{put} operations, the
-system relies on in-network TCP-proxies to aggregate requests, which
-introduces complexity and latency in the architecture.
+% \christos{1-2 paragraphs on how mainstream approaches fail many 
+% of these requirements. A trimmed down version of what is shown below. }
+% At massive scale, these interactions constrain applications.  For
+% example, latency considerations force Facebook to restrict the number
+% of sequential data accesses to fewer than 150 per rendered web
+% page~\cite{rumble2011s}.  Also at Facebook, connection scalability
+% limitations have led the deployment of a UDP-based memcached service
+% tier~\cite{nishtala2013scaling} for \texttt{get} operations, which
+% therefore forgoes all of the benefits of the standard TCP-based model.
+% To ensure the reliable application of \texttt{put} operations, the
+% system relies on in-network TCP-proxies to aggregate requests, which
+% introduces complexity and latency in the architecture.
 
-In a recent keynote, \edb{too personal?}Google's Luiz Barroso identified three additional challenges
-for applications that must process large amounts of data in little
-time: energy-proportionality, tail-tolerance, and microsecond
-computing~\cite{luiz-isscc}.
-Energy-proportionality~\cite{DBLP:journals/computer/BarrosoH07}
-requires systems to perform with a high degree of energy-efficiency,
-typically measured in transactions / Watt, across all typical levels
-of load on the system, and not only at saturation. Tail
-tolerance~\cite{DBLP:journals/cacm/DeanB13} describes the emerging
-systems-building discipline that aims to deliver predictable response
-times in a distributed system.  Finally, the microsecond computing
-challenge describes the need to minimize the latency of interactions
-within a datacenter: even though existing transmission and switching
-technologies allow for microsecond-level messaging between any two
-nodes in a datacenter, a combination of protocol processing, interrupt
-delivery, and operating system overheads generally increase the
-latency by two orders of magnitude.  Although each challenge is
-non-trivial in itself, these challenges must be handled
-simultaneously.  Unfortunately, techniques that improve one metric are
-often at odds with another metric.  For example, dynamic voltage
-scaling techniques improve energy-proportionality for batch
-applications~\cite{DBLP:conf/asplos/DelimitrouK14}, but at the
-expense of latency.  Similarly, batching techniques such as interrupt
-coalescing improve performance at the expense of average and tail
-latency~\cite{missing}.
+% In a recent keynote, \edb{too personal?}Google's Luiz Barroso identified three additional challenges
+% for applications that must process large amounts of data in little
+% time: energy-proportionality, tail-tolerance, and microsecond
+% computing~\cite{luiz-isscc}.
+% Energy-proportionality~\cite{DBLP:journals/computer/BarrosoH07}
+% requires systems to perform with a high degree of energy-efficiency,
+% typically measured in transactions / Watt, across all typical levels
+% of load on the system, and not only at saturation. Tail
+% tolerance~\cite{DBLP:journals/cacm/DeanB13} describes the emerging
+% systems-building discipline that aims to deliver predictable response
+% times in a distributed system.  Finally, the microsecond computing
+% challenge describes the need to minimize the latency of interactions
+% within a datacenter: even though existing transmission and switching
+% technologies allow for microsecond-level messaging between any two
+% nodes in a datacenter, a combination of protocol processing, interrupt
+% delivery, and operating system overheads generally increase the
+% latency by two orders of magnitude.  Although each challenge is
+% non-trivial in itself, these challenges must be handled
+% simultaneously.  Unfortunately, techniques that improve one metric are
+% often at odds with another metric.  For example, dynamic voltage
+% scaling techniques improve energy-proportionality for batch
+% applications~\cite{DBLP:conf/asplos/DelimitrouK14}, but at the
+% expense of latency.  Similarly, batching techniques such as interrupt
+% coalescing improve performance at the expense of average and tail
+% latency~\cite{missing}.
 
 The conventional wisdom is that these problems are rooted in a
 mismatch between existing commodity operating systems, existing
