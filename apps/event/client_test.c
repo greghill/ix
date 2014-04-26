@@ -5,12 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
 
 #include "ixev.h"
 
-#define TSC_RATE        3100000000
-
-static unsigned long tsc;
 static unsigned long count;
 static unsigned int msg_size;
 
@@ -40,12 +39,25 @@ static void client_die(void)
 static void main_handler(struct ixev_ctx *ctx, unsigned int reason)
 {
 	ssize_t ret;
+	char buf;
+	static unsigned long prv_count;
 
-	if (rdtsc() - tsc > TSC_RATE) {
-		printf("count is %ld / s\n", count);
-		count = 0;
-		tsc = rdtsc();
+	if (count - prv_count > 640000 / msg_size) {
+		prv_count = count;
+		ret = read(STDIN_FILENO, &buf, 1);
+		if (ret == 0) {
+			fprintf(stderr, "Error: EOF on STDIN.\n");
+			exit(1);
+		} else if (ret == -1 && errno == EAGAIN) {
+		} else if (ret == -1) {
+			perror("read");
+			exit(1);
+		} else {
+			printf("0 %ld 0 0 0 0 0 0 0 0\n", count);
+			fflush(stdout);
+		}
 	}
+
 	while (1) {
 		if (c->mode == CLIENT_MODE_SEND) {
 			ret = ixev_send_zc(ctx, &c->data[c->bytes_sent], msg_size - c->bytes_sent);
@@ -101,8 +113,10 @@ static void client_dialed(struct ixev_ctx *ctx, long ret)
 	c->mode = CLIENT_MODE_SEND;
 	c->bytes_sent = 0;
 
+	puts("ok");
+	fflush(stdout);
+
 	ixev_set_handler(ctx, IXEVOUT, &main_handler);
-	tsc = rdtsc();
 	main_handler(&c->ctx, IXEVOUT);
 }
 
@@ -126,6 +140,7 @@ static int parse_ip_addr(const char *str, uint32_t *addr)
 int main(int argc, char *argv[])
 {
 	int ret;
+	int flags;
 
 	c = malloc(sizeof(struct client_conn));
 	if (!c)
@@ -155,6 +170,9 @@ int main(int argc, char *argv[])
 		printf("unable to init IXEV\n");
 		exit(ret);
 	};
+
+	flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+	fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
 
 	ixev_dial(&c->ctx, &c->id);
 
