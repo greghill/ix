@@ -108,6 +108,8 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 {
 	int ret;
 	unsigned int i;
+	int done;
+	const int batch_size = 128;
 
 	usys_reset();
 
@@ -132,6 +134,10 @@ again:
 		eth_rx_poll(percpu_get(eth_rx)[i]);
 	KSTATS_POP(NULL);
 
+	done = 1;
+	for_each_queue(i)
+		done = done && eth_rx_process(percpu_get(eth_rx)[i], batch_size);
+
 	KSTATS_PUSH(tx_xmit, NULL);
 	i = eth_tx_xmit(percpu_get(eth_tx), percpu_get(tx_batch_pos),
 		        percpu_get(tx_batch));
@@ -142,10 +148,12 @@ again:
 	KSTATS_POP(NULL);
 
 	if (!percpu_get(usys_arr)->len) {
-		KSTATS_PUSH(idle, NULL);
-		/* FIXME: need to modify timer code to get the next event */
-		eth_rx_idle_wait(10 * ONE_MS);
-		KSTATS_POP(NULL);
+		if (done) {
+			KSTATS_PUSH(idle, NULL);
+			/* FIXME: need to modify timer code to get the next event */
+			eth_rx_idle_wait(10 * ONE_MS);
+			KSTATS_POP(NULL);
+		}
 
 		KSTATS_PUSH(tx_reclaim, NULL);
 		percpu_get(tx_batch_cap) = eth_tx_reclaim(percpu_get(eth_tx));

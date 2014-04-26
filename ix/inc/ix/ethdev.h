@@ -973,19 +973,32 @@ struct rte_eth_dev_sriov {
 
 struct eth_rx_queue {
 	int (*poll) (struct eth_rx_queue *rx);
+	int (*process) (struct eth_rx_queue *rx, unsigned int max_packets);
 	void *perqueue_offset;
 	int queue_idx;
 };
 
 /**
- * eth_rx_poll - processes all pending packets on an RX queue
+ * eth_rx_poll - fetches into the memory ring all pending packets on an RX queue
  * @rx: the RX queue
  *
- * Returns the number of packets processed.
+ * Returns the number of packets fetched.
  */
 static inline int eth_rx_poll(struct eth_rx_queue *rx)
 {
 	return rx->poll(rx);
+}
+
+/**
+ * eth_rx_process - processes all packets on an RX queue from memory ring
+ * @rx: the RX queue
+ * @max_packets: the maximum number of packets to process
+ *
+ * Returns 1 if all available packets have been processed.
+ */
+static inline int eth_rx_process(struct eth_rx_queue *rx, unsigned int max_packets)
+{
+	return rx->process(rx, max_packets);
 }
 
 struct eth_tx_queue {

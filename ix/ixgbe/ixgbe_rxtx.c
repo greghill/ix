@@ -26,15 +26,40 @@
 #define IXGBE_MIN_RING_DESC	64
 #define IXGBE_MAX_RING_DESC	4096
 
+#define IXGBE_MAX_INMEM_RING	8192
+
 struct rx_entry {
 	struct mbuf *mbuf;
 };
+
+struct inmem_ring_entry {
+	struct mbuf	*mbuf;
+};
+
+struct inmem_ring {
+	struct inmem_ring_entry	*entries;
+	uint64_t		head;
+	uint64_t		tail;
+	uint64_t		len;
+};
+
+#define RING_HEAD(ring) (&ring->entries[(ring)->head & ((ring)->len - 1)])
+#define RING_TAIL(ring) (&ring->entries[(ring)->tail & ((ring)->len - 1)])
+
+static void ring_init(struct inmem_ring *ring, struct inmem_ring_entry	*entries, uint64_t len)
+{
+	ring->head = 0;
+	ring->tail = 0;
+	ring->len = len;
+	ring->entries = entries;
+}
 
 struct rx_queue {
 	struct eth_rx_queue	erxq;
 	volatile union ixgbe_adv_rx_desc *ring;
 	machaddr_t		ring_physaddr;
 	struct rx_entry		*ring_entries;
+	struct inmem_ring	*inmem_ring;
 
 	volatile uint32_t	*rdt_reg_addr;
 	volatile uint32_t	*rdh_reg_addr;
@@ -136,9 +161,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 	uint32_t status;
 	int nb_descs = 0;
 	bool valid_checksum;
-#ifdef ENABLE_KSTATS
-	kstats_accumulate save;
-#endif
+	struct inmem_ring_entry *mre;
 
 	while (1) {
 		rxdp = &rxq->ring[rxq->pos & (rxq->len - 1)];
@@ -180,9 +203,14 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		rxdp->read.pkt_addr = cpu_to_le32(maddr);
 
 		if (likely(valid_checksum)) {
-			KSTATS_PUSH(eth_input, &save);
-			eth_input(rx, b);
-			KSTATS_POP(&save);
+			if (rxq->inmem_ring->tail >= rxq->inmem_ring->head + rxq->inmem_ring->len) {
+				log_info("ixgbe: dropping packet\n");
+				mbuf_free(b);
+			} else {
+				mre = RING_TAIL(rxq->inmem_ring);
+				rxq->inmem_ring->tail++;
+				mre->mbuf = b;
+			}
 		} else {
 			mbuf_free(b);
 		}
@@ -198,6 +226,26 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 	}
 
 	return nb_descs;
+}
+
+static int ixgbe_rx_process(struct eth_rx_queue *rx, unsigned int max_packets)
+{
+	struct rx_queue *rxq = eth_rx_queue_to_drv(rx);
+	struct inmem_ring_entry *mre;
+#ifdef ENABLE_KSTATS
+	kstats_accumulate save;
+#endif
+
+	while (max_packets && rxq->inmem_ring->head < rxq->inmem_ring->tail) {
+		mre = RING_HEAD(rxq->inmem_ring);
+		rxq->inmem_ring->head++
+		KSTATS_PUSH(eth_input, &save);
+		eth_input(rx, mre->mbuf);
+		KSTATS_POP(&save);
+		max_packets--;
+	}
+
+	return rxq->inmem_ring->head == rxq->inmem_ring->tail ? 1 : 0;
 }
 
 /* FIXME: make this driver independent */
@@ -261,7 +309,9 @@ int ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 
 	BUILD_ASSERT(align_up(sizeof(struct rx_queue), IXGBE_ALIGN) +
 		     (sizeof(union ixgbe_adv_rx_desc) + sizeof(struct rx_entry))
-		     * IXGBE_MAX_RING_DESC < PGSIZE_2MB);
+		     * IXGBE_MAX_RING_DESC + sizeof(struct inmem_ring) +
+		     sizeof(struct inmem_ring_entry) * IXGBE_MAX_INMEM_RING <
+		     PGSIZE_2MB);
 
 	/*
 	 * Additionally, for purely software performance optimization reasons,
@@ -286,6 +336,10 @@ int ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 		align_up(sizeof(struct rx_queue), IXGBE_ALIGN));
 	rxq->ring_entries = (struct rx_entry *) ((uintptr_t) rxq->ring +
 		sizeof(union ixgbe_adv_rx_desc) * nb_desc);
+	rxq->inmem_ring = (struct inmem_ring *) ((uintptr_t) rxq->ring_entries +
+		sizeof(struct rx_entry) * nb_desc);
+	ring_init(rxq->inmem_ring, (struct inmem_ring_entry *) ((uintptr_t)
+		rxq->inmem_ring + sizeof(struct inmem_ring)), IXGBE_MAX_INMEM_RING);
 	rxq->len = nb_desc;
 	rxq->pos = 0;
 
@@ -313,6 +367,7 @@ int ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 	}
 
 	rxq->erxq.poll = ixgbe_rx_poll;
+	rxq->erxq.process = ixgbe_rx_process;
 
 	ret = ixgbe_alloc_rx_mbufs(rxq);
 	if (ret)
