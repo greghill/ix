@@ -1,4 +1,4 @@
-s
+
 \section{Evaluation}
 \label{sec:eval}
 
@@ -59,7 +59,7 @@ scalability~\cite{jeong2014mtcp}.  Unless specifically mentioned, all
 clients run a baseline Linux configuration. 
 
 The Linux server implementations use the \texttt{libevent} framework
-running on XXX threads to serve the clients. The mTCP server
+running on XXX threads to serve the clients, and the \texttt{epoll} system call. The mTCP server
 implementation use the native mTCP API running on up to 8 cores
 (within each core, one hyperthread is dedicated to processing the
 network stack).  We downloaded and installed mTCP
