@@ -1,29 +1,29 @@
 \begin{table*}[t]
 \centering
 \begin{small}
-\begin{tabular}{|c|c|c|}
+\begin{tabular}{|l|l|l|}
 \hline
-\multicolumn{3}{|c|}{Event Conditions (each has a cookie, not shown)} \\
+\multicolumn{3}{|c|}{Event Conditions} \\
 \hline
 Condition &           Parameters  &                             Description\\
 \hline
-Knock  &               cookie,src\_IP, src\_port &                        A remote host is attempting to open a connection \\
-Connected &            cookie,outcome  &                                  A locally initiated flow has finished connecting\\
-Recv &                 cookie, mbuf\_ptr, mbuf\_len &                  A message buffer has been received\\
-Sent &                 cookie, bytes\_sent, window\_size &          Packet transmission has completed and/or the window size has changed \\
-Dead &                cookie, reason &                                    The flow has been closed or an error has occurred \\
+Knock  &               cookie, src\_IP, src\_port		& A remotely initiated connection was opened \\
+Connected &            cookie, outcome				& A locally initiated connection finished opening \\
+Recv &                 cookie, mbuf\_ptr, mbuf\_len		& A message buffer was received \\
+Sent &                 cookie, bytes\_sent, window\_size	& A send completed and/or the window size changed \\
+Dead &                 cookie, reason				& A connection was terminated \\
 \hline
 \hline
-\multicolumn{3}{|c|}{Batched System Calls (partial list)} \\
+\multicolumn{3}{|c|}{System Calls (batched)} \\
 \hline
-connect &            cookie, dst\_IP, dst\_port &            Open a connection\\
-accept &               handle, cookie &                          Accept a connection\\
-sendv &               handle, scatter\_gather\_array &      Transmits an array of addresses and lengths\\
-recv\_done &          handle, bytes\_acked &                Advances the receive window and frees memory buffers\\
-close &                 handle &                                      Closes a connection\\
+connect &             cookie, dst\_IP, dst\_port		& Opens a connection\\
+accept &              handle, cookie				& Accepts a connection\\
+sendv &               handle, scatter\_gather\_array		& Transmits a scatter-gather array of data\\
+recv\_done &          handle, bytes\_acked			& Advances the receive window and frees memory buffers\\
+close &               handle					& Closes a connection\\
 \hline
 \end{tabular}
-\caption{\ix event conditions and batch system calls}
+\caption{\ix event conditions and system calls}
 \label{tbl:api}
 \end{small}
 \end{table*}
