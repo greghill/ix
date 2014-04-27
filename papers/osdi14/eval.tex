@@ -31,8 +31,8 @@ reporting multi-core scalability, we report results with
 hyperthreading enabled, and both hyperthreads of the cores are used.
 
 For our experiments, the server is connected to the switch via either
-a single 10GbE link or via a 4x10GbE bond configured as a L2+L3 hash
-via LACP~\cite{ieee802.3ad}. Jumbo frames are never enabled.  Our
+a single 10GbE link or via a 4x10GbE bond configured as a L2+L3 hash.
+Jumbo frames are never enabled.  Our
 baseline configuration in each machine is the Ubuntu 12.04.4 LTS
 distribution running the 3.11.10 Linux kernel.  Although the server
 has two sockets, our experiments use only the CPU and memory resources
@@ -53,12 +53,10 @@ of the socket to which the NIC are attached.
 \input{figs/float-short}
 
 Whenever both practical and relevant, we compare the performance of an
-\ix server with a baseline out-of-the-box Linux configuration
-((\texttt{Linux-base}), an optimized configuration of Linux
-(\texttt{Linux-opt}), and the performance of mTCP, a
+\ix server with both the baseline Linux configuration and with mTCP, a
 recently-published user-level TCP stack specifically designed for
 scalability~\cite{jeong2014mtcp}.  Unless specifically mentioned, all
-clients run a baseline Linux configuration. 
+clients run the same Linux configuration. 
 
 The Linux server implementations use the \texttt{libevent} framework
 running on XXX threads to serve the clients, and the \texttt{epoll} system call. The mTCP server
