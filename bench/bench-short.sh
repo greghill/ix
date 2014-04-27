@@ -39,6 +39,7 @@ if [ $CLUSTER_ID = 'EPFL' ]; then
   SERVER_IP=192.168.21.1
   CLIENT_CORES=16
   CLIENT_CONNECTIONS=50
+  MAX_CORES=16
 elif [ $CLUSTER_ID = 'Stanford' ]; then
   CLIENTS="$CLIENTS maverick-1|p3p1|10.79.6.11"
   CLIENTS="$CLIENTS maverick-2|p3p1|10.79.6.13"
@@ -50,9 +51,10 @@ elif [ $CLUSTER_ID = 'Stanford' ]; then
   CLIENTS="$CLIENTS maverick-14|p3p1|10.79.6.25"
   #CLIENTS="$CLIENTS maverick-16|p3p1|10.79.6.27"
   #CLIENTS="$CLIENTS maverick-18|p3p1|10.79.6.29"
-  SERVER_IP=10.79.6.22
+  SERVER_IP=10.79.6.26
   CLIENT_CORES=24
   CLIENT_CONNECTIONS=96
+  MAX_CORES=12
 else
   echo 'invalid parameters' >&2
   exit 1
@@ -107,9 +109,14 @@ elif [ $SERVER_SPEC = 'mTCP-10-RPC' ]; then
   SERVER=server_mtcp_rpc
   SERVER_PORT=9876
   ON_EXIT=on_exit_mtcp_rpc
-  CORES="0,1,2,3,4,5"
+  CORES="0,1,2,3,4,5,6,7"
   BUILD_IX=0
   BUILD_TARGET_BENCH="all_mtcp"
+  if [ $CLUSTER_ID = 'Stanford' ]; then
+    MAX_CORES=6
+  else
+    MAX_CORES=8
+  fi
 elif [ $SERVER_SPEC = 'Linux-10-Stream' ]; then
   SERVER_NET="linux single"
   SERVER=server_linux_stream
@@ -123,9 +130,14 @@ elif [ $SERVER_SPEC = 'mTCP-10-Stream' ]; then
   SERVER=server_mtcp_stream
   SERVER_PORT=9876
   ON_EXIT=on_exit_mtcp_stream
-  CORES="0,1,2,3,4,5"
+  CORES="0,1,2,3,4,5,6,7"
   BUILD_IX=0
   BUILD_TARGET_BENCH="all_mtcp"
+  if [ $CLUSTER_ID = 'Stanford' ]; then
+    MAX_CORES=6
+  else
+    MAX_CORES=8
+  fi
 elif [ $SERVER_SPEC = 'Linux-40-RPC' ]; then
   SERVER_NET="linux bond"
   SERVER=server_linux_rpc
@@ -283,15 +295,14 @@ run_single() {
 }
 
 run() {
-  run_single 16 64 1
-  for i in {1..15}; do
+  for i in {1..$MAX_CORES}; do
     run_single $i 64 1
   done
   for i in 2 8 32 64 128 256 512 1024; do
-    run_single 16 64 $i
+    run_single $MAX_CORES 64 $i
   done
   for i in 256 1024 4096 8192; do
-    run_single 16 $i 1
+    run_single $MAX_CORES $i 1
   done
 }
 

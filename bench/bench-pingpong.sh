@@ -22,7 +22,7 @@ if [ $CLUSTER_ID = 'EPFL' ]; then
   SERVER_IP=192.168.21.1
 elif [ $CLUSTER_ID = 'Stanford' ]; then
   CLIENTS="$CLIENTS maverick-10|p7p1|10.79.6.21"
-  SERVER_IP=10.79.6.22
+  SERVER_IP=10.79.6.26
 else
   echo 'invalid parameters' >&2
   exit 1
@@ -36,8 +36,9 @@ if [ $# -lt 2 ]; then
   echo "              | Linux-10-RPC|Linux-10-Stream|Linux-40-RPC|Linux-40-Stream"
   echo "              | Netpipe-10 | Netpipe-40 | mTCP-10-RPC | mTCP-10-Stream"
   echo "              | Netpipe-10-Optimized | Netpipe-40-Optimized"
+  echo "              | Netpipe-mTCP"
   echo "  CLIENT_SPEC = Linux-Libevent|Linux-Simple|Netpipe"
-  echo "              | Netpipe-Optimized | IX"
+  echo "              | Netpipe-Optimized | Netpipe-mTCP | IX"
   echo "  CLUSTER_ID  = EPFL|Stanford (default: EPFL)"
   exit
 fi
@@ -81,7 +82,7 @@ elif [ $SERVER_SPEC = 'mTCP-10-RPC' ]; then
   SERVER=server_mtcp_rpc
   SERVER_PORT=9876
   ON_EXIT=on_exit_mtcp_rpc
-  CORES="0,1,2,3,4,5"
+  CORES="0"
   BUILD_IX=0
   BUILD_TARGET_BENCH="all_mtcp"
 elif [ $SERVER_SPEC = 'Linux-10-Stream' ]; then
@@ -97,7 +98,7 @@ elif [ $SERVER_SPEC = 'mTCP-10-Stream' ]; then
   SERVER=server_mtcp_stream
   SERVER_PORT=9876
   ON_EXIT=on_exit_mtcp_stream
-  CORES="0,1,2,3,4,5"
+  CORES="0"
   BUILD_IX=0
   BUILD_TARGET_BENCH="all_mtcp"
 elif [ $SERVER_SPEC = 'Linux-40-RPC' ]; then
@@ -138,24 +139,35 @@ elif [ $SERVER_SPEC = 'Netpipe-10' ]; then
   SERVER_NET="linux single"
   ON_EXIT=on_exit_netpipe
   NETPIPE=$[$NETPIPE+1]
+  NETPIPE_EXEC_SERVER="NPtcp"
   BUILD_IX=0
   BUILD_TARGET_BENCH=
 elif [ $SERVER_SPEC = 'Netpipe-40' ]; then
   SERVER_NET="linux bond"
   ON_EXIT=on_exit_netpipe
   NETPIPE=$[$NETPIPE+1]
+  NETPIPE_EXEC_SERVER="NPtcp"
   BUILD_IX=0
   BUILD_TARGET_BENCH=
 elif [ $SERVER_SPEC = 'Netpipe-10-Optimized' ]; then
   SERVER_NET="linux single opt"
   ON_EXIT=on_exit_netpipe
   NETPIPE=$[$NETPIPE+1]
+  NETPIPE_EXEC_SERVER="NPtcp"
   BUILD_IX=0
   BUILD_TARGET_BENCH=
 elif [ $SERVER_SPEC = 'Netpipe-40-Optimized' ]; then
   SERVER_NET="linux bond opt"
   ON_EXIT=on_exit_netpipe
   NETPIPE=$[$NETPIPE+1]
+  NETPIPE_EXEC_SERVER="NPtcp"
+  BUILD_IX=0
+  BUILD_TARGET_BENCH=
+elif [ $SERVER_SPEC = 'Netpipe-mTCP' ]; then
+  SERVER_NET="mtcp"
+  ON_EXIT=on_exit_netpipe_mtcp
+  NETPIPE=$[$NETPIPE+1]
+  NETPIPE_EXEC_SERVER="NPmtcp"
   BUILD_IX=0
   BUILD_TARGET_BENCH=
 else
@@ -182,12 +194,20 @@ elif [ $CLIENT_SPEC = 'Netpipe' ]; then
   DEPLOY_FILES="select_net.sh NPtcp"
   CLIENT_NET="linux single"
   NETPIPE=$[$NETPIPE+1]
+  NETPIPE_EXEC_CLIENT="NPtcp"
   KILL_CLIENT=""
 elif [ $CLIENT_SPEC = 'Netpipe-Optimized' ]; then
   DEPLOY_FILES="select_net.sh NPtcp"
   CLIENT_NET="linux single opt"
-  NETPIPE=$[$NETPIPE+1]
   KILL_CLIENT=""
+  NETPIPE=$[$NETPIPE+1]
+  NETPIPE_EXEC_CLIENT="NPtcp"
+elif [ $CLIENT_SPEC = 'Netpipe-mTCP' ]; then
+  DEPLOY_FILES="select_net.sh NPmtcp NPmtcp.conf"
+  CLIENT_NET="mtcp"
+  KILL_CLIENT=""
+  NETPIPE=$[$NETPIPE+1]
+  NETPIPE_EXEC_CLIENT="NPmtcp"
 elif [ $CLIENT_SPEC = 'IX' ]; then
   CLIENT_CMDLINE=" sudo ./ix -q -d 0000:01:00.0 -c 0 /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ./client_test $SERVER_IP $SERVER_PORT \$MSG_SIZE"
   DEPLOY_FILES="select_net.sh ../ix/ix ../apps/event/client_test ../dune/dune.ko ../igb_stub/igb_stub.ko"
@@ -219,7 +239,7 @@ on_exit_ix() {
   on_exit_common
   PID=`pidof ix||echo 0`
   if [ $PID -eq 0 ]; then return; fi
-  sudo kill -KILL $PID
+  sudo kill -KILL $PID 2>/dev/null || true
 }
 
 on_exit_linux_rpc() {
@@ -259,6 +279,14 @@ on_exit_mtcp_stream() {
 on_exit_netpipe() {
   on_exit_common
   PID=`pidof NPtcp||echo 0`
+  if [ $PID -eq 0 ]; then return; fi
+  kill $PID
+  wait $PID 2>/dev/null || true
+}
+
+on_exit_netpipe_mtcp() {
+  on_exit_common
+  PID=`pidof NPmtcp||echo 0`
   if [ $PID -eq 0 ]; then return; fi
   kill $PID
   wait $PID 2>/dev/null || true
@@ -310,7 +338,6 @@ server_mtcp_stream() {
 
 run_single() {
   MSG_SIZE=$1
-
   $SERVER 16 $MSG_SIZE
   if [ $CLIENT_SPEC != 'IX' ]; then
     ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then exit 1; fi; done"
@@ -329,8 +356,8 @@ run() {
 
 run_netpipe() {
   PARAMS="-r -n 100 -p 0 -l 64 -u $[2**25]"
-  ./NPtcp $PARAMS > /dev/null 2>&1 &
-  ssh $HOST "./NPtcp $PARAMS -h $SERVER_IP > /dev/null 2>&1 && awk '//{printf(\"0\\t%d\\t999999999\\t%f 0 0 0 0 0\\n\",\$1,\$2*1024*1024/8/2/\$1)}' np.out" > $OUTDIR/data
+  ./$NETPIPE_EXEC_SERVER $PARAMS > /dev/null 2>&1 &
+  ssh $HOST "./$NETPIPE_EXEC_CLIENT $PARAMS -h $SERVER_IP > /dev/null 2>&1 && awk '//{printf(\"0\\t%d\\t999999999\\t%f 0 0 0 0 0\\n\",\$1,\$2*1024*1024/8/2/\$1)}' np.out" > $OUTDIR/data
 }
 
 prepare $BUILD_IX $BUILD_TARGET_BENCH
