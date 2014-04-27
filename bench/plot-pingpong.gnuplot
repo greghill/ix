@@ -18,17 +18,10 @@ set output outfile
 set grid y
 set border 3
 set tics out nomirror
-set key top left
+set key bottom right invert
 
-set xlabel 'Message Size'
+set xlabel 'Message Size (KB)'
 set ylabel 'Throughput (Gbps)'
-set xrange [0:*]
-set yrange [0:*]
-set macro
-xtics = "('0' 0"
-do for [i=6:32:2] {
-  xtics = xtics . sprintf(",'%s' %d", sizefmt(2**i), i-5)
-}
-xtics = xtics.")"
-set xtics @xtics
-plot for [i=1:words(infile)] word(infile,i) using (invpow2($2)-5):(2*$4*$2*8/10**9) title gen_title(i) linestyle i
+set xrange [0:384]
+set yrange [0:10]
+plot for [i=1:words(infile)] word(infile,i) using ($2/1024):(2*$4*$2*8/10**9) title gen_title(i) linestyle i
