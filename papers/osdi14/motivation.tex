@@ -3,7 +3,7 @@
 \label{sec:motivation}
 
 Our work focuses on improving operating systems for the large and
-well-define class of web-scale applications. 
+well-defined class of web-scale applications. 
 
 %  In this section, we
 % first define the class of applications in our focus
@@ -36,7 +36,7 @@ Collectively, these services occupy hundreds to thousands of servers
 connected through high-speed networking. An incoming request from an
 external user leads to tens to hundreds of internal requests across
 the various services, with some requests issued sequentially due to
-dependencies in application logic, while other requests areissued in a
+dependencies in application logic, while other requests are issued in a
 parallel, fan-out manner.  Different services are routinely
 implemented using different programming languages, but are connected
 through a unifying framework for RPC, serialization, service
@@ -76,7 +76,7 @@ software and their networking stacks:
 \myparagraph{High packet rates:} The requests and, often times, the
 replies between services in web-scale applications are quite small. In
 Facebook's \texttt{memcached} service, for example, the vast majority
-of requests uses keys shorter than 50 bytes and involve values shorter
+of requests uses keys shorter than 50 bytes and involves values shorter
 than 500 bytes~\cite{Atikoglu:2012:WAL}. As a result, each service
 node must ideally scale to extremely high packet rates, measured in
 millions of packets per second on 10 GbE or 40 GbE NICs.  In such
@@ -190,7 +190,7 @@ entrusted into applications.
 API with lightweight sockets implemented with in-memory command
 rings~\cite{han2012megapipe} . This substantially reduces software
 overheads and increases packet rates, but retails all other challenges
-of using an existing, kernel-based  networking stack.
+of using an existing, kernel-based networking stack.
 
 \myparagraph{OS enhancements:} Tuning kernel-based stacks provides
 incremental benefits with superior ease of deployment.  Linux

@@ -75,7 +75,7 @@ adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH,mitchell:rdma,dragojevi
 kernel bypass eliminates context switch overheads, on its own it does
 not eliminate the difficult tradeoffs between high packet rates and
 low latency or the challenges of managing large numbers of
-connections. Moverover, user-level networking suffers from lack of
+connections. Moreover, user-level networking suffers from lack of
 protection. Application bugs and crashes can corrupt the networking
 stack and impact other workloads.
 
@@ -133,7 +133,7 @@ locality.  \ix is also optimized for synchronization and coherence
 free execution on multi-core systems. It uses multi-queue network
 adapters (NICs) and receive-side scaling (RSS) to implement
 flow-consistent hashing of incoming traffic to distinct hardware
-queues. Each dataplance instance exclusively controls a set of these
+queues. Each dataplane instance exclusively controls a set of these
 queues and runs the networking stack and a single application, such as
 a webserver or a distributed caching server. Moreover, the \ix API and
 companion user-level library meet the commutativity
@@ -170,7 +170,7 @@ and a wide range of existing applications.
 % (mean), with an additional latency jitter of not more than an extra
 % 10~\microsecond.
 
-We compare \ix against Linux and mTCP, a state-of-the-art userlevel
+We compare \ix against Linux and mTCP, a state-of-the-art user-level
 TCP stack~\cite{jeong2014mtcp}. \christos{TBD: discuss latency, packet
   rate for small messages, connection scaling, and resource
   usage. then discuss memached}
