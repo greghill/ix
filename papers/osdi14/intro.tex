@@ -8,20 +8,20 @@ Web-scale applications such as search, social networking, and
 e-commerce platforms, are redefining the requirements on system
 software. A single application can consist of hundreds of software
 services, deployed on thousands of servers. For example, Amazon
-routinely accesses 150 distinct services to render each page request
-from external users~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07}. Such
-applications need TCP/IP networking stack implementations that go well
-beyond the classical requirements of high streaming performance and
-moderate connection scalability. The new requirements include high
-packet rates for the short messages~\cite{Atikoglu:2012:WAL,missing-other},
+routinely accesses 150 distinct services to render each page requested
+by external users~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07}. Such
+applications need TCP/IP networking stacks that go well beyond the
+classical requirements of high streaming performance and moderate
+connection scalability. The new requirements include high packet rates
+for the short messages~\cite{Atikoglu:2012:WAL,missing-other},
 microsecond-level reponses to remote requests with tight tail latency
 guarantees~\cite{DBLP:journals/cacm/DeanB13}, and support for hundreds
 of thousands of connections with high connection
-churn~\cite{nishtala2013scaling,missing-other}. It is also desirable to be
-elastic in resource usage, allowing other applications to use the
-available cores and memory in a shared
-datacenter~\cite{nishtala2013scaling} or enabling cost reduction
-through power management~\cite{DBLP:journals/computer/BarrosoH07}.
+churn~\cite{nishtala2013scaling,missing-other}. It is also desirable
+to be elastic in resource usage, allowing other applications to use
+any available cores and memory in a shared
+cluster~\cite{nishtala2013scaling} or enabling cost reduction through
+power management~\cite{DBLP:journals/computer/BarrosoH07}.
 
 
 % \christos{1-2 paragraphs on how mainstream approaches fail many 
@@ -63,100 +63,150 @@ through power management~\cite{DBLP:journals/computer/BarrosoH07}.
 % coalescing improve performance at the expense of average and tail
 % latency~\cite{missing}.
 
-The conventional wisdom is that these problems are rooted in a
-mismatch between existing commodity operating systems, existing
-network protocols, and the unique requirements of web-scale
-applications.  Consequently, the proposed solutions generally involve
-either: 
-(i) improving the operating system's implementation and
-interface~\cite{DBLP:conf/eurosys/PesterevSZM12,han2012megapipe}; 
-(ii) replacing network-level connections with
-datagrams~\cite{nishtala2013scaling}; 
-(iii) offloading connection and protocol processing to a specialized hardware adapter, e.g, the
-RAMcloud~\cite{DBLP:conf/sosp/OngaroRSOR11} key-value store relies on
-RDMA~\cite{rdma-user-manual} to achieve 5~\microsecond latency; (iv)
-bypassing the operating system and implementing the protocol stack in
-user-space~\cite{jeong2014mtcp}; (v) merging the application logic
-directly within a software data plane, as is commonly done in
-middleboxes such as firewalls~\cite{missing},
-load-balancers~\cite{missing}, and software
-routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09};
-or even (vi) replacing the general-purpose hardware with a specialized
-FPGA implementation dedicated to serving a single, simple workload
-such as memcached~\cite{DBLP:conf/fpga/ChalamalasettiLWARM13}.
+The conventional wisdom is that there is a fundamental mismatch
+between the requirements of web-scale workloads and existing
+implementations of TCP/IP  in commodity operating
+systems. Consequently, many proposed solutions bypass the operating
+system and implement the networking stack in
+user-space~\cite{jeong2014mtcp,Kapoor:2012:CPL,openonload,marinos2013network,Thekkath:1993:INP}. Some
+systems go one step further by also replacing TCP/IP with RDMA in
+order to offload protocol processing to Infiniband network
+adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH,mitchell:rdma,dragojevic14farm}. While
+kernel bypass eliminates context switch overheads, on its own it does
+not eliminate the difficult tradeoffs between high packet rates and
+low latency or the challenges of managing large numbers of
+connections. Moverover, user-level networking suffers from lack of
+protection. Application bugs and crashes can corrupt the networking
+stack and impact other workloads.
 
-\christos{This is where we bring up the design principles of IX:
-  separation data/control plane; native zero-copy event-oriented API; 
-data-plane architecture that runs to completion; design for multi-core
-and multi-queue. Probably two paragraphs}
-In this paper, we propose an architecture designed specifically for
-event-driven, web-scale applications.  Like a conventional commodity
-operating system, the kernel  ---including the entire network protocol-processing stack--- is protected from the application.  Unlike a
-conventional operating system, the networking stack is organized as a
-dataplane that minimizes overheads and latency by processing flow
-fragments to completion, interleaving (kernel-mode) networking
-protocol processing with (user-mode) application execution.  
-This model is similar to the use of coroutines in applications~\cite{missing}.
+% Christos: I have decided to postpone the discussion of all other
+% alternatives in section 2. Simplifies the message in the intro
+% The conventional wisdom is that these problems are rooted in a
+% mismatch between existing commodity operating systems, existing
+% network protocols, and the unique requirements of web-scale
+% applications.  Consequently, the proposed solutions generally involve
+% either: (i) improving the operating system's implementation and
+% interface~\cite{DBLP:conf/eurosys/PesterevSZM12,han2012megapipe}; (ii)
+% replacing network-level connections with
+% datagrams~\cite{nishtala2013scaling}; (iii) offloading connection and
+% protocol processing to a specialized hardware adapter, e.g, the
+% RAMcloud~\cite{DBLP:conf/sosp/OngaroRSOR11} key-value store relies on
+% RDMA~\cite{rdma-user-manual} to achieve 5~\microsecond latency; (iv)
+% bypassing the operating system and implementing the protocol stack in
+% user-space~\cite{jeong2014mtcp}; (v) merging the application logic
+% directly within a software data plane, as is commonly done in
+% middleboxes such as firewalls~\cite{missing},
+% load-balancers~\cite{missing}, and software
+% routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09};
+% or even (vi) replacing the general-purpose hardware with a specialized
+% FPGA implementation dedicated to serving a single, simple workload
+% such as memcached~\cite{DBLP:conf/fpga/ChalamalasettiLWARM13}.
 
-We introduce \ix, a specialized system software solution built for
-event-driven applications, including applications built for the
-libevent framework~\cite{provos2003libevent}.  \ix is designed to meet the
-challenge of the C10M problem~\cite{theC10Mproblem}: for a given
-server, scale to 10 million concurrent TCP connections, saturate one
-or multiple 10 GbE interfaces, and deliver 10~\microsecond latency
-(mean), with an additional latency jitter of not more than an extra
-10~\microsecond.
+% \christos{This is where we bring up the design principles of IX:
+%   separation data/control plane; native zero-copy event-oriented API; 
+% data-plane architecture that runs to completion; design for multi-core
+% and multi-queue. Probably two paragraphs}
 
-\ix addresses the C10M problem through a careful separation of the
-control plane and dataplane functions.  The control plane consists of a
-vanilla Linux deployment running the Dune
-framework~\cite{belay2012dune}.  The dataplane is a special-purpose
-library operating system that directly controls hardware I/O queues,
-runs the networking stack, and generates the event callbacks of the
-application.  Each dataplane instance exclusively controls a set of
-hardware I/O queues, and runs a single application, e.g. a web sever
-listening to \texttt{:80} and \texttt{:443}.  Unlike kernel-bypass
-approaches and middlebox designs, \ix provides memory protection.
-Like these designs however, \ix offers a zero-copy solution both
-directions, eliminating all packet copy overheads.  Finally, the \ix
-API and companion userlevel library meets the commutativity
-rule~\cite{DBLP:conf/sosp/ClementsKZMK13}. Furthermore, our
-implementation has a symmetrical design in which hardware queues are partitioned among all hyperthreads. 
-The hyperthreads each interleave execution in kernel- and userspace, and executes in a
-\emph{coherence-free} manner end-to-end in the common case.
+We propose \ix, an operating system designed specifically to meet the
+networking requirements of event-driven, web-scale applications. Its
+architecture builds upon the lessons from high performance
+middleboxes, such as firewalls, load-balances, and software
+routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09}. \ix
+separates the control plane, which is responsible for basic kernel
+functionality such as provisioning and scheduling, from the dataplanes
+which run the networking stack and application logic. However, \ix
+uses hardware virtualization to isolate the control plane from the
+dataplanes~\cite{DBLP:journals/computer/UhligNRSMABKLS05}
+and offer the same protection model as commodity operating systems. In
+our implementation, the control plane is a vanilla Linux kernel and
+the dataplanes use Dune to run as protected, library-based operating
+systems~\cite{belay2012dune}. 
 
-\christos{lots of good numbers} Our evaluation of \ix shows that, on comparable hardware, it
-outperforms mTCP~\cite{jeong2014mtcp}, the current state-of-the-art userlevel TCP stack by
-3x on all microbenchmarks, and yet provides additional security and
-tail-latency benefits.
+\ix provides a native, zero-copy API that explicitly exposes network
+flow-control to applications.  This API enables dataplanes to optimize
+for both bandwidth and latency by processing a bounded batch of
+packets to completion.  Each dataplane executes all the pipeline
+stages for network processing for the batch in kernel mode, followed
+by the associated application processing in user mode. This approach
+amortizes API overheads and improves both instruction and data
+locality.  \ix is also optimized for synchronization and coherence
+free execution on multi-core systems. It uses multi-queue network
+adapters (NICs) and receive-side scaling (RSS) to implement
+flow-consistent hashing of incoming traffic to distinct hardware
+queues. Each dataplance instance exclusively controls a set of these
+queues and runs the networking stack and a single application, such as
+a webserver or a distributed caching server. Moreover, the \ix API and
+companion user-level library meet the commutativity
+rule~\cite{DBLP:conf/sosp/ClementsKZMK13}, eliminating multi-core
+synchronization in the common case operation. The \ix
+user-level library includes an interface nearly identical to the
+popular \texttt{libevent} library, providing compatibility between \ix
+and a wide range of existing applications.
 
-\christos{I prefer to enumerate the main design principles and the
-  list impressive numbers towards the goals rather than come up with
-  another contribution list that is repetative}
-The primary contributions of this paper are as follows:
+\christos{add a few more details above (3-4 sentences) if space allows}
 
-\begin{itemize}
+% \ix addresses the C10M problem through a careful separation of the
+% control plane and dataplane functions.  The control plane consists of a
+% vanilla Linux deployment running the Dune
+% framework~\cite{belay2012dune}. 
 
-\item  the use of Linux and Dune as a mechanism to separate the control-plane from the dataplane in web-scale applications;
-
-\item the design and implementation of \ix, a library operating system
-  organized as a protected dataplane with zero-copy specifically
-  designed to support event-driven applications;
-
-\item an evaluation of \ix that shows that we meet the C10M challenge;
-  despite the conventional wisdom, this is achieved through a
-  specialized kernel (organized as dataplane);
-
-\item the evaluation of \ix that shows that it outperforms the
-  state-of-the-art userlevel stack by \edb{3x?} or more for all
-  micro-benchmarks and real-world applications such as memcached;
-
-\item XXX
-
-\end{itemize}
+% The dataplane is a special-purpose library operating system that
+% directly controls hardware I/O queues, runs the networking stack, and
+% generates the event callbacks of the application.  Each dataplane
+% instance exclusively controls a set of hardware I/O queues, and runs a
+% single application, e.g. a web sever listening to \texttt{:80} and
+% \texttt{:443}.  Unlike kernel-bypass approaches and middlebox designs,
+% \ix provides memory protection.  Like these designs however, \ix
+% offers a zero-copy solution both directions, eliminating all packet
+% copy overheads.
 
 
-The rest of this paper is organized as follows: \edb{TODO}
+% We introduce \ix, a specialized system software solution built for
+% event-driven applications, including applications built for the
+% libevent framework~\cite{provos2003libevent}.  \ix is designed to meet the
+% challenge of the C10M problem~\cite{theC10Mproblem}: for a given
+% server, scale to 10 million concurrent TCP connections, saturate one
+% or multiple 10 GbE interfaces, and deliver 10~\microsecond latency
+% (mean), with an additional latency jitter of not more than an extra
+% 10~\microsecond.
+
+We compare \ix against Linux and mTCP, a state-of-the-art userlevel
+TCP stack~\cite{jeong2014mtcp}. \christos{TBD: discuss latency, packet
+  rate for small messages, connection scaling, and resource
+  usage. then discuss memached}
+
+% \christos{I prefer to enumerate the main design principles and the
+%   list impressive numbers towards the goals rather than come up with
+%   another contribution list that is repetative}
+% The primary contributions of this paper are as follows:
+
+% \begin{itemize}
+
+% \item  the use of Linux and Dune as a mechanism to separate the control-plane from the dataplane in web-scale applications;
+
+% \item the design and implementation of \ix, a library operating system
+%   organized as a protected dataplane with zero-copy specifically
+%   designed to support event-driven applications;
+
+% \item an evaluation of \ix that shows that we meet the C10M challenge;
+%   despite the conventional wisdom, this is achieved through a
+%   specialized kernel (organized as dataplane);
+
+% \item the evaluation of \ix that shows that it outperforms the
+%   state-of-the-art userlevel stack by \edb{3x?} or more for all
+%   micro-benchmarks and real-world applications such as memcached;
+
+% \item XXX
+
+% \end{itemize}
+
+\christos{Eliminate if we don't have space} The rest of the paper is
+organized as follows. Section \ref{sec:motivation} motivates the need
+for a new OS architecture for web-scale applications. Sections
+\ref{sec:design} and \ref{sec:impl} present the design principles and
+implementation of \ix. Section \ref{sec:eval} presents the
+quantitative evaluation, while Section \ref{sec:related} discusses
+related work. 
 
 
 
