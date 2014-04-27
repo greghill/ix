@@ -40,7 +40,7 @@ dependencies in application logic, while other requests areissued in a
 parallel, fan-out manner.  Different services are routinely
 implemented using different programming languages, but are connected
 through a unifying framework for RPC, serialization, service
-discovery, and logging~\cite{protocolbuffers, thrift, finagle}.
+discovery, and logging~\cite{protocolbuffers, thrift, finagle}\edb{REFS?}\edb{and most commonly use TCP/IP as transport.}
 
 Each node for these services responds to requests such as new incoming
 connections, data requests from existing connections, or replies to
@@ -185,7 +185,8 @@ limitations~\cite{nishtala2013scaling}. Even though UDP is running in
 the kernel, reliable communication and congestion management are
 entrusted into applications.
 
-\myparagraph{Alternatives to POSIX API:} MegaPipe replaces the POSIX
+\myparagraph{Alternatives to POSIX API:} \edb{NetMap~\cite{rizzo2012netmap} replaced system calls with command rings to increase raw packet processing in applications.}
+ MegaPipe replaces the POSIX
 API with lightweight sockets implemented with in-memory command
 rings~\cite{han2012megapipe} . This substantially reduces software
 overheads and increases packet rates, but retails all other challenges

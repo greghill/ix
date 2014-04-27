@@ -1,4 +1,6 @@
 
+% FOR THE HOTCRP ABSTRACT MAKE SURE TO REMOVE FORMATTING
+% \ix --> IX
 
 \begin{abstract}
 
@@ -8,22 +10,22 @@
   latency, support for hundreds of thousands of connections, and
   elastic use of system resources. The conventional wisdom is that
   such requirements are best addressed outside the operating system,
-  in a user-level implentation of the networking stack.
+  in a user-level implementation of the networking stack.
 
-  We present {\it IX}, a {\it dataplane operating system} specifically
-  designed for web-scale, event-driven applications.  The IX
+  We present \ix, a {\it dataplane operating system} specifically
+  designed for web-scale, event-driven applications.  The \ix
   architecture separates control plane from the dataplanes and
   provides a native, zero-copy API that explicitly exposes flow
-  control to applications. However, IX uses hardware virtualization to
-  offer the same protection model as commodity operating systems. IX
+  control to applications. However, \ix uses hardware virtualization to
+  offer the same protection model as commodity operating systems. \ix
   optimizes for both bandwidth and latency by processing bounded
   batches of packets to completion and by eliminating coherence
   traffic and synchronization on multi-core systems. 
 
-  \christos{fix} We demonstrate that IX outperforms Linux by X for packet rate and by
-  Y for latency. IX also outperforms a state-of-the-art, user-space
+  \christos{fix} We demonstrate that \ix outperforms Linux by X for packet rate and by
+  Y for latency. \ix also outperforms a state-of-the-art, user-space
   networking stack by X for packet rate and by Y for
-  latency. Moreover, we show that IX efficiently supports Z
+  latency. Moreover, we show that \ix efficiently supports Z
   connections and improves the overall performance of real-world
   applications by a factor of W.
 

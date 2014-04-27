@@ -117,8 +117,8 @@ functionality such as provisioning and scheduling, from the dataplanes
 which run the networking stack and application logic. However, \ix
 uses hardware virtualization to isolate the control plane from the
 dataplanes~\cite{DBLP:journals/computer/UhligNRSMABKLS05}
-and offer the same protection model as commodity operating systems. In
-our implementation, the control plane is a vanilla Linux kernel and
+and \edb{\sout{offer the same protection model as commodity operating systems}isolate the \ix kernel from its applications}. In
+our implementation, the control plane \edb{\sout{is a}runs on a} vanilla Linux kernel and
 the dataplanes use Dune to run as protected, library-based operating
 systems~\cite{belay2012dune}. 
 
@@ -201,11 +201,10 @@ TCP stack~\cite{jeong2014mtcp}. \christos{TBD: discuss latency, packet
 % \end{itemize}
 
 \christos{Eliminate if we don't have space} The rest of the paper is
-organized as follows. Section \ref{sec:motivation} motivates the need
-for a new OS architecture for web-scale applications. Sections
-\ref{sec:design} and \ref{sec:impl} present the design principles and
-implementation of \ix. Section \ref{sec:eval} presents the
-quantitative evaluation, while Section \ref{sec:related} discusses
+organized as follows. \edb{\sout{Section}\S} \ref{sec:motivation} motivates the need
+for a new OS architecture for web-scale applications. \S\ref{sec:design} and \S\ref{sec:impl} present the design principles and
+implementation of \ix. \S\ref{sec:eval} presents the
+quantitative evaluation, while \S\ref{sec:related} discusses
 related work. 
 
 
