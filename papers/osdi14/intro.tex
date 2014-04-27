@@ -117,9 +117,9 @@ functionality such as provisioning and scheduling, from the dataplanes
 which run the networking stack and application logic. However, \ix
 uses hardware virtualization to isolate the control plane from the
 dataplanes~\cite{DBLP:journals/computer/UhligNRSMABKLS05}
-and \edb{\sout{offer the same protection model as commodity operating systems}isolate the \ix kernel from its applications}. In
+and offer the same protection model as commodity operating systems. In
 our implementation, the control plane \edb{\sout{is a}runs on a} vanilla Linux kernel and
-the dataplanes use Dune to run as protected, library-based operating
+the dataplanes use Dune to run \ix as protected, library-based operating
 systems~\cite{belay2012dune}. 
 
 \ix provides a native, zero-copy API that explicitly exposes network
