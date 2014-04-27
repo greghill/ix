@@ -55,12 +55,27 @@ elif [ $CLUSTER_ID = 'Stanford' ]; then
   CLIENT_CORES=24
   CLIENT_CONNECTIONS=96
   MAX_CORES=12
+elif [ $CLUSTER_ID = 'Stanford-IX' ]; then
+  CLIENTS="$CLIENTS maverick-1|p3p1|10.79.6.11"	
+  CLIENTS="$CLIENTS maverick-2|p3p1|10.79.6.13"
+  CLIENTS="$CLIENTS maverick-4|p3p1|10.79.6.15"
+  CLIENTS="$CLIENTS maverick-7|p3p1|10.79.6.18"
+  CLIENTS="$CLIENTS maverick-8|p3p1|10.79.6.19"
+  CLIENTS="$CLIENTS maverick-10|p7p1|10.79.6.21"
+  CLIENTS="$CLIENTS maverick-12|p3p1|10.79.6.23"
+  CLIENTS="$CLIENTS maverick-14|p3p1|10.79.6.25"
+  CLIENTS="$CLIENTS maverick-16|p3p1|10.79.6.27"
+  CLIENTS="$CLIENTS maverick-18|p3p1|10.79.6.29"
+  SERVER_IP=10.79.6.112
+  CLIENT_CORES=24
+  CLIENT_CONNECTIONS=192 #75
+  MAX_CORES=6
 else
   echo 'invalid parameters' >&2
   exit 1
 fi
 
-TIME=10
+TIME=30
 
 if [ $# -lt 2 ]; then
   echo "Usage: $0 SERVER_SPEC CLIENT_SPEC [CLUSTER_ID]"
@@ -79,14 +94,20 @@ if [ -z $SERVER_SPEC ]; then
   echo 'missing parameter' >&2
   exit 1
 elif [ $SERVER_SPEC = 'IX-10-RPC' ]; then
-  SERVER_NET="ix node1"
   SERVER=server_ix_rpc
   SERVER_PORT=8000
   ON_EXIT=on_exit_ix
-  CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
   BUILD_IX=1
   BUILD_TARGET_BENCH=
-  IX_PARAMS="-d 0000:42:00.1 -c \$IX_PARAMS_CORES"
+  if [ $CLUSTER_ID = 'EPFL' ]; then
+    SERVER_NET="ix node1"
+    CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
+    IX_PARAMS="-d 0000:42:00.1 -c \$IX_PARAMS_CORES"
+  elif [ $CLUSTER_ID = 'Stanford-IX' ]; then
+    SERVER_NET="ix node0"
+    CORES="0,1,2,3,4,5"
+    IX_PARAMS="-d 0000:04:00.0 -c \$IX_PARAMS_CORES"
+  fi
 elif [ $SERVER_SPEC = 'IX-40-RPC' ]; then
   SERVER_NET="ix node0"
   SERVER=server_ix_rpc
@@ -155,14 +176,20 @@ elif [ $SERVER_SPEC = 'Linux-40-Stream' ]; then
   BUILD_IX=0
   BUILD_TARGET_BENCH=
 elif [ $SERVER_SPEC = 'IX-10-Stream' ]; then
-  SERVER_NET="ix node1"
-  SERVER=server_ix_stream
+  SERVER=server_ix_rpc
   SERVER_PORT=8000
   ON_EXIT=on_exit_ix
-  CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
   BUILD_IX=1
   BUILD_TARGET_BENCH=
-  IX_PARAMS="-d 0000:42:00.1 -c \$IX_PARAMS_CORES"
+  if [ $CLUSTER_ID = 'EPFL' ]; then
+    SERVER_NET="ix node1"
+    CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
+    IX_PARAMS="-d 0000:42:00.1 -c \$IX_PARAMS_CORES"
+  elif [ $CLUSTER_ID = 'Stanford-IX' ]; then
+    SERVER_NET="ix node0"
+    CORES="0,1,2,3,4,5" 	
+    IX_PARAMS="-d 0000:04:00.0 -c \$IX_PARAMS_CORES"
+  fi
 elif [ $SERVER_SPEC = 'IX-40-Stream' ]; then
   SERVER_NET="ix node0"
   SERVER=server_ix_stream
@@ -288,22 +315,34 @@ run_single() {
   MSG_PER_CONN=$3
 
   $SERVER $CORE_COUNT $MSG_SIZE
-  ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then exit 1; fi; done"
+  ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then echo $HOST failed; exit 1; fi; done"
   echo -ne "$CORE_COUNT\t$MSG_SIZE\t$MSG_PER_CONN\t" >> $OUTDIR/data
   python $DIR/launch.py --time $TIME --clients $CLIENT_HOSTS --client-cmdline "`eval echo $CLIENT_CMDLINE`" >> $OUTDIR/data
   $ON_EXIT
 }
 
 run() {
-  for i in {1..$MAX_CORES}; do
-    run_single $i 64 1
-  done
-  for i in 2 8 32 64 128 256 512 1024; do
-    run_single $MAX_CORES 64 $i
-  done
-  for i in 256 1024 4096 8192; do
-    run_single $MAX_CORES $i 1
-  done
+  if [ $CLUSTER_ID = 'EPFL' ]; then
+    for i in {1..$MAX_CORES}; do
+      run_single $i 64 1
+    done
+    for i in 2 8 32 64 128 256 512 1024; do
+      run_single $MAX_CORES 64 $i
+    done
+    for i in 256 1024 4096 8192; do
+      run_single $MAX_CORES $i 1
+    done
+  elif [ $CLUSTER_ID = 'Stanford-IX' ]; then
+    for i in `eval echo "{1..$MAX_CORES}"`; do
+      run_single $i 64 1
+    done
+    for i in 2 8 32 64 128 256 512 1024; do
+      run_single $MAX_CORES 64 $i
+    done
+    for i in 256 1024 4096 8192; do
+      run_single $MAX_CORES $i 1
+    done
+  fi
 }
 
 prepare $BUILD_IX $BUILD_TARGET_BENCH

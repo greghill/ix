@@ -23,6 +23,9 @@ if [ $CLUSTER_ID = 'EPFL' ]; then
 elif [ $CLUSTER_ID = 'Stanford' ]; then
   CLIENTS="$CLIENTS maverick-10|p7p1|10.79.6.21"
   SERVER_IP=10.79.6.26
+elif [ $CLUSTER_ID = 'Stanford-IX' ]; then
+  CLIENTS="$CLIENTS maverick-12|p3p1|10.79.6.23"
+  SERVER_IP=10.79.6.112
 else
   echo 'invalid parameters' >&2
   exit 1
@@ -52,14 +55,20 @@ if [ -z $SERVER_SPEC ]; then
   echo 'missing parameter' >&2
   exit 1
 elif [ $SERVER_SPEC = 'IX-10-RPC' ]; then
-  SERVER_NET="ix node1"
   SERVER=server_ix_rpc
   SERVER_PORT=8000
   ON_EXIT=on_exit_ix
-  CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
   BUILD_IX=1
   BUILD_TARGET_BENCH=
-  IX_PARAMS="-d 0000:42:00.1 -c \$IX_PARAMS_CORES"
+  if [ $CLUSTER_ID = 'EPFL' ]; then
+    SERVER_NET="ix node1"
+    CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
+    IX_PARAMS="-d 0000:42:00.1 -c \$IX_PARAMS_CORES"
+  elif [ $CLUSTER_ID = 'Stanford-IX' ]; then
+    SERVER_NET="ix node0"
+    CORES="0,1,2,3,4,5"
+    IX_PARAMS="-d 0000:04:00.0 -c \$IX_PARAMS_CORES"
+  fi
 elif [ $SERVER_SPEC = 'IX-40-RPC' ]; then
   SERVER_NET="ix node0"
   SERVER=server_ix_rpc
@@ -338,7 +347,12 @@ server_mtcp_stream() {
 
 run_single() {
   MSG_SIZE=$1
-  $SERVER 16 $MSG_SIZE
+  if [ $CLUSTER_ID = 'Stanford-IX' ]; then
+    $SERVER 6 $MSG_SIZE
+  elif [ $CLUSTER_ID = 'EPFL' ]; then
+    $SERVER 16 $MSG_SIZE
+  fi
+
   if [ $CLIENT_SPEC != 'IX' ]; then
     ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then exit 1; fi; done"
   fi
