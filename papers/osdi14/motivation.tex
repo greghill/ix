@@ -2,9 +2,9 @@
 \section{Background and Motivation}
 \label{sec:motivation}
 
-Our work focuses on identifying the mismatch and opportunities for
-improvement between commodity operating systems and a large, but
-well-defined, class of relevant applications.
+Our work focuses on improving operating systems for the large and
+well-define class of web-scale applications. 
+
 %  In this section, we
 % first define the class of applications in our focus
 % (\S\ref{sec:motivation:web}), then describe the system software
@@ -17,87 +17,90 @@ well-defined, class of relevant applications.
 \label{sec:motivation:web}
 
 Modern web-scale applications include interactive services such as
-search, social networking, webmail and instant messaging, online maps,
-automatic translation, software as a service (SaaS), and e-commerce
-platforms.  We have come to expect that these services provide
-millions of users with instantaneous, personalized, and contextual
-access to petabytes of data.  For example, the Google search engine
-updates query results interactively as the user types, predicting the
-most likely query, performing the search and showing the results
-within a few tens of milliseconds~\cite{DBLP:journals/cacm/DeanB13}.
+search, social networking and instant messaging, automatic
+translation, software as a service (SaaS), and e-commerce platforms.
+We have come to expect that these services provide millions of users
+with instantaneous, personalized, and contextual access to petabytes
+of data.  For example, the Google search engine updates query results
+interactively as the user types, predicting the most likely query,
+performing the search and showing the results within a few tens of
+milliseconds~\cite{DBLP:journals/cacm/DeanB13}.
 
 Internally, such applications use a service-oriented architecture and
 consist of tens of distinct, well-defined services such as
 load-balancing and HTTP proxies, web and application serving, content
 distribution and streaming, memory caching, queuing services,
 relational databases and object
-storage~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07,Alonso:2010:WSC,Eriksen:2013:YSF}. 
-Collectively, these services occupy
-hundreds to thousands of servers connected through high-speed
-networking. Different services are routinely implemented using
-different programming languages and paradigms, but are connected
+storage~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07,Alonso:2010:WSC,Eriksen:2013:YSF}.
+Collectively, these services occupy hundreds to thousands of servers
+connected through high-speed networking. An incoming request from an
+external user leads to tens to hundreds of internal requests across
+the various services, with some requests issued sequentially due to
+dependencies in application logic, while other requests areissued in a
+parallel, fan-out manner.  Different services are routinely
+implemented using different programming languages, but are connected
 through a unifying framework for RPC, serialization, service
-discovery, and logging~\cite{protocolbuffers, thrift, fingale,
-  others}. An incoming request from an external user leads to tens to
-hundreds of internal requests across the various services, with some
-requests issued sequentially due to dependencies in application logic,
-while other requests are issued in a parallel, fan-out manner.
+discovery, and logging~\cite{protocolbuffers, thrift, finagle}.
 
 Each node for these services responds to requests such as new incoming
 connections, data requests from existing connections, or replies to
 requests made to a downstream service.  The most efficient
 implementations use event-driven frameworks in which the service logic
 interacts with the framework exclusively via non-blocking
-calls~\cite{DBLP:conf/usenix/PaiDZ99,missing-other,missing-other}. This is in
-contrast with the classic thread-oriented programming paradigm, in
-which sessions are divided among a large pool of (kernel) threads,
-which block while waiting for incoming traffic or outstanding
-replies. For example, event-oriented nginx HTTP server and
-proxy~\cite{reese2008nginx} outperforms the thread-oriented Apache
-server~\cite{misc:apache}.
-
+calls~\cite{DBLP:conf/usenix/PaiDZ99,missing-other}. % This is in
+% contrast with the classic thread-oriented programming paradigm, in
+% which sessions are divided among a large pool of (kernel) threads,
+% which block while waiting for incoming traffic or outstanding
+% replies. For example, event-oriented nginx HTTP server and
+% proxy~\cite{reese2008nginx} outperforms the thread-oriented Apache
+% server~\cite{misc:apache}.
 High-level libraries simplify the development of event-driven
 applications~\cite{provos2003libevent,libev,libuv}.  For example, the
-popular \texttt{libevent} library~\cite{provos2003libevent} provides a
-level of abstraction that exposes the paradigm to applications running
-on top of Linux, *BSD, and Windows.  Many web-scale applications, such
-as memcached~\cite{url:memcached}, are built on top of \texttt{libevent}.  Others
-such as nginx and node.js are built using similar frameworks.
+popular \texttt{libevent} library provides a level of abstraction that
+exposes the paradigm to applications running on top of Linux, *BSD,
+and Windows~\cite{provos2003libevent}. Many web-scale applications,
+such as \texttt{memcached}~\cite{url:memcached}, are built on top of
+\texttt{libevent}.  Others such as \texttt{nginx} and \texttt{node.js} are built using
+similar frameworks.
 
 
 \subsection{Main Requirements}
 \label{sec:motivation:challenges}
 
-Web-scale applications, and in particular the ones that must respond to
-short, latency-sensitive queries, pose unique challenges to system software and their networking stacks:
+Web-scale applications pose unique challenges to system
+software and their networking stacks:
 
-\myparagraph{High packet rates:} The requests and, often times, the replies
-between services in web-scale applications are quite small. In the
-memcached service at Facebook, for example, the vast majority of
-requests uses keys shorter than 50 bytes and involve values shorter
+% and in particular the ones that must respond
+% to short, latency-sensitive queries,
+
+\myparagraph{High packet rates:} The requests and, often times, the
+replies between services in web-scale applications are quite small. In
+Facebook's \texttt{memcached} service, for example, the vast majority
+of requests uses keys shorter than 50 bytes and involve values shorter
 than 500 bytes~\cite{Atikoglu:2012:WAL}. As a result, each service
 node must ideally scale to extremely high packet rates, measured in
-millions of packets per second on 10 GbE or 40 GbE network interfaces (NICs).
-In such conditions, common hardware optimizations found in network
-interfaces, such as TCP segmentation and large receive offloading,
-have a marginal impact on performance. 
+millions of packets per second on 10 GbE or 40 GbE NICs.  In such
+conditions, common NIC hardware optimizations, such as TCP
+segmentation and large receive offloading, have a marginal impact on
+performance.
 
-\myparagraph{Micro-second latency:} To enable rich interactions between a
-large number of services in a web-scale application without impacting
-the overall latency experienced by the user, it is essential to
-minimize the latency for each service
-request~\cite{luiz-isscc,rumble2011s}. Today's networking
-technologies allow for one-way communication across a large-scale
-datacenter within a few \microsecond: 3\microsecond latency across
-a pair of 10 GbE NICs~\cite{cisco-sereno}, one to five switch
-crossings with cut-through latencies of a few hundred $ns$ each, and
-propagation delays of 500$ns$ for 100 meters distance. Unfortunately,
-system software is designed to operate at a totally different
+\myparagraph{Micro-second latency:} To enable rich interactions
+between a large number of services %in a web-scale application
+without impacting the overall latency experienced by the user, it is essential
+to minimize the latency for each service
+request~\cite{luiz-isscc,rumble2011s}. Today's networking technologies
+allow for one-way communication across a large-scale datacenter within
+a few \microsecond: 3\microsecond latency across a pair of 10 GbE
+NICs~\cite{cisco-sereno}, one to five switch crossings with
+cut-through latencies of a few hundred $ns$ each, and propagation
+delays of 500$ns$ for 100 meters distance. Unfortunately, system
+software is designed to operate at a totally different
 timescale. Interrupt coalescing used to improve throughput, queuing
 latency due to device driver processing intervals, and protocol
 processing of incoming packets without necessarily immediately
-scheduling the receiving application frequently add several hundred \microsecond of
-latency to remote procedure calls (see measurements in \S\ref{sec:eval}).
+scheduling the receiving application frequently add several hundred
+\microsecond of latency to remote procedure calls (see measurements in
+\S\ref{sec:eval}).
 
 
 These issues compound when considering the long tail of the latency
@@ -121,10 +124,10 @@ Connection scalability has been a historical challenge for commodity
 operating systems, reaching 10,000 concurrent connections a decade
 ago~\cite{theC10Kproblem} and exceeding one million connections
 today~\cite{theC10Mproblem}. For example, the nature of all-to-all
-communication between Facebook's application and memcached servers
-made it impractical to use TCP sockets between these two tiers,
-resulting in deployments that use UDP datagrams for \texttt{get}
-operations and an aggregation proxy for \texttt{put}
+communication between Facebook's application and \texttt{memcached}
+servers made it impractical to use TCP sockets between these two
+tiers, resulting in deployments that use UDP datagrams for
+\texttt{get} operations and an aggregation proxy for \texttt{put}
 operations~\cite{nishtala2013scaling}.
 
 \myparagraph{Resource elasticity:} The load of web-scale applications
@@ -140,13 +143,13 @@ proportionality~\cite{DBLP:journals/computer/BarrosoH07, Lo:2014:TWE}.
 
 \myparagraph{Protection:} Finally, as multiple foreground and
 background services share multi-core servers even in private
-datacenters~\cite{Schwarzkopf:2013:OFS,DBLP:journals/cacm/DeanB13},
-there is need for isolated protocol stacks. For single-tenant
+datacenters~\cite{Hindman:2011:MPF,Schwarzkopf:2013:OFS,DBLP:journals/cacm/DeanB13},
+there is need for isolated network stacks. For single-tenant
 deployments where all services are administered by the same
-organization, the use of kernel-based protocol stacks largely
-addresses the problem.  Challenges emerge when the networking stack is
-lifted into the user-space and application bugs can corrupt the
-networking stack and impact other services.
+organization, the use of kernel-based networking largely addresses the
+problem.  Challenges emerge when networking is lifted into the
+user-space and application bugs can corrupt the networking stack and
+impact other services.
 
 
 \subsection{Alternative Approaches}
@@ -154,43 +157,45 @@ networking stack and impact other services.
 
 TCP-based network stacks implemented within commodity kernels such as
 Linux do not meet these requirements, despite the abundance of hardware
-resources (tens of cores and tens of GBytes/sec DRAM and PCIe
+resources (tens of cores and tens of GBytes/s DRAM and PCIe
 bandwidth per server, 10 to 40 GbE interfaces, and \microsecond-level
 latency across datacenters).
-Alternative approaches have been proposed, each addressing a subset of
-the requirements for web-scale applications. However, no
-proposal meets all requirements on commodity hardware. 
+Alternative approaches have been proposed, each addressing a subset,
+but not all, of
+the requirements for web-scale applications. % However, no
+% proposal meets all requirements on commodity hardware. 
 
 \myparagraph{User-space networking stacks:} Systems such as
-OpenOnload~\cite{openonload}, mTCP~\cite{jeong2014mtcp} or Sandstorm~\cite{marinos2013network} run the
-entire networking stack in user-space, offering either low latency or connection scalability at the expense of
-protection. There are still tradeoffs between packet rate and
-latency. For instance, mTCP uses dedicated threads for the TCP
-stack, which communicate at relatively coarse grain with application
-threads. This amortizes switching overheads at the
-expense of \microsecond-scale latency.
+OpenOnload~\cite{openonload}, mTCP~\cite{jeong2014mtcp} or
+Sandstorm~\cite{marinos2013network} run the entire networking stack in
+user-space, offering either low latency or connection scalability at
+the expense of protection. There are still tradeoffs between packet
+rate and latency. For instance, mTCP uses dedicated threads for the
+TCP stack, which communicate at relatively coarse grain with
+application threads. This amortizes switching overheads at the expense
+of higher latency.
 
-\myparagraph{Alternatives to TCP:} Some low-latency key-value stores or object managers rely on
+\myparagraph{Alternatives to TCP:} Some low-latency object stores on
 kernel-bypass and RDMA to offload protocol processing on dedicated
 Infiniband host channel
-adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH,mitchell:rdma,dragojevic14farm}.  Using
-commodity Ethernet networking, Facebook's memcached deployment uses
-UDP to avoid connection scalability
+adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH,mitchell:rdma,dragojevic14farm}.
+Using commodity Ethernet networking, Facebook's memcached deployment
+uses UDP to avoid connection scalability
 limitations~\cite{nishtala2013scaling}. Even though UDP is running in
-the kernel, congestion management and flow control are entrusted into
-applications.
+the kernel, reliable communication and congestion management are
+entrusted into applications.
 
-\myparagraph{Alternatives to POSIX API:} MegaPipe~\cite{han2012megapipe}
-replaces the POSIX API with lightweight sockets implemented with
-in-memory command rings. This substantially reduces software overheads
-and increases packet rates, and uses the kernel's existing networking stack.
+\myparagraph{Alternatives to POSIX API:} MegaPipe replaces the POSIX
+API with lightweight sockets implemented with in-memory command
+rings~\cite{han2012megapipe} . This substantially reduces software
+overheads and increases packet rates, but retails all other challenges
+of using an existing, kernel-based  networking stack.
 
-
-\myparagraph{OS enhancements:} Tuning kernel-based stacks provides incremental
-benefits with superior ease of deployment.  Linux \texttt{SO\_REUSEPORT}
-allows multi-threaded applications to accept incoming connections in
-parallel. Affinity-accept reduces overheads by considering the
-affinity of network flows to specific
+\myparagraph{OS enhancements:} Tuning kernel-based stacks provides
+incremental benefits with superior ease of deployment.  Linux
+\texttt{SO\_REUSEPORT} allows multi-threaded applications to accept
+incoming connections in parallel. Affinity-accept reduces overheads by
+considering the affinity of network flows to specific
 cores~\cite{DBLP:conf/eurosys/PesterevSZM12}. These approaches cannot
 completely eliminate communication between cores, as the lack of
 commutativity in the POSIX socket API implies that cross-core
