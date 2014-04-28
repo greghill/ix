@@ -1,0 +1,241 @@
+diff --git a/bench/bench-common.sh b/bench/bench-common.sh
+index d9776bc..936dfb3 100644
+--- a/bench/bench-common.sh
++++ b/bench/bench-common.sh
+@@ -50,18 +50,18 @@ prepare() {
+   # clients have shared file system
+   scp $DEPLOY_FILES init.sh $HOST: > /dev/null
+   
+-  pids=''
++  #pids=''
+   sudo SERVER=1 NET="$SERVER_NET" USE_IX=$BUILD_IX bash init.sh &
+-  pids="$pids $!"
+-  for CLIENT_DESC in $CLIENTS; do
+-    IFS='|'
+-    read -r HOST NIC IX_IP <<< "$CLIENT_DESC"
+-    ssh $HOST "sudo SERVER=0 NET='$CLIENT_NET' USE_IX=$BUILD_IX NIC=$NIC IX_IP=$IX_IP bash init.sh" &
+-    pids="$pids $!"
+-  done
+-  IFS=' '
++  #pids="$pids $!"
++  #for CLIENT_DESC in $CLIENTS; do
++  #  IFS='|'
++  #  read -r HOST NIC IX_IP <<< "$CLIENT_DESC"
++  #  ssh $HOST "sudo SERVER=0 NET='$CLIENT_NET' USE_IX=$BUILD_IX NIC=$NIC IX_IP=$IX_IP bash init.sh" &
++  #  pids="$pids $!"
++  #done
++  #IFS=' '
+ 
+-  for pid in $pids; do
+-    wait $pid
+-  done
++  #for pid in $pids; do
++  #  wait $pid
++  #done
+ }
+diff --git a/bench/bench-short.sh b/bench/bench-short.sh
+index 4cd2cee..20dc8e6 100755
+--- a/bench/bench-short.sh
++++ b/bench/bench-short.sh
+@@ -56,7 +56,7 @@ elif [ $CLUSTER_ID = 'Stanford' ]; then
+   CLIENT_CONNECTIONS=96
+   MAX_CORES=12
+ elif [ $CLUSTER_ID = 'Stanford-IX' ]; then
+-  CLIENTS="$CLIENTS maverick-1|p3p1|10.79.6.11"	
++  #CLIENTS="$CLIENTS maverick-1|p3p1|10.79.6.11"	
+   CLIENTS="$CLIENTS maverick-2|p3p1|10.79.6.13"
+   CLIENTS="$CLIENTS maverick-4|p3p1|10.79.6.15"
+   CLIENTS="$CLIENTS maverick-7|p3p1|10.79.6.18"
+@@ -65,6 +65,7 @@ elif [ $CLUSTER_ID = 'Stanford-IX' ]; then
+   CLIENTS="$CLIENTS maverick-12|p3p1|10.79.6.23"
+   CLIENTS="$CLIENTS maverick-14|p3p1|10.79.6.25"
+   CLIENTS="$CLIENTS maverick-16|p3p1|10.79.6.27"
++  CLIENTS="$CLIENTS maverick-17|p3p1|10.79.6.28"
+   CLIENTS="$CLIENTS maverick-18|p3p1|10.79.6.29"
+   SERVER_IP=10.79.6.112
+   CLIENT_CORES=24
+@@ -83,7 +84,7 @@ if [ $# -lt 2 ]; then
+   echo "              | Linux-10-RPC|Linux-10-Stream|Linux-40-RPC|Linux-40-Stream"
+   echo "              | mTCP-10-RPC|mTCP-10-Stream"
+   echo "  CLIENT_SPEC = Linux-Libevent|Linux-Simple"
+-  echo "  CLUSTER_ID  = EPFL|Stanford (default: EPFL)"
++  echo "  CLUSTER_ID  = EPFL|Stanford|Stanford-IX (default: EPFL)"
+   exit
+ fi
+ 
+diff --git a/bench/init.sh b/bench/init.sh
+index 0e3fbc7..4c74dbb 100755
+--- a/bench/init.sh
++++ b/bench/init.sh
+@@ -44,10 +44,10 @@ else
+   export IP=auto
+   export ALL_IFS=$NIC
+   export SINGLE_NIC=$NIC
+-  sudo -u $SUDO_USER bash -c 'cat > ix.cfg' <<EOF
+-host_addr $IX_IP
+-arp $SERVER_IP $SERVER_MAC
+-EOF
++  #sudo -u $SUDO_USER bash -c 'cat > ix.cfg' <<EOF
++#host_addr $IX_IP
++#arp $SERVER_IP $SERVER_MAC
++#EOF
+ fi
+ 
+-bash select_net.sh $NET
++#bash select_net.sh $NET
+diff --git a/experiments/bench-common.sh b/experiments/bench-common.sh
+index 20f7264..98f296f 100755
+--- a/experiments/bench-common.sh
++++ b/experiments/bench-common.sh
+@@ -41,6 +41,7 @@ run_experiment() {
+ setup_and_run() {
+   set -eEu -o pipefail
+   trap on_err ERR
++  trap on_exit EXIT SIGHUP SIGINT SIGQUIT SIGTERM
+   
+   # Validate arguments
+   if [ $# -lt 1 -o $# -gt 2 ]
+@@ -130,7 +131,7 @@ setup_and_run() {
+   cd $DIR
+   cp $MUTILATE_BUILD_PATH/mutilate .
+   
+-  for i in `$AGENT_SUBDIR/standard_agentlist.sh`; do
++  for i in `${AGENT_SUBDIR}/${AGENT_PROFILE}_agentlist.sh`; do
+       scp $MUTILATE_BUILD_PATH/mutilate $i:mutilate
+   done
+   
+@@ -139,7 +140,6 @@ setup_and_run() {
+   OUTDIR=$OUTDIR_BASE/$OUTDIR
+   mkdir -p $OUTDIR
+   
+-  # Run the experiments then clean up before exiting
++  # Run the experiments
+   experiments
+-  on_exit
+ }
+diff --git a/experiments/bench-etc-basic.sh b/experiments/bench-etc-basic.sh
+new file mode 100755
+index 0000000..69f4f15
+--- /dev/null
++++ b/experiments/bench-etc-basic.sh
+@@ -0,0 +1,10 @@
++#!/bin/bash
++
++experiments() {
++  run_experiment fb_etc
++}
++
++source $(dirname $0)/bench-common.sh
++
++AGENT_PROFILE=standard
++setup_and_run $@
+diff --git a/experiments/bench-etc-connscale.sh b/experiments/bench-etc-connscale.sh
+new file mode 100755
+index 0000000..bc14a9e
+--- /dev/null
++++ b/experiments/bench-etc-connscale.sh
+@@ -0,0 +1,31 @@
++#!/bin/bash
++
++connscale_experiment() {
++  cp fb_etc_connscale_base.experiment fb_etc_connscale_$2.experiment
++  echo "-c $1" >> fb_etc_connscale_$2.experiment
++  run_experiment fb_etc_connscale_$2
++  rm -f fb_etc_connscale_$2.experiment
++}
++
++experiments() {
++  TOTAL_THREADS=0
++  for i in $($AGENT_SUBDIR/${AGENT_PROFILE}_agentrun.sh $($AGENT_SUBDIR/${AGENT_PROFILE}_agentlist.sh) | sed "s/[^ ]* //" | sed "s/\(-[^T] [0123456789]*\)//g" | grep -- -T | sed "s/-T //" | tr -s '\n' ' ')
++  do
++    TOTAL_THREADS=$(($TOTAL_THREADS + $i))
++  done
++  
++  CONNECTIONS_500=$((1 + $((500 / $TOTAL_THREADS))))
++  CONNECTIONS_1000=$((1 + $((1000 / $TOTAL_THREADS))))
++  CONNECTIONS_5000=$((1 + $((5000 / $TOTAL_THREADS))))
++  CONNECTIONS_10000=$((1 + $((10000 / $TOTAL_THREADS))))
++
++  connscale_experiment $CONNECTIONS_500 500
++  connscale_experiment $CONNECTIONS_1000 1000
++  connscale_experiment $CONNECTIONS_5000 5000
++  connscale_experiment $CONNECTIONS_10000 10000
++}
++
++source $(dirname $0)/bench-common.sh
++
++AGENT_PROFILE=connscale
++setup_and_run $@
+diff --git a/experiments/bench-etc-usr-basic.sh b/experiments/bench-etc-usr-basic.sh
+deleted file mode 100755
+index af044de..0000000
+--- a/experiments/bench-etc-usr-basic.sh
++++ /dev/null
+@@ -1,10 +0,0 @@
+-#!/bin/bash
+-
+-experiments() {
+-  run_experiment fb_etc
+-  run_experiment fb_usr
+-}
+-
+-source $(dirname $0)/bench-common.sh
+-
+-setup_and_run $@
+diff --git a/experiments/bench-usr-basic.sh b/experiments/bench-usr-basic.sh
+new file mode 100755
+index 0000000..04447c9
+--- /dev/null
++++ b/experiments/bench-usr-basic.sh
+@@ -0,0 +1,10 @@
++#!/bin/bash
++
++experiments() {
++  run_experiment fb_usr
++}
++
++source $(dirname $0)/bench-common.sh
++
++AGENT_PROFILE=standard
++setup_and_run $@
+diff --git a/experiments/fb_etc_connscale_base.experiment b/experiments/fb_etc_connscale_base.experiment
+new file mode 100644
+index 0000000..4306171
+--- /dev/null
++++ b/experiments/fb_etc_connscale_base.experiment
+@@ -0,0 +1,35 @@
++#############################################
++# Mutilate Experiment: Connection Scalability
++#############################################
++#  - Default inter-arrival distribution, key size, and value size
++#  - Constant, balanced connections from clients
++#  - Used for scaling the number of active connections
++###
++
++# Specify the connscale set of agents for this experiment
++AGENTS:connscale
++
++# Set the parameters for the master, which does latency measurements
++-T 24
++-Q 2000
++-D 4
++-C 4
++
++# 60 seconds per test
++-t 60
++
++# Use 1M records
++-r 1000000
++
++# Use a pipeline for adequate load generation
++-d 256
++
++# Inter-arrival time, key size, value size, and update ratio
++# These are taken from the Facebook paper
++-K fb_key
++-V fb_value
++-i fb_ia
++-u 0.033
++
++# Scan QPS from 5% to peak, step size of 5%
++--scan=20000:4000000:20000

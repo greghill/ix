@@ -41,6 +41,7 @@ run_experiment() {
 setup_and_run() {
   set -eEu -o pipefail
   trap on_err ERR
+  trap on_exit EXIT SIGHUP SIGINT SIGQUIT SIGTERM
   
   # Validate arguments
   if [ $# -lt 1 -o $# -gt 2 ]
@@ -130,7 +131,7 @@ setup_and_run() {
   cd $DIR
   cp $MUTILATE_BUILD_PATH/mutilate .
   
-  for i in `$AGENT_SUBDIR/standard_agentlist.sh`; do
+  for i in `${AGENT_SUBDIR}/${AGENT_PROFILE}_agentlist.sh`; do
       scp $MUTILATE_BUILD_PATH/mutilate $i:mutilate
   done
   
@@ -139,7 +140,6 @@ setup_and_run() {
   OUTDIR=$OUTDIR_BASE/$OUTDIR
   mkdir -p $OUTDIR
   
-  # Run the experiments then clean up before exiting
+  # Run the experiments
   experiments
-  on_exit
 }
