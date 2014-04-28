@@ -126,8 +126,8 @@ systems~\cite{belay2012dune}.
 flow-control to applications.  This API enables dataplanes to optimize
 for both bandwidth and latency by processing a bounded batch of
 packets to completion.  Each dataplane executes all the pipeline
-stages for network processing for the batch in kernel mode, followed
-by the associated application processing in user mode. This approach
+stages for TCP/IP processing for the batch in kernel mode, followed by
+the associated application processing in user mode. This approach
 amortizes API overheads and improves both instruction and data
 locality.  \ix is also optimized for synchronization and coherence
 free execution on multi-core systems. It uses multi-queue network
@@ -138,10 +138,10 @@ queues and runs the networking stack and a single application, such as
 a webserver or a distributed caching server. Moreover, the \ix API and
 companion user-level library meet the commutativity
 rule~\cite{DBLP:conf/sosp/ClementsKZMK13}, eliminating multi-core
-synchronization in the common case operation. The \ix
-user-level library includes an interface nearly identical to the
-popular \texttt{libevent} library~\cite{provos2003libevent}, providing compatibility between \ix
-and a wide range of existing applications.
+synchronization in the common case operation. The \ix user-level
+library includes an interface nearly identical to the popular
+\texttt{libevent} library~\cite{provos2003libevent}, providing
+compatibility between \ix and a wide range of existing applications.
 
 \christos{add a few more details above (3-4 sentences) if space allows}
 
