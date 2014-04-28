@@ -15,7 +15,7 @@ if [ -z "$SHORT_FILES" ]; then
   SHORT_FILES="$SHORT_FILES `nth 1 Linux-10-RPC/Linux-Libevent`"
   SHORT_FILES="$SHORT_FILES `nth 1 mTCP-10-RPC/Linux-Libevent`"
   SHORT_FILES="$SHORT_FILES `nth 1 IX-10-RPC/Linux-Libevent`"
-  SHORT_TITLES="Linux-10Gbps mTCP-10Gbps IX-10Gbps"
+  SHORT_TITLES="Linux mTCP IX"
 fi
 
 echo 'Using files:'
