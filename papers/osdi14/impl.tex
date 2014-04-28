@@ -136,12 +136,14 @@ conditions to application. The \texttt{sendv} batched system call does
 not synchronously return the number of bytes sent. Instead, the
 \texttt{Recv} event condition provides that information at a later point
 
-In addition to the native API in Table~\ref{tbl:api}, we also
-developed a user-level library that exposes a near identical API to
-\texttt{libevent}. This library simplifies provides compatibility for
+In addition to the native \ix API in Table~\ref{tbl:api}, we also
+developed a user-level library that provides asynchronous event
+notification. Our library is API compatible with the core part of
+\texttt{libevent} and support edge-triggered operation, but the
+current implementation is missing some features like timers and
+level-triggering. This library simplifies provides compatibility for
 legacy applications and significantly simplifies the development of
-new applications. \christos{add one sentence on what is different
-  here, since we mention ``near}
+new applications.
 
 \input{figs/float-pipeline} 
 
@@ -165,8 +167,8 @@ elastic thread (4) processes all system calls, and in particular the
 ones that direct outgoing TCP/IP traffic. It also (5) runs all kernel
 timers in order to ensure compliant TCP behavior and (6) places
 outgoing Ethernet frames in the NIC's descriptor rings for
-transmission. \christos{don't we also need to ring a NIC doorbell to
-  initiate the outgoing DMA?}
+transmission. Finally, it notifies the NIC to initiate a DMA transfer
+for these frames by updating the ring tail register on the NIC. 
 
 The \ix dataplane consists of 37 KSLOC. We leveraged existing
 codebases in its development: 43\% is derived from the Intel NIC
@@ -265,16 +267,13 @@ applications.
 The \ix dataplane and the application collaboratively manage
 memory. To enable zero-copy operation, a buffer used for an incoming
 packet is passed read-only to the application, enabling zero-copy
-operation. \edb{\sout{If the application does not return these buffers to the
-dataplane sufficiently soon, the dataplane will drop at the NIC
-further incoming packets. This is actually desireable as no processing
-time will be wasted for packets that the application does not have
-space to receive eventually.}Applications that hold on to message buffers for extensive periods of time must bound their use of this shared resource.}
-In the transmit direction, zero-copy
-operation implies that the application must maintain outgoing data
-immutable until the reception is acknowledged by the peer. \edb{\sout{If
-there is recepient is not operating fast enough or there is network
-congestion, the sender will soon experience memory pressure as well.}}
+operation. Applications that hold on to message buffers for extensive
+periods of time must bound their use of this shared resource.  In the
+transmit direction, zero-copy operation implies that the application
+must maintain outgoing data immutable until the reception is
+acknowledged by the peer. % \edb{\sout{If there is recepient is not
+    % operating fast enough or there is network congestion, the sender
+    % will soon experience memory pressure as well.}}
 
 Since elastic threads in \ix execute both the network stack and
 application code, a long running application can block further network
