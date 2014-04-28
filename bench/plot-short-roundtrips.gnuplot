@@ -9,6 +9,7 @@ if (format eq 'eps') {
 set style data linespoints
 set style line 1 linecolor rgbcolor 'red'
 set style line 2 linecolor rgbcolor 'green'
+set style line 3 linecolor rgbcolor 'green'
 set output outfile
 set grid y
 set border 3
