@@ -12,10 +12,10 @@ SHORT_FILES="$@"
 SHORT_TITLES="$@"
 
 if [ -z "$SHORT_FILES" ]; then
-  SHORT_FILES="$SHORT_FILES `nth 1 Linux-10-RPC/Linux-Simple`"
-  SHORT_FILES="$SHORT_FILES `nth 1 Linux-40-RPC/Linux-Simple`"
-  SHORT_FILES="$SHORT_FILES `nth 1 IX-10-RPC/Linux-Simple`"
-  SHORT_FILES="$SHORT_FILES `nth 1 IX-40-RPC/Linux-Simple`"
+  SHORT_FILES="$SHORT_FILES `nth 1 Linux-10-RPC/Linux-Libevent`"
+  SHORT_FILES="$SHORT_FILES `nth 1 Linux-40-RPC/Linux-Libevent`"
+  SHORT_FILES="$SHORT_FILES `nth 1 IX-10-RPC/Linux-Libevent`"
+  SHORT_FILES="$SHORT_FILES `nth 1 IX-40-RPC/Linux-Libevent`"
   SHORT_TITLES="Linux-10Gbps Linux-40Gbps IX-10Gbps IX-40Gbps"
 fi
 

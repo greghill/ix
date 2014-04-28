@@ -13,7 +13,6 @@
 #include <ix/timer.h>
 
 #define KSTATS_INTERVAL 5 * ONE_SECOND
-#define SLOW_THRESHOLD 10000
 
 DEFINE_PERCPU(kstats, _kstats);
 DEFINE_PERCPU(kstats_accumulate, _kstats_accumulate);
@@ -45,11 +44,6 @@ void kstats_leave(kstats_accumulate *saved_accu)
   kstats_distr *cur = acc->cur;
   
   if (cur)  {
-    if (diff_occ > SLOW_THRESHOLD) {
-      cur->slow_count++;
-      cur = &percpu_get(_kstats.slow);
-    }
-
     cur->tot_lat += diff_lat;
     cur->tot_occ += diff_occ;
     if (cur->count==0) {
@@ -73,18 +67,18 @@ void kstats_leave(kstats_accumulate *saved_accu)
 
 static void kstats_printone(kstats_distr *d, const char *name, long total_cycles)
 {
-  if (d->count || d->slow_count) {
-    log_info("kstat: %-28s %9lu+%5lu %2d%% latency %8lu | %8lu | %8lu "
-	     "occupancy %6lu | %6lu | %8lu\n",
+  if (d->count) { 
+    log_info("kstat: %2d %-30s %9lu %2d%% latency %7lu | %7lu | %7lu "
+	     "occupancy %6lu | %6lu | %6lu\n",
+	   percpu_get(cpu_id),
 	   name,
 	   d->count,
-	   d->slow_count,
 	   100 * d->tot_occ / total_cycles,
 	   d->min_lat,
-	   d->count ? d->tot_lat/d->count : 0,
+	   d->tot_lat/d->count,
 	   d->max_lat,
 	   d->min_occ,
-	   d->count ? d->tot_occ/d->count : 0,
+	   d->tot_occ/d->count,
 	   d->max_occ);
   }
 }

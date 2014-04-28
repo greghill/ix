@@ -6,7 +6,6 @@
 
 typedef struct kstats_distr {
   uint64_t count;
-  uint64_t slow_count;
   uint64_t min_occ;
   uint64_t max_occ;
   uint64_t tot_occ;

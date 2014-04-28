@@ -26,7 +26,7 @@
 #define IXGBE_MIN_RING_DESC	64
 #define IXGBE_MAX_RING_DESC	4096
 
-#define IXGBE_MAX_INMEM_RING	8192
+#define IXGBE_MAX_INMEM_RING	131072
 
 struct rx_entry {
 	struct mbuf *mbuf;

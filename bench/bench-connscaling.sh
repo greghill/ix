@@ -72,7 +72,7 @@ if [ $# -lt 2 ]; then
   echo "Usage: $0 SERVER_SPEC CLIENT_SPEC [CLUSTER_ID]"
   echo "  SERVER_SPEC = IX-10-RPC|IX-10-Stream|IX-40-RPC|IX-40-Stream"
   echo "              | Linux-10-RPC|Linux-10-Stream|Linux-40-RPC|Linux-40-Stream"
-  echo "  CLIENT_SPEC = Linux-Simple"
+  echo "  CLIENT_SPEC = Linux-Libevent | Linux-Simple"
   echo "  CLUSTER_ID  = EPFL|Stanford (default: EPFL)"
   exit
 fi
@@ -165,6 +165,10 @@ fi
 if [ -z $CLIENT_SPEC ]; then
   echo 'missing parameter' >&2
   exit 1
+elif [ $CLIENT_SPEC = 'Linux-Libevent' ]; then
+  CLIENT_CMDLINE="./client $SERVER_IP $SERVER_PORT 16 \$CLIENT_CONNECTIONS 64 999999999"
+  DEPLOY_FILES="select_net.sh client"
+  CLIENT_NET="linux single"
 elif [ $CLIENT_SPEC = 'Linux-Simple' ]; then
   CLIENT_CMDLINE="./simple_client $SERVER_IP $SERVER_PORT \$THREADS \$CONNECTIONS_PER_THREAD 64 999999999 1 0"
   DEPLOY_FILES="select_net.sh simple_client"
@@ -224,6 +228,7 @@ run_single() {
     THREADS=24
   fi
   CONNECTIONS_PER_THREAD=$[$CONNECTIONS / $CLIENT_COUNT / $THREADS]
+  CLIENT_CONNECTIONS=$[$CONNECTIONS_PER_THREAD * $THREADS]
   CONNECTIONS=$[$CONNECTIONS_PER_THREAD * $CLIENT_COUNT * $THREADS]
   $SERVER
   ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then exit 1; fi; done"
@@ -233,7 +238,7 @@ run_single() {
 }
 
 run() {
-  for i in `awk "BEGIN{for(i=1.4;i<=5.7;i+=0.2)printf \"%d \",10**i}"`; do
+  for i in `awk "BEGIN{for(i=1.4;i<=5.1;i+=0.2)printf \"%d \",10**i}"`; do
     run_single $i
   done
 }

@@ -6,7 +6,7 @@
 
 #include <ix/types.h>
 
-extern bool log_is_early_boot;
+extern __thread bool log_is_early_boot;
 
 extern void logk(int level, const char *fmt, ...);
 

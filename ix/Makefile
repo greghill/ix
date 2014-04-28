@@ -49,6 +49,7 @@ OBJS=$(subst .c,.generated.S,$(SRCS))
 DEPENDENCY = core/profiler_funcinfo_init.h
 core/profiler_funcinfo_init.h: $(OBJS)
 	python core/profiler_instrument.py -o core/profiler_funcinfo_init.h $(subst .c,.generated.S,$(SRCS))
+core/profiler.o: core/profiler.c core/profiler_funcinfo_init.h
 OBJS+=core/profiler.o
 else
 OBJS=$(subst .c,.o,$(SRCS))

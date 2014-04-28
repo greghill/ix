@@ -15,7 +15,7 @@
 
 #define MAX_LOG_LEN	1024
 
-bool log_is_early_boot = true;
+__thread bool log_is_early_boot = true;
 
 int max_loglevel = LOG_DEBUG;
 
