@@ -51,7 +51,7 @@ E5-2665 running at 2.4 Ghz with 256 GB of DRAM with four Intel 2P X520
 NICs.  Each socket (client or server) has 8 cores and 16 hyperthreads.
 The server is connected to the switch via a 4x10GbE bond configured as a L2+L3 hash.
 
-\myparagraph{Common elemenents:} Jumbo frames are never enabled.  Our
+\myparagraph{Common elements:} Jumbo frames are never enabled.  Our
 baseline configuration in each machine is the Ubuntu 12.04.4 LTS
 distribution running the 3.11.10 Linux kernel.  When reporting
 multi-core scalability, we report results on a per-core bassis with
@@ -132,13 +132,16 @@ or mTCP on any configuration.
 \subsection{High connection chun at 4x10GbE}
 \label{sec:eval:short40}
 
-Fig.~\ref{fig:short40} shows the results on the 4x10GbE setup.
-Fig.~\ref{fig:short40:mcore} shows that \ix linearly scales and can
-nearly quadruple throughput.  Fig.~\ref{fig:short40:roundtrips} also
-shows scaling, although here also appears limited by a hardware
-limitation, which we suspect to be due to high rate of short DMA
-requests on the PCIe bus.  Fig.\ref{fig:short40:size} shows that
-it can nearly saturate 4x10GbE of traffic even with short messgages.
+Fig.~\ref{fig:short40} shows the results on the 4x10GbE setup, and
+compare them with a configuration that uses only one of the four
+links.  The result for Linux are nearly identical, so only the 4x10
+configuration is shown.  Fig.~\ref{fig:short40:mcore} shows that \ix
+linearly scales and can nearly quadruples throughput.
+Fig.~\ref{fig:short40:roundtrips} also shows scaling, although here
+also appears limited by a hardware limitation, which we suspect to be
+due to high rate of short DMA requests on the PCIe bus.
+Fig.\ref{fig:short40:size} shows that it can nearly saturate 4x10GbE
+of traffic even with short messgages.
 
 \subsection{Connection Scalability}
 \input{figs/float-connscaling}
@@ -188,13 +191,6 @@ for Linux and \ix for XXX and YYY established, concurrent
 connections served by the 18 clients.
 
 Our results show that \edb{TODO}.....
-
-\subsection{Web serving performance}
-
-
-\todo Benchmark: lightttpd -- used by Affinity-Accept and mTCP.  
-
-\todo ngnx: an actually used webserver.
 
 
 %%%%%

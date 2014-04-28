@@ -80,19 +80,18 @@ future work. \adam{CHECK?}
 address the system interaction limitations of the POSIX model, and in
 particular inability to batch requests across sockets, For example,
 mTCP~\cite{jeong2014mtcp}, MegaPipe~\cite{han2012megapipe} and
-NetMap~\cite{rizzo2012netmap} all use some shared memory queue or ring
-for communication between the networking stack and the application,
-typically implemented using wait-free synchronization and
-atomics. 
-
-The queue or ring is required because of the asynchronous execution of the two components.  In
-contrast, \ix uses an array mechanisms and an interleaved execution
-model, which enables coherence-free execution.  The semantics of POSIX
-sockets also prevent non-blocking, zero-copy transfer of data. Systems
-such as IO-lite~~\cite{DBLP:journals/tocs/PaiDZ00} use memory
-protection mechanisms to unify buffering.  \ix enables a zero-copy
-model: on receive, it relies on memory protection to safely expose
-incoming packets to application; on send, \ix explicitly notifies the
+NetMap~\cite{rizzo2012netmap} all replace system calls with some
+shared memory queue or ring for communication between the networking
+stack and the application.  Some synchronization is required to
+protect the concurrent access to that ring because of the asynchronous
+execution of the two components.  In contrast, \ix uses an array
+mechanisms and an interleaved execution model, which enables
+coherence-free execution.  The semantics of POSIX sockets also prevent
+non-blocking, zero-copy transfer of data. Systems such as
+IO-lite~~\cite{DBLP:journals/tocs/PaiDZ00} use memory protection
+mechanisms to unify buffering.  \ix enables a zero-copy model: on
+receive, it relies on memory protection to safely expose incoming
+packets to application; on send, \ix explicitly notifies the
 application when the data has been acknowledged by the peer.
 
 

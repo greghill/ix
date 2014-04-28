@@ -1,5 +1,5 @@
 if (format eq 'eps') {
-  set terminal postscript eps enhanced size 3.2,1.4 font 'Times'
+  set terminal postscript eps enhanced solid size 3.2,1.4 font 'Times'
 } else {
   set terminal pngcairo size 1024,1024 lw 1 font 'Times'
 }
@@ -12,8 +12,8 @@ sizefmt_K(v) = invpow2(v) >= 10 ? sprintf('%dK', v / 1024**1) : sizefmt_0(v)
 sizefmt_0(v) = sprintf('%d', v)
 set style data linespoints
 set style line 1 linecolor rgbcolor 'red'
-set style line 2 linecolor rgbcolor 'green'
-set style line 3 linecolor rgbcolor 'green'
+set style line 2 linecolor rgbcolor 'black'
+set style line 3 linecolor rgbcolor 'black'
 set output outfile
 set grid y
 set border 3

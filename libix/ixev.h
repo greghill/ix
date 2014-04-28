@@ -5,6 +5,7 @@
 #pragma once
 
 #include "ix.h"
+#include <stdio.h>
 
 /* FIXME: we won't need recv depth when i get a chance to fix the kernel */
 #define IXEV_RECV_DEPTH	128
