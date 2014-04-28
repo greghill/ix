@@ -1,7 +1,7 @@
 #!/bin/bash
 
 nth() {
-  ls results/*/short/$2/data|sort -r|sed -n "$1{p;q;}"
+  ls stanford_fig4_results/*/short/$2/data|sort -r|sed -n "$1{p;q;}"
 }
 
 FORMAT=${1:-eps}
@@ -27,9 +27,9 @@ else
   OUTDIR=figures
 fi
 
-gnuplot -e format='"'"$FORMAT"'"' -e title='"'"$SHORT_TITLES"'"' -e infile='"'"$SHORT_FILES"'"' -e outfile='"'"$OUTDIR/short-mcore.$FORMAT"'"'       plot-short-mcore-with-mtcp.gnuplot
-gnuplot -e format='"'"$FORMAT"'"' -e title='"'"$SHORT_TITLES"'"' -e infile='"'"$SHORT_FILES"'"' -e outfile='"'"$OUTDIR/short-roundtrips.$FORMAT"'"'  plot-short-roundtrips-with-mtcp.gnuplot
-gnuplot -e format='"'"$FORMAT"'"' -e title='"'"$SHORT_TITLES"'"' -e infile='"'"$SHORT_FILES"'"' -e outfile='"'"$OUTDIR/short-size.$FORMAT"'"'        plot-short-size-with-mtcp.gnuplot
+gnuplot -e format='"'"$FORMAT"'"' -e title='"'"$SHORT_TITLES"'"' -e infile='"'"$SHORT_FILES"'"' -e outfile='"'"$OUTDIR/short-mcore10.$FORMAT"'"'       plot-short-mcore-with-mtcp.gnuplot
+gnuplot -e format='"'"$FORMAT"'"' -e title='"'"$SHORT_TITLES"'"' -e infile='"'"$SHORT_FILES"'"' -e outfile='"'"$OUTDIR/short-roundtrips10.$FORMAT"'"'  plot-short-roundtrips-with-mtcp.gnuplot
+gnuplot -e format='"'"$FORMAT"'"' -e title='"'"$SHORT_TITLES"'"' -e infile='"'"$SHORT_FILES"'"' -e outfile='"'"$OUTDIR/short-size10.$FORMAT"'"'        plot-short-size-with-mtcp.gnuplot
 if [ $FORMAT = 'eps' ]; then
-  gnuplot -e title='"'"$SHORT_TITLES"'"' -e outfile='"'"$OUTDIR/short-key.eps"'"' plot-short-key-with-mtcp.gnuplot
+  gnuplot -e title='"'"$SHORT_TITLES"'"' -e outfile='"'"$OUTDIR/short-key10.eps"'"' plot-short-key-with-mtcp.gnuplot
 fi
