@@ -23,6 +23,9 @@ struct stream_conn {
 	char data[BUF_SIZE];
 };
 
+static int stream_conn_pool_entries;
+static __thread struct mempool stream_conn_pool;
+
 static void stream_handler(struct ixev_ctx *ctx, unsigned int reason)
 {
 	struct stream_conn *conn = container_of(ctx, struct stream_conn, ctx);
@@ -67,7 +70,7 @@ static void stream_handler(struct ixev_ctx *ctx, unsigned int reason)
 static struct ixev_ctx *stream_accept(struct ip_tuple *id)
 {
 	/* NOTE: we accept everything right now, did we want a port? */
-	struct stream_conn *conn = malloc(sizeof(struct stream_conn));
+	struct stream_conn *conn = mempool_alloc(&stream_conn_pool);
 	if (!conn)
 		return NULL;
 
@@ -82,7 +85,7 @@ static void stream_release(struct ixev_ctx *ctx)
 {
 	struct stream_conn *conn = container_of(ctx, struct stream_conn, ctx);
 
-	free(conn);
+	mempool_free(&stream_conn_pool, conn);
 }
 
 struct ixev_conn_ops stream_conn_ops = {
@@ -100,6 +103,13 @@ static void *stream_main(void *arg)
 		return NULL;
 	};
 
+	ret = mempool_create(&stream_conn_pool, stream_conn_pool_entries,
+		sizeof(struct stream_conn));
+	if (ret) {
+		printf("unable to create mempool\n");
+		return NULL;
+	}
+
 	while (1) {
 		ixev_wait();
 	}
@@ -111,6 +121,11 @@ int main(int argc, char *argv[])
 {
 	int i, nr_cpu;
 	pthread_t tid;
+
+	if (argc >= 2)
+		stream_conn_pool_entries = atoi(argv[1]);
+	else
+		stream_conn_pool_entries = 64;
 
 	ixev_init(&stream_conn_ops);
 

@@ -16,6 +16,9 @@ struct pp_conn {
 
 static size_t msg_size;
 
+static unsigned int pp_conn_pool_entries;
+static __thread struct mempool pp_conn_pool;
+
 static void pp_main_handler(struct ixev_ctx *ctx, unsigned int reason);
 
 static void pp_stream_handler(struct ixev_ctx *ctx, unsigned int reason)
@@ -80,7 +83,7 @@ static void pp_main_handler(struct ixev_ctx *ctx, unsigned int reason)
 static struct ixev_ctx *pp_accept(struct ip_tuple *id)
 {
 	/* NOTE: we accept everything right now, did we want a port? */
-	struct pp_conn *conn = malloc(sizeof(struct pp_conn) + msg_size);
+	struct pp_conn *conn = mempool_alloc(&pp_conn_pool);
 	if (!conn)
 		return NULL;
 
@@ -95,7 +98,7 @@ static void pp_release(struct ixev_ctx *ctx)
 {
 	struct pp_conn *conn = container_of(ctx, struct pp_conn, ctx);
 
-	free(conn);
+	mempool_free(&pp_conn_pool, conn);
 }
 
 struct ixev_conn_ops pp_conn_ops = {
@@ -113,6 +116,13 @@ static void *pp_main(void *arg)
 		return NULL;
 	};
 
+	ret = mempool_create(&pp_conn_pool, pp_conn_pool_entries,
+		sizeof(struct pp_conn) + msg_size);
+	if (ret) {
+		printf("unable to create mempool\n");
+		return NULL;
+	}
+
 	while (1) {
 		ixev_wait();
 	}
@@ -126,11 +136,16 @@ int main(int argc, char *argv[])
 	pthread_t tid;
 
 	if (argc < 2) {
-		fprintf(stderr, "Usage: %s MSG_SIZE\n", argv[0]);
+		fprintf(stderr, "Usage: %s MSG_SIZE [MAX_CONNECTIONS]\n", argv[0]);
 		return -1;
 	}
 
 	msg_size = atol(argv[1]);
+
+	if (argc >= 3)
+		pp_conn_pool_entries = atoi(argv[2]);
+	else
+		pp_conn_pool_entries = 64;
 
 	ixev_init(&pp_conn_ops);
 
