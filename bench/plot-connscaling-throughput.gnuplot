@@ -12,9 +12,9 @@ set grid y
 set border 3
 set tics out nomirror
 
-set xlabel 'Connection Count'
+set xlabel 'Connection Count (log scale)'
 set ylabel 'Messages/sec (x 10^{6})'
-set xrange [*:*]
+set xrange [*:100000]
 set yrange [0:*]
 set logscale x
 plot for [i=1:words(infile)] word(infile,i) using 1:($4/10**6) title gen_title(i) linestyle i
