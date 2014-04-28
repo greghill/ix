@@ -16,8 +16,8 @@ set border 3
 set tics out nomirror
 
 fig(infile) = "< awk '//{if ($2==64&&$3==1)print $0 }' ".infile.'| sort -nk1'
-set xlabel 'Number of CPU threads'
+set xlabel 'Number of CPU cores'
 set ylabel 'Messages/sec (x 10^{6})'
 set xrange [0:*]
 set yrange [0:*]
-plot for [i=1:words(infile)] fig(word(infile,i)) using ($0+1):($4/10**6) title gen_title(i) linestyle i
+plot for [i=1:words(infile)] fig(word(infile,i)) using 1:($4/10**6) title gen_title(i) linestyle i

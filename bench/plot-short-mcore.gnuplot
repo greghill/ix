@@ -8,16 +8,15 @@ if (format eq 'eps') {
 }
 set style data linespoints
 set style line 1 linecolor rgbcolor 'red'
-set style line 2 linecolor rgbcolor 'red'
+set style line 2 linecolor rgbcolor 'green'
 set style line 3 linecolor rgbcolor 'green'
-set style line 4 linecolor rgbcolor 'green'
 set output outfile
 set grid y
 set border 3
 set tics out nomirror
 
 fig(infile) = "< awk '//{if ($2==64&&$3==1)print $0 }' ".infile.'| sort -nk1'
-set xlabel 'Number of CPU threads'
+set xlabel 'Number of CPU cores'
 set ylabel 'Messages/sec (x 10^{6})'
 set xrange [0:*]
 set yrange [0:*]

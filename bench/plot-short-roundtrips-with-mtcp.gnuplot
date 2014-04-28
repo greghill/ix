@@ -20,5 +20,5 @@ set xlabel 'Number of Messages per Connection'
 set ylabel 'Messages/sec (x 10^{6})'
 set xrange [0:*]
 set yrange [0:*]
-set xtics ('0' 0)
-plot for [i=1:words(infile)] fig(word(infile,i)) using ($0+1):($4/10**6):xticlabel(3) title gen_title(i) linestyle i
+set xtics ('0' 0, '1' 1, '2' 2, '8' 3, '32' 4, '64' 5, '128' 6, '256' 7, '512' 8, '1K' 9)
+plot for [i=1:words(infile)] fig(word(infile,i)) using ($0+1):($4/10**6) title gen_title(i) linestyle i

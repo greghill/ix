@@ -323,7 +323,7 @@ run_single() {
 
 run() {
   if [ $CLUSTER_ID = 'EPFL' ]; then
-    for i in {1..$MAX_CORES}; do
+    for i in `eval echo "{1..$MAX_CORES}"`; do
       run_single $i 64 1
     done
     for i in 2 8 32 64 128 256 512 1024; do
