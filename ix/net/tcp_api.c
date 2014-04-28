@@ -368,7 +368,7 @@ static void on_err(void *arg, err_t err)
 	api = (struct tcpapi_pcb *) arg;
 	cookie = api->cookie;
 
-	if (err == ERR_ABRT || err == ERR_RST || err == ERR_CLSD)
+	if (err == ERR_ABRT || err == ERR_CLSD)
 		mark_dead(api, cookie);
 }
 
