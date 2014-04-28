@@ -149,8 +149,7 @@ again:
 
 	if (!percpu_get(usys_arr)->len) {
 		if (done) {
-			uint64_t deadline = 10*ONE_MS; // FIXME - enable next line instead
-			// deadline = timer_deadline(10*ONE_MS);
+			uint64_t deadline = timer_deadline(10 * ONE_MS);
 			if (deadline > 0) { 
 				KSTATS_PUSH(idle, NULL);
 				eth_rx_idle_wait(deadline);
