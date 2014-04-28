@@ -490,17 +490,22 @@ void tcp_segs_free(struct tcp_seg *seg);
 void tcp_seg_free(struct tcp_seg *seg);
 struct tcp_seg *tcp_seg_copy(struct tcp_seg *seg);
 
-#define tcp_ack(pcb)                               \
-  do {                                             \
-    if(timer_pending(&(pcb)->delayed_ack_timer)) {  \
-      timer_del(&(pcb)->delayed_ack_timer);        \
-      (pcb)->flags |= TF_ACK_NOW;                  \
-    }                                              \
-    else {                                         \
-      timer_add(&(pcb)->delayed_ack_timer, TCP_ACK_DELAY); \
-    }                                              \
-  } while (0)
 
+/* MAX_PACKETS_DELAYED_ACK -- LWIP behavior set to 2 */
+#define MAX_PACKETS_DELAYED_ACK 2 
+static inline void tcp_ack(struct tcp_pcb *pcb)
+{
+	if(timer_pending(&pcb->delayed_ack_timer)) {	
+		timer_del(&pcb->delayed_ack_timer);
+		pcb->delayed_ack_counter++;
+		if (pcb->delayed_ack_counter>=MAX_PACKETS_DELAYED_ACK)
+			pcb->flags |= TF_ACK_NOW;
+	} else {
+		pcb->delayed_ack_counter = 1;
+		timer_add(&pcb->delayed_ack_timer, TCP_ACK_DELAY);    
+	}
+}  
+    
 #define tcp_ack_now(pcb)                           \
   do {                                             \
     (pcb)->flags |= TF_ACK_NOW;                    \

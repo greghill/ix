@@ -174,6 +174,7 @@ enum tcp_state {
   type *prev; /* for the linked list */ \
   type *hash_bucket_next; /* for the hash bucket linked list */ \
   void *perqueue; \
+  u32_t delayed_ack_counter; \
   struct timer delayed_ack_timer; \
   struct timer retransmit_timer; \
   struct timer persist_timer; \
