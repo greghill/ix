@@ -76,6 +76,7 @@ static inline void timer_del(struct timer *t)
 }
 
 extern void timer_run(void);
+extern uint64_t timer_deadline(uint64_t max_us);
 extern void timer_init_cpu(void);
 extern int timer_init(void);
 

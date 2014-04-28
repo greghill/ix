@@ -149,12 +149,15 @@ again:
 
 	if (!percpu_get(usys_arr)->len) {
 		if (done) {
-			KSTATS_PUSH(idle, NULL);
-			/* FIXME: need to modify timer code to get the next event */
-			eth_rx_idle_wait(10 * ONE_MS);
-			KSTATS_POP(NULL);
+			uint64_t deadline = 10*ONE_MS; // FIXME - enable next line instead
+			// deadline = timer_deadline(10*ONE_MS);
+			if (deadline > 0) { 
+				KSTATS_PUSH(idle, NULL);
+				eth_rx_idle_wait(deadline);
+				KSTATS_POP(NULL);
+			}
 		}
-
+		
 		KSTATS_PUSH(tx_reclaim, NULL);
 		percpu_get(tx_batch_cap) = eth_tx_reclaim(percpu_get(eth_tx));
 		KSTATS_POP(NULL);

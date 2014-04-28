@@ -197,6 +197,33 @@ void timer_run(void)
 	percpu_get(timer_pos) = pos;
 }
 
+
+/**
+ * timer_deadline - determine the immediate timer deadline
+ * 
+ * because of its implementation, will return [0..4ms], which is the high wheel resolution
+
+ */
+uint64_t
+timer_deadline(uint64_t max_deadline_us)
+{
+        uint64_t pos = percpu_get(timer_pos);
+        uint64_t now_us = rdtsc() / cycles_per_us;
+        uint64_t max_us = now_us + max_deadline_us;
+	
+        for (; pos <= max_us; pos += MIN_DELAY_US) {
+		int high_off = WHEEL_OFFSET(pos, 0);
+		
+		if (!high_off)
+			break;  // don't attempt to collapse; just stop at that side of the wheel
+		if (percpu_get(wheels[0][high_off].head)!= NULL)
+			break; // pending event 
+        }
+        if (pos < now_us)
+		return 0;
+        return pos - now_us;
+}
+
 /* derived from DPDK */
 static int
 timer_calibrate_tsc(void)
