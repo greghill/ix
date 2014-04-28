@@ -496,10 +496,13 @@ struct tcp_seg *tcp_seg_copy(struct tcp_seg *seg);
 static inline void tcp_ack(struct tcp_pcb *pcb)
 {
 	if(timer_pending(&pcb->delayed_ack_timer)) {	
-		timer_del(&pcb->delayed_ack_timer);
 		pcb->delayed_ack_counter++;
-		if (pcb->delayed_ack_counter>=MAX_PACKETS_DELAYED_ACK)
+		if (pcb->delayed_ack_counter>=MAX_PACKETS_DELAYED_ACK) {
+			timer_del(&pcb->delayed_ack_timer);
 			pcb->flags |= TF_ACK_NOW;
+		}
+	} else if (MAX_PACKETS_DELAYED_ACK == 1) {
+		pcb->flags |= TF_ACK_NOW;
 	} else {
 		pcb->delayed_ack_counter = 1;
 		timer_add(&pcb->delayed_ack_timer, TCP_ACK_DELAY);    
