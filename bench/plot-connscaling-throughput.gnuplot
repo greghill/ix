@@ -1,12 +1,14 @@
 if (format eq 'eps') {
-  set terminal postscript eps enhanced size 3.1,2.1 font 'Times'
+  set terminal postscript eps enhanced solid size 3.1,2.1 font 'Times'
 } else {
   set terminal pngcairo size 1024,1024 lw 1 font 'Times'
 }
 gen_title(i) = word(title,i)
 set style data linespoints
 set style line 1 linecolor rgbcolor 'red'
-set style line 2 linecolor rgbcolor 'green'
+set style line 2 linecolor rgbcolor 'red'
+set style line 3 linecolor rgbcolor 'black'
+set style line 4 linecolor rgbcolor 'black'
 set output outfile
 set grid y
 set border 3

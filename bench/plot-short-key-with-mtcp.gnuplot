@@ -1,7 +1,7 @@
-set terminal postscript eps enhanced lw 1 font 'Times'
+set terminal postscript eps enhanced solid lw 1 font 'Times'
 set style line 1 linecolor rgbcolor 'red'
 set style line 2 linecolor rgbcolor 'blue'
-set style line 3 linecolor rgbcolor 'green'
+set style line 3 linecolor rgbcolor 'black'
 set output outfile
 
 unset border
