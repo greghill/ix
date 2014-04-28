@@ -22,7 +22,11 @@ application (\S\ref{sec:eval:memcached}).
 \subsection{Experimental setup}
 \label{sec:eval:setup}
 
-Our experimental setup is complicated by the fact that we wish to simulanteously 
+Our experimental setup is complicated by the fact that we wish to
+simulanteously compare with mTCP and scale to bandwidth beyond 10GbE.
+Unfortunately, our 4x10GbE setup uses more recent hardware that is
+sufficiently different in terms of CPU and NIC that porting mTCP and
+getting good performance became a challenge\footnote{We will unify our testing infrastructure by the deadline.}
 
 consists of a cluster of 19 clients and one
 server connected by an HP 5820AF-24XG 10GbE switch.  The client

@@ -1,0 +1,27 @@
+
+%% put the key last to have correct numbering
+
+\begin{figure*}
+
+\centering
+  \vspace*{0.3in}
+ \subfloat[Multi-core scalability (n=1;s=64B)]{
+  \label{fig:short:mcore}
+   \includegraphics{figs/short-mcore10.eps}}
+ \hspace{.01in}
+ \subfloat[$n$ roundtrips per conn. (core=8,s=64B)]{
+  \label{fig:short:roundtrips}
+  \includegraphics{figs/short-roundtrips10.eps}}
+  \hspace{.01in}
+ \subfloat[Different message sizes $s$ (core=8,n=1)]{
+  \label{fig:short:size}
+  \includegraphics{figs/short-size10.eps}}
+ \centering
+  \vspace{-1.9in}
+  \subfloat{\includegraphics{figs/short-key10.eps}}
+ \vspace{1.5in}
+ \
+\caption{Short message performance on the 10GbE infrastructure.}
+ \label{fig:short}
+
+\end{figure*}
