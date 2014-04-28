@@ -363,13 +363,18 @@ run_single() {
 }
 
 run() {
-  for i in {6..25}; do
-    run_single $[2**$i]
+  run_single 64
+  for i in {1..9}; do
+    run_single $[$i * 20000]
   done
+  for i in {2..9}; do
+    run_single $[$i * 100000]
+  done
+  run_single $[1024 * 1024]
 }
 
 run_netpipe() {
-  PARAMS="-r -n 100 -p 0 -l 64 -u $[2**25]"
+  PARAMS="-r -n 100 -p 0 -l 64 -u $[2**20]"
   ./$NETPIPE_EXEC_SERVER $PARAMS > /dev/null 2>&1 &
   ssh $HOST "./$NETPIPE_EXEC_CLIENT $PARAMS -h $SERVER_IP > /dev/null 2>&1 && awk '//{printf(\"0\\t%d\\t999999999\\t%f 0 0 0 0 0\\n\",\$1,\$2*1024*1024/8/2/\$1)}' np.out" > $OUTDIR/data
 }
