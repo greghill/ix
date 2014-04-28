@@ -3,7 +3,7 @@
 # Validate arguments
 if [ $# -ne 2 ]
 then
-    echo "Mutilate experiment preparer 0.2" >&2
+    echo "Mutilate experiment preparer 0.3" >&2
     echo "" >&2
     echo "Usage: $0 memcached_server experiment_name" >&2
     echo "" >&2

@@ -3,7 +3,7 @@
 # Validate arguments
 if [ $# -ne 1 ]
 then
-    echo "Mutilate experiment agent cleaner 0.2" >&2
+    echo "Mutilate experiment agent cleaner 0.3" >&2
     echo "" >&2
     echo "Usage: $0 experiment_name" >&2
     echo "" >&2

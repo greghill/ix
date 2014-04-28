@@ -3,7 +3,7 @@
 # Validate arguments
 if [ $# -ne 2 ]
 then
-    echo "Mutilate experiment runner 0.2" >&2
+    echo "Mutilate experiment runner 0.3" >&2
     echo "" >&2
     echo "Usage: $0 memcached_server experiment_name" >&2
     echo "" >&2
@@ -14,23 +14,33 @@ then
     exit 1
 fi
 
+# Collect arguments
+MEMCACHED_SERVER=$1
+EXPERIMENT_NAME=$2
+
 # Ensure the requested experiment is defined
-if [ ! -e $(dirname $0)/$2.experiment ]
+if [ ! -e $(dirname $0)/$EXPERIMENT_NAME.experiment ]
 then
-    echo "$0: error: unknown experiment \"$2\"" >&2
+    echo "$0: error: unknown experiment \"$EXPERIMENT_NAME\"" >&2
     exit 1
 fi
 
 # Ensure that the experiment specifies an agent profile
-cat $(dirname $0)/$2.experiment | grep "^AGENTS:" > /dev/null 2>&1
+cat $(dirname $0)/$EXPERIMENT_NAME.experiment | grep "^AGENTS:" > /dev/null 2>&1
 if [ $? -ne 0 ]
 then
-    echo "$0: error: experiment \"$2\" does not specify an agent profile" >&2
+    echo "$0: error: experiment \"$EXPERIMENT_NAME\" does not specify an agent profile" >&2
     exit 2
 fi
 
+# Check if the AGENT_SUBDIR variable is set and warn if not
+if [ "$(echo $AGENT_SUBDIR)" == "" ]
+then
+    echo "$0: warning: AGENT_SUBDIR not set, using \"$(dirname $0)\" for agent profiles" >&2
+fi
+
 # Extract the agent profile from the experiment definition
-AGENT_PROFILE=$(cat $(dirname $0)/$2.experiment | grep "^AGENTS:" | sed s/AGENTS://)
+AGENT_PROFILE=$(cat $(dirname $0)/$EXPERIMENT_NAME.experiment | grep "^AGENTS:" | sed s/AGENTS://)
 AGENT_LIST="$(dirname $0)/${AGENT_SUBDIR}${AGENT_PROFILE}_agentlist.sh"
 AGENT_RUN="$(dirname $0)/${AGENT_SUBDIR}${AGENT_PROFILE}_agentrun.sh"
 
@@ -68,21 +78,21 @@ fi
 # Start the agents, if the profile says to do so
 if [ -e $AGENT_RUN ]
 then
-    swarm -w "${AGENT_STRING[@]}" &
+    $(dirname $0)/swarm -w "${AGENT_STRING[@]}" &
     SWARM_PID=$!
-    trap "kill $SWARM_PID" EXIT SIGHUP SIGINT SIGQUIT SIGTERM
+    trap "kill $SWARM_PID > /dev/null 2>&1" EXIT SIGHUP SIGINT SIGQUIT SIGTERM
     echo "$0: started agents for profile \"$AGENT_PROFILE\"" >&2
 fi
 
 # Run mutilate and produce a CSV file
-MUTILATE_OPTS=$(cat $(dirname $0)/$2.experiment | grep -v "#" | grep -v "AGENTS:" | tr -s '\n' ' ')
+MUTILATE_OPTS=$(cat $(dirname $0)/$EXPERIMENT_NAME.experiment | grep -v "#" | grep -v "AGENTS:" | tr -s '\n' ' ')
 
 for i in `$AGENT_LIST`
 do
     MUTILATE_AGENTS+="-a $i "
 done
 
-MUTILATE_CMD="nice -n -20 ${MUTILATE_EXPERIMENT_PREFIX}/mutilate --noload -v -s $1 $MUTILATE_AGENTS $MUTILATE_OPTS"
+MUTILATE_CMD="nice -n -20 ${MUTILATE_EXPERIMENT_PREFIX}/mutilate --noload -v -s $MEMCACHED_SERVER $MUTILATE_AGENTS $MUTILATE_OPTS"
 echo "$0: starting experiment" >&2
 echo "$0: $MUTILATE_CMD" >&2
-sudo $MUTILATE_CMD | tr -s ' ' ','
+sudo $MUTILATE_CMD #| tr -s ' ' ','
