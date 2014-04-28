@@ -27,29 +27,25 @@ coherency-free manner through the dataplane, with the guiding
 principle to eliminate any atomic instructions from common case
 execution.
 
-\myparagraph{Selecting \ix's TCP stack:} 
-The \ix kernel includes a complete network protocol stack with
-RFC-compliant support for TCP, UDP, ARP, ICMP and LACP.  It however
-explicitly lacks a complete IP-layer and is therefore only a capable
-networking endpoint, but not of handling routing, bridging or
-filtering functions.  It also totally lacks a socket layer and its
-associated API and semantics.  For our implementation of TCP, we chose
-to lwIP~\cite{dunkels2001design} as a starting point for our code base because of its
-modularity and is maturity as a compliant, feature-rich networking
-stack.  lwIP was however designed with memory-efficiency in mind,
-primarily for embedded environments.  We radically changed the data
-structures that organize protocol control blocks for scalability, as
-well as for finer-grain, precise timer management.  However, we did
-not (yet) attempt to optimize the code paths for performance, and
-consequently believe that our results have room for improvement.
+% \myparagraph{Selecting \ix's TCP stack:} 
+% The \ix kernel includes a complete network protocol stack with
+% RFC-compliant support for TCP, UDP, ARP, ICMP and LACP.  It however
+% explicitly lacks a complete IP-layer and is therefore only a capable
+% networking endpoint, but not of handling routing, bridging or
+% filtering functions.  It also totally lacks a socket layer and its
+% associated API and semantics.  For our implementation of TCP, we chose
+% to lwIP~\cite{dunkels2001design} as a starting point for our code base because of its
+% modularity and is maturity as a compliant, feature-rich networking
+% stack.  lwIP was however designed with memory-efficiency in mind,
+% primarily for embedded environments.  We radically changed the data
+% structures that organize protocol control blocks for scalability, as
+% well as for finer-grain, precise timer management.  However, we did
+% not (yet) attempt to optimize the code paths for performance, and
+% consequently believe that our results have room for improvement.
 
 
 
-\myparagraph{Challenges in API design:}
-
-\adam{TODO}
-
-
+\myparagraph{Challenges in API design:} \adam{TODO}
 
 
 \myparagraph{Limitations of the prototype:} The \ix prototype is
