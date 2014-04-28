@@ -92,8 +92,8 @@ bandwidth increases with the message size. Two \ix machines can
 pinp-pong at half 5Gbps (half the maximum) with messages as small as
 32KB.  The latencye differences, measured with 64B messages, are
 striking.  The one-way latency is 6.8\microsecond between two machines
-running \ix, 24\microsecond if they are running Linux, and
-87\microsecond if they are running mTCP.  The difference in system
+running \ix, 30\microsecond if they are running Linux, and
+91\microsecond if they are running mTCP.  The difference in system
 architecture help explain such a dramatic difference: \ix has a
 dataplane model that polls queues and runs them to completion; Linux
 has an interrupt model, which wakes up the blocked process.  The mTCP
