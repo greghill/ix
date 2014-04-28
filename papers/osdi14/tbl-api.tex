@@ -3,9 +3,10 @@
 \begin{small}
 \begin{tabular}{|l|l|l|}
 \hline
-\multicolumn{3}{|c|}{Event Conditions} \\
+\multicolumn{3}{|c|}{{\bf Event Conditions}} \\
 \hline
-Condition &           Parameters  &                             Description\\
+{\bf Condition} &           {\bf Parameters}  &
+{\bf Description}\\
 \hline
 Knock  &               cookie, src\_IP, src\_port		& A remotely initiated connection was opened \\
 Connected &            cookie, outcome				& A locally initiated connection finished opening \\
@@ -14,7 +15,7 @@ Sent &                 cookie, bytes\_sent, window\_size	& A send completed and/
 Dead &                 cookie, reason				& A connection was terminated \\
 \hline
 \hline
-\multicolumn{3}{|c|}{System Calls (batched)} \\
+\multicolumn{3}{|c|}{{\bf System Calls (batched)}} \\
 \hline
 connect &             cookie, dst\_IP, dst\_port		& Opens a connection\\
 accept &              handle, cookie				& Accepts a connection\\
@@ -23,7 +24,7 @@ recv\_done &          handle, bytes\_acked			& Advances the receive window and f
 close &               handle					& Closes a connection\\
 \hline
 \end{tabular}
-\caption{\ix event conditions and system calls}
+\caption{\ix event conditions and system calls API.}
 \label{tbl:api}
 \end{small}
 \end{table*}

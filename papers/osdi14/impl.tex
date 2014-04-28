@@ -57,8 +57,8 @@ OSes in virtualized systems~\cite{belay2012dune}. The applications run
 in ring 3 as usual. This approach provides dataplanes with direct
 access to hardware functions such as page tables and provides full
 protection between the control plane, dataplanes, and untrusted user
-code. \christos{should we explicitly say that most web-scale apps are
-  deployed without VMs so taking over VMX is not a problem?}\edb{not needed}
+code. %\christos{should we explicitly say that most web-scale apps are
+%  deployed without VMs so taking over VMX is not a problem?}\edb{not needed}
 
 % \myparagraph{Separation and protection of control and data plane:}
 % Each \ix instance and its applications runs as a distinct Dune process
@@ -160,12 +160,13 @@ generating event conditions. Next, the elastic thread (3) passes
 control to the user-space applications, which consumes all event
 conditions. Assuming that the incoming packets include remote
 requests, the application processes these requests and responds with a
-batch of system calls. Upon return of control from user-space, \edb{\sout{\ix}the elastic thread} (4)
-processes all system calls, and in particular the ones that direct
-outgoing TCP/IP traffic. It also (5) runs all kernel timers in order
-to ensure compliant TCP behavior and (6) places outgoing Ethernet
-frames in the NIC's descriptor rings for transmission. \christos{don't
-  we also need to ring a NIC doorbell to initiate the outgoing DMA?}
+batch of system calls. Upon return of control from user-space, the
+elastic thread (4) processes all system calls, and in particular the
+ones that direct outgoing TCP/IP traffic. It also (5) runs all kernel
+timers in order to ensure compliant TCP behavior and (6) places
+outgoing Ethernet frames in the NIC's descriptor rings for
+transmission. \christos{don't we also need to ring a NIC doorbell to
+  initiate the outgoing DMA?}
 
 The \ix dataplane consists of 37 KSLOC. We leveraged existing
 codebases in its development: 43\% is derived from the Intel NIC
@@ -221,9 +222,9 @@ reply is assigned to the same elastic thread that made the
 request. Since we cannot reverse the Toepliz hash used by RSS, we
 simply probe the ephemeral port range to find a port number that
 would lead to the desired behavior. Note that this implies that two
-elastic threads in a client cannot share a flow to a server. \edb{\sout{In
-\S\ref{sec:eval}, we show that \ix scales wells to hundreds of
-thousands of outgoing connections.}}
+elastic threads in a client cannot share a flow to a server. % \edb{\sout{In
+% \S\ref{sec:eval}, we show that \ix scales wells to hundreds of
+% thousands of outgoing connections.}}
  
 % ephemeral source port no longer form namespaces, which allows an \ix
 % client to support millions of outgoing connections.
@@ -255,8 +256,8 @@ protocol processing code.
 
 The \ix API and implementation leads to a cooperative flow control
 model between application code and the network processing stack.  But
-unlike user-level stacks that also expose \edb{\sout{control flow}networking behavior} to user code,
-the \ix protection model makes few assumptions about application
+unlike user-level stacks that also expose networking behavior to user
+code, the \ix protection model makes few assumptions about application
 behavior. A malicious or misbehaving application can only hurt
 itself. It cannot corrupt the networking stack or affect other
 applications.
@@ -271,7 +272,7 @@ time will be wasted for packets that the application does not have
 space to receive eventually.}Applications that hold on to message buffers for extensive periods of time must bound their use of this shared resource.}
 In the transmit direction, zero-copy
 operation implies that the application must maintain outgoing data
-immutable until the reception is acknowledged by the \edb{\sout{recipient}peer}. \edb{\sout{If
+immutable until the reception is acknowledged by the peer. \edb{\sout{If
 there is recepient is not operating fast enough or there is network
 congestion, the sender will soon experience memory pressure as well.}}
 
@@ -281,7 +282,7 @@ processing for a set of queues. This behavior affects no other
 applications or dataplanes in anyway. We use a timeout interrupt to
 detect elastic threads that spend excessive time in user mode (e.g.,
 beyond 10ms). We mark such applications as non-responsive and notify
-the control plane\edb{\sout{to potentially take resource allocation actions.}}
+the control plane. %\edb{\sout{to potentially take resource allocation actions.}}
 
 Note that all application code in \ix runs in user-mode, while the
 dataplane code is in protected ring 0. Applications cannot access
@@ -291,7 +292,7 @@ actions can be used to violate correct adherence to TCP and other
 network specifications.  Furthermore, the dataplane can be used to
 enforce network security policies (e.g., iptables or Amazon Security
 Groups) or to implement the network virtualization functions typically
-done in a hypervisor~\cite{nsdi:nsx}. \edb{\sout{This}Our} security model is as strong
+done in a hypervisor~\cite{nsdi:nsx}. Our security model is as strong
 as conventional network stacks in commodity OSes and is missing from all
 the recently proposed user-level networking stacks. 
 
