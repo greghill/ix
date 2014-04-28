@@ -41,7 +41,7 @@ a parallel, fan-out manner.  Different services are routinely
 implemented using different programming languages, but are connected
 through a unifying framework for RPC, serialization, service
 discovery, and logging~\cite{protocolbuffers, thrift,
-  finagle}\edb{REFS?}  and most commonly use TCP/IP as the transport
+  finagle} and most commonly use TCP/IP as their transport
 layer.
 
 Each node for these services responds to requests such as new incoming
@@ -49,7 +49,7 @@ connections, data requests from existing connections, or replies to
 requests made to a downstream service.  The most efficient
 implementations use event-driven frameworks in which the service logic
 interacts with the framework exclusively via non-blocking
-calls~\cite{DBLP:conf/usenix/PaiDZ99,missing-other}. % This is in
+calls~\cite{DBLP:conf/usenix/PaiDZ99,DBLP:conf/sosp/WelshCB01}. % This is in
 % contrast with the classic thread-oriented programming paradigm, in
 % which sessions are divided among a large pool of (kernel) threads,
 % which block while waiting for incoming traffic or outstanding
@@ -192,8 +192,6 @@ API with lightweight sockets implemented with in-memory command
 rings~\cite{han2012megapipe} . This substantially reduces software
 overheads and increases packet rates, but retails all other challenges
 of using an existing, kernel-based networking stack.
-\edb{NetMap~\cite{rizzo2012netmap} replaced system calls with command
-  rings to increase raw packet processing in applications.}  
 
 \myparagraph{OS enhancements:} Tuning kernel-based stacks provides
 incremental benefits with superior ease of deployment.  Linux
