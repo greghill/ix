@@ -238,7 +238,7 @@ run_single() {
 }
 
 run() {
-  for i in `awk "BEGIN{for(i=1.4;i<=5.7;i+=0.2)printf \"%d \",10**i}"`; do
+  for i in `awk "BEGIN{for(i=1.4;i<=5.1;i+=0.2)printf \"%d \",10**i}"`; do
     run_single $i
   done
 }
