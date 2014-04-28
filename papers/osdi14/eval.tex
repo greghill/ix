@@ -7,12 +7,13 @@ baseline running a 3.11.10 kernel, and whenever possible to mTCP.  We
 selected mTCP as it is the state-of-the-art user-space TCP alternative
 available on the same hardware~\cite{jeong2014mtcp}.  We first
 describe the experimental setup (\S\ref{sec:eval:setup}).  We then
-characterize the performance using a series of micro-benchmark: the
-popular NetPIPE ping-pong test~\cite{snell1996netpipe}
-(\S\ref{sec:eval:netpipe}); the short message transaction test
-previously used to evaluate MegaPipe and mTCP
-in~\cite{han2012megapipe,jeong2014mtcp} (\S\ref{sec:eval:short}); and
-the scalability of the system for large persistent connections
+characterize the performance using a series of micro-benchmark against
+a server with 10GbE of connectivity: the popular NetPIPE ping-pong
+test~\cite{snell1996netpipe} (\S\ref{sec:eval:netpipe}) and the short
+message transaction test previously used to evaluate MegaPipe and mTCP
+in~\cite{han2012megapipe,jeong2014mtcp} (\S\ref{sec:eval:short}).  We
+then scale the latter test to a server with 4x10GbE of connectivity
+and use that infrastructure to characterize \ix's scalability in handling large persistent connections
 (\S\ref{sec:eval:scale}).  Finally, we characterize the performance of
 the \ix system by running memcached -- a real-world massively deployed
 application (\S\ref{sec:eval:memcached}).
@@ -21,7 +22,9 @@ application (\S\ref{sec:eval:memcached}).
 \subsection{Experimental setup}
 \label{sec:eval:setup}
 
-Our experimental setup consists of a cluster of 19 clients and one
+Our experimental setup is complicated by the fact that we wish to simulanteously 
+
+consists of a cluster of 19 clients and one
 server connected by an HP 5820AF-24XG 10GbE switch.  The client
 machines are a mix of dual Xenon E5-2637 running at 3.5 Ghz and single Xenon E5-2650 running at 2.6 Ghz with a single, Intel
 82599EB 10GbE NIC connecting to the switch.  The server is a dual-Xeon E5-2665
@@ -50,7 +53,8 @@ of the socket to which the NIC are attached.
 \input{figs/float-pingpong}
 %\input{tbl-pingpong}
 
-\input{figs/float-short}
+\input{figs/float-short10}
+\input{figs/float-short40}
 
 Whenever both practical and relevant, we compare the performance of an
 \ix server with both the baseline Linux configuration and with mTCP, a
