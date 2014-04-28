@@ -36,7 +36,7 @@ static void client_die(void)
 	exit(-1);
 }
 
-static void main_handler(struct ixev_ctx *ctx, unsigned int reason)
+static void print_stats(void)
 {
 	ssize_t ret;
 	char buf;
@@ -57,10 +57,16 @@ static void main_handler(struct ixev_ctx *ctx, unsigned int reason)
 			fflush(stdout);
 		}
 	}
+}
+
+static void main_handler(struct ixev_ctx *ctx, unsigned int reason)
+{
+	ssize_t ret;
 
 	while (1) {
 		if (c->mode == CLIENT_MODE_SEND) {
-			ret = ixev_send_zc(ctx, &c->data[c->bytes_sent], msg_size - c->bytes_sent);
+			ret = ixev_send_zc(ctx, &c->data[c->bytes_sent],
+					   msg_size - c->bytes_sent);
 			if (ret <= 0) {
 				if (ret != -EAGAIN)
 					client_die();
@@ -75,7 +81,8 @@ static void main_handler(struct ixev_ctx *ctx, unsigned int reason)
 			ixev_set_handler(ctx, IXEVIN, &main_handler);
 			c->mode = CLIENT_MODE_RECV;
 		} else {
-			ret = ixev_recv(ctx, &c->data[c->bytes_recvd], msg_size - c->bytes_recvd);
+			ret = ixev_recv(ctx, &c->data[c->bytes_recvd],
+					msg_size - c->bytes_recvd);
 			if (ret <= 0) {
 				if (ret != -EAGAIN)
 					client_die();
@@ -87,6 +94,8 @@ static void main_handler(struct ixev_ctx *ctx, unsigned int reason)
 				return;
 
 			count++;
+			print_stats();
+
 			c->bytes_sent = 0;
 			ixev_set_handler(ctx, IXEVOUT, &main_handler);
 			c->mode = CLIENT_MODE_SEND;
@@ -99,10 +108,7 @@ static struct ixev_ctx *client_accept(struct ip_tuple *id)
 	return NULL;
 }
 
-static void client_release(struct ixev_ctx *ctx)
-{
-	free(c);
-}
+static void client_release(struct ixev_ctx *ctx) { }
 
 static void client_dialed(struct ixev_ctx *ctx, long ret)
 {
