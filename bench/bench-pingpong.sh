@@ -306,7 +306,7 @@ server_ix_rpc() {
   MSG_SIZE=$2
 
   IX_PARAMS_CORES=`echo $CORES|cut -d',' -f-$CORE_COUNT`
-  (trap ERR; cd $DIR/../ix; sudo stdbuf -o0 -e0 ./ix `eval echo $IX_PARAMS` /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ../apps/event/pingpong $MSG_SIZE >> ix.log 2>&1) &
+  (trap ERR; cd $DIR/../ix; sudo stdbuf -o0 -e0 ./ix `eval echo $IX_PARAMS` /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ../apps/event/pingpong $MSG_SIZE 2 >> ix.log 2>&1) &
 }
 
 server_ix_stream() {
