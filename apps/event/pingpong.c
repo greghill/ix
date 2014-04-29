@@ -18,6 +18,7 @@ static size_t msg_size;
 
 static unsigned int pp_conn_pool_entries;
 static __thread struct mempool pp_conn_pool;
+static __thread int pp_conn_pool_count;
 
 static void pp_main_handler(struct ixev_ctx *ctx, unsigned int reason);
 
@@ -83,9 +84,14 @@ static void pp_main_handler(struct ixev_ctx *ctx, unsigned int reason)
 static struct ixev_ctx *pp_accept(struct ip_tuple *id)
 {
 	/* NOTE: we accept everything right now, did we want a port? */
+	if (pp_conn_pool_count >= pp_conn_pool_entries) {
+		fprintf(stderr, "Error: mempool ran out of space.\n");
+		exit(1);
+	}
 	struct pp_conn *conn = mempool_alloc(&pp_conn_pool);
 	if (!conn)
 		return NULL;
+	pp_conn_pool_count++;
 
 	conn->bytes_left = msg_size;
 	ixev_ctx_init(&conn->ctx);
@@ -99,6 +105,7 @@ static void pp_release(struct ixev_ctx *ctx)
 	struct pp_conn *conn = container_of(ctx, struct pp_conn, ctx);
 
 	mempool_free(&pp_conn_pool, conn);
+	pp_conn_pool_count--;
 }
 
 struct ixev_conn_ops pp_conn_ops = {
