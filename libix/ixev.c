@@ -453,9 +453,9 @@ static void ixev_handle_close_ret(struct ixev_ctx *ctx, long ret)
 		ref->cb(ref);
 		ref = ref->next;
 	}
-#endif
 
 	ixev_global_ops.release(ctx);
+#endif
 }
 
 static void ixev_handle_one_ret(struct bsys_ret *r)
