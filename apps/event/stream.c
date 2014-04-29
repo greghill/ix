@@ -132,7 +132,7 @@ int main(int argc, char *argv[])
 	if (argc >= 2)
 		stream_conn_pool_entries = atoi(argv[1]);
 	else
-		stream_conn_pool_entries = 64;
+		stream_conn_pool_entries = 4096;
 
 	ixev_init(&stream_conn_ops);
 

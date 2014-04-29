@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
 	if (argc >= 3)
 		pp_conn_pool_entries = atoi(argv[2]);
 	else
-		pp_conn_pool_entries = 64;
+		pp_conn_pool_entries = 4096;
 
 	ixev_init(&pp_conn_ops);
 
