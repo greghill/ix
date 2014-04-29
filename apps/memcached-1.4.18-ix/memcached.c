@@ -5646,6 +5646,8 @@ int main (int argc, char **argv) {
     /* start up worker threads if MT mode */
     thread_init(settings.num_threads, main_base);
 
+/* XXX: hack: spawning normal threads works on Linux kernel 3.2 ish but not newer kernels, disable background threads for now */
+#if 0
     if (start_assoc_maintenance_thread() == -1) {
         exit(EXIT_FAILURE);
     }
@@ -5654,6 +5656,7 @@ int main (int argc, char **argv) {
         start_slab_maintenance_thread() == -1) {
         exit(EXIT_FAILURE);
     }
+#endif
 
     /* Run regardless of initializing it later */
     init_lru_crawler();
