@@ -17,7 +17,7 @@ stop atd
 /etc/init.d/ntp stop
 stop cgred
 
-for i in $@; do $(dirname $0)/set_irq_affinity.sh $i; done
+$(dirname $0)/set_irq_affinity.sh $1 $2
 
 for i in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
     echo userspace > $i

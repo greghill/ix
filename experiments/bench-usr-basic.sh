@@ -6,5 +6,5 @@ experiments() {
 
 source $(dirname $0)/bench-common.sh
 
-AGENT_PROFILE=fb_etc
+AGENT_PROFILE=osdi14_basic
 setup_and_run $@

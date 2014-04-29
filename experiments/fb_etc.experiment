@@ -4,8 +4,7 @@
 #  - Models the Facebook ETC cache
 ###
 
-# Specify the standard set of agents for this experiment
-AGENTS:standard
+AGENTS:osdi14_basic
 
 # Set the parameters for the master, which does latency measurements
 -T 24
@@ -13,17 +12,15 @@ AGENTS:standard
 -D 4
 -C 4
 
-# 12 connections per agent thread
--c 12
+# 8 connections per agent thread
+-c 8
 
-# 60 seconds per test
+# 60 seconds per test, 10 second warmup
 -t 60
+-w 10
 
 # Use 1M records
 -r 1000000
-
-# Scan QPS from 5% to peak, step size of 5%
---scan=100000:2000000:100000
 
 # Inter-arrival time, key size, value size, and update ratio
 # These are taken from the Facebook paper

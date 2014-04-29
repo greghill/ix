@@ -12,18 +12,10 @@
 #		(RX_INTERRUPT ? "rx" : "tx"),
 #		queue->index);
 #
-#  Assuming a device with two RX and TX queues.
-#  This script will assign: 
-#
-#	eth0-rx-0  CPU0
-#	eth0-rx-1  CPU1
-#	eth0-tx-0  CPU0
-#	eth0-tx-1  CPU1
-#
 
 set_affinity()
 {
-	if [ $VEC -ge 32 ]
+    if [ $VEC -ge 32 ]
 	then
 		MASK_FILL=""
 		MASK_ZERO="00000000"
@@ -34,23 +26,23 @@ set_affinity()
 		done
 
 		let "VEC -= 32 * $IDX"
-		MASK_TMP=$((1<<$VEC))
+		MASK_TMP=$((1<<${CORES[$VEC]}))
 		MASK=`printf "%X%s" $MASK_TMP $MASK_FILL`
 	else
-		MASK_TMP=$((1<<$VEC))
+		MASK_TMP=$((1<<${CORES[$VEC]}))
 		MASK=`printf "%X" $MASK_TMP`
 	fi
 
-    printf "%s mask=%s for /proc/irq/%d/smp_affinity\n" $DEV $MASK $IRQ
+    printf "%d: %s mask=%s for /proc/irq/%d/smp_affinity\n" $VEC $DEV $MASK $IRQ
     printf "%s" $MASK > /proc/irq/$IRQ/smp_affinity
 }
 
-if [ "$1" = "" ] ; then
+if [ $# -ne 2 ] ; then
 	echo "Description:"
 	echo "    This script attempts to bind each queue of a multi-queue NIC"
-	echo "    to the same numbered core, ie tx0|rx0 --> cpu0, tx1|rx1 --> cpu1"
+	echo "    to the specified core, in order"
 	echo "usage:"
-	echo "    $0 eth0 [eth1 eth2 eth3]"
+	echo "    $0 eth0 0,1,2,3..."
 fi
 
 
@@ -64,32 +56,38 @@ if [ "$IRQBALANCE_ON" == "0" ] ; then
 fi
 
 #
+# Read the list of cores.
+#
+OLDIFS=$IFS
+IFS=','
+CORESLIST="$2,$2,$2,$2,$2,$2"
+CORES=($CORESLIST)
+IFS=$OLDIFS
+
+#
 # Set up the desired devices.
 #
-
-for DEV in $*
+DEV=$1
+for DIR in rx tx TxRx
 do
-  for DIR in rx tx TxRx
-  do
-     MAX=`grep $DEV-$DIR /proc/interrupts | wc -l`
-     if [ "$MAX" == "0" ] ; then
-       MAX=`egrep -i "$DEV:.*$DIR" /proc/interrupts | wc -l`
-     fi
-     if [ "$MAX" == "0" ] ; then
-       echo no $DIR vectors found on $DEV
-       continue
-     fi
-     for VEC in `seq 0 1 $MAX`
-     do
-        IRQ=`cat /proc/interrupts | grep -i $DEV-$DIR-$VEC"$"  | cut  -d:  -f1 | sed "s/ //g"`
-        if [ -n  "$IRQ" ]; then
-          set_affinity
-        else
-           IRQ=`cat /proc/interrupts | egrep -i $DEV:v$VEC-$DIR"$"  | cut  -d:  -f1 | sed "s/ //g"`
-           if [ -n  "$IRQ" ]; then
-             set_affinity
-           fi
-        fi
-     done
-  done
+   MAX=`grep $DEV-$DIR /proc/interrupts | wc -l`
+   if [ "$MAX" == "0" ] ; then
+     MAX=`egrep -i "$DEV:.*$DIR" /proc/interrupts | wc -l`
+   fi
+   if [ "$MAX" == "0" ] ; then
+     echo no $DIR vectors found on $DEV
+     continue
+   fi
+   for VEC in `seq 0 1 $MAX`
+   do
+      IRQ=`cat /proc/interrupts | grep -i $DEV-$DIR-$VEC"$"  | cut  -d:  -f1 | sed "s/ //g"`
+      if [ -n  "$IRQ" ]; then
+        set_affinity
+      else
+         IRQ=`cat /proc/interrupts | egrep -i $DEV:v$VEC-$DIR"$"  | cut  -d:  -f1 | sed "s/ //g"`
+         if [ -n  "$IRQ" ]; then
+           set_affinity
+         fi
+      fi
+   done
 done

@@ -1,0 +1,41 @@
+How to run memcached experiments
+
+1. Make sure agent profiles exist.
+    - Currently these are split by cluster: one subfolder for Stanford, one for EPFL
+    - *_agentlist.sh: just print a list, one item per line, of machines to use as agents
+    - *_agentrun.sh: specify a mutilate command-line for each agent
+        > Use Stanford's "osdi14_basic_agentrun.sh" as an example
+        > Keep the format the same; only change the parameters to mutilate, not the first part of the line
+        > -A is mandatory (tells the machine it is an agent)
+        > -T specifies number of threads to use on the agent; at Stanford maverick machines have 24 hyperthreads and we use all of them
+        > Agents just generate load, not important for collecting results (they do not collect latency samples)
+
+2. Fill in missing script information
+    - bench_common.sh
+    - Has a section for EPFL (select based on CLUSTER_ID variable)
+    - Please fill in what is missing: SERVER_HOST, SERVER_IF, and MEMCACHED_CORES (currently only useful on Linux tests)
+    - Also can specify QPS sweep parameters QPS_SWEEP_MAX (maximum target QPS) and QPS_NUM_POINTS (number of data points to collect)
+
+3. Satisfy mutilate dependencies
+    - "make" in the bmos/apps/mutilate directory
+    - Try to run it without any parameters and see if it complains about missing libraries
+    - mutilate depends on libzmq, commonly not present; "sudo apt-get install libzmq-dev"
+    - These dependencies must be present on ALL agent machines as well!
+
+4. Decide how you want to get memcached running
+    - Either run it yourself or let the script do it
+    - The script can compile and run memcached in the bmos repo
+    - Current defaults: Linux (script will run memcached), IX: (expects memcached to be run separately)
+    - To change defaults, look in bench-common.sh and modify the lines that set MEMCACHED_SHOULD_DEPLOY
+    - Look at "MEMCACHED_PARAMS" in bench-common.sh for suggested parameters for running memcached
+        > For IX, run with -m 8192 (reserves 8GB of memory for the KV store)
+
+5. Run the script
+    - bench-common.sh: EPFL can remove line 65 once agent profiles have been added
+        > this line just reminds you to make agent profiles
+    - bench-etc-basic.sh: generates a Facebook ETC workload (from the Facebook paper)
+    - bench-usr-basic.sh: generates a Facebook USR workload (very small keys and values)
+
+6. Plot the graphs:
+    - plot-etc-basic.sh
+    - plot-usr-basic.sh
