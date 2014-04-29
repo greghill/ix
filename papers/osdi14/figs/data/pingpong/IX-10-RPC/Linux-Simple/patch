@@ -1,0 +1,102 @@
+diff --git a/bench/bench-connscaling.sh b/bench/bench-connscaling.sh
+old mode 100755
+new mode 100644
+diff --git a/bench/bench-pingpong.sh b/bench/bench-pingpong.sh
+index e1941e9..44245fd 100755
+--- a/bench/bench-pingpong.sh
++++ b/bench/bench-pingpong.sh
+@@ -363,13 +363,18 @@ run_single() {
+ }
+ 
+ run() {
+-  for i in {6..25}; do
+-    run_single $[2**$i]
++  run_single 64
++  for i in {1..9}; do
++    run_single $[$i * 20000]
+   done
++  for i in {3..9}; do
++    run_single $[$i * 100000]
++  done
++  run_single $[1024 * 1024]
+ }
+ 
+ run_netpipe() {
+-  PARAMS="-r -n 100 -p 0 -l 64 -u $[2**25]"
++  PARAMS="-r -n 100 -p 0 -l 64 -u $[2**20]"
+   ./$NETPIPE_EXEC_SERVER $PARAMS > /dev/null 2>&1 &
+   ssh $HOST "./$NETPIPE_EXEC_CLIENT $PARAMS -h $SERVER_IP > /dev/null 2>&1 && awk '//{printf(\"0\\t%d\\t999999999\\t%f 0 0 0 0 0\\n\",\$1,\$2*1024*1024/8/2/\$1)}' np.out" > $OUTDIR/data
+ }
+diff --git a/bench/bench-short.sh b/bench/bench-short.sh
+old mode 100755
+new mode 100644
+diff --git a/bench/plot-connscaling.sh b/bench/plot-connscaling.sh
+old mode 100755
+new mode 100644
+diff --git a/bench/plot-pingpong.gnuplot b/bench/plot-pingpong.gnuplot
+index 0f3d8c0..79098db 100644
+--- a/bench/plot-pingpong.gnuplot
++++ b/bench/plot-pingpong.gnuplot
+@@ -22,6 +22,6 @@ set key bottom right invert
+ 
+ set xlabel 'Message Size (KB)'
+ set ylabel 'Throughput (Gbps)'
+-set xrange [0:384]
++set xrange [0:1024]
+ set yrange [0:10]
+ plot for [i=1:words(infile)] word(infile,i) using ($2/1024):(2*$4*$2*8/10**9) title gen_title(i) linestyle i
+diff --git a/bench/plot-short-with-mtcp.sh b/bench/plot-short-with-mtcp.sh
+old mode 100755
+new mode 100644
+diff --git a/bench/plot-short.sh b/bench/plot-short.sh
+old mode 100755
+new mode 100644
+diff --git a/ix/core/syscall.c b/ix/core/syscall.c
+index a1549c1..bdaaf57 100644
+--- a/ix/core/syscall.c
++++ b/ix/core/syscall.c
+@@ -149,8 +149,7 @@ again:
+ 
+ 	if (!percpu_get(usys_arr)->len) {
+ 		if (done) {
+-			uint64_t deadline = 10*ONE_MS; // FIXME - enable next line instead
+-			// deadline = timer_deadline(10*ONE_MS);
++			uint64_t deadline = timer_deadline(10 * ONE_MS);
+ 			if (deadline > 0) { 
+ 				KSTATS_PUSH(idle, NULL);
+ 				eth_rx_idle_wait(deadline);
+diff --git a/ix/inc/lwip/lwip/tcp_impl.h b/ix/inc/lwip/lwip/tcp_impl.h
+index 903698a..0eeaf22 100644
+--- a/ix/inc/lwip/lwip/tcp_impl.h
++++ b/ix/inc/lwip/lwip/tcp_impl.h
+@@ -492,14 +492,15 @@ struct tcp_seg *tcp_seg_copy(struct tcp_seg *seg);
+ 
+ 
+ /* MAX_PACKETS_DELAYED_ACK -- LWIP behavior set to 2 */
+-#define MAX_PACKETS_DELAYED_ACK 2 
++#define MAX_PACKETS_DELAYED_ACK 1 
+ static inline void tcp_ack(struct tcp_pcb *pcb)
+ {
+ 	if(timer_pending(&pcb->delayed_ack_timer)) {	
+-		timer_del(&pcb->delayed_ack_timer);
+ 		pcb->delayed_ack_counter++;
+-		if (pcb->delayed_ack_counter>=MAX_PACKETS_DELAYED_ACK)
++		if (pcb->delayed_ack_counter>=MAX_PACKETS_DELAYED_ACK) {
++			timer_del(&pcb->delayed_ack_timer);
+ 			pcb->flags |= TF_ACK_NOW;
++		}
+ 	} else {
+ 		pcb->delayed_ack_counter = 1;
+ 		timer_add(&pcb->delayed_ack_timer, TCP_ACK_DELAY);    
+diff --git a/ix/net/tcp_in.c b/ix/net/tcp_in.c
+index f20ac8a..3411352 100644
+--- a/ix/net/tcp_in.c
++++ b/ix/net/tcp_in.c
+@@ -924,7 +924,6 @@ tcp_receive(struct tcp_pcb *pcb)
+ 
+   if (perqueue_get(flags) & TCP_ACK) {
+     right_wnd_edge = pcb->snd_wnd + pcb->snd_wl2;
+-
+     /* Update window. */
+     if (TCP_SEQ_LT(pcb->snd_wl1, perqueue_get(seqno)) ||
+        (pcb->snd_wl1 == perqueue_get(seqno) && TCP_SEQ_LT(pcb->snd_wl2, perqueue_get(ackno))) ||
