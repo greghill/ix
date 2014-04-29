@@ -66,12 +66,14 @@ setup_and_run() {
     export AGENT_SUBDIR="epfl/"
     SERVER_HOST=
     SERVER_IF=
-    MEMCACHED_THREADS=32
+    MEMCACHED_THREADS=16
+    MEMCACHED_CORES=
   elif [ $CLUSTER_ID = 'Stanford' ]; then
     export AGENT_SUBDIR="stanford/"
     SERVER_HOST="maverick-17-10g"
     SERVER_IF="p3p1"
-    MEMCACHED_THREADS=24
+    MEMCACHED_THREADS=12
+    MEMCACHED_CORES=0,12,1,13,2,14,3,15,4,16,5,17
   else
     echo 'Invalid paramters'
     exit 1
@@ -122,7 +124,7 @@ setup_and_run() {
   scp $MEMCACHED_BUILD_PATH/$MEMCACHED_EXEC $SERVER_HOST:$MEMCACHED_EXEC
   
   $PREP
-  ssh $SERVER_HOST sudo nice -n -20 ./$MEMCACHED_EXEC -t $MEMCACHED_THREADS -m 8192 -c 65535 -T -u `whoami` &
+  ssh $SERVER_HOST sudo nice -n -20 ./$MEMCACHED_EXEC -t $MEMCACHED_THREADS -m 8192 -c 65535 -T $MEMCACHED_CORES -u `whoami` &
   
   # Build and deploy mutilate
   DIR=`pwd`

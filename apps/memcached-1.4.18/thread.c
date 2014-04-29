@@ -299,7 +299,7 @@ static void cqi_free(CQ_ITEM *item) {
 /*
  * Creates a worker thread.
  */
-static void create_worker(void *(*func)(void *), void *arg) {
+static void create_worker(void *(*func)(void *), void *arg, int core) {
     pthread_t       thread;
     pthread_attr_t  attr;
     int             ret;
@@ -307,21 +307,17 @@ static void create_worker(void *(*func)(void *), void *arg) {
     pthread_attr_init(&attr);
     
     if (settings.thread_affinity) {
-        static int current_cpu = -1;
         static int max_cpus = 8 * sizeof(cpu_set_t);
         cpu_set_t m;
         int i = 0;
         
-        printf("Affinitizing!\n");
-
         CPU_ZERO(&m);
         sched_getaffinity(0, sizeof(cpu_set_t), &m);
-
+        
         for (i = 0; i < max_cpus; i++) {
-            int c = (current_cpu + i + 1) % max_cpus;
-            if (CPU_ISSET(c, &m)) {
+            if (CPU_ISSET(core, &m)) {
                 CPU_ZERO(&m);
-                CPU_SET(c, &m);
+                CPU_SET(core, &m);
                 if ((ret = pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &m)) != 0) {
                     fprintf(stderr, "Can't set thread affinity: %s\n",
                             strerror(ret));
@@ -329,10 +325,9 @@ static void create_worker(void *(*func)(void *), void *arg) {
                 }
 
                 if (settings.verbose > 0) {
-                    fprintf(stderr, "Created thread with affinity = %d\n", c);
+                    fprintf(stderr, "Created thread with affinity = %d\n", core);
                 }
-
-                current_cpu = c;
+                
                 break;
             }
         }
@@ -812,6 +807,7 @@ void slab_stats_aggregate(struct thread_stats *stats, struct slab_stats *out) {
 void thread_init(int nthreads, struct event_base *main_base) {
     int         i;
     int         power;
+    char *      core_str;
 
     pthread_mutex_init(&cache_lock, NULL);
     pthread_mutex_init(&stats_lock, NULL);
@@ -872,10 +868,24 @@ void thread_init(int nthreads, struct event_base *main_base) {
     }
 
     /* Create threads after we've done all the libevent setup. */
-    for (i = 0; i < nthreads; i++) {
-        create_worker(worker_libevent, &threads[i]);
+    if (settings.thread_affinity) {
+        core_str = strtok(settings.core_list, ",");
+        for (i = 0; i < nthreads; i++) {
+            int core;
+            if (!core_str) {
+                fprintf(stderr, "Not enough cores specified for affinitizing!\n");
+                exit(1);
+            }
+            core = atoi(core_str);
+            create_worker(worker_libevent, &threads[i], core);
+            core_str = strtok(NULL, ",");
+        }
+    } else {
+        for (i = 0; i < nthreads; i++) {
+            create_worker(worker_libevent, &threads[i], 0);
+        }
     }
-
+    
     /* Wait for all the threads to set themselves up before returning. */
     pthread_mutex_lock(&init_lock);
     wait_for_thread_registration(nthreads);

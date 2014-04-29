@@ -28,7 +28,7 @@ fi
 
 # Extract the agent profile from the experiment definition
 AGENT_PROFILE=$(cat $(dirname $0)/$1.experiment | grep "^AGENTS:" | sed s/AGENTS://)
-AGENT_LIST="$(dirname $0)/${AGENT_PROFILE}_agentlist.sh"
+AGENT_LIST="$(dirname $0)/${AGENT_SUBDIR}${AGENT_PROFILE}_agentlist.sh"
 
 # Ensure the agent profile exists
 if [ ! -e $AGENT_LIST ]
@@ -41,5 +41,5 @@ fi
 for i in `$AGENT_LIST`
 do
     echo "$0: killing agent on $i" >&2
-    ssh $i killall mutilate
+    ssh $i sudo killall mutilate
 done

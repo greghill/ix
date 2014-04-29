@@ -28,7 +28,7 @@ fi
 
 # Run mutilate and prep the experiment
 MUTILATE_OPTS=$(cat $(dirname $0)/$2.experiment | grep -- -[KVr] | tr -s '\n' ' ')
-MUTILATE_CMD="${MUTILATE_EXPERIMENT_PREFIX}/mutilate --loadonly -v -s $1 $MUTILATE_AGENTS $MUTILATE_OPTS"
+MUTILATE_CMD="${MUTILATE_EXPERIMENT_PREFIX}/mutilate --loadonly --binary -v -s $1 $MUTILATE_AGENTS $MUTILATE_OPTS"
 echo "$0: preparing experiment" >&2
 echo "$0: $MUTILATE_CMD" >&2
 $MUTILATE_CMD

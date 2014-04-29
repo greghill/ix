@@ -92,7 +92,7 @@ do
     MUTILATE_AGENTS+="-a $i "
 done
 
-MUTILATE_CMD="nice -n -20 ${MUTILATE_EXPERIMENT_PREFIX}/mutilate --noload -v -s $MEMCACHED_SERVER $MUTILATE_AGENTS $MUTILATE_OPTS"
+MUTILATE_CMD="nice -n -20 ${MUTILATE_EXPERIMENT_PREFIX}/mutilate --noload --binary -v -s $MEMCACHED_SERVER $MUTILATE_AGENTS $MUTILATE_OPTS"
 echo "$0: starting experiment" >&2
 echo "$0: $MUTILATE_CMD" >&2
 sudo $MUTILATE_CMD #| tr -s ' ' ','

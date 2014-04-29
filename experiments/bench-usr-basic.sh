@@ -6,5 +6,5 @@ experiments() {
 
 source $(dirname $0)/bench-common.sh
 
-AGENT_PROFILE=standard
+AGENT_PROFILE=fb_etc
 setup_and_run $@

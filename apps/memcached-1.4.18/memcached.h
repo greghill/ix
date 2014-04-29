@@ -325,6 +325,7 @@ struct settings {
     int lru_crawler_sleep;  /* Microsecond sleep between items */
     uint32_t lru_crawler_tocrawl; /* Number of items to crawl per run */
     bool thread_affinity;
+    char core_list[1024];
 };
 
 extern struct stats stats;
