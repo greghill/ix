@@ -98,9 +98,12 @@ void slabs_init(const size_t limit, const double factor, const bool prealloc) {
 
     mem_limit = limit;
 
+    printf("allocating mem_limit bytes %ld\n", mem_limit);
+
     if (prealloc) {
         /* Allocate everything in a big chunk with malloc */
-        mem_base = malloc(mem_limit);
+        //mem_base = malloc(mem_limit);
+	mem_base = ix_alloc_pages(div_up(mem_limit, PGSIZE_2MB));
         if (mem_base != NULL) {
             mem_current = mem_base;
             mem_avail = mem_limit;
