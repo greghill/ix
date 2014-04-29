@@ -238,7 +238,7 @@ static int ixgbe_rx_process(struct eth_rx_queue *rx, unsigned int max_packets)
 
 	while (max_packets && rxq->inmem_ring->head < rxq->inmem_ring->tail) {
 		mre = RING_HEAD(rxq->inmem_ring);
-		rxq->inmem_ring->head++
+		rxq->inmem_ring->head++;
 		KSTATS_PUSH(eth_input, &save);
 		eth_input(rx, mre->mbuf);
 		KSTATS_POP(&save);
