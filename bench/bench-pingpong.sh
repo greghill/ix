@@ -367,10 +367,10 @@ run() {
   for i in {1..9}; do
     run_single $[$i * 20000]
   done
-  for i in {2..9}; do
+  for i in {2..4}; do
     run_single $[$i * 100000]
   done
-  run_single $[1024 * 1024]
+  run_single $[512 * 1024]
 }
 
 run_netpipe() {
