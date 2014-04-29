@@ -4,6 +4,17 @@ nth() {
   ls results/*/short/$2/data|sort -r|sed -n "$1{p;q;}"
 }
 
+copy_files() {
+  DEST=$1
+  mkdir -p $DEST
+  shift
+  while [ $# -gt 0 ]; do
+    FILE=$1
+    tar -c `dirname $FILE` | tar --strip-components=2 -C $DEST -x
+    shift
+  done
+}
+
 FORMAT=${1:-eps}
 
 shift
@@ -23,6 +34,7 @@ echo $SHORT_FILES|tr ' ' '\n'
 
 if [ $FORMAT = 'eps' ]; then
   OUTDIR=../papers/osdi14/figs
+  copy_files ../papers/osdi14/figs/data $SHORT_FILES
 else
   OUTDIR=figures
 fi
