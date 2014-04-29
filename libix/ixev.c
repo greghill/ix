@@ -455,9 +455,12 @@ static void ixev_handle_close_ret(struct ixev_ctx *ctx, long ret)
 	}
 #endif
 
-#if defined(OSDI_BENCHMARK)
+#if defined(OSDI_BENCHMARK) && !defined(OSDI_MEMCACHED)
 	ixev_global_ops.release(ctx);
+#else
+#error define OSDI_BENCHMARK or OSDI_MEMCACHED
 #endif
+
 }
 
 static void ixev_handle_one_ret(struct bsys_ret *r)
