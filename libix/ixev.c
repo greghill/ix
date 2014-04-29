@@ -453,7 +453,9 @@ static void ixev_handle_close_ret(struct ixev_ctx *ctx, long ret)
 		ref->cb(ref);
 		ref = ref->next;
 	}
+#endif
 
+#if defined(OSDI_BENCHMARK)
 	ixev_global_ops.release(ctx);
 #endif
 }

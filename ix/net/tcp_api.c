@@ -368,7 +368,13 @@ static void on_err(void *arg, err_t err)
 	api = (struct tcpapi_pcb *) arg;
 	cookie = api->cookie;
 
+#if defined(OSDI_BENCHMARK) && !defined(OSDI_MEMCACHED)
+	if (err == ERR_ABRT || err == ERR_RST || err == ERR_CLSD)
+#elif !defined(OSDI_BENCHMARK) && defined(OSDI_MEMCACHED)
 	if (err == ERR_ABRT || err == ERR_CLSD)
+#else
+#error define OSDI_BENCHMARK or OSDI_MEMCACHED
+#endif
 		mark_dead(api, cookie);
 }
 

@@ -25,6 +25,14 @@ ifneq ($(ENABLE_KSTATS),)
 CFLAGS += -DENABLE_KSTATS
 endif
 
+ifneq ($(OSDI_BENCHMARK),)
+CFLAGS += -DOSDI_BENCHMARK
+endif
+
+ifneq ($(OSDI_MEMCACHED),)
+CFLAGS += -DOSDI_MEMCACHED
+endif
+
 SRCS =
 DIRS = core ixgbe libdune lwip net sandbox vnic
 
