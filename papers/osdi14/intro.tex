@@ -168,13 +168,24 @@ compatibility between \ix and a wide range of existing applications.
 % (mean), with an additional latency jitter of not more than an extra
 % 10~\microsecond.
 
-We compare \ix against Linux and mTCP, a state-of-the-art user-level
-TCP stack~\cite{jeong2014mtcp}.  \ix outperforms both Linux and mTCP
-on benchmarks that
+\edb{The primary contributions resulting from our design are: (i) the
+  combined use of commodity OS and virtualization hardware to separate
+  control from data plane; (ii) a run-to-completion execution model
+  with cooperating, untrusted applications; (iii) a bounded, adaptive
+  batching mechanisms that provides both low-latency and high
+  throughput.}
 
-\christos{TBD: discuss latency, packet
-  rate for small messages, connection scaling, and resource
-  usage. then discuss memached}
+\edb{We compare \ix against Linux 3.11.10 and mTCP, a state-of-the-art
+user-level TCP stack~\cite{jeong2014mtcp}.  On network-intensive
+microbenchmark that are either latency-sensitive, require a high TCP
+connection churn, or manage a large number of concurrent connections,
+\ix outperforms Linux by an order of magnitude, and mTCP by up to
+2.5x.  \ix even scales to 4x10GbE configuration, using a single
+socket.  Our evaluation with memcached, a real-world, massively
+deployed key-value store shows that \ix outperforms Linux by XXX--
+this specific workload transitions from running $>80\%$ in kernel mode with Linux
+to $<XXX\%$ with \ix.}
+
 
 % \christos{I prefer to enumerate the main design principles and the
 %   list impressive numbers towards the goals rather than come up with
