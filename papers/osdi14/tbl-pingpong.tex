@@ -3,6 +3,7 @@
 %%%  use the ping-pong test to measure the half rountrip latency @ 64B
 %%% 
 
+
 \begin{table}[b]
 \vspace{-1em}
 \begin{center}
@@ -11,13 +12,13 @@
 \hline
 Config &  Avg lat. & 99\% lat. & 5Gpbs message size\\
 \hline
-Linux-Linux & 24.2\microsecond & 0\microsecond & 384KB\\
+Linux-Linux & 21\microsecond & 0\microsecond & 384KB\\
 %\hline
-Linux-mTCP   & 87+\microsecond &  0\microsecond & 1.5MB \\
-mTCP-mTCP    & 80+\microsecond &  0\microsecond & 8MB \\
+Linux-mTCP   & 87\microsecond &  0\microsecond & 1.5MB \\
+mTCP-mTCP    & 98\microsecond &  0\microsecond & 8MB \\
 %\hline
 %REDO
-Linux-\ix   & 16.0\microsecond &  38\microsecond? & XXX\\
+Linux-\ix   & XXX16.0\microsecond &  38\microsecond? & XXX\\
 \ix-\ix     & 6.8\microsecond &  0\microsecond & 32KB\\
 \hline
 \end{tabular}

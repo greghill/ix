@@ -143,8 +143,6 @@ library includes an interface nearly identical to the popular
 \texttt{libevent} library~\cite{provos2003libevent}, providing
 compatibility between \ix and a wide range of existing applications.
 
-\christos{add a few more details above (3-4 sentences) if space allows}
-
 % \ix addresses the C10M problem through a careful separation of the
 % control plane and dataplane functions.  The control plane consists of a
 % vanilla Linux deployment running the Dune
@@ -171,7 +169,10 @@ compatibility between \ix and a wide range of existing applications.
 % 10~\microsecond.
 
 We compare \ix against Linux and mTCP, a state-of-the-art user-level
-TCP stack~\cite{jeong2014mtcp}. \christos{TBD: discuss latency, packet
+TCP stack~\cite{jeong2014mtcp}.  \ix outperforms both Linux and mTCP
+on benchmarks that
+
+\christos{TBD: discuss latency, packet
   rate for small messages, connection scaling, and resource
   usage. then discuss memached}
 

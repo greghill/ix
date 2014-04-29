@@ -70,7 +70,7 @@ which the NIC are attached.
 %\input{tbl-pingpong}
 
 \input{figs/float-short10}
-\input{figs/float-short40}
+
 
 As for the benchmarks themselves: the Linux client and server
 implementations of our benchmarks use the \texttt{libevent} framework
@@ -88,26 +88,30 @@ specified by NetPIPE~\cite{snell1996netpipe}. The benchmark simply
 exchanges a fixed-size message between two servers and helps
 calibrate the latency and bandwdith of a single-flow.
 
-\edb{NEED FINAL LAT NUMBERS.} Fig.~\ref{fig:pingpong} compares the performance of various
+%%%
+%%% Numbers for latency
+%% IX-IX missing
+%% Linux-Linux (20.95us 
+%% Linux-mTCP (86.77us)
+%% mTCP-mTCP (95.53us)
+
+
+\edb Fig.~\ref{fig:pingpong} compares the performance of various
 configurations for different message sizes.  As expected, the
 bandwidth increases with the message size. Two \ix machines can
 pinp-pong at half 5Gbps (half the maximum) with messages as small as
-32KB.  The latency differences, measured with 64B messages, are
-striking.  The one-way latency is 6.8\microsecond between two machines
-running \ix, 30\microsecond if they are running Linux, and
-91\microsecond if they are running mTCP.  The difference in system
-architecture help explain such a dramatic difference: \ix has a
-dataplane model that polls queues and runs them to completion; Linux
-has an interrupt model, which wakes up the blocked process.  The mTCP
-authors mention high context switching overheads between the various
-threads in their architecture, and the need for aggressive
-batching~\cite{jeong2014mtcp}, which helps explain why it is such a
-challenging benchmark for that system.
-
+\edb{32KB}.  Using 64B messages, the one-way latency is \edb{XXX}
+6.8\microsecond between two machines running \ix, 21\microsecond if
+they are running Linux, and 95\microsecond if they are running mTCP.
+The difference in system architecture help explain such a dramatic
+difference: \ix has a dataplane model that polls queues and runs them
+to completion; Linux has an interrupt model, which wakes up the
+blocked process; mTCP uses aggressive batching to offset the cost of context switching~\cite{jeong2014mtcp}.
 
 \subsection{Handling high TCP connection churn}
 \label{sec:eval:short}
 
+\input{figs/float-short40}
 We then evaluate \ix's multi-core scalability in handling workloads
 with extreme connection churn by using the same benchmark used to evaluate
 Megapipe~\cite{han2012megapipe} and mTCP~\cite{jeong2014mtcp}:
@@ -119,19 +123,22 @@ Each client performs this synchronous remote procedure
 call $n$ times, and then close the connection using a reset
 (\texttt{TCP RST}).
 
+
+
+
 Fig.~\ref{fig:short10} shows the results on the 10GbE setup.  For
-Linux and mTCP, our results match the ones published in
-~\cite{jeong2014mtcp}.  For all three tests, \ix scales much better
+Linux and mTCP, our results are consistent with the ones published in
+~\cite{jeong2014mtcp}.  For all three tests, \ix scales linearly wmuch better
 and is quickly able to sature the hardware resources.  When reaching
 saturation, it is never CPU-bound, and appears to be limited by the
-NIC packet per second hardware limit and Ethernet wire rates limitations.  In constast, mTCP needs
-all 6 cores to match the rate on Fig.~\ref{fig:short10:mcore}, and
-delivers 40\% of the throughput of \ix on
-Fig.~\ref{fig:short10:roundtrips}.  Linux is never able to match \ix
-or mTCP on any configuration.
+NIC packet per second hardware limit and Ethernet wire rates
+limitations.  In constast, mTCP needs all 6 cores to match the rate on
+Fig.~\ref{fig:short10:mcore}, and delivers 40\% of the throughput of
+\ix on Fig.~\ref{fig:short10:roundtrips}.  Linux is never able to
+match \ix or mTCP on any configuration.
 
 
-\subsection{High connection chun at 4x10GbE}
+\subsection{High connection churn at 4x10GbE}
 \label{sec:eval:short40}
 
 Fig.~\ref{fig:short40} shows the results on the 4x10GbE setup, and
@@ -146,7 +153,6 @@ Fig.\ref{fig:short40:size} shows that it can nearly saturate 4x10GbE
 of traffic even with short messgages.
 
 \subsection{Connection Scalability}
-\input{figs/float-connscaling}
 
 \label{sec:eval:scale}
 
@@ -174,31 +180,4 @@ delivers XXX\% of its own peak throughput\footnote{Unexplained
   experiments to 100,000 connections at the time of submission. \ix is
   designed to scale to millions of concurrent connections.}
 
-
-\subsection{Application performance -- memcache}
-\label{sec:eval:memcached}
-
-\input{figs/float-mutilate}
-
-We now validate the performance benefits of the protected dataplane
-design on memcached -- a real world, massively deployed, in-memory
-key-value store built on top of the libevent framework.  We use the
-mutilate~\cite{url:mutilate} load-generator and tool to measure
-average and 99\% latency as a function of the throughput delivered by
-the server~\cite{Leverich:RHSU:2014}.
-
-Fig.~\ref{fig:mutilate} reports the latencies as a function of the
-number of queries per second.  The peak QPS is measured using \ix at
-XXX, which maps to a bandwidth leaving the server of XXX Gbps, or XX\%
-of the theoretical wire rate of the machine.  We report the numbers
-for Linux and \ix for XXX and YYY established, concurrent
-connections served by the 18 clients.
-
-Our results show that \edb{TODO}.....
-
-
-%%%%%
-%%%%% very optimistic
-%%%%%
-
-%\input{eval-mtier}
+\input{eval-memcache}

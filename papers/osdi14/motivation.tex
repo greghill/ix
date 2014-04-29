@@ -126,7 +126,7 @@ Connection scalability has been a historical challenge for commodity
 operating systems, reaching 10,000 concurrent connections a decade
 ago~\cite{theC10Kproblem} and exceeding one million connections
 today~\cite{theC10Mproblem}.  For example, the nature of all-to-all
-communication between Facebook's \edb{added:large-scale deployments} of both application and \texttt{memcached}
+communication between Facebook's \edb{large-scale deployments} of both application and \texttt{memcached}
 servers made it impractical to use TCP sockets between these two
 tiers, resulting in deployments that use UDP datagrams for
 \texttt{get} operations and an aggregation proxy for \texttt{put}
