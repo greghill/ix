@@ -34,7 +34,7 @@ packet is done before moving on to the next packet.  In contrast, a
 commodity OS decouples protocol processing from the application itself
 in order to enable flexibility in terms of resource scheduling and
 flow control. For example, a commodity OS relies on device and soft
-interrupts \george{i am not totally sure that soft interrupts is a well defined term; linux defines softirqs and windows DPC that do the bulk of interrupt processing outside of cli; anyway it is a technicality} to context switch from application processing to protocol
+interrupts, to context switch from application processing to protocol
 processing. Similarly, the kernel' networking stack will generate a
 TCP \texttt{ACK} and slide its receive window even though the
 application is not consuming data, up to some extent. Second,
@@ -68,7 +68,7 @@ dataplane, which runs the networking stack and application logic.
 Like a conventional OS, the control plane multiplexes and schedules
 resources among dataplanes but in an coarse-grain manner in space and
 time: cores are dedicated to applications until revoked, memory is
-allocated at superpage \george{large pages is the linux term} granularity and pinned \george{large pages are by definition pinned; they can't be paged out; we can add "to physical memory/pages"}; hardware queues are
+allocated at large page granularity of physical memory; hardware queues are
 exclusively assigned to a single dataplane until explicitly revoked.
 Each dataplane runs a single application in a single address space.
 This is similar to the Exokernel approach of using library operating

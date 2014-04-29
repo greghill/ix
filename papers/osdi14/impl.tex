@@ -55,7 +55,7 @@ Dune system within Linux to enable dataplanes to run as library-based
 OS in the VMX non-root ring 0, the mode typically used to run guest
 OSes in virtualized systems~\cite{belay2012dune}. The applications run
 in ring 3 as usual. This approach provides dataplanes with direct
-access to hardware functions \george {features?} such as page tables and provides full
+access to hardware features such as page tables and provides full
 protection between the control plane, dataplanes, and untrusted user
 code. %\christos{should we explicitly say that most web-scale apps are
 %  deployed without VMs so taking over VMX is not a problem?}\edb{not needed}
@@ -89,8 +89,8 @@ application. For instance, Fig.~\ref{fig:cp-dp} shows one dataplane
 for a multi-threaded \texttt{memcached} server and another dataplane
 for a multi-threaded \texttt{nginx} server. The control plane allocates
 resources to each dataplane in a coarse-grain manner. Core allocation
-is controlled through real-time priorities and \texttt{cpumasks} \george{cpuset is more accurate};
-memory is allocated in 2MB and 1GB chunks \george{pages?}; each NIC hardware queue is
+is controlled through real-time priorities and \texttt{cpusets};
+memory is allocated in large pages of 2MB and 1GB in size; each NIC hardware queue is
 assigned to a single dataplane. This approach avoids the overheads and
 unpredictability of fine-grain time multiplexing of resources between
 demanding applications~\cite{Leverich:RHSU:2014}.
@@ -134,7 +134,7 @@ then hold on to these message buffers and release them via a batched
 system call.  \ix also differs in directly exposing flow control
 conditions to application. The \texttt{sendv} batched system call does
 not synchronously return the number of bytes sent. Instead, the
-\texttt{Recv} \george{Sent?} event condition provides that information at a later point
+\texttt{Sent} event condition provides that information at a later point.
 
 In addition to the native \ix API in Table~\ref{tbl:api}, we also
 developed a user-level library that provides asynchronous event
@@ -178,7 +178,7 @@ three code bases are highly modified for \ix. The rest is
 approximately 7 KSLOC of new code. We chose lwIP as a starting point
 for TCP/IP processing because of its modularity and its maturity as a
 compliant, feature-rich networking stack. It allows us to be
-RFC-compliant for TCP, UDP, ARP, ICMP and LACP \george{lwIP does not provide anything related to LACP}. Since lwIP was
+RFC-compliant for TCP, UDP, ARP, and ICMP. Since lwIP was
 optimized for memory efficiency in embedded environments, we had to
 radically change its internal data structures for multi-core
 scalability and fine-grain timer management. We did not yet optimize
@@ -268,7 +268,7 @@ The \ix dataplane and the application collaboratively manage
 memory. To enable zero-copy operation, a buffer used for an incoming
 packet is passed read-only to the application, enabling zero-copy
 operation. Applications that hold on to message buffers for extensive
-periods of time must bound \george{what if they don't?} their use of this shared resource.  In the
+periods of time must bound their use of this shared resource.  In the
 transmit direction, zero-copy operation implies that the application
 must maintain outgoing data immutable until the reception is
 acknowledged by the peer. % \edb{\sout{If there is recepient is not
@@ -290,7 +290,7 @@ hardware.  No sequence of batched system calls or other user-level
 actions can be used to violate correct adherence to TCP and other
 network specifications.  Furthermore, the dataplane can be used to
 enforce network security policies (e.g., iptables or Amazon Security
-Groups \george{someone could ask what is this? citation needed?}) or to implement the network virtualization functions typically
+Groups~\cite{url:amazon-sg}) or to implement the network virtualization functions typically
 done in a hypervisor~\cite{nsdi:nsx}. Our security model is as strong
 as conventional network stacks in commodity OSes and is missing from all
 the recently proposed user-level networking stacks. 

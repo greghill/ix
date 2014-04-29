@@ -83,7 +83,7 @@ than 500 bytes~\cite{Atikoglu:2012:WAL}. As a result, each service
 node must ideally scale to extremely high packet rates, measured in
 millions of packets per second on 10 GbE or 40 GbE NICs.  In such
 conditions, common NIC hardware optimizations, such as TCP
-segmentation and large receive offloading \george{intel nic manual names this feature: Receive Side Coalescing; LRO is a linux term, I think}, have a marginal impact on
+segmentation and receive side coalescing, have a marginal impact on
 performance.
 
 \myparagraph{Micro-second latency:} To enable rich interactions
@@ -125,8 +125,8 @@ of concurrent connections or the rate of churn.
 Connection scalability has been a historical challenge for commodity
 operating systems, reaching 10,000 concurrent connections a decade
 ago~\cite{theC10Kproblem} and exceeding one million connections
-today~\cite{theC10Mproblem}. \george{the following example is a bit hard to match with the previous sentence} For example, the nature of all-to-all
-communication between Facebook's application and \texttt{memcached}
+today~\cite{theC10Mproblem}.  For example, the nature of all-to-all
+communication between Facebook's \edb{added:large-scale deployments} of both application and \texttt{memcached}
 servers made it impractical to use TCP sockets between these two
 tiers, resulting in deployments that use UDP datagrams for
 \texttt{get} operations and an aggregation proxy for \texttt{put}

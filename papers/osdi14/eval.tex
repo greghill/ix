@@ -3,7 +3,7 @@
 \label{sec:eval}
 
 We evaluate the scalability of \ix and compare it to the Linux
-baseline running the \george{the or a for the kernel?} 3.11.10 kernel, and to mTCP. We selected mTCP as it
+baseline running a 3.11.10 kernel, and to mTCP. We selected mTCP as it
 is the state-of-the-art user-space TCP alternative available on the
 same hardware~\cite{jeong2014mtcp}.  We first describe the
 experimental setup (\S\ref{sec:eval:setup}).  We then characterize the
@@ -33,7 +33,9 @@ mTCP results. The \emph{4x10GbE setup} is used for
 \S\ref{sec:eval:memcached} and compares \ix and Linux~\footnote{We
   were able to port mTCP to the 4x10GbE setup, but could not reproduce
   the expected performance.  We will attempt to unify the setup by the
-  camera-ready deadline. \george{possible false hope that mTCP can use 4 NICs. I am not sure about that.}}.
+  camera-ready deadline.}
+
+%\george{possible false hope that mTCP can use 4 NICs. I am not sure about that.}}.
 
  
 \myparagraph{10GbE setup:} \edb{PLACEHOLDER:} This setup consists of a
@@ -49,12 +51,12 @@ and single Xenon E5-2650 @ 2.6 Ghz.  Each client has a single
 82599EB 10GbE NIC connecting to the switch.  The server is a dual-Xeon
 E5-2665 running at 2.4 Ghz with 256 GB of DRAM with four Intel 2P X520
 NICs.  Each socket (client or server) has 8 cores and 16 hyperthreads.
-The server is connected to the switch via a 4x10GbE bond configured as a L2+L3 hash \george{i'll lookup the terms}.
+The server is connected to the switch via a 4x10GbE bond configured as a L2+L3 hash.
 
 \myparagraph{Common elements:} Jumbo frames are never enabled.  Our
 baseline configuration in each machine is the Ubuntu 12.04.4 LTS
 distribution running the 3.11.10 Linux kernel.  When reporting
-multi-core scalability, we report results on a per-core bassis \george{basis?} with
+multi-core scalability, we report results on a per-core basis with
 hyperthreading enabled.  Except for \S\ref{sec:eval:netpipe}, client
 machines always run Linux. Although the servers have two sockets, our
 experiments use only the CPU and memory resources of the socket to
@@ -122,7 +124,7 @@ Linux and mTCP, our results match the ones published in
 ~\cite{jeong2014mtcp}.  For all three tests, \ix scales much better
 and is quickly able to sature the hardware resources.  When reaching
 saturation, it is never CPU-bound, and appears to be limited by the
-NIC PPS \george{packet per second hardware limit or DMA limit as mentioned below?} and Ethernet wire rates limitations.  In constast, mTCP needs
+NIC packet per second hardware limit and Ethernet wire rates limitations.  In constast, mTCP needs
 all 6 cores to match the rate on Fig.~\ref{fig:short10:mcore}, and
 delivers 40\% of the throughput of \ix on
 Fig.~\ref{fig:short10:roundtrips}.  Linux is never able to match \ix
@@ -134,7 +136,7 @@ or mTCP on any configuration.
 
 Fig.~\ref{fig:short40} shows the results on the 4x10GbE setup, and
 compare them with a configuration that uses only one of the four
-links \george{as a matter of fact we use a fifth link that's not in the bond}.  The result for Linux are nearly identical, so only the 4x10
+links.  The result for Linux are nearly identical, so only the 4x10
 configuration is shown.  Fig.~\ref{fig:short40:mcore} shows that \ix
 linearly scales and can nearly quadruple throughput.
 Fig.~\ref{fig:short40:roundtrips} also shows scaling, although here
@@ -156,7 +158,9 @@ open sockets to perform the RPC.  In our setup with 19 clients, the
 server must multiplex among $19 \times n \times m$ open connections.
 We experimentally set $n \leq 24$ to maximize throughput.  We report
 the maximal throughput in messages per second for varying number of
-total established connections. \george{need to verify that this is indeed the setup}
+total established connections. 
+
+%\george{need to verify that this is indeed the setup}
 
 Fig.~\ref{fig:connscaling} shows the results.  As expected, throughput
 increases with the degree of concurrency, but then decreases with

@@ -57,7 +57,7 @@ DPDK~\cite{intel:dpdk} as a starting code base.  We avoided adding to
 portability costs for higher performance.  Our current implementation
 operates without an IOMMU or VT-d; instead, the Dune environment maps
 descriptor rings directly into \ix memory, and furthermore provides
-\ix with the list of physical addresses in use, as \george{a?} form of
+\ix with the list of physical addresses in use, as a form of
 paravirtualization~\cite{DBLP:conf/sosp/BarhamDFHHHN03}.  Although
 this implementation choice puts some level of trust into \ix, the
 applications remain securely isolated.  Finally, \ix is designed and
