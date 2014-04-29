@@ -2,7 +2,7 @@
 
 on_exit() {
   if [ ! -z ${SERVER_HOST+x} ]; then
-    ssh $SERVER_HOST killall $MEMCACHED_EXEC > /dev/null 2>&1
+    ssh $SERVER_HOST sudo killall $MEMCACHED_EXEC > /dev/null 2>&1
   fi
   
   rm -f ./mutilate
@@ -16,7 +16,7 @@ on_err() {
 prep_linux() {
   scp memcached_prep_linux_lite.sh $SERVER_HOST:memcached_prep_linux_lite.sh
   scp set_irq_affinity.sh $SERVER_HOST:set_irq_affinity.sh
-  ssh $SERVER_HOST sudo ./memcached_prep_linux_lite.sh $SERVER_IF
+  ssh $SERVER_HOST sudo ./memcached_prep_linux_lite.sh $SERVER_IF $MEMCACHED_CORES
 }
 
 prep_linux-40() {
@@ -72,8 +72,10 @@ setup_and_run() {
     export AGENT_SUBDIR="stanford/"
     SERVER_HOST="maverick-17-10g"
     SERVER_IF="p3p1"
-    MEMCACHED_THREADS=12
-    MEMCACHED_CORES=0,12,1,13,2,14,3,15,4,16,5,17
+    #MEMCACHED_THREADS=12
+    #MEMCACHED_CORES=0,12,1,13,2,14,3,15,4,16,5,17
+    MEMCACHED_THREADS=24
+    MEMCACHED_CORES=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23
   else
     echo 'Invalid paramters'
     exit 1
@@ -85,46 +87,64 @@ setup_and_run() {
   if [ $SERVER_SPEC = 'Linux-10' ]; then
     PREP=prep_linux
     OUTDIR='Linux-10'
+    QPS_SWEEP_MAX=1000000
+    QPS_NUM_POINTS=20
     MEMCACHED_EXEC='memcached'
     MEMCACHED_BUILD_PATH='../apps/memcached-1.4.18'
     MEMCACHED_BUILD_TARGET=''
+    MEMCACHED_PARAMS="-t $MEMCACHED_THREADS -m 8192 -c 65535 -T $MEMCACHED_CORES -u `whoami`"
+    MEMCACHED_SHOULD_DEPLOY=1
   elif [ $SERVER_SPEC = 'Linux-40' ]; then
     PREP=prep_linux-40
     OUTDIR='Linux-40'
+    QPS_SWEEP_MAX=1000000
+    QPS_NUM_POINTS=20
     MEMCACHED_EXEC='memcached'
     MEMCACHED_BUILD_PATH='../apps/memcached-1.4.18'
     MEMCACHED_BUILD_TARGET=''
+    MEMCACHED_PARAMS="-t $MEMCACHED_THREADS -m 8192 -c 65535 -T $MEMCACHED_CORES -u `whoami`"
+    MEMCACHED_SHOULD_DEPLOY=1
   elif [ $SERVER_SPEC = 'IX-10' ]; then
-    echo "IX: please specify a memcached executable!" && false
+    echo "IX: make sure a memcached server is already running!"
     PREP=prep_ix
     OUTDIR='IX-10'
+    QPS_SWEEP_MAX=2000000
+    QPS_NUM_POINTS=20
     MEMCACHED_EXEC=
     MEMCACHED_BUILD_PATH=
     MEMCACHED_BUILD_TARGET=''
+    MEMCACHED_PARAMS='-m 8192'
+    MEMCACHED_SHOULD_DEPLOY=0
   elif [ $SERVER_SPEC = 'IX-40' ]; then
-    echo "IX: please specify a memcached executable!" && false
+    echo "IX: make sure a memcached server is already running!"
     PREP=prep_ix-40
     OUTDIR='IX-40'
+    QPS_SWEEP_MAX=2000000
+    QPS_NUM_POINTS=20
     MEMCACHED_EXEC=
     MEMCACHED_BUILD_PATH=
     MEMCACHED_BUILD_TARGET=''
+    MEMCACHED_PARAMS='-m 8192'
+    MEMCACHED_SHOULD_DEPLOY=0
   else
     echo 'Invalid parameters'
     exit 1
   fi
   
-  # Build, deploy, and run memcached
-  if [ ! -e $MEMCACHED_BUILD_PATH/Makefile ]; then
-    DIR=`pwd`
-    cd $MEMCACHED_BUILD_PATH
-    ./configure
-    cd $DIR
+  if [ $MEMCACHED_SHOULD_DEPLOY -eq 1 ]; then
+    # Build, deploy, and run memcached
+    if [ ! -e $MEMCACHED_BUILD_PATH/Makefile ]; then
+      DIR=`pwd`
+      cd $MEMCACHED_BUILD_PATH
+      ./configure
+      cd $DIR
+    fi
+    make -C $MEMCACHED_BUILD_PATH
+    scp $MEMCACHED_BUILD_PATH/$MEMCACHED_EXEC $SERVER_HOST:$MEMCACHED_EXEC
+    
+    $PREP
+    ssh $SERVER_HOST sudo nice -n -20 ./$MEMCACHED_EXEC $MEMCACHED_PARAMS &
   fi
-  make -C $MEMCACHED_BUILD_PATH
-  scp $MEMCACHED_BUILD_PATH/$MEMCACHED_EXEC $SERVER_HOST:$MEMCACHED_EXEC
-  
-  $PREP
-  ssh $SERVER_HOST sudo nice -n -20 ./$MEMCACHED_EXEC -t $MEMCACHED_THREADS -m 8192 -c 65535 -T $MEMCACHED_CORES -u `whoami` &
   
   # Build and deploy mutilate
   DIR=`pwd`
@@ -136,6 +156,11 @@ setup_and_run() {
   for i in `${AGENT_SUBDIR}/${AGENT_PROFILE}_agentlist.sh`; do
       scp $MUTILATE_BUILD_PATH/mutilate $i:mutilate
   done
+  
+  # Set up the QPS sweep
+  QPS_MIN=$(($QPS_SWEEP_MAX / $QPS_NUM_POINTS))
+  QPS_STEP=$(($QPS_SWEEP_MAX / $QPS_NUM_POINTS))
+  export MUTILATE_EXTRA_OPTS="--scan=$QPS_MIN:$QPS_SWEEP_MAX:$QPS_STEP"
   
   # Set up the output directory
   OUTDIR_BASE="results/$(date +%Y-%m-%d-%H-%M-%S)"
