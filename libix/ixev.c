@@ -147,6 +147,7 @@ static void ixev_tcp_sent(hid_t handle, unsigned long cookie, size_t len)
 	while (ref && ref->send_pos <= ctx->sent_total) {
 		ref->cb(ref);
 		ref = ref->next;
+		ctx->cur_buf = NULL; /* XXX: HACK */
 	}
 
 	ctx->ref_head = ref;
@@ -447,12 +448,14 @@ static void ixev_handle_close_ret(struct ixev_ctx *ctx, long ret)
 		return;
 	}
 
+#if 0 /* XXX: hack */
 	while (ref) {
 		ref->cb(ref);
 		ref = ref->next;
 	}
 
 	ixev_global_ops.release(ctx);
+#endif
 }
 
 static void ixev_handle_one_ret(struct bsys_ret *r)
