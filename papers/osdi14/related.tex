@@ -11,7 +11,7 @@ the commentary already exposed in \S\ref{sec:motivation:current}.
 architected separation between control and data plane is pervasive in
 the design of networking protocols and devices.  In systems,
 virtualization also separates the control and execution functions. For
-example, a type-2
+example, type-2
 hypervisors~\cite{DBLP:journals/tocs/BugnionDRSW12,misc/kivity07kvm}
 use a Linux environment for control, and a separate virtualization
 module for execution.  We leverage Dune and the same virtualization
@@ -22,11 +22,11 @@ most closely ressembles Arrakis, but with noticeable differences:
 first, Arrakis uses the Barrelfish multikernel~\cite{DBLP:conf/sosp/BaumannBDHIPRSS09} as its control plane
 and run-time layer, whereas the \ix control plane runs on a vanilla
 Linux foundation.  Second, Arrakis runs its own, homegrown, networking
-stack at userlevel, whereas \ix uses runs its networking stack
+stack at userlevel, whereas \ix runs its networking stack
 protected from the application.
 
 \myparagraph{Library operating systems:}
-In an Exokernel, the role of the kernel is limited to the same
+In an Exokernel, the role of the kernel is limited to the same \george{i don't understand "to the same"}
 multiplexing of hardware resources, and all abstractions are
 implemented by library operating systems linked with
 applications~\cite{DBLP:conf/sosp/EnglerKO95}; the authors observe
@@ -37,8 +37,8 @@ use hardware virtualization to run specialized operating systems
 running a single application~\cite{DBLP:journals/tocs/BugnionDGR97}, a
 case also made more recently by Unikernels in the context of
 XXX~\cite{DBLP:conf/asplos/MadhavapeddyMRSSGSHC13}.  \ix builds on
-these notions: the control plane merely multiplexes hardware resource
-among dataplane; the \ix kernel is a single-application operating
+these notions: the control plane merely multiplexes hardware resources
+among dataplanes; the \ix kernel is a single-application operating
 system using hardware virtualization for protection; finally, \ix
 applies the end-to-end principle by safely exposing TCP flow control
 to applications without the need for additional abstractions.

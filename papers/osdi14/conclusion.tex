@@ -11,12 +11,12 @@ plane, the \ix kernel instances, and the event-driven applications
 running on top of \ix.  The system is designed to ensure high packet
 rates, to offer micro-second latency response times to clients
 including in high occupancy situations, to scale to hundreds of
-thousands of TCP connections, and to allow for an coarse-grain, yet
+thousands of TCP connections \george{in a footnote we say millions}, and to allow for a coarse-grain, yet
 elastic allocation of hardware resources.
 
 Our evaluation on stressful micro-benchmarks shows that \ix can
 deliver wire-rate performance in most situations and typically
-outperforms Linux 3.3 by an order of magnitude and mTCP, a
+outperforms Linux 3.11 by an order of magnitude and mTCP, a
 state-of-the-art user-level TCP stack, by a factor of three.  Our
 latency-sensitive benchmarks indicate that it can deliver one-way
 messages in \twiddle 7\microsecond.  Our evaluation with memcached, a

@@ -6,7 +6,7 @@
 
 We now describe the \ix prototype.  The current implementation uses
 the VT-x features available on all x86-64
-severs~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. However, it can
+servers~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. However, it can
 be ported to any architecture with virtualization support, such as ARM
 and Power.
 
@@ -45,7 +45,7 @@ performance and implements resource allocation policies. The
 development of efficient allocation policies involves understanding
 difficult tradeoffs between dataplane performance, energy
 proportionality, and resource sharing between co-located applications
-as their load varies over time. We leave the design of such policies
+as their load varies over time. \george{is any christos' paper relevant for citation here?} We leave the design of such policies
 to future work and focus this paper on the \ix dataplane architecture.
 
 We run the Linux kernel in VMX root ring 0, the mode typically used to
@@ -55,7 +55,7 @@ Dune system within Linux to enable dataplanes to run as library-based
 OS in the VMX non-root ring 0, the mode typically used to run guest
 OSes in virtualized systems~\cite{belay2012dune}. The applications run
 in ring 3 as usual. This approach provides dataplanes with direct
-access to hardware functions such as page tables and provides full
+access to hardware functions \george {features?} such as page tables and provides full
 protection between the control plane, dataplanes, and untrusted user
 code. %\christos{should we explicitly say that most web-scale apps are
 %  deployed without VMs so taking over VMX is not a problem?}\edb{not needed}
@@ -87,10 +87,10 @@ code. %\christos{should we explicitly say that most web-scale apps are
 Each \ix dataplane supports a single, multithreaded POSIX
 application. For instance, Fig.~\ref{fig:cp-dp} shows one dataplane
 for a multi-threaded \texttt{memcached} server and another dataplane
-for a multi-threaded \texttt{ngix} server. The control plane allocates
+for a multi-threaded \texttt{nginx} server. The control plane allocates
 resources to each dataplane in a coarse-grain manner. Core allocation
-is controlled through real-time priorities and \texttt{cpumasks};
-memory is allocated in 2MB and 1GB chunks; each NIC hardware queue is
+is controlled through real-time priorities and \texttt{cpumasks} \george{cpuset is more accurate};
+memory is allocated in 2MB and 1GB chunks \george{pages?}; each NIC hardware queue is
 assigned to a single dataplane. This approach avoids the overheads and
 unpredictability of fine-grain time multiplexing of resources between
 demanding applications~\cite{Leverich:RHSU:2014}.
@@ -134,14 +134,14 @@ then hold on to these message buffers and release them via a batched
 system call.  \ix also differs in directly exposing flow control
 conditions to application. The \texttt{sendv} batched system call does
 not synchronously return the number of bytes sent. Instead, the
-\texttt{Recv} event condition provides that information at a later point
+\texttt{Recv} \george{Sent?} event condition provides that information at a later point
 
 In addition to the native \ix API in Table~\ref{tbl:api}, we also
 developed a user-level library that provides asynchronous event
 notification. Our library is API compatible with the core part of
 \texttt{libevent} and support edge-triggered operation, but the
 current implementation is missing some features like timers and
-level-triggering. This library simplifies provides compatibility for
+level-triggering. This library provides compatibility for
 legacy applications and significantly simplifies the development of
 new applications.
 
@@ -176,9 +176,9 @@ device driver~\cite{intel:dpdk}, 23\% from the lwIP TCP/IP
 stack~\cite{dunkels2001design}, and 16\% from the Dune library.  All
 three code bases are highly modified for \ix. The rest is
 approximately 7 KSLOC of new code. We chose lwIP as a starting point
-for TCP/IP processing because of its modularity and is maturity as a
+for TCP/IP processing because of its modularity and its maturity as a
 compliant, feature-rich networking stack. It allows us to be
-RFC-compliant for TCP, UDP, ARP, ICMP and LACP. Since lwIP was
+RFC-compliant for TCP, UDP, ARP, ICMP and LACP \george{lwIP does not provide anything related to LACP}. Since lwIP was
 optimized for memory efficiency in embedded environments, we had to
 radically change its internal data structures for multi-core
 scalability and fine-grain timer management. We did not yet optimize
@@ -221,7 +221,7 @@ flows. Hence, no synchronization or coherence occurs during the
 processing of incoming requests for a server application. For client
 applications with outbound connections, we need to ensure that the
 reply is assigned to the same elastic thread that made the
-request. Since we cannot reverse the Toepliz hash used by RSS, we
+request. Since we cannot reverse the Toeplitz hash used by RSS, we
 simply probe the ephemeral port range to find a port number that
 would lead to the desired behavior. Note that this implies that two
 elastic threads in a client cannot share a flow to a server. % \edb{\sout{In
@@ -268,7 +268,7 @@ The \ix dataplane and the application collaboratively manage
 memory. To enable zero-copy operation, a buffer used for an incoming
 packet is passed read-only to the application, enabling zero-copy
 operation. Applications that hold on to message buffers for extensive
-periods of time must bound their use of this shared resource.  In the
+periods of time must bound \george{what if they don't?} their use of this shared resource.  In the
 transmit direction, zero-copy operation implies that the application
 must maintain outgoing data immutable until the reception is
 acknowledged by the peer. % \edb{\sout{If there is recepient is not
@@ -290,7 +290,7 @@ hardware.  No sequence of batched system calls or other user-level
 actions can be used to violate correct adherence to TCP and other
 network specifications.  Furthermore, the dataplane can be used to
 enforce network security policies (e.g., iptables or Amazon Security
-Groups) or to implement the network virtualization functions typically
+Groups \george{someone could ask what is this? citation needed?}) or to implement the network virtualization functions typically
 done in a hypervisor~\cite{nsdi:nsx}. Our security model is as strong
 as conventional network stacks in commodity OSes and is missing from all
 the recently proposed user-level networking stacks. 

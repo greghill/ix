@@ -13,10 +13,10 @@ deliver wire-rate performance for most benchmarks.  The tight coupling
 of the dataplane architecture, using only a minimal amount of batching
 to amortize transition costs, causes application logic to be scheduled
 at the right time, which is essential for latency-sensitive workloads.
-The benefits of \ix can therefore exceed the time spent in the kernel
+The benefits of \ix can therefore exceed the time spent in the kernel \george{i don't understand that}
 in a conventional Linux-based deployment.  The lack of intermediate
 buffering pushes all abstractions outside of the kernel as in an
-Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, allowing for an efficient,
+Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, allowing for efficient,
 targeted implementations by applications.  In particular, the
 zero-copy architecture helps even when the application libraries add a
 level of copying, e.g., for \texttt{libevent} backward compatibility:
@@ -57,7 +57,7 @@ DPDK~\cite{intel:dpdk} as a starting code base.  We avoided adding to
 portability costs for higher performance.  Our current implementation
 operates without an IOMMU or VT-d; instead, the Dune environment maps
 descriptor rings directly into \ix memory, and furthermore provides
-\ix with the list of physical addresses in use, as form of
+\ix with the list of physical addresses in use, as \george{a?} form of
 paravirtualization~\cite{DBLP:conf/sosp/BarhamDFHHHN03}.  Although
 this implementation choice puts some level of trust into \ix, the
 applications remain securely isolated.  Finally, \ix is designed and
@@ -93,7 +93,7 @@ In particular, the security model of \ix, which enforces modularity
 without introducing noticeable overheads, appears like a great match
 to meet the protection, multi-tenancy, and scalability requirements of
 network function virtualization~\cite{etsi:NFV}.  Also, we expect that
-DCTP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10} will be synergistic
+DCTCP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10} will be synergistic
 with the \microsecond-level latencies and reduced buffering
 characteristics of \ix deployments.  DCTCP requires
 ECN~\cite{ramakrishnan2001addition} in the network; it could easily be

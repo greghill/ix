@@ -13,7 +13,7 @@ by external users~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07}. Such
 applications need TCP/IP networking stacks that go well beyond the
 classical requirements of high streaming performance and moderate
 connection scalability. The new requirements include high packet rates
-for the short messages~\cite{Atikoglu:2012:WAL,missing-other},
+for short messages~\cite{Atikoglu:2012:WAL,missing-other},
 microsecond-level reponses to remote requests with tight tail latency
 guarantees~\cite{DBLP:journals/cacm/DeanB13}, and support for hundreds
 of thousands of connections with high connection
@@ -134,7 +134,7 @@ free execution on multi-core systems. It uses multi-queue network
 adapters (NICs) and receive-side scaling (RSS) to implement
 flow-consistent hashing of incoming traffic to distinct hardware
 queues. Each dataplane instance exclusively controls a set of these
-queues and runs the networking stack and a single application, such as
+queues and runs the networking stack and a single application \george{they may ask here how we direct traffic for different applications between queues; at the moment, IX can run only 1 application and furthermore it's not clear how RSS can be used to map applications and hardware queues. It is true that each dataplane runs a single thread of an application}, such as
 a webserver or a distributed caching server. Moreover, the \ix API and
 companion user-level library meet the commutativity
 rule~\cite{DBLP:conf/sosp/ClementsKZMK13}, eliminating multi-core
