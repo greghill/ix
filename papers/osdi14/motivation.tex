@@ -177,7 +177,7 @@ TCP stack, which communicate at relatively coarse grain with
 application threads. This amortizes switching overheads at the expense
 of higher latency.
 
-\myparagraph{Alternatives to TCP:} Some low-latency object stores on
+\myparagraph{Alternatives to TCP:} Some low-latency object stores rely on
 kernel-bypass and RDMA to offload protocol processing on dedicated
 Infiniband host channel
 adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH,mitchell:rdma,dragojevic14farm}.
@@ -185,7 +185,7 @@ Using commodity Ethernet networking, Facebook's memcached deployment
 uses UDP to avoid connection scalability
 limitations~\cite{nishtala2013scaling}. Even though UDP is running in
 the kernel, reliable communication and congestion management are
-entrusted into applications.
+entrusted to applications.
 
 \myparagraph{Alternatives to POSIX API:} MegaPipe replaces the POSIX
 API with lightweight sockets implemented with in-memory command
