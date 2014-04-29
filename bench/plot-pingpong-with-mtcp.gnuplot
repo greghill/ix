@@ -23,7 +23,7 @@ set tics out nomirror
 set key bottom right invert
 
 set xlabel 'Message Size (KB)'
-set ylabel 'Throughput (Gbps)'
+set ylabel 'Goodput (Gbps)'
 set xrange [0:512]
 set yrange [0:10]
 plot for [i=1:words(infile)] word(infile,i) using ($2/1024):(2*$4*$2*8/10**9) title gen_title(i) linestyle i
