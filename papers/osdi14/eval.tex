@@ -224,7 +224,10 @@ increasingly high cost of multiplexing among open connections.  At the
 peak, \ix performs 13x better than Linux, consistent with the results
 from Fig.~\ref{fig:short40:roundtrips}.  With 100,000 connections and
 4x10GbE, \ix is able to deliver 52\% of its own peak
-throughput\edb{\sout{We believe we can improve on this result
-through further tuning of our TCP/IP stack. }}
+throughput\edb{\sout{We believe we can improve on this result through
+    further tuning of our TCP/IP stack. }The performance drop is not
+  due to an increase in instruction counts, but rather primarily
+  because the TCP/IP control block structures exceed the size of the
+  processors's layer-3 cache.}
 
 \input{eval-memcache}

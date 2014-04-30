@@ -11,7 +11,8 @@
  --> connection/IX-10/../data --> 8.8 = 92% of max.
 
 
-10GbE -- connection scaling tests @ 4000 connections
+DATA FROM 2014-04-30 -- early morning 
+(a) 10GbE -- connection scaling tests @ 4000 connections
 >>>>> --- BEGIN KSTATS --- 2% idle, 19% user, 78% sys
 >>>>> kstat: 31 idle                              111083  2% latency      80 |    2436 |  388448 occupancy     80 |   2436 | 388448
 >>>>> kstat: 31 user                              940052 19% latency    1000 |    2505 |   95176 occupancy   1000 |   2505 |  95176
@@ -28,7 +29,7 @@
 >>>>> kstat: 31 bsys_tcp_sendv                   2750862 22% latency     512 |     990 |   79080 occupancy    512 |    990 |  79080
 
 
-4x10GbE - connection scaling tests @ 4000 connection, 
+(b) 4x10GbE - connection scaling tests @ 4000 connection, 
 >>>>> --- BEGIN KSTATS --- 0% idle, 15% user, 84% sys
 >>>>> kstat: 30 user                               29078 15% latency   29268 |   62521 |  144520 occupancy  29268 |  62521 | 144520
 >>>>> kstat: 30 timer                              29078  0% latency     180 |     341 |  904680 occupancy    180 |    296 |  35500
@@ -44,7 +45,7 @@
 >>>>> kstat: 30 bsys_tcp_sendv                   3295649 26% latency     560 |     976 |   46556 occupancy    560 |    976 |  46556
 
 
-100,000 conn @ 40GbE
+(c) 100,000 conn @ 40GbE
 >>>>> --- BEGIN KSTATS --- 0% idle, 23% user, 76% sys
 >>>>> kstat: 30 user                               14424 23% latency  170912 |  197170 |  345964 occupancy 170912 | 197170 | 345964
 >>>>> kstat: 30 timer                              14424  0% latency     268 |    5241 | 4748432 occupancy    224 |    552 | 411344
@@ -61,3 +62,44 @@
 >>>>> kstat: 30 bsys_tcp_accept                      533  0% latency      72 |     255 |    1248 occupancy     72 |    255 |   1248
 >>>>> kstat: 30 bsys_tcp_recv_done               1844673  4% latency     140 |     319 |   64040 occupancy    140 |    319 |  64040
 >>>>> kstat: 30 bsys_tcp_sendv                   1844673 16% latency     552 |    1075 |  102384 occupancy    552 |   1075 | 102384
+
+
+100,000, 4x10GbE - afternoon; tcp_hash_lookup is factored out
+>>>>> --- BEGIN KSTATS --- 0% idle, 23% user, 76% sys
+>>>>> kstat: 30 user                               14121 23% latency  168784 |  196810 |  341316 occupancy 168784 | 196810 | 341316
+>>>>> kstat: 30 timer                              14121  0% latency     260 |    4954 | 4425304 occupancy    248 |    524 | 397092
+>>>>> kstat: 30 print_kstats                           1  0% latency 1124048 | 1124048 | 1124048 occupancy 1124048 | 1124048 | 1124048
+>>>>> kstat: 30 tx_reclaim                         14121  0% latency    4604 |    7014 |   62276 occupancy   4604 |   7014 |  62276
+>>>>> kstat: 30 tx_xmit                            14121  2% latency   13868 |   17314 |  119108 occupancy  13868 |  17314 | 119108
+>>>>> kstat: 30 rx_poll                            14121  3% latency   13692 |   29508 |  112432 occupancy  13692 |  29508 | 112432
+>>>>> kstat: 30 bsys                               14121  0% latency  163488 |  201472 |  308796 occupancy     96 |    201 |   6952
+>>>>> kstat: 30 timer_tcp_fasttmr                     10  0% latency 1675844 | 1853055 | 2123952 occupancy 1675844 | 1853055 | 2123952
+>>>>> kstat: 30 timer_tcp_slowtmr                     10  0% latency 3692888 | 4022178 | 4423388 occupancy 3692888 | 4022178 | 4423388
+>>>>> kstat: 30 eth_input                            828  0% latency    1616 |    2663 |   16992 occupancy   1312 |   2331 |  16664
+>>>>> kstat: 30 tcp_hash_lookup                  1807488  1% latency      36 |     106 |   55764 occupancy     36 |    106 |  55764
+>>>>> kstat: 30 tcp_input_fast_path                 1676  0% latency    1512 |    2720 |   13572 occupancy   1448 |   2624 |  13484
+>>>>> kstat: 30 tcp_on_recv_data                 1804984 43% latency     708 |    3000 |  103420 occupancy    648 |   2894 | 103336
+>>>>> kstat: 30 timer_tcp_retransmit                1505  0% latency     780 |    1688 |    8000 occupancy    780 |   1688 |   8000
+>>>>> kstat: 30 bsys_tcp_accept                      836  0% latency      72 |     269 |    8992 occupancy     72 |    269 |   8992
+>>>>> kstat: 30 bsys_tcp_recv_done               1804985  4% latency     136 |     312 |  105724 occupancy    136 |    312 | 105724
+>>>>> kstat: 30 bsys_tcp_sendv                   1804985 16% latency     600 |    1090 |  102236 occupancy    600 |   1090 | 102236
+
+
+>>>>> --- BEGIN KSTATS --- 0% idle, 23% user, 76% sys
+>>>>> kstat: 30 user                               14427 23% latency  151676 |  199257 |  333000 occupancy 151676 | 199257 | 333000
+>>>>> kstat: 30 timer                              14427  0% latency     268 |    5517 | 5009408 occupancy    192 |    502 | 123068
+>>>>> kstat: 30 print_kstats                           1  0% latency 1139376 | 1139376 | 1139376 occupancy 1139376 | 1139376 | 1139376
+>>>>> kstat: 30 tx_reclaim                         14427  0% latency    4816 |    6935 |   65768 occupancy   4816 |   6935 |  65768
+>>>>> kstat: 30 tx_xmit                            14427  2% latency   12952 |   17188 |   68868 occupancy  12952 |  17188 |  68868
+>>>>> kstat: 30 rx_poll                            14427  3% latency   15800 |   29432 |  107032 occupancy  15800 |  29432 | 107032
+>>>>> kstat: 30 bsys                               14427  0% latency  150412 |  207176 |  293712 occupancy     96 |    213 |   1904
+>>>>> kstat: 30 timer_tcp_fasttmr                     10  0% latency 2042136 | 2139582 | 2241532 occupancy 2042136 | 2139582 | 2241532
+>>>>> kstat: 30 timer_tcp_slowtmr                     10  0% latency 4506792 | 4780859 | 5008072 occupancy 4506792 | 4780859 | 5008072
+>>>>> kstat: 30 eth_input                            656  0% latency    1596 |    2537 |   12156 occupancy   1252 |   2201 |  11836
+>>>>> kstat: 30 tcp_hash_lookup                  1846656  2% latency      32 |     145 |   60120 occupancy     32 |    145 |  60120
+>>>>> kstat: 30 tcp_input_fast_path                 1312  0% latency    1412 |    2575 |   11936 occupancy   1344 |   2431 |  11876
+>>>>> kstat: 30 tcp_on_recv_data                 1844688 40% latency     700 |    2792 |  100780 occupancy    648 |   2646 | 100712
+>>>>> kstat: 30 timer_tcp_retransmit                1190  0% latency     844 |    1603 |   47760 occupancy    844 |   1603 |  47760
+>>>>> kstat: 30 bsys_tcp_accept                      656  0% latency      68 |     244 |    9168 occupancy     68 |    244 |   9168x
+>>>>> kstat: 30 bsys_tcp_recv_done               1844688  4% latency     140 |     318 |   58792 occupancy    140 |    318 |  58792
+>>>>> kstat: 30 bsys_tcp_sendv                   1844688 17% latency     580 |    1117 |  101728 occupancy    580 |   1117 | 101728
