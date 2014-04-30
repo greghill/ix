@@ -13,7 +13,11 @@ deliver wire-rate performance for most benchmarks.  The tight coupling
 of the dataplane architecture, using only a minimal amount of batching
 to amortize transition costs, causes application logic to be scheduled
 at the right time, which is essential for latency-sensitive workloads.
-The benefits of \ix can therefore exceed the time spent in the kernel \george{i don't understand that}
+The benefits of \ix can therefore exceed the time spent in the kernel
+\george{i don't understand that}
+\dm{I guess the point is that even if linux kernel time were magically
+  optimized to zero but you couldn't change the system call interface,
+  you'd still get worse performance than \ix.}
 in a conventional Linux-based deployment.  The lack of intermediate
 buffering pushes all abstractions outside of the kernel as in an
 Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, allowing for efficient,
@@ -65,7 +69,7 @@ implemented to support the dynamic addition and removal of elastic
 threads, and the associated run-time rebalancing of hardware queues;
 we've however only tested static configurations to date. 
 
-\myparagraph{Limitations of RSS:} We realized that using RSS
+\myparagraph{Limitations of RSS:} Using RSS
 makes the design of outgoing connections particularly complex.
 Furthermore, current multi-queue NICs only support RSS groups of 16
 queues, which is inadequate given current multi-core trends.  Despite
@@ -79,7 +83,7 @@ interesting addition or alternative to our existing implementation.
 OS aspects of \ix, with an original focus on event-oriented
 applications such as memcached, application, and web servers.
 However, the \ix design is not limited to such applications.  For
-example, \edb{MAKE SOMETHING UP - JVM}
+example, \edb{PROVIDE AN EXAMPLE -- JVM}
 
 Despite its critical importance to our original evaluation, our choice
 of a TCP stack was driven by considerations of interoperability and

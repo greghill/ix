@@ -3,7 +3,7 @@
 \label{sec:eval}
 
 We compared \ix to the Linux baseline running a 3.11.10 kernel, and to
-mTCP We evaluate the scalability of \ix and compare it to the Linux
+mTCP\@. We evaluate the scalability of \ix and compare it to the Linux
 baseline running a 3.11.10 kernel and to mTCP~\cite{jeong2014mtcp}. 
 Our evalution uses both networking microbenchmarks and a real-world,
 massively deployed, event-based application. 
@@ -30,10 +30,10 @@ massively deployed, event-based application.
 
 We use two experimental setups because we wish to simulanteously
 compare with mTCP and scale to bandwidth beyond 10GbE.  Unfortunately,
-our 4x10GbE setup uses recent hardware not support by mTCP out of the
-box~\footnote{We were able to port mTCP to the 4x10GbE setup, but
+our 4x10GbE setup uses recent hardware not supported by mTCP out of the
+box.\footnote{We were able to port mTCP to the 4x10GbE setup, but
   could not reach the expected performance.  We will attempt to unify
-  the setup by the camera-ready deadline.}. Linux and \ix run on both
+  the setup by the camera-ready deadline.}  Linux and \ix run on both
 setups.
 
 %  more recent hardware that does not run mTCP out
@@ -142,8 +142,10 @@ listening on a single port, send a request of size $s$ and wait for an
 echo of a message of the same size.  As with NetPIPE, while accepting
 the message, the server holds off its echo response until the message
 has been entirely received.  Each client performs this synchronous
-remote procedure call $n$ times, and then close the connection using a
-reset (\texttt{TCP RST}).
+remote procedure call $n$ times, and then closes the connection using a
+reset (\texttt{TCP RST}).  \dm{This begs the question of what happens
+  with FIN, since that is more realistic\@.  Is the point that \ix has
+an unfair advantage?}
 
 
 %%

@@ -8,9 +8,9 @@
 Finally, we evaluated the performance benefits of the \ix prected
 dataplane design with \texttt{memcached}, a massively deployed,
 in-memory key-value store built on top of the \texttt{libevent}
-framework~\cite{url:memcached}, . It is frequently used as a
+framework~\cite{url:memcached}. It is frequently used as a
 high-throughput, low-latency caching tier in front of persistent
-database servers. \texttt{memcached} is a networking bound
+database servers. \texttt{memcached} is a network-bound
 application, with threads spending over 80\% of execution time in
 kernel mode for network processing~\cite{Leverich:RHSU:2014}. It is a
 particularly difficult application to scale, in particular because the
@@ -31,13 +31,15 @@ keys, 1B-1KB values, and 90\% GET requests; and the USR workload that
 represents deployment with most GET requests in Facebook, has short
 keys ($<$20B), 2B values, and 99\% GET requests. In USR, almost all
 traffic involves minimum-sized TCP packets. Each request is issued 
+\dm{incomplete sentence?}
 
+\dm{Paragraph needs editing.  Also, why not report 99\% or 99.9\%?}
 For all experiments, we report 95th percentile latency as a function
-of the achieved throuhput. This graph provides insights the full range
+of the achieved throuhput.  This graph provides insights into the full range
 of system behaviors. Most commercial \texttt{memcached} use such a
 latency-throughput graph to provision each server so that the 95th
 percentile latency does not exceed 200 to 500\microsecond. We report
-only 95ht percentile latency as the average or median latency is
+only 95th percentile latency as the average or median latency is
 irrelevant for web-scale services~\cite{DBLP:journals/cacm/DeanB13}.
 We carefully tune the Linux baseline setup according to the guidlines
 in \cite{Leverich:RHSU:2014}. Specifically, we pin memcached threads,

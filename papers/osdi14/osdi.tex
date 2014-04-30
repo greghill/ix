@@ -47,6 +47,14 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % debugging only
 \usepackage[usenames,dvipsnames]{xcolor}
+\newif\ifcomments
+\commentstrue
+
+%% Uncomment the following line to remove comments from text and get an
+%% accurate page count.
+%\commentsfalse
+
+\ifcomments
 \newcommand{\edb}[1]{\noindent{\color{Plum} {\bf \fbox{EdB} {\it#1}}}}
 \newcommand{\adam}[1]{\noindent{\color{Red} {\bf \fbox{AB} {\it#1}}}}
 \newcommand{\christos}[1]{\noindent{\color{Green} {\bf \fbox{CK} {\it#1}}}}
@@ -54,6 +62,14 @@
 %\newcommand{\babak}[1]{\noindent{\color{Purple} {\bf \fbox{BF}} {\it#1}}}
 \newcommand{\dm}[1]{\noindent{\color{Red}{\fbox{DM} {#1}}}}
 \newcommand{\todo}{\noindent $\triangleright $~}
+\else
+\newcommand{\edb}[1]{}
+\newcommand{\adam}[1]{}
+\newcommand{\christos}[1]{}
+\newcommand{\george}[1]{}
+\newcommand{\dm}[1]{}
+\newcommand{\todo}[1]{}
+\fi
 \newcommand{\oldcite}[2]{\item #1 ({\small #2})\cite{#2}.}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
