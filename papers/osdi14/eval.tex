@@ -186,7 +186,7 @@ multi-core server.
 
 \label{sec:eval:scale}
 
-We now evaluate \ix's scalability when handling a large number of
+We also evaluate \ix's scalability when handling a large number of
 concurrent connections. In this benchmark, each client machine runs
 $n$ threads, with each thread independently performing a 64B remote
 procedure call to the server.  Each RPC randomly chooses among $m$
@@ -194,7 +194,7 @@ open sockets to perform the RPC.  In our setup with 19 clients, the
 server must multiplex among $19 \times n \times m$ open connections.
 We experimentally set $n \leq 24$ to maximize throughput.  We report
 the maximal throughput in messages per second for varying number of
-total established connections. 
+total established connections.
 
 %Connection scaling IX/Linux @ 40Gbe 
 %12036405.031689
@@ -202,14 +202,15 @@ total established connections.
 %/p
 %13.15085
 
-Fig.~\ref{fig:connscaling} shows the results.  We show results going
-to 100,000 connections as our experimental setup is limited by the
-client machines's own abilities to handle larger connections counts.
+Fig.~\ref{fig:connscaling} shows up to to 100,000 connections, which
+is the upper bound we can reach with the available client machines.
 As expected, throughput increases with the degree of concurrency, but
-then decreases with increasing number of connections due to the
+then decreases for very large connections counts due to the
 increasingly high cost of multiplexing among open connections.  At the
 peak, \ix performs 13x better than Linux, consistent with the results
 from Fig.~\ref{fig:short40:roundtrips}.  With 100,000 connections and
-4x10GbE, \ix is able to deliver 52\% of its own peak throughput.
+4x10GbE, \ix is able to deliver 52\% of its own peak
+throughput. \christos{check} We believe we can improve on this result
+through further tuning of our TCP/IP stack. 
 
 \input{eval-memcache}
