@@ -1,20 +1,52 @@
 
-\subsection{Application performance -- memcache}
+\subsection{Memcached Performance}
 \label{sec:eval:memcached}
 
 \input{figs/float-connscaling}
 \input{figs/float-mutilate}
 
-We now validate the performance benefits of the protected dataplane
-design on memcached -- a real world, massively deployed, in-memory
-key-value store built on top of the libevent framework.  We use the
-mutilate~\cite{url:mutilate} load-generator to measure median and 95th
-percentile latency as a function of the throughput delivered by the
-server~\cite{Leverich:RHSU:2014}. 
+Finally, we evaluated the performance benefits of the \ix prected
+dataplane design with \texttt{memcached}, a massively deployed,
+in-memory key-value store built on top of the \texttt{libevent}
+framework~\cite{url:memcached}, . It is frequently used as a
+high-throughput, low-latency caching tier in front of persistent
+database servers. \texttt{memcached} is a networking bound
+application, with threads spending over 80\% of execution time in
+kernel mode for network processing~\cite{Leverich:RHSU:2014}. It is a
+particularly difficult application to scale, in particular because the
+common deployments involve high connection counts for
+\texttt{memcached} servers and small-sized requests and
+replies~\cite{nishtala2013scaling,Atikoglu:2012:WAL}
 
-Fig.~\ref{fig:mutilate} reports the latencies as a function of the
-number of queries per second for synthetic workloads modelled after
-Facebook's \texttt{ETC} and \texttt{USR} workloads~\cite{Atikoglu:2012:WAL}.
+We use the \texttt{mutilate} load-generator to place a selected load
+on the server in terms of requests per second (RPS) and measure
+response latency~\cite{url:mutilate}. \texttt{mutilate} coordinates a
+large number of client threads across multiple machines to generate
+the desired RPS load, while a sepeparate unloaded client measures
+latency by issuing one request at the time.  We configure
+\texttt{mutilate} to generate load representative of two workloads
+from Facebook~\cite{Atikoglu:2012:WAL}: the ETC workload that
+represents that highest capacity deployment in Facebook, has 20B - 70B
+keys, 1B-1KB values, and 90\% GET requests; and the USR workload that
+represents deployment with most GET requests in Facebook, has short
+keys ($<$20B), 2B values, and 99\% GET requests. In USR, almost all
+traffic involves minimum-sized TCP packets. Each request is issued 
+
+For all experiments, we report 95th percentile latency as a function
+of the achieved throuhput. This graph provides insights the full range
+of system behaviors. Most commercial \texttt{memcached} use such a
+latency-throughput graph to provision each server so that the 95th
+percentile latency does not exceed 200 to 500\microsecond. We report
+only 95ht percentile latency as the average or median latency is
+irrelevant for web-scale services~\cite{DBLP:journals/cacm/DeanB13}.
+We carefully tune the Linux baseline setup according to the guidlines
+in \cite{Leverich:RHSU:2014}. Specifically, we pin memcached threads,
+configure interrupt-distribution based on thread-affinity, and tune
+interrupt moderation thresholds. We believe that our baseline Linux
+numbers are as tuned as possible for this hardware using the
+open-source version of memcached. \christos{add version number}
+
+\christos{Should we discuss the porting process to IX?}
 
 \edb{PLACEHOLDER} The peak QPS is measured using \ix at
 XXX, which maps to a bandwidth leaving the server of XXX Gbps, or XX\%
