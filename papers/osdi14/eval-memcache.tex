@@ -53,7 +53,7 @@ using 6 sockets out of the 8 available.
 
 \input{tbl-mutilate}
 
-Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
+\edb{NEW with table:} Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
 two \texttt{memcached} workloads for Linux and \ix, while
 Table~\ref{tbl:mutilate} reports the unloaded latencies and QPS at
 saturation.  \ix noticeably reduces the unloaded latencies, measured
@@ -61,7 +61,7 @@ at both the 50th and 95th percentile.  We note here that the benchmark
 clients are running on Linux, and that running them on \ix should
 further reduce that latency. 
 
-For both workloads, the distribution of CPU time shifts from being
+\edb{NEW:}For both workloads, the distribution of CPU time shifts from being
 $>80\%$ in the kernel with Linux to $<30\%$ with \ix.  Since the
 application is unmodified, Amdahl's law would predict a speedup of 3x.
 \ix actually increases the throughput of memcached by 60\% and 111\%
