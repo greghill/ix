@@ -50,11 +50,12 @@ setups.
 %\george{possible false hope that mTCP can use 4 NICs. I am not sure about that.}}.
 
  
-\myparagraph{10GbE setup:} \edb{PLACEHOLDER:} This setup consists of a
-cluster of XX Xeon XXX @ XXX Ghz machine with Intel 82599EB 10GbE NICs,
-connected with an Arista XXX switch. One machine is used as the
-server, while the rest can be used as clients. The server socket has 6
-cores and 12 hyperthreads.
+\myparagraph{10GbE setup:} This setup consists of a
+cluster of 28 Xeon E5-2630 @ 2.3 Ghz machines with a mixture of
+Intel 82599EB 10GbE and Solarflare SFC9000 10GbE NICs, configured
+with 64 GB of RAM each. They are connected with an Arista 7050S-64
+switch. One machine is used as the server, while the rest can be used
+as clients. The server socket has 6 cores and 12 hyperthreads.
 
 \myparagraph{4x10GbE setup:} This setup consists of a cluster of 19
 clients and one server connected by an HP 5820AF-24XG 10GbE switch.
