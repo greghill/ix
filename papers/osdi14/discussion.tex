@@ -2,30 +2,27 @@
 \section{Discussion}
 \label{sec:disc}
 
-We now discuss a number of lessons that were learned in the design and
-implementation of \ix, some of its current limitations, and
-opportunities for future work.
+We now discuss a number of important lessons, design issues, and
+limitations of the current \ix implementation.
 
-\myparagraph{What makes \ix faster?:} The results of \S\ref{sec:eval}
-show that a networking stack can be implemented in an OS kernel,
-provide protection and security to applications, and simultaneously
-deliver wire-rate performance for most benchmarks.  The tight coupling
-of the dataplane architecture, using only a minimal amount of batching
-to amortize transition costs, causes application logic to be scheduled
-at the right time, which is essential for latency-sensitive workloads.
-The benefits of \ix can therefore exceed the time spent in the kernel \george{i don't understand that}
-in a conventional Linux-based deployment.  The lack of intermediate
-buffering pushes all abstractions outside of the kernel as in an
-Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, allowing for efficient,
-targeted implementations by applications.  In particular, the
-zero-copy architecture helps even when the application libraries add a
-level of copying, e.g., for \texttt{libevent} backward compatibility:
-the copy occurs temporally much closer to its actual use, thereby
-increasing cache locality.  Finally, we took great care in the
-implementation of \ix to ensure that it could operate in a
-coherency-free manner through the dataplane, with the guiding
-principle to eliminate any atomic instructions from common case
-execution.
+\myparagraph{What makes \ix faster:} The results in \S\ref{sec:eval}
+show that a networking stack can be implemented in a protected OS
+kernel and still deliver wire-rate performance for most benchmarks.
+The tight coupling of the dataplane architecture, using only a minimal
+amount of batching to amortize transition costs, causes application
+logic to be scheduled at the right time, which is essential for
+latency-sensitive workloads.  Therefore, the benefits of \ix go beyond
+just minimizing kernel overheads. Similar to
+Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, the lack of intermediate
+buffers pushes all abstractions outside of the OS kernel, allowing for
+efficient, application-specific implementations.  In particular, the
+zero-copy approach helps even when the user-level libraries add a
+level of copying, as it is the case for \texttt{libevent}
+compatibility.  The extra copy occurs much closer to the actual use,
+thereby increasing cache locality.  Finally, we took great care in
+tuning the implementation of \ix for multi-core scalability,
+eliminating constructs that introduce synchronization or coherence
+traffic.
 
 % \myparagraph{Selecting \ix's TCP stack:} 
 % The \ix kernel includes a complete network protocol stack with
@@ -43,68 +40,55 @@ execution.
 % not (yet) attempt to optimize the code paths for performance, and
 % consequently believe that our results have room for improvement.
 
-
-
 \myparagraph{Challenges in API design:} \adam{TODO}
 
+\todo Lessons learned: importance of hardware knobs and
+micro-architectural effects.  \christos{should we get into that? at
+  least say that this will be better with Hasswell, more cores, better
+  nics. the trends are in our favor}
 
-\myparagraph{Limitations of the prototype:} The \ix prototype is
-architected to support any stateless offload NIC with multiple queues
-and support for flow-consistent hashing in hardware (e.g., RSS).
-However, we've only ported the Intel XXX driver, using
-DPDK~\cite{intel:dpdk} as a starting code base.  We avoided adding to
-\ix a Linux driver compatibility, explicitly trading off higher
-portability costs for higher performance.  Our current implementation
-operates without an IOMMU or VT-d; instead, the Dune environment maps
-descriptor rings directly into \ix memory, and furthermore provides
-\ix with the list of physical addresses in use, as a form of
-paravirtualization~\cite{DBLP:conf/sosp/BarhamDFHHHN03}.  Although
-this implementation choice puts some level of trust into \ix, the
-applications remain securely isolated.  Finally, \ix is designed and
-implemented to support the dynamic addition and removal of elastic
-threads, and the associated run-time rebalancing of hardware queues;
-we've however only tested static configurations to date. 
-
-\myparagraph{Limitations of RSS:} We realized that using RSS
-makes the design of outgoing connections particularly complex.
-Furthermore, current multi-queue NICs only support RSS groups of 16
-queues, which is inadequate given current multi-core trends.  Despite
-its flow scalability limitations, the use of Intel's Flow
+\myparagraph{Limitations of current prototype:} The curent prototype
+supports any stateless offload NIC with multiple queues and RSS
+support. The NICs we currently use support RSS group of 16 queues,
+which is inadequate given current multi-core trends. Nevertheless, the
+trend in NICs seems to be towards support for larger number of
+queues~\cite{refs,nsdi14}. We also plan to explore using Intel's Flow
 Director~\cite{intel:82599} to provide connection
-affinity~\cite{DBLP:conf/eurosys/PesterevSZM12} might provide an
-interesting addition or alternative to our existing implementation.
+affinity~\cite{DBLP:conf/eurosys/PesterevSZM12} as an alternative to
+our current flow hashing implementation. Our current implementation
+does not exploit IOMMUs or VT-d. Instead, it uses Dune to map
+descriptor rings directly into \ix memory as a form of
+paravirtualization~\cite{DBLP:conf/sosp/BarhamDFHHHN03}.  Although
+this choice puts some level of trust into \ix, the applications remain
+securely isolated.  \christos{maybe something about the packet rate
+  limitatations of nics}
+
+\myparagraph{Future work:} This paper focused on the \ix dataplane
+design. \ix is designed and implemented to support the dynamic
+addition and removal of elastic threads in order to achieve energy
+proportional and resource efficient computing. So far we have tested
+only static configurations. In future work, we will design a dynamic
+runtime that rebalances hardware queues between available elastic
+threads in a manner that maintains throughput and latency constraints.
+%
+We will also explore the synergies between \ix and networking
+protocols designed to support microsecond-level latencies and reduced
+buffering characteristics of \ix deployments such as
+DCTCP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10} and
+ECN~\cite{ramakrishnan2001addition}.
 
 
-\myparagraph{Opportunities for future work:} This paper focuses on the
-OS aspects of \ix, with an original focus on event-oriented
-applications such as memcached, application, and web servers.
-However, the \ix design is not limited to such applications.  For
-example, \edb{MAKE SOMETHING UP - JVM}
-
-Despite its critical importance to our original evaluation, our choice
-of a TCP stack was driven by considerations of interoperability and
-software modularity, rather than by its networking behavior (which we
-had to enhance substantially to meet the challenges of current
-datacenter networking speeds).  Looking ahead, we envision that an
-\ix-style model may provide a higher performance alternative to the
-current OS-based and hypervisor-based implementations of virtual
-switches~\cite{openvswitch} and IP-level features (e.g., iptables).
-In particular, the security model of \ix, which enforces modularity
-without introducing noticeable overheads, appears like a great match
-to meet the protection, multi-tenancy, and scalability requirements of
-network function virtualization~\cite{etsi:NFV}.  Also, we expect that
-DCTCP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10} will be synergistic
-with the \microsecond-level latencies and reduced buffering
-characteristics of \ix deployments.  DCTCP requires
-ECN~\cite{ramakrishnan2001addition} in the network; it could easily be
-added at the end-host in \ix to detect congestion at the NIC edge.
+ % Looking ahead, we envision that an
+% \ix-style model may provide a higher performance alternative to the
+% current OS-based and hypervisor-based implementations of virtual
+% switches~\cite{openvswitch} and IP-level features (e.g., iptables).
+% In particular, the security model of \ix, which enforces modularity
+% without introducing noticeable overheads, appears like a great match
+% to meet the protection, multi-tenancy, and scalability requirements of
+% network function virtualization~\cite{etsi:NFV}.
 
 
-\myparagraph{DANGLING:}
 
 
-\todo Lessons learned: importance of hardware knobs and micro-architectural effects.
-
-
-\todo Use of dataplane vs. virtual machines. 
+%\todo Use of dataplane vs. virtual machines. 
 
