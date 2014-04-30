@@ -131,12 +131,12 @@ the associated application processing in user mode. This approach
 amortizes API overheads and improves both instruction and data
 locality.  \ix is also optimized for synchronization and coherence
 free execution on multi-core systems. It uses multi-queue network
-adapters (NICs) and receive-side scaling (RSS)~\cite{url:rss} to implement
-flow-consistent hashing of incoming traffic to distinct hardware
-queues. Each dataplane instance exclusively controls a set of these
-queues and runs the networking stack and a single application, such as
-a webserver or a distributed caching server. Moreover, the \ix API and
-companion user-level library meet the commutativity
+adapters (NICs) and receive-side scaling (RSS)~\cite{url:rss} to
+implement flow-consistent hashing of incoming traffic to distinct
+hardware queues. Each dataplane instance exclusively controls a set of
+these queues and runs the networking stack and a single application,
+such as a webserver or a distributed caching server. Moreover, the \ix
+API and companion user-level library meet the commutativity
 rule~\cite{DBLP:conf/sosp/ClementsKZMK13}, eliminating multi-core
 synchronization in the common case operation. The \ix user-level
 library includes an interface nearly identical to the popular
@@ -168,25 +168,25 @@ compatibility between \ix and a wide range of existing applications.
 % (mean), with an additional latency jitter of not more than an extra
 % 10~\microsecond.
 
-The primary contributions resulting from our design are: (i) the
-combined use of commodity OS and virtualization hardware to separate
-control from data plane; (ii) a run-to-completion execution model with
-cooperating, untrusted applications; (iii) a bounded, adaptive
-batching mechanisms that provides both low-latency and high
-throughput.
+The primary contributions of the \ix design are: (i) the combined use
+of commodity OS and virtualization hardware to separate control from
+data plane in a protected networking stack; (ii) a run-to-completion
+execution model with cooperating, untrusted applications; (iii) a
+bounded, adaptive batching mechanism that provides both low-latency
+and high throughput; (iv) an implementation carefully optimized for
+multi-core scalability. 
 
 We compare \ix against Linux 3.11.10 and mTCP, a state-of-the-art
-user-level TCP stack~\cite{jeong2014mtcp}.  On network-intensive
-microbenchmark that are either latency-sensitive, require a high TCP
+user-level TCP stack~\cite{jeong2014mtcp}.  On networking
+microbenchmark thats are either latency-sensitive, require a high TCP
 connection churn, or manage a large number of concurrent connections,
 \ix outperforms Linux by an order of magnitude, and mTCP by up to
 2.5x.  \ix even scales to 4x10GbE configuration, using a single
-socket.  Our evaluation with memcached, a real-world, massively
-deployed key-value store shows that \ix outperforms Linux by XXX in
-terms of throughput, and lowers latency by XXX\% --- this specific
-workload transitions from running $>80\%$ in kernel mode with Linux to
-$<33\%$ with \ix.
-
+multi-core socket.  Our evaluation with memcached, a real-world,
+massively deployed key-value store, shows that \ix improves upon Linux
+by \christos{check} 2x in terms of throughput at a given 95th
+percentil latency bound, as it can reduce kernel mode processing from
+$>80\%$ with Linux to $<33\%$ with \ix.
 
 % \christos{I prefer to enumerate the main design principles and the
 %   list impressive numbers towards the goals rather than come up with
