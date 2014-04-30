@@ -169,13 +169,26 @@ or mTCP on any configuration.
 %\subsection{High connection churn at 4x10GbE}
 %\label{sec:eval:short40}
 
-\myparagraph{40GbE results:} Figs.~\ref{fig:short40:mcore}-\ref{fig:short40:size} show the results
+
+%%
+%%  see data in figs/data/connection-scaling-kstats.tex
+%%
+
+\myparagraph{40GbE results:}
+Figs.~\ref{fig:short40:mcore}-\ref{fig:short40:size} show the results
 on the 4x10GbE setup for Linux and \ix, as well as an \ix
 configuration that uses only one of the four
 links. Fig.~\ref{fig:short40:mcore} shows that \ix linearly scales and
 delivers 3.9MTPS on 4x10GbE with a single socket.
 Fig.~\ref{fig:short40:roundtrips} shows that going to 4x10GbE also
-improves throughput, but only by 30\%--\edb{WHY?}.  Finally,
+improves throughput, but only by 30\%: 
+\edb{the 10GbE configuration is within 10\% of the wire rate, but also
+  CPU-bound, resulting in small batches or \twiddle 3 packets
+  processed at every iteration through the \ix pipeline.  At 4x10GbE,
+  the pipeline automatically adapts to larger batches of \twiddle 113 packets,
+  which amortizes transitions and improves temporal
+  locality.}
+Finally,
 Fig.\ref{fig:short40:size} shows that \ix can deliver 8KB messages
 with a goodput of 35Gbps, for a wire throughput of 38Gpbs (out of a
 possible 39.7Gbps).  Overall, \ix makes it practical to scale
