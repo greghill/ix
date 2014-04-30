@@ -2,68 +2,83 @@
 \section{Evaluation}
 \label{sec:eval}
 
-We evaluate the scalability of \ix and compare it to the Linux
-baseline running a 3.11.10 kernel, and to mTCP. We selected mTCP as it
-is the state-of-the-art user-space TCP alternative available on the
-same hardware~\cite{jeong2014mtcp}.  We first describe the
-experimental setup (\S\ref{sec:eval:setup}).  We then characterize the
-performance using a series of micro-benchmark against a server with
-10GbE of connectivity: the popular NetPIPE ping-pong
-test~\cite{snell1996netpipe} (\S\ref{sec:eval:netpipe}) and the short
-message transaction test previously used to evaluate MegaPipe and mTCP
-in~\cite{han2012megapipe,jeong2014mtcp} (\S\ref{sec:eval:short}).  We
-then scale the latter test to a server with 4x10GbE of connectivity
-and use that infrastructure to characterize \ix's scalability in
-handling large persistent connections (\S\ref{sec:eval:scale}).
-Finally, we characterize the performance of the \ix system by running
-memcached -- a real-world massively deployed application
-(\S\ref{sec:eval:memcached}).
+We compared \ix to the Linux baseline running a 3.11.10 kernel, and to
+mTCP We evaluate the scalability of \ix and compare it to the Linux
+baseline running a 3.11.10 kernel and to mTCP~\cite{jeong2014mtcp}. 
+Our evalution uses both networking microbenchmarks and a real-world,
+massively deployed, event-based application. 
+
+% We
+% selected mTCP as it is the state-of-the-art user-space TCP alternative
+% available on the same hardware.  We first
+% describe the experimental setup (\S\ref{sec:eval:setup}).  We then
+% characterize the performance using a series of micro-benchmark against
+% a server with 10GbE of connectivity: the popular NetPIPE ping-pong
+% test~\cite{snell1996netpipe} (\S\ref{sec:eval:netpipe}) and the short
+% message transaction test previously used to evaluate MegaPipe and mTCP
+% in~\cite{han2012megapipe,jeong2014mtcp} (\S\ref{sec:eval:short}).  We
+% then scale the latter test to a server with 4x10GbE of connectivity
+% and use that infrastructure to characterize \ix's scalability in
+% handling large persistent connections (\S\ref{sec:eval:scale}).
+% Finally, we characterize the performance of the \ix system by running
+% memcached -- a real-world massively deployed application
+% (\S\ref{sec:eval:memcached}).
 
 
-\subsection{Experimental setup}
+\subsection{Experimental Methodology}
 \label{sec:eval:setup}
 
-Our experimental setup is complicated by the fact that we wish to
-simulanteously compare with mTCP and scale to bandwidth beyond 10GbE.
-Unfortunately, our 4x10GbE setup uses more recent hardware that does
-not run mTCP out of the box.  We therefore used a \emph{10GbE setup}
-for \S\ref{sec:eval:netpipe} and \S\ref{sec:eval:short} and includes
-mTCP results. The \emph{4x10GbE setup} is used for
-\S\ref{sec:eval:short40}, \S\ref{sec:eval:scale} and
-\S\ref{sec:eval:memcached} and compares \ix and Linux~\footnote{We
-  were able to port mTCP to the 4x10GbE setup, but could not reproduce
-  the expected performance.  We will attempt to unify the setup by the
-  camera-ready deadline.}
+We use two experimental setups because we wish to simulanteously
+compare with mTCP and scale to bandwidth beyond 10GbE.  Unfortunately,
+our 4x10GbE setup uses recent hardware not support by mTCP out of the
+box~\footnote{We were able to port mTCP to the 4x10GbE setup, but
+  could not reach the expected performance.  We will attempt to unify
+  the setup by the camera-ready deadline.}. Linux and \ix run on both
+setups.
+
+%  more recent hardware that does not run mTCP out
+% of the box.  We therefore used a \emph{10GbE setup} for
+% \S\ref{sec:eval:netpipe} and \S\ref{sec:eval:short} and includes mTCP
+% results. The \emph{4x10GbE setup} is used for
+% \S\ref{sec:eval:short40}, \S\ref{sec:eval:scale} and
+% \S\ref{sec:eval:memcached} and compares \ix and Linux~\footnote{We
+%   were able to port mTCP to the 4x10GbE setup, but could not reproduce
+%   the expected performance.  We will attempt to unify the setup by the
+%   camera-ready deadline.}
+
 
 %\george{possible false hope that mTCP can use 4 NICs. I am not sure about that.}}.
 
  
 \myparagraph{10GbE setup:} \edb{PLACEHOLDER:} This setup consists of a
-cluster of XX dual-Xeon XXX@XXXGhz used as clients and one dual-Xeon
-XXX@XXXGhz machine uses as the server connected by an Arista XXX
-switch via Intel 82599EB 10GbE NICs.  The server socket has 6 cores and
-12 hyperthreads.
+cluster of XX Xeon XXX @ XXX Ghz machine with Intel 82599EB 10GbE NICs,
+connected with an Arista XXX switch. One machine is used as the
+server, while the rest can be used as clients. The server socket has 6
+cores and 12 hyperthreads.
 
 \myparagraph{4x10GbE setup:} This setup consists of a cluster of 19
 clients and one server connected by an HP 5820AF-24XG 10GbE switch.
-The client machines are a mix of dual Xenon E5-2637 @ 3.5 Ghz
-and single Xenon E5-2650 @ 2.6 Ghz.  Each client has a single
-82599EB 10GbE NIC connecting to the switch.  The server is a dual-Xeon
-E5-2665 running at 2.4 Ghz with 256 GB of DRAM with four Intel 2P X520
-NICs.  Each socket (client or server) has 8 cores and 16 hyperthreads.
-The server is connected to the switch via a 4x10GbE bond configured as a L2+L3 hash.
+The client machines are a mix of Xeon E5-2637 @ 3.5 Ghz and Xeon
+E5-2650 @ 2.6 Ghz.  Each client has a single 82599EB 10GbE NIC
+connecting to the switch.  The server is a Xeon E5-2665 @ 2.4 Ghz with
+256 GB of DRAM and four Intel 2P X520 NICs.  Each client or server
+socket has has 8 cores and 16 hyperthreads.  The server is connected
+to the switch via a 4x10GbE bond configured as a L2+L3 hash.
 
-\myparagraph{Common elements:} Jumbo frames are never enabled.  Our
-baseline configuration in each machine is the Ubuntu 12.04.4 LTS
-distribution running the 3.11.10 Linux kernel.  When reporting
-multi-core scalability, we report results on a per-core basis with
-hyperthreading enabled.  Except for \S\ref{sec:eval:netpipe}, client
-machines always run Linux. Although the servers have two sockets, our
-experiments use only the CPU and memory resources of the socket to
-which the NIC are attached.
-\edb{CONTREVERSIAL: We made this deliberate decision to eliminate NUMA
-  imbalances from our experiments, and to most closely reproduce the
-  setup used in ~\cite{jeong2014mtcp}}
+\myparagraph{Common elements:} Our baseline configuration in each
+machine is the Ubuntu 12.04.4 LTS distribution running the 3.11.10
+Linux kernel.  When reporting multi-core scalability, we report
+results on a per-core basis with hyperthreading enabled.  Except for
+\S\ref{sec:eval:netpipe}, client machines always run Linux. All power
+management features are disabled for all systems in all
+experiments. Jumbo frames are never enabled.
+
+% Although the servers have two sockets, our
+% experiments use only the CPU and memory resources of the socket to
+% which the NIC are attached.  \edb{CONTREVERSIAL: We made this
+%   deliberate decision to eliminate NUMA imbalances from our
+%   experiments, and to most closely reproduce the setup used in
+%   ~\cite{jeong2014mtcp}}
 
 
 \input{figs/float-pingpong}
@@ -71,22 +86,21 @@ which the NIC are attached.
 
 \input{figs/float-short10}
 
+The Linux client and server implementations of our benchmarks use the
+\texttt{libevent} framework with the \texttt{epoll} system call.  We
+downloaded and installed mTCP from the public-domain
+realease~\cite{url:mtcp}, but had to write the benchmarks ourselves
+using the mTCP API.  To run mTCP, we switch to the 2.6.36 kernel, as
+this is the most recent supported kernel version.
 
-As for the benchmarks themselves: the Linux client and server
-implementations of our benchmarks use the \texttt{libevent} framework
-with the \texttt{epoll} system call.  We downloaded and installed mTCP
-from the public-domain implementation~\cite{url:mtcp}, but had to
-write the benchmarks using the mTCP API.  To run mTCP, we switch to the
-2.6.36 kernel, as this is the most recent supported kernel version.
-
-\subsection{High-bandwidth and low-latency}
+\subsection{Latency and Single-flow Bandwidth}
 \label{sec:eval:netpipe}
 
-
-We start the evaluation with the popular ping-pong benchmark as
-specified by NetPIPE~\cite{snell1996netpipe}. The benchmark simply
-exchanges a fixed-size message between two servers and helps
-calibrate the latency and bandwdith of a single-flow.
+We first evaluated the latency of \ix using NetPIPE, a popular
+ping-pong benchmark, using our 10GbE setup.  NetPIPE simply exchanges
+a fixed-size message between two servers and helps calibrate the
+latency and bandwdith of a single-flow~\cite{snell1996netpipe}.  In
+all cases, the two servers use the same system (Linux, mTCP, or \ix).
 
 %%%
 %%% Numbers for latency
@@ -95,32 +109,38 @@ calibrate the latency and bandwdith of a single-flow.
 %% Linux-mTCP (86.77us)
 %% mTCP-mTCP (95.53us)
 
+Fig.~\ref{fig:pingpong} shows the goodput achieved for NetPIPE for
+different message sizes.  Two \ix servers achieve goodput of 5Gbps
+(half of the maximum) with messages as small as \edb{32KB}. In
+contrast, mTCP requires \edb{400KB} messages to achieve 5Gbps, while
+Linux requires messages larger than 500KB. The goodput difference
+between the three systems is most dramatic for small messages. Using
+64B messages, the one-way latency is 6.1\microsecond between two
+servers running \ix, 21\microsecond if they are running Linux, and
+95\microsecond if they are running mTCP.  The differences in system
+architecture explain such the dramatic gap. \ix has a dataplane model
+that polls queues and runs them to completion. Linux has an interrupt
+model, which wakes up the blocked process. mTCP uses aggressive
+batching to offset the cost of context switching~\cite{jeong2014mtcp}.
+Nevertheless, even with high message sizes, \ix maintains a \edb{2x}
+and \edb{3x} goodput advantage over mTCP and Linux respectively.
+\christos{double-check the latency numbers}
 
-\edb Fig.~\ref{fig:pingpong} compares the performance of various
-configurations for different message sizes.  As expected, the
-bandwidth increases with the message size. Two \ix machines can
-pinp-pong at half 5Gbps (half the maximum) with messages as small as
-\edb{32KB}.  Using 64B messages, the one-way latency is 6.1\microsecond between two machines running \ix, 21\microsecond if
-they are running Linux, and 95\microsecond if they are running mTCP.
-The difference in system architecture help explain such a dramatic
-difference: \ix has a dataplane model that polls queues and runs them
-to completion; Linux has an interrupt model, which wakes up the
-blocked process; mTCP uses aggressive batching to offset the cost of context switching~\cite{jeong2014mtcp}.
-
-\subsection{Handling high TCP connection churn}
+\subsection{Scalability and High Connection Churn}
 \label{sec:eval:short}
 
 \input{figs/float-short40}
-We then evaluate \ix's multi-core scalability in handling workloads
-with extreme connection churn by using the same benchmark used to evaluate
-Megapipe~\cite{han2012megapipe} and mTCP~\cite{jeong2014mtcp}:
-multiple clients connect to a single server listening on a single
-port, send a request of size $s$ and wait for an echo of a message of
-the same size.  As with NetPIPE, while accepting the message, the server holds off its
-echo response until the message has been entirely received.
-Each client performs this synchronous remote procedure
-call $n$ times, and then close the connection using a reset
-(\texttt{TCP RST}).
+
+Next, we evaluate \ix's multi-core scalability in handling workloads
+with extreme connection churn by using the same benchmark used to
+evaluate Megapipe~\cite{han2012megapipe} and
+mTCP~\cite{jeong2014mtcp}. Multiple clients connect to a single server
+listening on a single port, send a request of size $s$ and wait for an
+echo of a message of the same size.  As with NetPIPE, while accepting
+the message, the server holds off its echo response until the message
+has been entirely received.  Each client performs this synchronous
+remote procedure call $n$ times, and then close the connection using a
+reset (\texttt{TCP RST}).
 
 
 %%
@@ -128,30 +148,38 @@ call $n$ times, and then close the connection using a reset
 %% IX:  7074246
 %% mTCP: 3253521
 
-Fig.~\ref{fig:short10} shows the results on the 10GbE setup.  For
-Linux and mTCP, our results are consistent with the ones published in
-~\cite{jeong2014mtcp}.  For all three tests, \ix scales linearly much better
-and is quickly able to sature the hardware resources.  When reaching
-saturation, it is never CPU-bound, and appears to be limited by the
-NIC packet per second hardware limit and Ethernet wire rates
-limitations.  In constast, mTCP needs all 6 cores to match the rate on
-Fig.~\ref{fig:short10:mcore}, and delivers 46\% of the throughput of
-\ix on Fig.~\ref{fig:short10:roundtrips}.  Linux is never able to
-match \ix or mTCP on any configuration.
+\christos{in figure 4, the core count for b and c is core = 6}
+
+\myparagraph{10GbE results:} Fig.~\ref{fig:short10} shows the results
+on the 10GbE setup.  For Linux and mTCP, our results are consistent
+with the ones published in the mTCP paper~\cite{jeong2014mtcp}.  For
+all three tests (core scaling, message count scaling, message size
+scaling), \ix scales linearly much better and is quickly able to
+sature the hardware resources.  When reaching saturation, it is never
+CPU-bound, and appears to be limited by the NIC packet per second
+hardware limit (Fig.~\ref{fig:short10:mcore}) or Ethernet wire rates
+limitations (Fig.~\ref{fig:short10:size}).  In constast, mTCP needs
+all 6 cores to match the rate on Fig.~\ref{fig:short10:mcore}, and
+delivers 46\% of the throughput of \ix on
+Fig.~\ref{fig:short10:roundtrips}.  Linux is never able to match \ix
+or mTCP on any configuration.
 
 
-\subsection{High connection churn at 4x10GbE}
-\label{sec:eval:short40}
+%\subsection{High connection churn at 4x10GbE}
+%\label{sec:eval:short40}
 
-Fig.~\ref{fig:short40} shows the results on the 4x10GbE setup, and
-compare them with a configuration that uses only one of the four
-links. Fig.~\ref{fig:short40:mcore} shows that \ix
-linearly scales and delivers 3.9MTPS on 4x10GbE with a single socket.
+\myparagraph{40GbE results:} Fig.~\ref{fig:short40} shows the results
+on the 4x10GbE setup for Linux and \ix, as well as an \ix
+configuration that uses only one of the four
+links. Fig.~\ref{fig:short40:mcore} shows that \ix linearly scales and
+delivers 3.9MTPS on 4x10GbE with a single socket.
 Fig.~\ref{fig:short40:roundtrips} shows that going to 4x10GbE also
 improves throughput, but only by 30\%--\edb{WHY?}.  Finally,
 Fig.\ref{fig:short40:size} shows that \ix can deliver 8KB messages
 with a goodput of 35Gbps, for a wire throughput of 38Gpbs (out of a
-possible 39.7Gbps).
+possible 39.7Gbps).  Overall, \ix makes it practical to scale
+protected TCP/IP processing beyond 10GbE, even with a single
+multi-core server.
 
 
 \subsection{Connection Scalability}
