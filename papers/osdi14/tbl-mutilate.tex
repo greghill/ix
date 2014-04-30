@@ -13,7 +13,8 @@
 \begin{small}
 \begin{tabular}{|l|c|c|c|}
 \hline
-Config &  50th pct. lat. & 95th pct. lat. & QPS@SLA\\
+Config &  \multicolumn{2}{|c|}{Unloaded latency} &  QPS for SLA:\\
+& 50th pct. & 95th pct. &  $<1ms@95th$\\
 \hline
 ETC-Linux & 56\microsecond & 70\microsecond & 800K\\
 ETC-IX    & 40\microsecond & 54\microsecond & 1477K\\
@@ -22,7 +23,7 @@ USR-Linux & 51\microsecond & 60\microsecond & 550K\\
 USR-IX    & 37\microsecond & 44\microsecond & 1500K\\
 \hline
 \end{tabular}
-\caption{Unloaded latencies and maximum QPS with a service-level of $<1ms$ at the 95th percentile.}
+\caption{Unloaded latencies and maximum QPS for a given service-level agreement for \texttt{ETC} and \texttt{USR}.}
 \vspace*{-2em}
 \label{tbl:mutilate}
 \end{small}
