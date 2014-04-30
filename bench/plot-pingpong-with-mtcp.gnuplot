@@ -1,5 +1,5 @@
 if (format eq 'eps') {
-  set terminal postscript eps enhanced solid size 3.2,1.4 font 'Times'
+  set terminal postscript eps enhanced solid size 3.2,2.1 font 'Times'
 } else {
   set terminal pngcairo size 1024,1024 lw 1 font 'Times'
 }
