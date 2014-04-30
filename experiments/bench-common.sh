@@ -154,6 +154,8 @@ setup_and_run() {
       ./configure
       cd $DIR
     fi
+    ../make.sh clean
+    ../make_memcached.sh
     make -C $MEMCACHED_BUILD_PATH
     scp $MEMCACHED_BUILD_PATH/$MEMCACHED_EXEC $SERVER_HOST:$MEMCACHED_EXEC
     
