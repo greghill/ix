@@ -84,7 +84,8 @@ experiments. Jumbo frames are never enabled.
 \input{figs/float-pingpong}
 %\input{tbl-pingpong}
 
-\input{figs/float-short10}
+%\input{figs/float-short10}
+\input{figs/float-short-both}
 
 The Linux client and server implementations of our benchmarks use the
 \texttt{libevent} framework with the \texttt{epoll} system call.  We
@@ -109,11 +110,11 @@ all cases, the two servers use the same system (Linux, mTCP, or \ix).
 %% Linux-mTCP (86.77us)
 %% mTCP-mTCP (95.53us)
 
-Fig.~\ref{fig:pingpong} shows the goodput achieved for NetPIPE for
+Fig.~\ref{fig:pingpong} shows the goodput achieved for
 different message sizes.  Two \ix servers achieve goodput of 5Gbps
-(half of the maximum) with messages as small as \edb{32KB}. In
-contrast, mTCP requires \edb{400KB} messages to achieve 5Gbps, while
-Linux requires messages larger than 500KB. The goodput difference
+(half of the maximum) with messages as small as 20KB. In
+contrast, Linux requires 384 messages to achieve 5Gbps, while
+mTCP requires messages larger than 500KB. The goodput difference
 between the three systems is most dramatic for small messages. Using
 64B messages, the one-way latency is 6.1\microsecond between two
 servers running \ix, 21\microsecond if they are running Linux, and
@@ -122,14 +123,15 @@ architecture explain such the dramatic gap. \ix has a dataplane model
 that polls queues and runs them to completion. Linux has an interrupt
 model, which wakes up the blocked process. mTCP uses aggressive
 batching to offset the cost of context switching~\cite{jeong2014mtcp}.
-Nevertheless, even with high message sizes, \ix maintains a \edb{2x}
-and \edb{3x} goodput advantage over mTCP and Linux respectively.
-\christos{double-check the latency numbers}
+
+%Nevertheless, even with high message sizes, \ix maintains a \edb{2x}
+%and \edb{3x} goodput advantage over mTCP and Linux respectively.
+%\christos{double-check the latency numbers}
 
 \subsection{Scalability and High Connection Churn}
 \label{sec:eval:short}
 
-\input{figs/float-short40}
+%\input{figs/float-short40}
 
 Next, we evaluate \ix's multi-core scalability in handling workloads
 with extreme connection churn by using the same benchmark used to
@@ -150,7 +152,7 @@ reset (\texttt{TCP RST}).
 
 \christos{in figure 4, the core count for b and c is core = 6}
 
-\myparagraph{10GbE results:} Fig.~\ref{fig:short10} shows the results
+\myparagraph{10GbE results:} Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} show the results
 on the 10GbE setup.  For Linux and mTCP, our results are consistent
 with the ones published in the mTCP paper~\cite{jeong2014mtcp}.  For
 all three tests (core scaling, message count scaling, message size
@@ -168,7 +170,7 @@ or mTCP on any configuration.
 %\subsection{High connection churn at 4x10GbE}
 %\label{sec:eval:short40}
 
-\myparagraph{40GbE results:} Fig.~\ref{fig:short40} shows the results
+\myparagraph{40GbE results:} Figs.~\ref{fig:short40:mcore}-\ref{fig:short40:size} show the results
 on the 4x10GbE setup for Linux and \ix, as well as an \ix
 configuration that uses only one of the four
 links. Fig.~\ref{fig:short40:mcore} shows that \ix linearly scales and
@@ -187,7 +189,7 @@ multi-core server.
 \label{sec:eval:scale}
 
 We also evaluate \ix's scalability when handling a large number of
-concurrent connections. In this benchmark, each client machine runs
+concurrent connections on the 4x10GbE setup. In this benchmark, each client machine runs
 $n$ threads, with each thread independently performing a 64B remote
 procedure call to the server.  Each RPC randomly chooses among $m$
 open sockets to perform the RPC.  In our setup with 19 clients, the
@@ -210,7 +212,7 @@ increasingly high cost of multiplexing among open connections.  At the
 peak, \ix performs 13x better than Linux, consistent with the results
 from Fig.~\ref{fig:short40:roundtrips}.  With 100,000 connections and
 4x10GbE, \ix is able to deliver 52\% of its own peak
-throughput. \christos{check} We believe we can improve on this result
-through further tuning of our TCP/IP stack. 
+throughput\edb{\sout{We believe we can improve on this result
+through further tuning of our TCP/IP stack. }}
 
 \input{eval-memcache}
