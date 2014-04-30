@@ -69,7 +69,7 @@ to the switch via a 4x10GbE bond configured as a L2+L3 hash.
 \myparagraph{Common elements:} Our baseline configuration in each
 machine is the Ubuntu 12.04.4 LTS distribution running the 3.11.10
 Linux kernel.  When reporting multi-core scalability, we report
-results on a per-core basis with hyperthreading enabled.  Except for
+results on a per-core basis. We enable hyperthreading when it improves performance. Except for
 \S\ref{sec:eval:netpipe}, client machines always run Linux. All power
 management features are disabled for all systems in all
 experiments. Jumbo frames are never enabled.
@@ -182,7 +182,7 @@ links. Fig.~\ref{fig:short40:mcore} shows that \ix linearly scales and
 delivers 3.9MTPS on 4x10GbE with a single socket.
 Fig.~\ref{fig:short40:roundtrips} shows that going to 4x10GbE also
 improves throughput, but only by 30\%: the 10GbE configuration is CPU
-bound and within 10\% of the wire rate, resulting in small batches or
+bound and within 90\% of the wire rate, resulting in small batches or
 \twiddle 3 packets processed at every iteration through the \ix
 pipeline.  At 4x10GbE, the pipeline automatically adapts to larger
 batches of \twiddle 113 packets, which amortizes transitions and
