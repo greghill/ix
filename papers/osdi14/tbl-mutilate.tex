@@ -3,6 +3,9 @@
 %%%  use the ping-pong test to measure the half rountrip latency @ 64B
 %%% 
 
+%%
+%%  1477 / 800 = 1.84
+%%  1500 / 550 = 2.72
 
 \begin{table}[b]
 \vspace{-1em}
@@ -10,16 +13,16 @@
 \begin{small}
 \begin{tabular}{|l|c|c|c|}
 \hline
-Config &  50th pct. lat. & 95th pct. lat. & QPS\\
+Config &  50th pct. lat. & 95th pct. lat. & QPS@SLA\\
 \hline
-ETC-Linux & 56\microsecond & 70\microsecond & 924K\\
-ETC-IX    & 40\microsecond & 54\microsecond & 1476\\
+ETC-Linux & 56\microsecond & 70\microsecond & 800K\\
+ETC-IX    & 40\microsecond & 54\microsecond & 1477K\\
 \hline
-USR-Linux & 51\microsecond & 60\microsecond & 637K\\
-USR-IX    & 37\microsecond & 44\microsecond & 1727K\\
+USR-Linux & 51\microsecond & 60\microsecond & 550K\\
+USR-IX    & 37\microsecond & 44\microsecond & 1500K\\
 \hline
 \end{tabular}
-\caption{Unloaded latencies and QPS at saturation.}
+\caption{Unloaded latencies and maximum QPS with a service-level of $<1ms$ at the 95th percentile.}
 \vspace*{-2em}
 \label{tbl:mutilate}
 \end{small}

@@ -214,7 +214,7 @@ connection churn, or manage a large number of concurrent connections,
 2.5x.  \ix even scales to 4x10GbE configuration, using a single
 multi-core socket.  Our evaluation with memcached, a real-world,
 massively deployed key-value store, shows that \ix improves upon Linux
-by \christos{check} 2x in terms of throughput at a given 95th
+by 1.8x-2.7x in terms of throughput at a given 95th
 percentile latency bound, as it can reduce kernel mode processing from
 $>80\%$ with Linux to $<33\%$ with \ix.
 

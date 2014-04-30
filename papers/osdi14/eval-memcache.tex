@@ -55,8 +55,8 @@ using 6 sockets out of the 8 available.
 
 \edb{NEW with table:} Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
 two \texttt{memcached} workloads for Linux and \ix, while
-Table~\ref{tbl:mutilate} reports the unloaded latencies and QPS at
-saturation.  \ix noticeably reduces the unloaded latencies, measured
+Table~\ref{tbl:mutilate} reports the unloaded latencies and maximum query throughput that meets a service-level agreement of $<1ms$ at the 95th percentile.
+\ix noticeably reduces the unloaded latencies, measured
 at both the 50th and 95th percentile.  We note here that the benchmark
 clients are running on Linux, and that running them on \ix should
 further reduce that latency. 
@@ -64,11 +64,11 @@ further reduce that latency.
 \edb{NEW:}For both workloads, the distribution of CPU time shifts from being
 $>80\%$ in the kernel with Linux to $<30\%$ with \ix.  Since the
 application is unmodified, Amdahl's law would predict a speedup of 3x.
-\ix actually increases the throughput of memcached by 60\% and 111\%
+\ix actually increases the throughput of memcached by 1.8 and 2.7
 for \texttt{ETC} and \texttt{USR}, respectively.  We explain the
 difference by the increased lock contention within the application
-itself.  Furthermore, \texttt{ETC} has a higher write-frequency than
-\texttt{USR}, which explains the difference in measured speedup.  
+itself, in particular for \texttt{ETC}, which has a higher write frequency.
 
 
 %\input{eval-mtier}
+
