@@ -2,7 +2,7 @@
 
 on_exit() {
   if [ ! -z ${SERVER_HOST+x} ]; then
-    ssh $SERVER_HOST sudo killall $MEMCACHED_EXEC > /dev/null 2>&1
+    ssh $SERVER_HOST sudo killall $MEMCACHED_EXEC > /dev/null 2>&1 || true
   fi
   
   rm -f ./mutilate
@@ -48,7 +48,7 @@ setup_and_run() {
   then
       echo "Usage: $0 SERVER_SPEC [CLUSTER_ID]"
       echo "  SERVER_SPEC = Linux-10 | Linux-40 | IX-10 | IX-40"
-      echo "  CLUSTER_ID = EPFL | Stanford (default: EPFL)"
+      echo "  CLUSTER_ID = EPFL | Stanford | Stanford-IX (default: EPFL)"
       exit 1
   fi
   
@@ -72,10 +72,14 @@ setup_and_run() {
     export AGENT_SUBDIR="stanford/"
     SERVER_HOST="maverick-17-10g"
     SERVER_IF="p3p1"
-    #MEMCACHED_THREADS=12
-    #MEMCACHED_CORES=0,12,1,13,2,14,3,15,4,16,5,17
-    MEMCACHED_THREADS=24
-    MEMCACHED_CORES=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23
+    MEMCACHED_THREADS=12
+    MEMCACHED_CORES=0,1,2,3,4,5,12,13,14,15,16,17
+  elif [ $CLUSTER_ID = 'Stanford-IX' ]; then
+    export AGENT_SUBDIR="stanford/"
+    SERVER_HOST="10.79.6.121:8000"
+    SERVER_IF=
+    MEMCACHED_THREADS=
+    MEMCACHED_CORES=
   else
     echo 'Invalid paramters'
     exit 1
@@ -108,7 +112,7 @@ setup_and_run() {
     echo "IX: make sure a memcached server is already running!"
     PREP=prep_ix
     OUTDIR='IX-10'
-    QPS_SWEEP_MAX=2000000
+    QPS_SWEEP_MAX=2800000
     QPS_NUM_POINTS=20
     MEMCACHED_EXEC=
     MEMCACHED_BUILD_PATH=
@@ -119,7 +123,7 @@ setup_and_run() {
     echo "IX: make sure a memcached server is already running!"
     PREP=prep_ix-40
     OUTDIR='IX-40'
-    QPS_SWEEP_MAX=2000000
+    QPS_SWEEP_MAX=2800000
     QPS_NUM_POINTS=20
     MEMCACHED_EXEC=
     MEMCACHED_BUILD_PATH=
@@ -143,7 +147,9 @@ setup_and_run() {
     scp $MEMCACHED_BUILD_PATH/$MEMCACHED_EXEC $SERVER_HOST:$MEMCACHED_EXEC
     
     $PREP
-    ssh $SERVER_HOST sudo nice -n -20 ./$MEMCACHED_EXEC $MEMCACHED_PARAMS &
+    
+    MEMCACHED_CMD="sudo nice -n -20 ./$MEMCACHED_EXEC $MEMCACHED_PARAMS"
+    ssh $SERVER_HOST $MEMCACHED_CMD &
   fi
   
   # Build and deploy mutilate

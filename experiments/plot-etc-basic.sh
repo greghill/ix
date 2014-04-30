@@ -9,15 +9,19 @@ FORMAT=${1:-eps}
 shift
 
 SHORT_FILES="$@"
-SHORT_TITLES="$@"
+
+for i in "$@"; do
+  SHORT_TITLES_AVE="$SHORT_TITLES_AVE ${i}_median"
+  SHORT_TITLES_95TH="$SHORT_TITLES_95TH ${i}_95th"
+done
 
 if [ -z "$SHORT_FILES" ]; then
   SHORT_FILES="$SHORT_FILES `nth 1 Linux-10`"
-  SHORT_FILES="$SHORT_FILES `nth 1 Linux-40`"
   SHORT_FILES="$SHORT_FILES `nth 1 IX-10`"
+  SHORT_FILES="$SHORT_FILES `nth 1 Linux-40`"
   SHORT_FILES="$SHORT_FILES `nth 1 IX-40`"
-  SHORT_TITLES_AVE="Linux-10Gbps-Median Linux-40Gbps-Median IX-10Gbps-Median IX-40Gbps-Median"
-  SHORT_TITLES_95TH="Linux-10Gbps-95th Linux-40Gbps-95th IX-10Gbps-95th IX-40Gbps-95th"
+  SHORT_TITLES_AVE="Linux-10Gbps-Median IX-10Gbps-Median Linux-40Gbps-Median IX-40Gbps-Median"
+  SHORT_TITLES_95TH="Linux-10Gbps-95th IX-10Gbps-95th Linux-40Gbps-95th IX-40Gbps-95th"
 fi
 
 echo 'Using files:'
