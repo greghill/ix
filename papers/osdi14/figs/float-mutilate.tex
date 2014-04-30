@@ -1,9 +1,14 @@
+%% put the key last to have correct numbering
+
 \begin{figure*}
 \begin{centering}
 \subfloat[Synthetic workload modeled after ETC~\cite{Atikoglu:2012:WAL}.]{
 \includegraphics{figs/memcached-etc-basic.eps}}
 \subfloat[Synthetic workload modeled after USR\cite{Atikoglu:2012:WAL}.]{
 \includegraphics{figs/memcached-usr-basic.eps}}
+\vspace{-2.7in}
+\subfloat{\includegraphics{figs/memcached-key.eps}}
+ \vspace{2.2in}
 \caption{Capacity vs. 95th percentile latency for two memcached workloads for different core counts.}
 \label{fig:mutilate}
 \end{centering}
