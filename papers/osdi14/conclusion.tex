@@ -19,13 +19,13 @@ deliver wire-rate performance in most situations and typically
 outperforms Linux 3.11 by an order of magnitude and mTCP, a
 state-of-the-art user-level TCP stack, by a factor of two or more. Our
 latency-sensitive benchmarks indicate that it can deliver one-way
-messages in \twiddle 6\microsecond, or 15\microsecond less than
-Linux.  \edb{NEW:}Our evaluation with memcached, a real-world key-value store,
+messages in \twiddle 6\microsecond, or 15\microsecond less than Linux.
+\edb{NEW:}Our evaluation with memcached, a real-world key-value store,
 using two realistic synthetic benchmarks, shows that \ix can deliver
-more 1.5M or more queries per second, for a speedup of 1.6 and 2.1
-over Linux, depending on the benchmark.  Furthermore, \ix consistently
-delivers lower tail-latencies until saturation.  When running on \ix,
-memcached is no longer kernel-limited and its own application-level
-bottlenecks now limit its scalabilty.
+more \twiddle  1.5M while meeting a service level aggreement of $1ms$ at the
+95th percentile, an improvement of 1.8 and 2.7 over Linux, respectively.
+When running on \ix, memcached is no longer
+kernel-limited and its own application-level bottlenecks now limit its
+scalabilty.
 
 
