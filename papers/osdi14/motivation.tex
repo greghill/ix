@@ -94,8 +94,11 @@ request~\cite{luiz-isscc,rumble2011s}. Today's networking technologies
 allow for one-way communication across a large-scale datacenter within
 a few \microsecond: 3\microsecond latency across a pair of 10 GbE
 NICs~\cite{cisco-sereno}, one to five switch crossings with
-cut-through latencies of a few hundred $ns$ each, and propagation
-delays of 500$ns$ for 100 meters distance. Unfortunately, system
+% Avoid putting lower-case letters next to one another in math mode.
+% No need for italics in ns, anyway, unless you are denoting
+% multiplication between distinct variables.
+cut-through latencies of a few hundred ns each, and propagation
+delays of 500ns for 100 meters distance. Unfortunately, system
 software is designed to operate at a totally different
 timescale. Interrupt coalescing used to improve throughput, queuing
 latency due to device driver processing intervals, and protocol
@@ -134,9 +137,9 @@ operations~\cite{nishtala2013scaling}.
 
 \myparagraph{Resource elasticity:} The load of web-scale applications
 varies significantly due to diurnal patterns and unexpected spikes in
-user traffic. Ideally, each service node will use the minimum amount
-of resources (cores, memory, or IOPS) needed to satisfy packet rate
-and tail latency requirements at any point in time. The remaining
+user traffic. Ideally, each service node will use the fewest
+resources (cores, memory, or IOPS) needed to satisfy packet rate
+and tail latency requirements at any point. The remaining
 resources can be allocated to other applications in a shared
 datacenter (e.g., background
 analytics)~\cite{Hindman:2011:MPF,DBLP:conf/asplos/DelimitrouK14,Leverich:RHSU:2014}
@@ -190,7 +193,7 @@ entrusted to applications.
 \myparagraph{Alternatives to POSIX API:} MegaPipe replaces the POSIX
 API with lightweight sockets implemented with in-memory command
 rings~\cite{han2012megapipe} . This substantially reduces software
-overheads and increases packet rates, but retails all other challenges
+overheads and increases packet rates, but retains all other challenges
 of using an existing, kernel-based networking stack.
 
 \myparagraph{OS enhancements:} Tuning kernel-based stacks provides

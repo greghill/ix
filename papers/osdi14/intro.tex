@@ -4,6 +4,15 @@
 
 %\edb{Not updated in a while....}
 
+\dm{The intro is very buzzword-heavy, which makes a fundamental
+  contribution (architecture for super low-overhead networking) sound
+  really artifactual.  The term ``web-scale'' does not do us any
+  favors.  Yes right now the web and social networking are hot topics,
+  but these should be presented as examples of services that can
+  benefit from sub-microsecond receive paths.  Our contribution is not
+  to fix twitter's or Amazon's problems in 2014.  It is a fundamental
+  re-thinking of how to design network APIs for modern NIC hardware,
+  which could enable new types of system down the line.}
 Web-scale applications such as search, social networking, and
 e-commerce platforms, are redefining the requirements on system
 software. A single application can consist of hundreds of software
@@ -63,6 +72,11 @@ power management~\cite{DBLP:journals/computer/BarrosoH07}.
 % coalescing improve performance at the expense of average and tail
 % latency~\cite{missing}.
 
+\dm{Bad to rely on ``conventional wisdom'' without citation, but we
+  can reasonably quantify such overheads ourselves to state a fact.
+  E.g., ``Currently the only option for meeting XXX performance
+  requirement is to bypass the kernel[cite], with the following
+  disadvantages\ldots''}
 The conventional wisdom is that there is a fundamental mismatch
 between the requirements of web-scale workloads and existing
 implementations of TCP/IP  in commodity operating
@@ -108,7 +122,14 @@ stack and impact other workloads.
 % and multi-queue. Probably two paragraphs}
 
 We propose \ix, an operating system designed specifically to meet the
-networking requirements of event-driven, web-scale applications. Its
+networking requirements of event-driven, web-scale applications.
+\dm{Again, this makes it sound narrow.  Phrase in a more fundamental
+  way.  Point is that currently people must achieve a delicate $n$-way
+  balance between throughput, latency, protection/robustness,
+  complexity, number of machines/power consumption, etc.  \ix shows it
+  doesn't have to be this way; we can have our cake and eat it, too,
+  if we architect better systems around improved APIs.}
+Its
 architecture builds upon the lessons from high performance
 middleboxes, such as firewalls, load-balances, and software
 routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09}. \ix
@@ -142,6 +163,15 @@ synchronization in the common case operation. The \ix user-level
 library includes an interface nearly identical to the popular
 \texttt{libevent} library~\cite{provos2003libevent}, providing
 compatibility between \ix and a wide range of existing applications.
+
+\dm{The above paragraph does a reasonable job of describing what's
+  new.  But it might be worth another paragraph addressing why now
+  Basically there's a fundamental question of granularity here.  E.g.,
+  page sizes have been 4--8K since machines had less than a Megabyte
+  of DRAM\@.  Schedulers have been designed under the premise of more
+  applications than CPUs.  Network APIs were designed when packet
+  inter-arrival times were many times the system call/interrupt
+  latency.}
 
 % \ix addresses the C10M problem through a careful separation of the
 % control plane and dataplane functions.  The control plane consists of a
@@ -178,7 +208,7 @@ multi-core scalability.
 
 We compare \ix against Linux 3.11.10 and mTCP, a state-of-the-art
 user-level TCP stack~\cite{jeong2014mtcp}.  On networking
-microbenchmark thats are either latency-sensitive, require a high TCP
+microbenchmarks that are either latency-sensitive, require a high TCP
 connection churn, or manage a large number of concurrent connections,
 \ix outperforms Linux by an order of magnitude, and mTCP by up to
 2.5x.  \ix even scales to 4x10GbE configuration, using a single
