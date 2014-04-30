@@ -1,0 +1,28 @@
+
+%%%
+%%%  use the ping-pong test to measure the half rountrip latency @ 64B
+%%% 
+
+
+\begin{table}[b]
+\vspace{-1em}
+\begin{center}
+\begin{small}
+\begin{tabular}{|l|c|c|c|}
+\hline
+Config &  50th pct. lat. & 95th pct. lat. & QPS\\
+\hline
+ETC-Linux & 56\microsecond & 70\microsecond & 924K\\
+ETC-IX    & 40\microsecond & 54\microsecond & 1476\\
+\hline
+USR-Linux & 51\microsecond & 60\microsecond & 637K\\
+USR-IX    & 37\microsecond & 44\microsecond & 1727K\\
+\hline
+\end{tabular}
+\caption{Unloaded latencies and QPS at saturation.}
+\vspace*{-2em}
+\label{tbl:mutilate}
+\end{small}
+\end{center}
+\end{table}
+

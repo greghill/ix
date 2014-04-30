@@ -32,33 +32,43 @@ represents deployment with most GET requests in Facebook, has short
 keys ($<$20B), 2B values, and 99\% GET requests. In USR, almost all
 traffic involves minimum-sized TCP packets. Each request is issued 
 
-For all experiments, we report 95th percentile latency as a function
-of the achieved throughput. This graph provides insights the full range
-of system behaviors. Most commercial \texttt{memcached} use such a
-latency-throughput graph to provision each server so that the 95th
-percentile latency does not exceed 200 to 500\microsecond. We report
-only 95ht percentile latency as the average or median latency is
-irrelevant for web-scale services~\cite{DBLP:journals/cacm/DeanB13}.
-We carefully tune the Linux baseline setup according to the guidelines
-in \cite{Leverich:RHSU:2014}. Specifically, we pin memcached threads,
+For all experiments, we report the 50th (median) and 95th percentile
+latency as a function of the achieved throughput. This graph provides
+insights the full range of system behaviors. Most commercial
+\texttt{memcached} use such a latency-throughput graph to provision
+each server so that the 95th percentile latency does not exceed 200 to
+500\microsecond~\cite{DBLP:journals/cacm/DeanB13}.  We carefully tune
+the Linux baseline setup according to the guidelines in
+\cite{Leverich:RHSU:2014}. Specifically, we pin memcached threads,
 configure interrupt-distribution based on thread-affinity, and tune
 interrupt moderation thresholds. We believe that our baseline Linux
 numbers are as tuned as possible for this hardware using the
-open-source version of memcached. \christos{add version number}
+open-source version of \texttt{memcached-1.4.18}. For our benchmark,
+we use 6 client machines and a total of 772 connections to the
+memcached server. We report the results for the configuration that
+provides the best performance -- for both Linux and \ix, this is by
+using 6 sockets out of the 8 available.
 
 \christos{Should we discuss the porting process to IX?}
 
-\christos{ guestimate} Fig.~\ref{fig:mutilate} shows the
-throughput-latency curves for the two \texttt{memcached} workloads for
-Linux and \ix. In both cases, we use \christos{X} client machines and
-a total of \christos{Y} connections to the memcached server. The
-server uses 16 hyperthreads for memcached. Comparing the knee of the
-Linux and \ix, \ix achieves nearly a 2x improvement throughput (QPS)
-improvement at the same 95th percentil latency. \christos{say
-  something about each workload once graphs finalized}. The primary
-advantage of \ix is that it drops the time spend in the kernel for
-TCP/IP processing from 80\% of total time with Linux roughly
-\christos{check} 33\%. \christos{anything else worth discussing?}
+\input{tbl-mutilate}
+
+Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
+two \texttt{memcached} workloads for Linux and \ix, while
+Table~\ref{tbl:mutilate} reports the unloaded latencies and QPS at
+saturation.  \ix noticeably reduces the unloaded latencies, measured
+at both the 50th and 95th percentile.  We note here that the benchmark
+clients are running on Linux, and that running them on \ix should
+further reduce that latency. 
+
+For both workloads, the distribution of CPU time shifts from being
+$>80\%$ in the kernel with Linux to $<30\%$ with \ix.  Since the
+application is unmodified, Amdahl's law would predict a speedup of 3x.
+\ix actually increases the throughput of memcached by 60\% and 111\%
+for \texttt{ETC} and \texttt{USR}, respectively.  We explain the
+difference by the increased lock contention within the application
+itself.  Furthermore, \texttt{ETC} has a higher write-frequency than
+\texttt{USR}, which explains the difference in measured speedup.  
 
 
 %\input{eval-mtier}
