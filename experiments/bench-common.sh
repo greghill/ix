@@ -2,7 +2,11 @@
 
 on_exit() {
   if [ ! -z ${SERVER_HOST+x} ]; then
-    ssh $SERVER_HOST sudo killall $MEMCACHED_EXEC > /dev/null 2>&1 || true
+    if [ $IX -eq 1 ]; then
+      ssh $SERVER_HOST sudo killall -KILL ix > /dev/null 2>&1 || true
+    else
+      ssh $SERVER_HOST sudo killall $MEMCACHED_EXEC > /dev/null 2>&1 || true
+    fi
   fi
   
   rm -f ./mutilate
@@ -26,16 +30,16 @@ prep_linux-40() {
 }
 
 prep_ix() {
-  echo "IX: need to implement preparation script!" && false
+  ssh $SERVER_HOST sudo ~/bmos/bench/select_net.sh ix node1
 }
 
 prep_ix-40() {
-  echo "IX: need to implement preparation script!" && false
+  ssh $SERVER_HOST sudo ~/bmos/bench/select_net.sh ix node0
 }
 
 run_experiment() {
-  ./prep_experiment.sh $SERVER_HOST $1
-  ./run_experiment.sh $SERVER_HOST $1 > $OUTDIR/$1.csv
+  ./prep_experiment.sh $SERVER_HOST_EXPERIMENT $1
+  ./run_experiment.sh $SERVER_HOST_EXPERIMENT $1 > $OUTDIR/$1.csv
 }
 
 setup_and_run() {
@@ -62,15 +66,16 @@ setup_and_run() {
   
   # Configure
   if [ $CLUSTER_ID = 'EPFL' ]; then
-    echo "EPFL: please specify a server and make agent profiles!" && false
     export AGENT_SUBDIR="epfl/"
-    SERVER_HOST=
-    SERVER_IF=
-    MEMCACHED_THREADS=16
-    MEMCACHED_CORES=
+    SERVER_HOST=sciicebpc1
+    SERVER_HOST_EXPERIMENT=192.168.21.1
+    SERVER_IF=eth11
+    MEMCACHED_THREADS=6
+    MEMCACHED_CORES=1,3,5,7,9,11
   elif [ $CLUSTER_ID = 'Stanford' ]; then
     export AGENT_SUBDIR="stanford/"
     SERVER_HOST="maverick-17-10g"
+    SERVER_HOST_EXPERIMENT="maverick-17-10g"
     SERVER_IF="p3p1"
     MEMCACHED_THREADS=12
     MEMCACHED_CORES=0,1,2,3,4,5,12,13,14,15,16,17
@@ -98,6 +103,7 @@ setup_and_run() {
     MEMCACHED_BUILD_TARGET=''
     MEMCACHED_PARAMS="-t $MEMCACHED_THREADS -m 8192 -c 65535 -T $MEMCACHED_CORES -u `whoami`"
     MEMCACHED_SHOULD_DEPLOY=1
+    IX=0
   elif [ $SERVER_SPEC = 'Linux-40' ]; then
     PREP=prep_linux-40
     OUTDIR='Linux-40'
@@ -108,28 +114,33 @@ setup_and_run() {
     MEMCACHED_BUILD_TARGET=''
     MEMCACHED_PARAMS="-t $MEMCACHED_THREADS -m 8192 -c 65535 -T $MEMCACHED_CORES -u `whoami`"
     MEMCACHED_SHOULD_DEPLOY=1
+    IX=0
   elif [ $SERVER_SPEC = 'IX-10' ]; then
-    echo "IX: make sure a memcached server is already running!"
     PREP=prep_ix
     OUTDIR='IX-10'
-    QPS_SWEEP_MAX=2800000
-    QPS_NUM_POINTS=20
-    MEMCACHED_EXEC=
-    MEMCACHED_BUILD_PATH=
+    QPS_SWEEP_MAX=3000000
+    QPS_NUM_POINTS=30
+    MEMCACHED_EXEC=memcached
+    MEMCACHED_BUILD_PATH=../apps/memcached-1.4.18-ix
     MEMCACHED_BUILD_TARGET=''
-    MEMCACHED_PARAMS='-m 8192'
-    MEMCACHED_SHOULD_DEPLOY=0
+    MEMCACHED_PARAMS='-m 8192 -u `whoami`'
+    MEMCACHED_SHOULD_DEPLOY=1
+    IX=1
+    IX_PARAMS="-d 0000:42:00.1 -c $MEMCACHED_CORES"
+    SERVER_HOST_EXPERIMENT=${SERVER_HOST_EXPERIMENT}:8000
   elif [ $SERVER_SPEC = 'IX-40' ]; then
-    echo "IX: make sure a memcached server is already running!"
     PREP=prep_ix-40
     OUTDIR='IX-40'
     QPS_SWEEP_MAX=2800000
     QPS_NUM_POINTS=20
-    MEMCACHED_EXEC=
-    MEMCACHED_BUILD_PATH=
+    MEMCACHED_EXEC=memcached
+    MEMCACHED_BUILD_PATH=../apps/memcached-1.4.18-ix
     MEMCACHED_BUILD_TARGET=''
-    MEMCACHED_PARAMS='-m 8192'
-    MEMCACHED_SHOULD_DEPLOY=0
+    MEMCACHED_PARAMS='-m 8192 -u `whoami`'
+    MEMCACHED_SHOULD_DEPLOY=1
+    IX=1
+    IX_PARAMS="-d 0000:04:00.0,0000:04:00.1,0000:05:00.0,0000:05:00.1 -c 0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
+    SERVER_HOST_EXPERIMENT=${SERVER_HOST_EXPERIMENT}:8000
   else
     echo 'Invalid parameters'
     exit 1
@@ -143,13 +154,19 @@ setup_and_run() {
       ./configure
       cd $DIR
     fi
+    ../make.sh clean
+    ../make_memcached.sh
     make -C $MEMCACHED_BUILD_PATH
     scp $MEMCACHED_BUILD_PATH/$MEMCACHED_EXEC $SERVER_HOST:$MEMCACHED_EXEC
     
     $PREP
-    
-    MEMCACHED_CMD="sudo nice -n -20 ./$MEMCACHED_EXEC $MEMCACHED_PARAMS"
-    ssh $SERVER_HOST $MEMCACHED_CMD &
+    if [ $IX -eq 1 ]; then
+      ssh $SERVER_HOST "cd ~/bmos/ix && sudo ./ix $IX_PARAMS -- /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ~/$MEMCACHED_EXEC $MEMCACHED_PARAMS" &
+      sleep 10
+    else
+      MEMCACHED_CMD="sudo nice -n -20 ./$MEMCACHED_EXEC $MEMCACHED_PARAMS"
+      ssh $SERVER_HOST $MEMCACHED_CMD &
+    fi
   fi
   
   # Build and deploy mutilate

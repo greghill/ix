@@ -18,7 +18,7 @@ well-defined class of web-scale applications.
 
 Modern web-scale applications include interactive services such as
 search, social networking and instant messaging, automatic
-translation, software as a service (SaaS), and e-commerce platforms.
+translation, software as a service, and e-commerce platforms.
 We have come to expect that these services provide millions of users
 with instantaneous, personalized, and contextual access to petabytes
 of data.  For example, the Google search engine updates query results
@@ -128,11 +128,11 @@ of concurrent connections or the rate of churn.
 Connection scalability has been a historical challenge for commodity
 operating systems, reaching 10,000 concurrent connections a decade
 ago~\cite{theC10Kproblem} and exceeding one million connections
-today~\cite{theC10Mproblem}.  For example, the nature of all-to-all
-communication between Facebook's \edb{large-scale deployments} of both application and \texttt{memcached}
-servers made it impractical to use TCP sockets between these two
-tiers, resulting in deployments that use UDP datagrams for
-\texttt{get} operations and an aggregation proxy for \texttt{put}
+today~\cite{theC10Mproblem}.  For example, the communication patterns
+between application and \texttt{memcached} servers at Facebook made it
+impractical to use TCP sockets between these two tiers, resulting in
+deployments that use UDP datagrams for \texttt{get} operations and an
+aggregation proxy for \texttt{put}
 operations~\cite{nishtala2013scaling}.
 
 \myparagraph{Resource elasticity:} The load of web-scale applications

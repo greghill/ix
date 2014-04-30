@@ -37,9 +37,9 @@ The \ix control plane consists of the full Linux kernel and
 \texttt{IXCP}, a user-level program. The Linux kernel initializes PCIe
 devices, such as the NICs, and provides the basic mechanisms for
 resource allocation to the dataplanes, including cores, memory, and
-network queues. Equally important, Linux provides the wide range of
-system calls and services necessary for compatibility with
-applications, such as file system and signal
+network queues. Equally important, Linux provides the substrate of
+system calls and services necessary for compatibility with a wide
+range of applications, such as file system and signal
 support. \texttt{IXCP} monitors resource usage and dataplane
 performance and implements resource allocation policies. The
 development of efficient allocation policies involves understanding
@@ -49,13 +49,13 @@ as their load varies over time. \george{is any christos' paper relevant for cita
 to future work and focus this paper on the \ix dataplane architecture.
 
 We run the Linux kernel in VMX root ring 0, the mode typically used to
-run the hypervisor in virtualized
+run hypervisors in virtualized
 systems~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. We use the
 Dune system within Linux to enable dataplanes to run as library-based
-OS in the VMX non-root ring 0, the mode typically used to run guest
-OSes in virtualized systems~\cite{belay2012dune}. The applications run
-in ring 3 as usual. This approach provides dataplanes with direct
-access to hardware features such as page tables and provides full
+OSes in the VMX non-root ring 0, the mode typically used to run guest
+kernels in virtualized systems~\cite{belay2012dune}. Finally, applications run
+VMX non-root ring 3. This approach provides dataplanes with direct
+access to hardware features, such as page tables and exceptions, and provides full
 protection between the control plane, dataplanes, and untrusted user
 code. %\christos{should we explicitly say that most web-scale apps are
 %  deployed without VMs so taking over VMX is not a problem?}\edb{not needed}
@@ -266,12 +266,12 @@ protocol processing code.
 \label{sec:impl:coop}
 
 The \ix API and implementation leads to a cooperative flow control
-model between application code and the network processing stack.  But
-unlike user-level stacks that also expose networking behavior
+model between application code and the network-processing stack.  But
+unlike user-level stacks that also expose networking behavior to user
+code,
 \dm{Can you say something more specific than networking behavior?
   Maybe something like ``unrestricted raw network access''?}
-to user
-code, the \ix protection model makes few assumptions about application
+the \ix protection model makes few assumptions about application
 behavior. A malicious or misbehaving application can only hurt
 itself. It cannot corrupt the networking stack or affect other
 applications.

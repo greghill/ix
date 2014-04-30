@@ -251,6 +251,7 @@ sub Spill {
 	    $p = ReplaceCommand($p,"\\label"," [LABEL]");
 	    $p = ReplaceCommand($p,"\\ignore","");
 	    $p = ReplaceCommand($p,"\\edb","");
+	    $p = ReplaceCommand($p,"\\dm","");
 	    
 
 

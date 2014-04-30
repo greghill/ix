@@ -5,7 +5,7 @@
 \input{figs/float-connscaling}
 \input{figs/float-mutilate}
 
-Finally, we evaluated the performance benefits of the \ix prected
+Finally, we evaluated the performance benefits of the \ix protected
 dataplane design with \texttt{memcached}, a massively deployed,
 in-memory key-value store built on top of the \texttt{libevent}
 framework~\cite{url:memcached}. It is frequently used as a
@@ -22,7 +22,7 @@ We use the \texttt{mutilate} load-generator to place a selected load
 on the server in terms of requests per second (RPS) and measure
 response latency~\cite{url:mutilate}. \texttt{mutilate} coordinates a
 large number of client threads across multiple machines to generate
-the desired RPS load, while a sepeparate unloaded client measures
+the desired RPS load, while a separate unloaded client measures
 latency by issuing one request at the time.  We configure
 \texttt{mutilate} to generate load representative of two workloads
 from Facebook~\cite{Atikoglu:2012:WAL}: the ETC workload that
@@ -35,28 +35,43 @@ traffic involves minimum-sized TCP packets. Each request is issued
 
 \dm{Paragraph needs editing.  Also, why not report 99\% or 99.9\%?}
 For all experiments, we report 95th percentile latency as a function
-of the achieved throuhput.  This graph provides insights into the full range
-of system behaviors. Most commercial \texttt{memcached} use such a
-latency-throughput graph to provision each server so that the 95th
-percentile latency does not exceed 200 to 500\microsecond. We report
-only 95th percentile latency as the average or median latency is
-irrelevant for web-scale services~\cite{DBLP:journals/cacm/DeanB13}.
-We carefully tune the Linux baseline setup according to the guidlines
-in \cite{Leverich:RHSU:2014}. Specifically, we pin memcached threads,
-configure interrupt-distribution based on thread-affinity, and tune
-interrupt moderation thresholds. We believe that our baseline Linux
-numbers are as tuned as possible for this hardware using the
-open-source version of memcached. \christos{add version number}
+of the achieved throughput as this is the relevant metric for
+datacenter
+applications\microsecond~\cite{DBLP:journals/cacm/DeanB13}. This graph
+provides insights the full range of system behaviors. Most commercial
+\texttt{memcached} use such a latency-throughput graph to provision
+each server so that the 95th percentile latency does not exceed 200 to
+500.  We carefully tune the Linux baseline setup according to the
+guidelines in \cite{Leverich:RHSU:2014}. Specifically, we pin
+memcached threads, configure interrupt-distribution based on
+thread-affinity, and tune interrupt moderation thresholds. We believe
+that our baseline Linux numbers are as tuned as possible for this
+hardware using the open-source version of
+\texttt{memcached-1.4.18}. For our benchmark, we use 6 client machines
+and a total of 772 connections to the memcached server. We report the
+results for the configuration that provides the best performance: 
+8 sockets with Linux, but only 6 with \ix.
 
 \christos{Should we discuss the porting process to IX?}
 
-\edb{PLACEHOLDER} The peak QPS is measured using \ix at
-XXX, which maps to a bandwidth leaving the server of XXX Gbps, or XX\%
-of the theoretical wire rate of the machine.  We report the numbers
-for Linux and \ix for XXX and YYY established, concurrent
-connections served by the 18 clients.
+\input{tbl-mutilate}
 
-Our results show that \edb{TODO}.....
+\edb{NEW with table:} Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
+two \texttt{memcached} workloads for Linux and \ix, while
+Table~\ref{tbl:mutilate} reports the unloaded latencies and maximum query throughput that meets a service-level agreement of $<1ms$ at the 95th percentile.
+\ix noticeably reduces the unloaded latencies, also measured
+at the 95th percentile.  We note here that the benchmark
+clients are running on Linux, and that running them on \ix should
+further reduce that latency. 
+
+\edb{NEW:}For both workloads, the distribution of CPU time shifts from being
+$>80\%$ in the kernel with Linux to $<30\%$ with \ix.  Since the
+application is unmodified, Amdahl's law would predict a speedup of 3x.
+\ix actually increases the throughput of memcached by 1.8 and 2.7
+for \texttt{ETC} and \texttt{USR}, respectively.  We explain the
+difference by the increased lock contention within the application
+itself, in particular for \texttt{ETC}, which has a higher write frequency.
 
 
 %\input{eval-mtier}
+

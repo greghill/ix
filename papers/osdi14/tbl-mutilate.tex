@@ -1,0 +1,38 @@
+
+%%%
+%%%  use the ping-pong test to measure the half rountrip latency @ 64B
+%%% 
+
+%%
+%%  1477 / 800 = 1.84
+%%  1500 / 550 = 2.72
+
+\begin{table}[b]
+\vspace{-1em}
+\begin{center}
+\begin{small}
+\begin{tabular}{|l|c|c|c|}
+\hline
+%Config &  \multicolumn{2}{|c|}{Unloaded latency} &  QPS for SLA:\\
+Config &  Unloaded latency &  QPS for SLA:\\
+&  95th pct. &  $<1ms@95th$\\
+\hline
+%ETC-Linux & 56\microsecond & 70\microsecond & 800K\\
+ETC-Linux & 70\microsecond & 800K\\
+%ETC-IX    & 40\microsecond & 54\microsecond & 1477K\\
+ETC-IX   & 54\microsecond & 1477K\\
+\hline
+%USR-Linux & 51\microsecond & 60\microsecond & 550K\\
+%USR-IX    & 37\microsecond & 44\microsecond & 1500K\\
+USR-Linux  & 60\microsecond & 550K\\
+USR-IX     & 44\microsecond & 1500K\\
+
+\hline
+\end{tabular}
+\caption{Unloaded latency and maximum QPS for a given service-level agreement for \texttt{ETC} and \texttt{USR}.}
+%\vspace*{-2em}
+\label{tbl:mutilate}
+\end{small}
+\end{center}
+\end{table}
+

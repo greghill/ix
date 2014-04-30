@@ -72,14 +72,7 @@ allocated at large page granularity of physical memory; hardware queues are
 exclusively assigned to a single dataplane until explicitly revoked.
 Each dataplane runs a single application in a single address space.
 This is similar to the Exokernel approach of using library operating
-systems~\cite{DBLP:conf/sosp/EnglerKO95}, but with the additional
-protection between applications and the control plane using the
-ubiquitously available virtualization support in modern
-servers~\cite{DBLP:journals/computer/UhligNRSMABKLS05,belay2012dune}.
-\dm{I don't understand this point about additional protection.  Is the
-  claim that \ix provides more protection than the exokernel, or that 
-  it avails itself of additional mechanisms to provide similar
-  protection in a less radical way?}
+systems~\cite{DBLP:conf/sosp/EnglerKO95}.
 
 \myparagraph{Native zero-copy API with explicit flow control:} We do
 not expose or emulate the POSIX API for networking.  Instead, the

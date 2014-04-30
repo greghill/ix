@@ -95,4 +95,4 @@ done
 MUTILATE_CMD="nice -n -20 ${MUTILATE_EXPERIMENT_PREFIX}/mutilate --noload --binary -v -s $MEMCACHED_SERVER $MUTILATE_AGENTS $MUTILATE_OPTS ${MUTILATE_EXTRA_OPTS}"
 echo "$0: starting experiment" >&2
 echo "$0: $MUTILATE_CMD" >&2
-sudo $MUTILATE_CMD | tr -s ' ' ','
+sudo stdbuf -o0 -e0 $MUTILATE_CMD | stdbuf -o0 -e0 tr -s ' ' ','

@@ -13,7 +13,7 @@ set output outfile
 set grid y
 set border 3
 set tics out nomirror
-set key top left
+set key top left invert
 
 set xlabel 'Connection Count (log scale)'
 set ylabel 'Messages/sec (x 10^{6})'

@@ -1,10 +1,15 @@
+%% put the key last to have correct numbering
+
 \begin{figure*}
 \begin{centering}
-\subfloat[Latency vs throughput for the memcached ETC workload.]{
+\subfloat[Synthetic workload modeled after ETC~\cite{Atikoglu:2012:WAL}.]{
 \includegraphics{figs/memcached-etc-basic.eps}}
-\subfloat[Multilate-Me Again!]{
-\includegraphics{figs/blank.eps}}
-\caption{Capacity and quality of service of memcached on Linux and \ix for XXX and YYY concurrent, established connections}
+\subfloat[Synthetic workload modeled after USR\cite{Atikoglu:2012:WAL}.]{
+\includegraphics{figs/memcached-usr-basic.eps}}
+\vspace{-2.7in}
+\subfloat{\includegraphics{figs/memcached-key.eps}}
+ \vspace{2.2in}
+\caption{95th percentila latency as a function of throughput for two memcached workloads.}
 \label{fig:mutilate}
 \end{centering}
 \end{figure*}
