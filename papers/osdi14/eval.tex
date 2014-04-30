@@ -5,7 +5,7 @@
 We compared \ix to the Linux baseline running a 3.11.10 kernel, and to
 mTCP We evaluate the scalability of \ix and compare it to the Linux
 baseline running a 3.11.10 kernel and to mTCP~\cite{jeong2014mtcp}. 
-Our evalution uses both networking microbenchmarks and a real-world,
+Our evaluation uses both networking microbenchmarks and a real-world,
 massively deployed, event-based application. 
 
 % We
@@ -91,7 +91,7 @@ experiments. Jumbo frames are never enabled.
 The Linux client and server implementations of our benchmarks use the
 \texttt{libevent} framework with the \texttt{epoll} system call.  We
 downloaded and installed mTCP from the public-domain
-realease~\cite{url:mtcp}, but had to write the benchmarks ourselves
+release~\cite{url:mtcp}, but had to write the benchmarks ourselves
 using the mTCP API.  To run mTCP, we switch to the 2.6.36 kernel, as
 this is the most recent supported kernel version.
 
@@ -156,7 +156,7 @@ on the 10GbE setup.  For Linux and mTCP, our results are consistent
 with the ones published in the mTCP paper~\cite{jeong2014mtcp}.  For
 all three tests (core scaling, message count scaling, message size
 scaling), \ix scales linearly much better and is quickly able to
-sature the hardware resources.  When reaching saturation, it is never
+saturatee the hardware resources.  When reaching saturation, it is never
 CPU-bound, and appears to be limited by the NIC packet per second
 hardware limit (Fig.~\ref{fig:short10:mcore}) or Ethernet wire rates
 limitations (Fig.~\ref{fig:short10:size}).  In constast, mTCP needs
@@ -181,19 +181,16 @@ configuration that uses only one of the four
 links. Fig.~\ref{fig:short40:mcore} shows that \ix linearly scales and
 delivers 3.9MTPS on 4x10GbE with a single socket.
 Fig.~\ref{fig:short40:roundtrips} shows that going to 4x10GbE also
-improves throughput, but only by 30\%: 
-\edb{the 10GbE configuration is within 10\% of the wire rate, but also
-  CPU-bound, resulting in small batches or \twiddle 3 packets
-  processed at every iteration through the \ix pipeline.  At 4x10GbE,
-  the pipeline automatically adapts to larger batches of \twiddle 113 packets,
-  which amortizes transitions and improves temporal
-  locality.}
-Finally,
-Fig.\ref{fig:short40:size} shows that \ix can deliver 8KB messages
-with a goodput of 35Gbps, for a wire throughput of 38Gpbs (out of a
-possible 39.7Gbps).  Overall, \ix makes it practical to scale
-protected TCP/IP processing beyond 10GbE, even with a single
-multi-core server.
+improves throughput, but only by 30\%: the 10GbE configuration is CPU
+bound and within 10\% of the wire rate, resulting in small batches or
+\twiddle 3 packets processed at every iteration through the \ix
+pipeline.  At 4x10GbE, the pipeline automatically adapts to larger
+batches of \twiddle 113 packets, which amortizes transitions and
+improves temporal locality.  Finally, Fig.\ref{fig:short40:size} shows
+that \ix can deliver 8KB messages with a goodput of 35Gbps, for a wire
+throughput of 38Gpbs (out of a possible 39.7Gbps).  Overall, \ix makes
+it practical to scale protected TCP/IP processing beyond 10GbE, even
+with a single multi-core server.
 
 
 \subsection{Connection Scalability}
@@ -216,6 +213,7 @@ total established connections.
 %/p
 %13.15085
 
+
 Fig.~\ref{fig:connscaling} shows up to to 100,000 connections, which
 is the upper bound we can reach with the available client machines.
 As expected, throughput increases with the degree of concurrency, but
@@ -223,11 +221,10 @@ then decreases for very large connections counts due to the
 increasingly high cost of multiplexing among open connections.  At the
 peak, \ix performs 13x better than Linux, consistent with the results
 from Fig.~\ref{fig:short40:roundtrips}.  With 100,000 connections and
-4x10GbE, \ix is able to deliver 52\% of its own peak
-throughput\edb{\sout{We believe we can improve on this result through
-    further tuning of our TCP/IP stack. }The performance drop is not
-  due to an increase in instruction counts, but rather primarily
-  because the TCP/IP control block structures exceed the size of the
-  processors's layer-3 cache.}
+4x10GbE, \ix is able to deliver 53\% of its own peak throughput.  The
+performance drop is not due to an increase in instruction counts, but
+rather primarily because the size of the TCP/IP protocol control block
+structures, which alone exceeds the size of the processor's layer-3
+cache.
 
 \input{eval-memcache}

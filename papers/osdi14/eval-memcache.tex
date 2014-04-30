@@ -5,7 +5,7 @@
 \input{figs/float-connscaling}
 \input{figs/float-mutilate}
 
-Finally, we evaluated the performance benefits of the \ix prected
+Finally, we evaluated the performance benefits of the \ix protected
 dataplane design with \texttt{memcached}, a massively deployed,
 in-memory key-value store built on top of the \texttt{libevent}
 framework~\cite{url:memcached}, . It is frequently used as a
@@ -22,7 +22,7 @@ We use the \texttt{mutilate} load-generator to place a selected load
 on the server in terms of requests per second (RPS) and measure
 response latency~\cite{url:mutilate}. \texttt{mutilate} coordinates a
 large number of client threads across multiple machines to generate
-the desired RPS load, while a sepeparate unloaded client measures
+the desired RPS load, while a separate unloaded client measures
 latency by issuing one request at the time.  We configure
 \texttt{mutilate} to generate load representative of two workloads
 from Facebook~\cite{Atikoglu:2012:WAL}: the ETC workload that
@@ -33,13 +33,13 @@ keys ($<$20B), 2B values, and 99\% GET requests. In USR, almost all
 traffic involves minimum-sized TCP packets. Each request is issued 
 
 For all experiments, we report 95th percentile latency as a function
-of the achieved throuhput. This graph provides insights the full range
+of the achieved throughput. This graph provides insights the full range
 of system behaviors. Most commercial \texttt{memcached} use such a
 latency-throughput graph to provision each server so that the 95th
 percentile latency does not exceed 200 to 500\microsecond. We report
 only 95ht percentile latency as the average or median latency is
 irrelevant for web-scale services~\cite{DBLP:journals/cacm/DeanB13}.
-We carefully tune the Linux baseline setup according to the guidlines
+We carefully tune the Linux baseline setup according to the guidelines
 in \cite{Leverich:RHSU:2014}. Specifically, we pin memcached threads,
 configure interrupt-distribution based on thread-affinity, and tune
 interrupt moderation thresholds. We believe that our baseline Linux
@@ -48,7 +48,7 @@ open-source version of memcached. \christos{add version number}
 
 \christos{Should we discuss the porting process to IX?}
 
-\christos{ guestimate} Fig.~\cite{fig:mutilate} shows the
+\christos{ guestimate} Fig.~\ref{fig:mutilate} shows the
 throughput-latency curves for the two \texttt{memcached} workloads for
 Linux and \ix. In both cases, we use \christos{X} client machines and
 a total of \christos{Y} connections to the memcached server. The
