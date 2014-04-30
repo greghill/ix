@@ -34,8 +34,8 @@ prep_ix-40() {
 }
 
 run_experiment() {
-  ./prep_experiment.sh $SERVER_HOST $1
-  ./run_experiment.sh $SERVER_HOST $1 > $OUTDIR/$1.csv
+  ./prep_experiment.sh $SERVER_HOST_EXPERIMENT $1
+  ./run_experiment.sh $SERVER_HOST_EXPERIMENT $1 > $OUTDIR/$1.csv
 }
 
 setup_and_run() {
@@ -71,6 +71,7 @@ setup_and_run() {
   elif [ $CLUSTER_ID = 'Stanford' ]; then
     export AGENT_SUBDIR="stanford/"
     SERVER_HOST="maverick-17-10g"
+    SERVER_HOST_EXPERIMENT="maverick-17-10g"
     SERVER_IF="p3p1"
     MEMCACHED_THREADS=12
     MEMCACHED_CORES=0,1,2,3,4,5,12,13,14,15,16,17
