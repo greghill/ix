@@ -62,12 +62,12 @@ setup_and_run() {
   
   # Configure
   if [ $CLUSTER_ID = 'EPFL' ]; then
-    echo "EPFL: please specify a server and make agent profiles!" && false
     export AGENT_SUBDIR="epfl/"
-    SERVER_HOST=
-    SERVER_IF=
-    MEMCACHED_THREADS=16
-    MEMCACHED_CORES=
+    SERVER_HOST=sciicebpc1
+    SERVER_HOST_EXPERIMENT=192.168.21.1
+    SERVER_IF=eth11
+    MEMCACHED_THREADS=6
+    MEMCACHED_CORES=1,3,5,7,9,11
   elif [ $CLUSTER_ID = 'Stanford' ]; then
     export AGENT_SUBDIR="stanford/"
     SERVER_HOST="maverick-17-10g"
