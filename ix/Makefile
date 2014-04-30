@@ -67,7 +67,7 @@ OBJS+=$(subst .S,.o,$(ASM_SRCS))
 depend: .depend
 
 .depend: $(SRCS)
-	bash -c "cat $(foreach SRC,$(SRCS),<($(CC) $(INC) -MM -MT $(SRC:.c=.o) $(SRC))) > ./.depend"
+	bash -c "cat $(foreach SRC,$(SRCS),<($(CC) $(CFLAGS) -MM -MT $(SRC:.c=.o) $(SRC))) > ./.depend"
 
 ifneq ($(MAKECMDGOALS),clean)
 include .depend

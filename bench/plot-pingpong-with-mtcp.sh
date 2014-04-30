@@ -13,11 +13,11 @@ SHORT_TITLES="$@"
 
 if [ -z "$SHORT_FILES" ]; then
   SHORT_FILES="$SHORT_FILES `nth 1 Netpipe-10/Netpipe`"
-  SHORT_FILES="$SHORT_FILES `nth 1 Netpipe-mTCP/Netpipe`"
+  #SHORT_FILES="$SHORT_FILES `nth 1 Netpipe-mTCP/Netpipe`"
   SHORT_FILES="$SHORT_FILES `nth 1 Netpipe-mTCP/Netpipe-mTCP`"
-  SHORT_FILES="$SHORT_FILES `nth 1 IX-10-RPC/Linux-Libevent`"
+  #SHORT_FILES="$SHORT_FILES `nth 1 IX-10-RPC/Linux-Libevent`"
   SHORT_FILES="$SHORT_FILES `nth 1 IX-10-RPC/IX`"
-  SHORT_TITLES="Linux-10Gbps mTCP-10Gbps mTCP-10Gbps-mTCP IX-10Gbps IX-10Gbps-IX"
+  SHORT_TITLES="Linux-Linux mTCP-mTCP IX-IX"
 fi
 
 echo 'Using files:'

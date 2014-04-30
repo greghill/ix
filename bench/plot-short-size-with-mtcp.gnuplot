@@ -17,7 +17,7 @@ set tics out nomirror
 
 fig(infile) = "< awk '//{if ($1==6&&$3==1)print $0 }' ".infile.'| sort -nk2'
 set xlabel 'Message Size'
-set ylabel 'Throughput (Gbps)'
+set ylabel 'Goodput (Gbps)'
 set xrange [0:*]
 set yrange [0:10]
 set xtics ('0' 0)

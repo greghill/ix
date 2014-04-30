@@ -143,8 +143,6 @@ library includes an interface nearly identical to the popular
 \texttt{libevent} library~\cite{provos2003libevent}, providing
 compatibility between \ix and a wide range of existing applications.
 
-\christos{add a few more details above (3-4 sentences) if space allows}
-
 % \ix addresses the C10M problem through a careful separation of the
 % control plane and dataplane functions.  The control plane consists of a
 % vanilla Linux deployment running the Dune
@@ -170,10 +168,25 @@ compatibility between \ix and a wide range of existing applications.
 % (mean), with an additional latency jitter of not more than an extra
 % 10~\microsecond.
 
-We compare \ix against Linux and mTCP, a state-of-the-art user-level
-TCP stack~\cite{jeong2014mtcp}. \christos{TBD: discuss latency, packet
-  rate for small messages, connection scaling, and resource
-  usage. then discuss memached}
+The primary contributions resulting from our design are: (i) the
+combined use of commodity OS and virtualization hardware to separate
+control from data plane; (ii) a run-to-completion execution model with
+cooperating, untrusted applications; (iii) a bounded, adaptive
+batching mechanisms that provides both low-latency and high
+throughput.
+
+We compare \ix against Linux 3.11.10 and mTCP, a state-of-the-art
+user-level TCP stack~\cite{jeong2014mtcp}.  On network-intensive
+microbenchmark that are either latency-sensitive, require a high TCP
+connection churn, or manage a large number of concurrent connections,
+\ix outperforms Linux by an order of magnitude, and mTCP by up to
+2.5x.  \ix even scales to 4x10GbE configuration, using a single
+socket.  Our evaluation with memcached, a real-world, massively
+deployed key-value store shows that \ix outperforms Linux by XXX in
+terms of throughput, and lowers latency by XXX\% --- this specific
+workload transitions from running $>80\%$ in kernel mode with Linux to
+$<33\%$ with \ix.
+
 
 % \christos{I prefer to enumerate the main design principles and the
 %   list impressive numbers towards the goals rather than come up with

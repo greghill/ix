@@ -1,0 +1,28 @@
+
+\subsection{Application performance -- memcache}
+\label{sec:eval:memcached}
+
+\input{figs/float-connscaling}
+\input{figs/float-mutilate}
+
+We now validate the performance benefits of the protected dataplane
+design on memcached -- a real world, massively deployed, in-memory
+key-value store built on top of the libevent framework.  We use the
+mutilate~\cite{url:mutilate} load-generator to measure median and 95th
+percentile latency as a function of the throughput delivered by the
+server~\cite{Leverich:RHSU:2014}. 
+
+Fig.~\ref{fig:mutilate} reports the latencies as a function of the
+number of queries per second for synthetic workloads modelled after
+Facebook's \texttt{ETC} and \texttt{USR} workloads~\cite{Atikoglu:2012:WAL}.
+
+\edb{PLACEHOLDER} The peak QPS is measured using \ix at
+XXX, which maps to a bandwidth leaving the server of XXX Gbps, or XX\%
+of the theoretical wire rate of the machine.  We report the numbers
+for Linux and \ix for XXX and YYY established, concurrent
+connections served by the 18 clients.
+
+Our results show that \edb{TODO}.....
+
+
+%\input{eval-mtier}
