@@ -1,0 +1,12 @@
+diff --git a/ix/core/init.c b/ix/core/init.c
+index 70f7985..478cb11 100644
+--- a/ix/core/init.c
++++ b/ix/core/init.c
+@@ -735,6 +735,7 @@ int main(int argc, char *argv[])
+ 	}
+ #endif
+ 
++	sleep(30);
+ #if SANDBOX_ENABLED
+ 	ret = sandbox_init(arguments.restc, arguments.restv);
+ 	if (ret) {
