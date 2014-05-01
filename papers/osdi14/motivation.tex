@@ -59,11 +59,11 @@ calls~\cite{DBLP:conf/usenix/PaiDZ99,DBLP:conf/sosp/WelshCB01}. % This is in
 High-level libraries simplify the development of event-driven
 applications~\cite{provos2003libevent,libev,libuv}.  For example, the
 popular \texttt{libevent} library provides a level of abstraction that
-exposes the paradigm to applications running on top of Linux, *BSD,
-and Windows~\cite{provos2003libevent}. Many web-scale applications,
-such as \texttt{memcached}~\cite{url:memcached}, are built on top of
-\texttt{libevent}.  Others such as \texttt{nginx} and \texttt{node.js} are built using
-similar frameworks.
+exposes the paradigm to Linux, *BSD, and Windows
+applications~\cite{provos2003libevent}. For example,
+\texttt{memcached} is built on top of
+\texttt{libevent}~\cite{url:memcached}, while \texttt{nginx} and
+\texttt{node.js} are built using similar frameworks.
 
 
 \subsection{Main Requirements}
@@ -78,7 +78,7 @@ software and their networking stacks:
 \myparagraph{High packet rates:} The requests and, often times, the
 replies between services in web-scale applications are quite small. In
 Facebook's \texttt{memcached} service, for example, the vast majority
-of requests uses keys shorter than 50 bytes and involves values shorter
+of requests use keys shorter than 50 bytes and involves values shorter
 than 500 bytes~\cite{Atikoglu:2012:WAL}. As a result, each service
 node must ideally scale to extremely high packet rates, measured in
 millions of packets per second on 10 GbE or 40 GbE NICs.  In such
@@ -97,33 +97,34 @@ NICs~\cite{cisco-sereno}, one to five switch crossings with
 % Avoid putting lower-case letters next to one another in math mode.
 % No need for italics in ns, anyway, unless you are denoting
 % multiplication between distinct variables.
-cut-through latencies of a few hundred ns each, and propagation
-delays of 500ns for 100 meters distance. Unfortunately, system
-software is designed to operate at a totally different
-timescale. Interrupt coalescing used to improve throughput, queuing
-latency due to device driver processing intervals, and protocol
-processing of incoming packets without necessarily immediately
-scheduling the receiving application frequently add several hundred
-\microsecond of latency to remote procedure calls (see measurements in
-\S\ref{sec:eval}).
+cut-through latencies of a few hundred ns each, and propagation delays
+of 500ns for 100 meters distance. Unfortunately, system software is
+designed to operate at a totally different timescale. Interrupt
+coalescing used to improve throughput, queuing latency due to device
+driver processing intervals, and protocol processing of incoming
+packets without immediately scheduling the receiving application
+frequently add several hundred \microsecond of latency to remote
+procedure calls (see measurements in \S\ref{sec:eval}).
 
 
 These issues compound when considering the long tail of the latency
 distributions of RPCs across thousands of
 servers~\cite{DBLP:journals/cacm/DeanB13}. Although tail-tolerance is
 actually an end-to-end challenge, the system software stack plays a
-significant role in exacerbating the problem~\cite{Leverich:RHSU:2014}.
-Protocol-processing techniques that reduce latency to \microsecond on
-average, but do not improve 95th or 99th percentile latency are
-unlikely to result in end-to-end application gains.
+significant role in exacerbating the
+problem~\cite{Leverich:RHSU:2014}.  Protocol-processing techniques
+that reduce average latency, but do not improve 95th or 99th
+percentile latency are unlikely to result in end-to-end application
+gains.
 
-\myparagraph{Connection scalability:} For applications that use thousands of
-multi-core servers, it is desirable to efficiently support both a
-large number of concurrent connections per server, as well as high
-churn in these connections.  Ideally, the only limitation to a
-server's concurrent connection count should be its memory capacity. Furthermore,
-the packet rate and tail latency should be independent of the number
-of concurrent connections or the rate of churn.
+\myparagraph{Connection scalability:} For applications that use
+thousands of multi-core servers, it is desirable to efficiently
+support both a large number of concurrent connections per server, as
+well as high connections churn.  Ideally, the only limitation to a
+server's concurrent connection count should be its memory
+capacity. Furthermore, the packet rate and tail latency should be
+independent of the number of concurrent connections or the rate of
+churn.
  
 Connection scalability has been a historical challenge for commodity
 operating systems, reaching 10,000 concurrent connections a decade
@@ -152,9 +153,9 @@ datacenters~\cite{Hindman:2011:MPF,Schwarzkopf:2013:OFS,DBLP:journals/cacm/DeanB
 there is need for isolated network stacks. For single-tenant
 deployments where all services are administered by the same
 organization, the use of kernel-based networking largely addresses the
-problem.  However, security tradeoffs emerge when networking is lifted into the
-user-space and application bugs can corrupt the networking stack and
-impact other services.
+problem.  However, security tradeoffs emerge when networking is lifted
+into the user-space and application bugs can corrupt the networking
+stack and impact other services.
 
 
 \subsection{Alternative Approaches}
@@ -192,7 +193,7 @@ entrusted to applications.
 
 \myparagraph{Alternatives to POSIX API:} MegaPipe replaces the POSIX
 API with lightweight sockets implemented with in-memory command
-rings~\cite{han2012megapipe} . This substantially reduces software
+rings~\cite{han2012megapipe}. This substantially reduces software
 overheads and increases packet rates, but retains all other challenges
 of using an existing, kernel-based networking stack.
 
@@ -206,6 +207,6 @@ completely eliminate communication between cores, as the lack of
 commutativity in the POSIX socket API implies that cross-core
 communication is needed when connections are accepted or
 closed~\cite{DBLP:conf/sosp/ClementsKZMK13}. When microsecond
-latencies are irrelevant\ana{(tolerable?)}, such as Internet-facing communication
-services, properly tuned stacks can support millions of concurrent
-connections~\cite{whatsapp-2mil}.
+latencies are irrelevant\ana{(tolerable?)}, as with Internet-facing
+messaging services, properly tuned stacks can support millions of
+concurrent connections~\cite{whatsapp-2mil}.
