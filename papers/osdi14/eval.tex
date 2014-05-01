@@ -4,9 +4,9 @@
 
 We compared \ix to the Linux baseline running a 3.11.10 kernel, and to
 mTCP\@. We evaluate the scalability of \ix and compare it to the Linux
-baseline running a 3.11.10 kernel and to mTCP~\cite{jeong2014mtcp}. 
+baseline running a 3.11.10 kernel and to mTCP~\cite{jeong2014mtcp}.
 Our evaluation uses both networking microbenchmarks and a real-world,
-massively deployed, event-based application. 
+massively deployed, event-based application.
 
 % We
 % selected mTCP as it is the state-of-the-art user-space TCP alternative
@@ -153,17 +153,18 @@ an unfair advantage?}
 %% IX:  7074246
 %% mTCP: 3253521
 
-\myparagraph{10GbE results:} Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} show the results
+\myparagraph{10GbE results:}
+Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} show the results
 on the 10GbE setup.  For Linux and mTCP, our results are consistent
 with the ones published in the mTCP paper~\cite{jeong2014mtcp}.  For
 all three tests (core scaling, message count scaling, message size
-scaling), \ix scales more aggresively and is quickly able to
-saturate the hardware resources.  When reaching saturation, it is never
+scaling), \ix scales more aggresively and is quickly able to saturate
+the hardware resources.  When reaching saturation, it is never
 CPU-bound, and appears to be limited by the NIC packet per second
 hardware limit (Fig.~\ref{fig:short10:mcore}) or Ethernet wire rates
-limitations (Fig.~\ref{fig:short10:size}).  By contrast, \adam{new:} mTCP,
-can only come close to matching \ix on Fig.~\ref{fig:short10:mcore} with all 6 cores, and
-delivers 46\% of the throughput of \ix on
+limitations (Fig.~\ref{fig:short10:size}).  By contrast, mTCP, can
+only come close to matching \ix on Fig.~\ref{fig:short10:mcore} with
+all 6 cores, and delivers 46\% of the throughput of \ix on
 Fig.~\ref{fig:short10:roundtrips}.  Linux is never able to match \ix
 or mTCP on any configuration.
 
@@ -226,8 +227,8 @@ from Fig.~\ref{fig:short40:roundtrips}.  With 100,000 connections and
 4x10GbE, \ix is able to deliver 53\% of its own peak throughput.  The
 performance drop is not due to an increase in instruction counts, but
 rather primarily because the size of the TCP/IP protocol control block
-structures, which alone exceeds the size of the processor's layer-3
-cache. \adam{new:} Moreover, there are algorithmic complexity and memory footprint overheads
-in our LWIP-based TCP implementation, so we believe even greater scalability is possible.
+structures, which alone exceeds the size of the processor's L3
+cache. We believe we can improve further on the complexity and memory
+footprint of our lwIP-based stack in future work. 
 
 \input{eval-memcache}
