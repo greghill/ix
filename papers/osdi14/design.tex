@@ -113,10 +113,14 @@ runs to completion all pipeline stages needed to receive or transmit a
 packet, interleaving protocol processing (kernel mode) and application
 logic (user mode) as needed. Hence, there is no need for intermediate
 buffering between pipeline stages or between the application logic and
-the TCP/IP stack. Batch processing minimizes instruction overheads and
+the TCP/IP stack. \adam{try to address mogul:} Run to completion has been
+previously proposed as a solution to recieve livelock~\cite{receivelivelock}. Our system builds
+on this approach by generalizing it to both kernel and user-level, improving
+end-to-end performance through better temporal locality and eliminating
+the need for interrupts in the common case.  Batch processing also minimizes instruction overheads and
 increases cache locality.  Unlike previous proposals that batch only
 at the API level in order to amortize system call
-overhead~\cite{jeong2014mtcp,han2012megapipe}, we execute every
+overhead~\cite{jeong2014mtcp,han2012megapipe,soares2010flexsc}, we execute every
 pipeline stage on a small batch of packets or commands in order to
 fully amortize instruction caching effects and the overhead of PCIe
 transfers. To minimize the impact on latency and improve utilization on
