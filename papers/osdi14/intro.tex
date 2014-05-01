@@ -2,7 +2,6 @@
 \section{Introduction}
 \label{sec:intro}
 
-%\edb{Not updated in a while....}
 
 \dm{The intro is very buzzword-heavy, which makes a fundamental
   contribution (architecture for super low-overhead networking) sound
@@ -13,6 +12,7 @@
   to fix twitter's or Amazon's problems in 2014.  It is a fundamental
   re-thinking of how to design network APIs for modern NIC hardware,
   which could enable new types of system down the line.}
+
 Web-scale applications such as search, social networking, and
 e-commerce platforms, are redefining the requirements on system
 software. A single application can consist of hundreds of software
@@ -22,15 +22,15 @@ by external users~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07}. Such
 applications need TCP/IP networking stacks that go well beyond the
 classical requirements of high streaming performance and moderate
 connection scalability. The new requirements include high packet rates
-for short messages~\cite{Atikoglu:2012:WAL},
-microsecond-level responses to remote requests with tight tail latency
+for short messages~\cite{Atikoglu:2012:WAL}, microsecond-level
+responses to remote requests with tight tail latency
 guarantees~\cite{DBLP:journals/cacm/DeanB13}, and support for hundreds
 of thousands of connections with high connection
-churn~\cite{nishtala2013scaling}. It is also desirable
-to be elastic in resource usage, allowing other applications to use
-any available cores and memory in a shared
-cluster~\cite{nishtala2013scaling} or enabling cost reduction through
-power management~\cite{DBLP:journals/computer/BarrosoH07}.
+churn~\cite{nishtala2013scaling}. It is also desirable to be elastic
+in resource usage, allowing other applications to use any available
+cores and memory in a shared cluster~\cite{nishtala2013scaling} or
+enabling cost reduction through power
+management~\cite{DBLP:journals/computer/BarrosoH07}.
 
 
 % \christos{1-2 paragraphs on how mainstream approaches fail many 
@@ -72,16 +72,16 @@ power management~\cite{DBLP:journals/computer/BarrosoH07}.
 % coalescing improve performance at the expense of average and tail
 % latency~\cite{missing}.
 
-\dm{Bad to rely on ``conventional wisdom'' without citation, but we
-  can reasonably quantify such overheads ourselves to state a fact.
-  E.g., ``Currently the only option for meeting XXX performance
-  requirement is to bypass the kernel[cite], with the following
-  disadvantages\ldots''}
+% \dm{Bad to rely on ``conventional wisdom'' without citation, but we
+%   can reasonably quantify such overheads ourselves to state a fact.
+%   E.g., ``Currently the only option for meeting XXX performance
+%   requirement is to bypass the kernel[cite], with the following
+%   disadvantages\ldots''} 
 The conventional wisdom is that there is a fundamental mismatch
 between the requirements of web-scale workloads and existing
 implementations of TCP/IP in commodity operating
-systems. Consequently, many proposed solutions bypass the operating
-system and implement the networking stack in
+systems. Consequently, many proposed solutions bypass the OS and
+implement the networking stack in
 user-space~\cite{jeong2014mtcp,Kapoor:2012:CPL,openonload,marinos2013network,Thekkath:1993:INP}. Some
 systems go one step further by also replacing TCP/IP with RDMA in
 order to offload protocol processing to Infiniband network
@@ -121,15 +121,15 @@ stack and impact other workloads.
 % data-plane architecture that runs to completion; design for multi-core
 % and multi-queue. Probably two paragraphs}
 
-We propose \ix, an operating system designed specifically to meet the
-networking requirements of event-driven, web-scale applications.
 \dm{Again, this makes it sound narrow.  Phrase in a more fundamental
   way.  Point is that currently people must achieve a delicate $n$-way
   balance between throughput, latency, protection/robustness,
   complexity, number of machines/power consumption, etc.  \ix shows it
   doesn't have to be this way; we can have our cake and eat it, too,
-  if we architect better systems around improved APIs.}
-Its
+  if we architect better systems around improved APIs.} 
+
+We propose \ix, an operating system designed specifically to meet the
+networking requirements of event-driven, web-scale applications.  Its
 architecture builds upon the lessons from high performance
 middleboxes, such as firewalls, load-balances, and software
 routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09}. \ix
@@ -137,11 +137,11 @@ separates the control plane, which is responsible for basic kernel
 functionality such as provisioning and scheduling, from the dataplanes
 which run the networking stack and application logic. However, \ix
 uses hardware virtualization to isolate the control plane from the
-dataplanes~\cite{DBLP:journals/computer/UhligNRSMABKLS05}
-and offer the same protection model as commodity operating systems. In
-our implementation, the control plane runs on a vanilla Linux kernel and
-the dataplanes use Dune to run \ix as protected, library-based operating
-systems~\cite{belay2012dune}. 
+dataplanes~\cite{DBLP:journals/computer/UhligNRSMABKLS05} and offer
+the same protection model as commodity operating systems. In our
+implementation, the control plane runs on a vanilla Linux kernel and
+the dataplanes use Dune to run \ix as protected, library-based
+operating systems~\cite{belay2012dune}.
 
 \ix provides a native, zero-copy API that explicitly exposes network
 flow-control to applications.  This API enables dataplanes to optimize
@@ -208,13 +208,13 @@ compatibility between \ix and a wide range of existing applications.
 % (mean), with an additional latency jitter of not more than an extra
 % 10~\microsecond.
 
-The primary contributions of the \ix design are: (i) the combined use
-of commodity OS and virtualization hardware to separate control from
-data plane in a protected networking stack; (ii) a run-to-completion
-execution model with cooperating, untrusted applications; (iii) a
-bounded, adaptive batching mechanism that provides both low-latency
-and high throughput; (iv) an implementation carefully optimized for
-multi-core scalability. 
+% The primary contributions of the \ix design are: (i) the combined use
+% of commodity OS and virtualization hardware to separate control from
+% data plane in a protected networking stack; (ii) a run-to-completion
+% execution model with cooperating, untrusted applications; (iii) a
+% bounded, adaptive batching mechanism that provides both low-latency
+% and high throughput; (iv) an implementation carefully optimized for
+% multi-core scalability. 
 
 We compare \ix against Linux 3.11.10 and mTCP, a state-of-the-art
 user-level TCP stack~\cite{jeong2014mtcp}.  On networking
@@ -224,9 +224,20 @@ connection churn, or manage a large number of concurrent connections,
 2.5x.  \ix even scales to 4x10GbE configuration, using a single
 multi-core socket.  Our evaluation with memcached, a real-world,
 massively deployed key-value store, shows that \ix improves upon Linux
-by 1.8x-2.7x in terms of throughput at a given 95th
-percentile latency bound, as it can reduce kernel mode processing from
-$>80\%$ with Linux to $<33\%$ with \ix.
+by 1.8x-2.7x in terms of throughput at a given 95th percentile latency
+bound, as it can reduce kernel mode processing from $>80\%$ with Linux
+to $<33\%$ with \ix.
+
+\ix demonstrates that, by revisiting the networking APIs and taking
+advantage of modern NICs and multi-core chips, we can design systems
+that achieve high throughput \underline{and} low latency
+\underline{and} high connection counts \underline{and} robust
+protection. It also shows that, by separating the the small subset of
+performance-critical I/O functions from the rest of the kernel, we can
+design systems with radically different I/O architectures and achieve
+large performance gains, while retaining compatibility with the huge
+set of servers provided by a modern OS.
+
 
 % \christos{I prefer to enumerate the main design principles and the
 %   list impressive numbers towards the goals rather than come up with
