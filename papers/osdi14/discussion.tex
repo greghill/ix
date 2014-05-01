@@ -17,8 +17,8 @@ Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, the lack of intermediate
 buffers pushes all abstractions outside of the OS kernel, allowing for
 efficient, application-specific implementations.  In particular, the
 zero-copy approach helps even when the user-level libraries add a
-level of copying, as it is the case for \texttt{libevent}
-compatibility.  The extra copy occurs much closer to the actual use,
+level of copying, as it is the case for compatibility interfaces in
+our event library.  The extra copy occurs much closer to the actual use,
 thereby increasing cache locality.  Finally, we took great care in
 tuning the implementation of \ix for multi-core scalability,
 eliminating constructs that introduce synchronization or coherence
@@ -40,7 +40,30 @@ traffic.
 % not (yet) attempt to optimize the code paths for performance, and
 % consequently believe that our results have room for improvement.
 
-\myparagraph{Challenges in API design:} \adam{TODO}
+\myparagraph{Challenges in API design:} \adam{TODO} We iterated through
+many designs for the \ix dataplane API in an effort to
+support simple, high performance, flexible, and secure IO at user-level.
+Batched system calls, in particular, were a challenge to support
+correctly. In an early design of \ix we ommited return codes from
+batched system calls, instead opting to make the outcome of every operation be
+an event condition. However, we discovered that the undefined order
+of event condition delivery created uneccesary complexity. For example, if a
+sent event condition is delivered before the status of the previous sendv system call
+was provided, then it was difficult for our event library to determine
+which pending data in the send window should be enqueued next. We
+fixed this issue by handling system call return codes seperately from
+event conditions. In our final design, the kernel overwrites user memory
+containing batched system call requests with corresponding return
+codes. We also discovered that we could improve performance and error
+handling simplicity in our event libary by issuing a single sendv system
+call per flow for each processing round. Thus, if an application
+requests more than one write IO, we'll coalesce them into a single
+system call.
+
+In the future, We are interested in supporting multiple different IO programming
+models, each of which would be possible to implement on top of our low-level
+dataplane API. These include Megapipe~\cite{han2012megapipe},
+cooperative threading~\cite{capriccio}, and rule-based models~\cite{stutsman_2013}.
 
 \todo Lessons learned: importance of hardware knobs and
 micro-architectural effects.  \christos{should we get into that? at
