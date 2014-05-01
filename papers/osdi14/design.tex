@@ -2,21 +2,20 @@
 \label{sec:design}
 
 % We now present the fundamental design principles of a dataplane
-% architecture designed to run untrusted, event-driven applicatxions, and
-% designed to address the specific scalability challenges of today's
-% web-scale applications.
+% architecture designed to run untrusted, event-driven applicatxions,
+% and designed to address the specific scalability challenges of
+% today's web-scale applications.
 
 The first three requirements of \S\ref{sec:motivation:challenges} --
 high packet rate, microsecond latency, and connection scalability--
-are not unique to event-driven, web-scale applications.  These
-requirements are reasonably well understood and have been addressed in
-the design of middleboxes such as firewalls,
-load-balancers, and software
+are not unique to web-scale applications.  These requirements are
+reasonably well understood and have been addressed in the design of
+middleboxes such as firewalls, load-balancers, and software
 routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09};
 by integrating the networking stack and the application into a single
-\emph{dataplane}. The two remaining requirements -- resource elasticity
-and protection -- are not addressed in middleboxes because they
-are single-purpose systems, not exposed directly to users.
+\emph{dataplane}. The two remaining requirements -- resource
+elasticity and protection -- are not addressed in middleboxes because
+they are single-purpose systems, not exposed directly to users.
 
 % As for the other two remaining aspects -- resource elasticity and
 % security and protection --, middleboxes provide fewer insights: since
