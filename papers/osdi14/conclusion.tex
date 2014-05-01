@@ -2,30 +2,31 @@
 \section{Conclusion}
 
 We have presented \ix, a dataplane operating system for event-driven,
-web-scale applications.  Although event-driven applications have
-become the norm in web-scale applications, they typically run on
-commodity operating systems and networking stacks designed and
-optimized for the thread-oriented applications.  In contrast, our
-architecture leverages hardware virtualization to separate the control
-plane, the \ix kernel instances, and the event-driven applications
-running on top of \ix.  The system is designed to ensure high packet
-rates, to offer micro-second latency response times to clients
-including in high occupancy situations, to scale to a large number of 
-TCP connections, and to allow for a coarse-grain, yet
-elastic allocation of hardware resources.
+web-scale applications.  Our architecture leverages hardware
+virtualization to separate the control plane, the \ix dataplane
+instances, and the event-driven applications running on top of it.
+\ix optimizes for both bandwidth and latency by processing bounded
+batches of packets to completion and by eliminating coherence traffic
+and synchronization on multi-core systems. We show that \ix
+outperforms Linux 3.11 by an order of magnitude and mTCP by up to 2.5
+in terms of throughput. It also outperforms Linux and mTCP in terms of
+latency by 3x and 15x respectively. \ix can support efficiently a
+hundred thousand connections. Finally, we show that porting
+\texttt{memcached} to \ix removes kernel bottlenecks and improves
+throughput by up to 2.7x.
 
-Our evaluation on stressful micro-benchmarks shows that \ix can
-deliver wire-rate performance in most situations and typically
-outperforms Linux 3.11 by an order of magnitude and mTCP, a
-state-of-the-art user-level TCP stack, by a factor of two or more. Our
-latency-sensitive benchmarks indicate that it can deliver one-way
-messages in \twiddle 6\microsecond, or 15\microsecond less than Linux.
-\edb{NEW:}Our evaluation with memcached, a real-world key-value store,
-using two realistic synthetic benchmarks, shows that \ix can deliver
-more \twiddle  1.5M while meeting a service level aggreement of $1ms$ at the
-95th percentile, an improvement of 1.8 and 2.7 over Linux, respectively.
-When running on \ix, memcached is no longer
-kernel-limited and its own application-level bottlenecks now limit its
-scalabilty.
+% A real-world key-value store,
+% using two realistic synthetic benchmarks, shows that \ix can deliver
+% more \twiddle  1.5M while meeting a service level aggreement of $1ms$ at the
+% 95th percentile, an improvement of 1.8 and 2.7 over Linux, respectively.
+% When running on \ix, memcached is no longer
+% kernel-limited and its own application-level bottlenecks now limit its
+% scalabilty.
 
 
+
+% The system is designed to ensure high packet rates, to offer
+% micro-second latency response times to clients including in high
+% occupancy situations, to scale to a large number of TCP connections,
+% and to allow for a coarse-grain, yet elastic allocation of hardware
+% resources.
