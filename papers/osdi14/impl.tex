@@ -202,7 +202,7 @@ outgoing Ethernet frames in the NIC's descriptor rings for
 transmission. Finally, it notifies the NIC to initiate a DMA transfer
 for these frames by updating the transmit ring's tail register.
 This process operates continuously in a loop until there are no
-event conditions posted. In this case, we enter a quiescent, where
+event conditions posted. In this situation, we enter a quiescent state, where
 we periodically poll the receive queues and potentially engage
 in power conservation states or yield to the control plane.
 
