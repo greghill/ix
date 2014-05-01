@@ -15,11 +15,12 @@ appliances~\cite{DBLP:conf/lisa/SapuntzakisBCZCLR03}, or processes
 with access to privileged instructions~\cite{belay2012dune}.
 Arrakis~\cite{peter2013arrakis,arrakisTR13} uses virtualization
 hardware, the Barrelfish
-multikernel~\cite{DBLP:conf/sosp/BaumannBDHIPRSS09} for control, and
-its own networking stack, to separate the dataplane from the control
-plane. \ix is a dataplane operating system that uses Linux for
-control, Dune for isolation, a mature networking stack for protocol
-processing.
+multikernel~\cite{DBLP:conf/sosp/BaumannBDHIPRSS09} for control, sharing
+s a similar separation of the dataplane from the control
+plane. \ix differs in that it uses Linux for
+control, has isolation of dataplane and application through use of Dune \adam{Arrakis runs the application and the network stack in the
+same protection domain, so this is a pretty large difference},
+and has a different execution model built around adaptive batching and run to completion.
 
 
 \myparagraph{Library operating systems:}
