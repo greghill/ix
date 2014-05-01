@@ -11,8 +11,8 @@ sizefmt_M(v) = invpow2(v) >= 20 ? sprintf('%dM', v / 1024**2) : sizefmt_K(v)
 sizefmt_K(v) = invpow2(v) >= 10 ? sprintf('%dK', v / 1024**1) : sizefmt_0(v)
 sizefmt_0(v) = sprintf('%d', v)
 set style data linespoints
-set style line 1 linecolor rgbcolor 'red'
-set style line 2 linecolor rgbcolor 'blue'
+set style line 1 linecolor rgbcolor 'blue'
+set style line 2 linecolor rgbcolor 'red'
 set style line 3 linecolor rgbcolor 'black'
 set style line 4 linecolor rgbcolor 'black'
 set style line 5 linecolor rgbcolor 'black'
