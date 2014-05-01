@@ -72,8 +72,8 @@ equivalent versions in our API. % There were a few incompatibilities
 % Finally, we made some small changes to the
 % behavior of the main event loop in order to better support our run to
 % completion execution model.
-We did not attempt to tune the internal scalability of {\it memcached}
-or to support zero-copy IO operations.
+We did yet not attempt to tune the internal scalability of {\it
+  memcached}~\cite{} or to support zero-copy IO operations.
 
 
 \input{tbl-mutilate}
@@ -81,13 +81,10 @@ or to support zero-copy IO operations.
 Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
 two \texttt{memcached} workloads for Linux and \ix, while
 Table~\ref{tbl:mutilate} reports the unloaded latencies and maximum
-query throughput that meets a service-level agreement, both measured at the 95th percentile.
-\ix noticeably reduces the unloaded latencies.
-Note that we use Linux clients for
-these experiments; running \ix on clients should further reduce
-latency.
-
-
+query throughput that meets a service-level agreement, both measured
+at the 95th percentile.  \ix noticeably reduces the unloaded
+latencies.  Note that we use Linux clients for these experiments;
+running \ix on clients should further reduce latency.
 
 For both workloads, the distribution of CPU time shifts from being
 $>80\%$ in the kernel with Linux to $<30\%$ with \ix.  Since the
