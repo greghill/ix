@@ -173,6 +173,16 @@ compatibility between \ix and a wide range of existing applications.
   inter-arrival times were many times the system call/interrupt
   latency.}
 
+\dm{Another point to add is that the breadth of OS APIs has made it
+  virtually impossible to deploy clean-slate operating systems,
+  despite possibly huge performance gains from radically different IO
+  architectures.  Fortunately, the performance-critical IO functions
+  are a small subset of the garbage can of system calls required for
+  setup, initialization, and configuration.  Hence, a big contribution
+  is showing how we can completely rearchitect the IO path while
+  retaining a high degree of source code compatibility and remaining
+  compatible with existing system configuration and management tool.}
+
 % \ix addresses the C10M problem through a careful separation of the
 % control plane and dataplane functions.  The control plane consists of a
 % vanilla Linux deployment running the Dune

@@ -8,9 +8,9 @@
 Finally, we evaluated the performance benefits of the \ix protected
 dataplane design with \texttt{memcached}, a massively deployed,
 in-memory key-value store built on top of the \texttt{libevent}
-framework~\cite{url:memcached}, . It is frequently used as a
+framework~\cite{url:memcached}. It is frequently used as a
 high-throughput, low-latency caching tier in front of persistent
-database servers. \texttt{memcached} is a networking bound
+database servers. \texttt{memcached} is a network-bound
 application, with threads spending over 80\% of execution time in
 kernel mode for network processing~\cite{Leverich:RHSU:2014}. It is a
 particularly difficult application to scale, in particular because the
@@ -31,23 +31,26 @@ keys, 1B-1KB values, and 90\% GET requests; and the USR workload that
 represents deployment with most GET requests in Facebook, has short
 keys ($<$20B), 2B values, and 99\% GET requests. In USR, almost all
 traffic involves minimum-sized TCP packets. Each request is issued 
+\dm{incomplete sentence?}
 
-For all experiments, we report the 50th (median) and 95th percentile
-latency as a function of the achieved throughput. This graph provides
-insights the full range of system behaviors. Most commercial
+\dm{Paragraph needs editing.  Also, why not report 99\% or 99.9\%?}
+For all experiments, we report 95th percentile latency as a function
+of the achieved throughput as this is the relevant metric for
+datacenter
+applications\microsecond~\cite{DBLP:journals/cacm/DeanB13}. This graph
+provides insights the full range of system behaviors. Most commercial
 \texttt{memcached} use such a latency-throughput graph to provision
 each server so that the 95th percentile latency does not exceed 200 to
-500\microsecond~\cite{DBLP:journals/cacm/DeanB13}.  We carefully tune
-the Linux baseline setup according to the guidelines in
-\cite{Leverich:RHSU:2014}. Specifically, we pin memcached threads,
-configure interrupt-distribution based on thread-affinity, and tune
-interrupt moderation thresholds. We believe that our baseline Linux
-numbers are as tuned as possible for this hardware using the
-open-source version of \texttt{memcached-1.4.18}. For our benchmark,
-we use 6 client machines and a total of 772 connections to the
-memcached server. We report the results for the configuration that
-provides the best performance -- for both Linux and \ix, this is by
-using 6 sockets out of the 8 available.
+500.  We carefully tune the Linux baseline setup according to the
+guidelines in \cite{Leverich:RHSU:2014}. Specifically, we pin
+memcached threads, configure interrupt-distribution based on
+thread-affinity, and tune interrupt moderation thresholds. We believe
+that our baseline Linux numbers are as tuned as possible for this
+hardware using the open-source version of
+\texttt{memcached-1.4.18}. For our benchmark, we use 6 client machines
+and a total of 772 connections to the memcached server. We report the
+results for the configuration that provides the best performance: 
+8 sockets with Linux, but only 6 with \ix.
 
 \christos{Should we discuss the porting process to IX?}
 
@@ -56,8 +59,8 @@ using 6 sockets out of the 8 available.
 \edb{NEW with table:} Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
 two \texttt{memcached} workloads for Linux and \ix, while
 Table~\ref{tbl:mutilate} reports the unloaded latencies and maximum query throughput that meets a service-level agreement of $<1ms$ at the 95th percentile.
-\ix noticeably reduces the unloaded latencies, measured
-at both the 50th and 95th percentile.  We note here that the benchmark
+\ix noticeably reduces the unloaded latencies, also measured
+at the 95th percentile.  We note here that the benchmark
 clients are running on Linux, and that running them on \ix should
 further reduce that latency. 
 

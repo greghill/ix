@@ -88,11 +88,11 @@ Each \ix dataplane supports a single, multithreaded POSIX
 application. For instance, Fig.~\ref{fig:cp-dp} shows one dataplane
 for a multi-threaded \texttt{memcached} server and another dataplane
 for a multi-threaded \texttt{nginx} server. The control plane allocates
-resources to each dataplane in a coarse-grain manner. Core allocation
+resources to each dataplane in a coarse-grained manner. Core allocation
 is controlled through real-time priorities and \texttt{cpusets};
 memory is allocated in large pages of 2MB in size; each NIC hardware queue is
 assigned to a single dataplane. This approach avoids the overheads and
-unpredictability of fine-grain time multiplexing of resources between
+unpredictability of fine-grained time multiplexing of resources between
 demanding applications~\cite{Leverich:RHSU:2014}.
 
 The \ix dataplane operates as a single address-space OS and supports
@@ -102,7 +102,7 @@ initiate and consume network I/O and (ii) \emph{background threads}.
 Both elastic and background threads can issue arbitrary POSIX system
 calls that are \adam{new:} intermediated and validated for security
 by the dataplane before being being forwarded
-by the Linux kernel.  Elastic threads are expected to \emph{not} issue
+to the Linux kernel.  Elastic threads are expected to \emph{not} issue
 blocking calls because of the adverse impact on network behavior and
 performance. Similarly, each elastic thread makes exclusive use of a
 core or hyperthread allocated to the dataplane in order to achieve
@@ -171,7 +171,7 @@ is associated with a specific set of receive queues from one or more
 NICs. Each NIC uses RSS to implement flow-consistent hashing and
 distribute incoming packets to queues. The queues are mapped in the
 server's main memory and the NIC is given a set of buffer descriptors
-that allow it to transfer incoming packets to memory using DMA.  The
+that allow it to transfer incoming packets to memory using DMA\@.  The
 elastic thread (1) polls the receive queues it is responsible for and
 potentially posts fresh buffer descriptors to the NIC for use with
 future incoming packets. The elastic thread (2) processes a bounded
@@ -188,7 +188,7 @@ outgoing Ethernet frames in the NIC's descriptor rings for
 transmission. Finally, it notifies the NIC to initiate a DMA transfer
 for these frames by updating the transmit ring's tail register. 
 
-The \ix dataplane consists of 37 KSLOC. We leveraged existing
+The \ix dataplane consists of 37 KSLOC\@. We leveraged existing
 codebases in its development: 43\% is derived from the DPDK variant of
 the Intel NIC device driver~\cite{intel:dpdk}, 23\% from the lwIP TCP/IP
 stack~\cite{dunkels2001design}, and 16\% from the Dune library.  All
@@ -260,7 +260,15 @@ elastic threads in a client cannot share a flow to a server. % \edb{\sout{In
 require synchronization on updates.  For example, the ARP table is
 shared by all elastic threads and is protected by RCU
 locks~\cite{mckenney1998read}, Hence, the common case reads are
-coherency-free but the rare updates are not. \ix also requires
+coherency-free but the rare updates are not.
+%
+\dm{Can you add a sentence about what constitutes a quiescent period
+  for RCU garbage collection, given that this is a very non-Linux
+  API?}
+
+% Worth a paragraph break here, since reconfiguration is a big
+% deal. -dm
+\ix also requires
 synchronization when the control plane reallocates resources between
 dataplanes.  For instance, when a core is revoked from a dataplane,
 the corresponding incoming queues must be assigned to another elastic
@@ -279,7 +287,10 @@ protocol processing code.
 The \ix API and implementation leads to a cooperative flow control
 model between application code and the network-processing stack.  But
 unlike user-level stacks that also expose networking behavior to user
-code, the \ix protection model makes few assumptions about application
+code,
+\dm{Can you say something more specific than networking behavior?
+  Maybe something like ``unrestricted raw network access''?}
+the \ix protection model makes few assumptions about application
 behavior. A malicious or misbehaving application can only hurt
 itself. It cannot corrupt the networking stack or affect other
 applications.
@@ -290,17 +301,19 @@ packet is passed read-only to the application, enabling zero-copy
 operation. Applications that hold on to message buffers for extensive
 periods of time must bound their use of this shared resource.  In the
 transmit direction, zero-copy operation implies that the application
-must maintain outgoing data immutable until the reception is
+must not modify outgoing data
+% maintain outgoing data immutable
+until reception is
 acknowledged by the peer. % \edb{\sout{If there is recepient is not
     % operating fast enough or there is network congestion, the sender
     % will soon experience memory pressure as well.}}
 
 Since elastic threads in \ix execute both the network stack and
 application code, a long running application can block further network
-processing for a set of queues. This behavior affects no other
-applications or dataplanes in anyway. We use a timeout interrupt to
+processing for a set of queues. This behavior in no way affects other
+applications or dataplanes. We use a timeout interrupt to
 detect elastic threads that spend excessive time in user mode (e.g.,
-beyond 10ms). We mark such applications as non-responsive and notify
+in excess of 10ms). We mark such applications as non-responsive and notify
 the control plane. %\edb{\sout{to potentially take resource allocation actions.}}
 
 Note that all application code in \ix runs in user-mode, while the
@@ -324,3 +337,13 @@ dataplanes and control planes, possibly at the expensive of some performance
 overhead~\cite{iommu_overhead}.
 
 
+\dm{This raised a couple of questions for me.  First, is the
+  immutability of transmit buffers enforced by memory protection, or
+  just by convention.  In other words, can you cause TCP segments to
+  be sent with bad checksums or otherwise shoot yourself in the foot
+  by writing to buffers in the send queue?  Second, why are message
+  buffers read-only (or does this exclude the actual payload part).
+  For example, if I'm implementing an HTTP proxy, can I make small
+  modifications to a message buffer I just received and then
+  retransmit it?  Or is the point that one would use scatter gather IO
+  for such surgical edits?}
