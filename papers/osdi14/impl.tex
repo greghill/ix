@@ -245,7 +245,7 @@ commutative~\cite{DBLP:conf/sosp/ClementsKZMK13}.
 
 Second, the API implementation is carefully optimized.  Each elastic
 thread manages its own memory pools, hardware queues, event condition
-queue, and batched system call queue. No synchronization is required
+array, and batched system call array. No synchronization is required
 to access any of them. The implementation of event conditions and
 batched system calls benefits directly from the explicit, cooperative
 control flow transfers between \ix and the application by the elastic
@@ -340,8 +340,8 @@ the control plane. %\edb{\sout{to potentially take resource allocation actions.}
 
 Note that all application code in \ix runs in user-mode, while the
 dataplane code is in protected ring 0. Applications cannot access
-kernel memory, except for read-only message buffers, or network
-hardware.  No sequence of batched system calls or other user-level
+dataplane memory, except for read-only message buffers. 
+No sequence of batched system calls or other user-level
 actions can be used to violate correct adherence to TCP and other
 network specifications.  Furthermore, the dataplane can be used to
 enforce network security policies (e.g., iptables or Amazon Security
