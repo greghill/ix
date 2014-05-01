@@ -13,7 +13,7 @@ high-throughput, low-latency caching tier in front of persistent
 database servers. \texttt{memcached} is a network-bound
 application, with threads spending over 80\% of execution time in
 kernel mode for network processing~\cite{Leverich:RHSU:2014}. It is a
-particularly difficult application to scale, in particular because the
+difficult application to scale, in particular because the
 common deployments involve high connection counts for
 \texttt{memcached} servers and small-sized requests and
 replies~\cite{nishtala2013scaling,Atikoglu:2012:WAL}
@@ -34,6 +34,7 @@ traffic involves minimum-sized TCP packets. Each request is issued
 \dm{incomplete sentence?}
 
 \dm{Paragraph needs editing.  Also, why not report 99\% or 99.9\%?}
+\adam{Are our linux graphs too noisy to do 99th? IX looks fine at 99th...}
 For all experiments, we report 95th percentile latency as a function
 of the achieved throughput as this is the relevant metric for
 datacenter
@@ -53,6 +54,21 @@ results for the configuration that provides the best performance:
 8 sockets with Linux, but only 6 with \ix.
 
 \christos{Should we discuss the porting process to IX?}
+\adam{new:} Porting memcached to IX primarly consisted of adapting it
+to use our event library. In most cases, the port was straightforward,
+replacing Linux and \texttt{libevent} function calls with their equivalent
+versions in our API. There were a few incompatibilities that required
+aditional effort. For example we don't yet support vectored write
+operations (e.g., \texttt{writev}) in our
+API (the benefits would be only marginal because we batch
+writes inside our event library). Morever, we had to make some internal changes
+to memcached in order to deliniate the spawning elastic threads and background
+threads.  \adam{On our haswell machine, which runs an older linux
+kernel this change works great, but it had to be disabled on the mavericks and at EPFL because
+newer kernels have something wierd going on with thread spawning. In pratice,
+background threads didn't make any noticable difference on the Haswell. Should I say anything about this
+limitation?} Finally, we made some small changes to the behavior of the main
+event loop in order to better support our run to completion execution model.
 
 \input{tbl-mutilate}
 
