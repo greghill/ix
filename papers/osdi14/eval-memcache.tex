@@ -75,6 +75,7 @@ threads. % \adam{On our haswell machine, which runs an older
 We did not attempt to tune the internal scalability of {\it memcached}
 or to support zero-copy IO operations.
 
+
 \input{tbl-mutilate}
 
 Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
@@ -85,6 +86,8 @@ query throughput that meets a service-level agreement of $<1ms$ at the
 measured at the 95th percentile.  Note that we use Linux clients for
 these experiments; running \ix on clients should further reduce
 latency.
+
+
 
 For both workloads, the distribution of CPU time shifts from being
 $>80\%$ in the kernel with Linux to $<30\%$ with \ix.  Since the

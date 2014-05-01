@@ -48,11 +48,11 @@
 % debugging only
 \usepackage[usenames,dvipsnames]{xcolor}
 \newif\ifcomments
-\commentstrue
+%\commentstrue
 
 %% Uncomment the following line to remove comments from text and get an
 %% accurate page count.
-%\commentsfalse
+\commentsfalse
 
 \ifcomments
 \newcommand{\edb}[1]{\noindent{\color{Plum} {\bf \fbox{EdB} {\it#1}}}}
@@ -107,7 +107,9 @@
 \bibliography{../common/dblp,../common/gscholar,../common/misc}
 \bibliographystyle{abbrv} 
 
+\ifcomments
 \input{dangling}
+\fi
 
 %\input{internal-notes} % really old stuff
 
