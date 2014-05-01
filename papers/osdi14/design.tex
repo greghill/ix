@@ -8,9 +8,9 @@
 
 The first three requirements of \S\ref{sec:motivation:challenges} --
 high packet rate, microsecond latency, and connection scalability--
-are not unique to web-scale applications.  These requirements are
-reasonably well understood and have been addressed in the design of
-middleboxes such as firewalls, load-balancers, and software
+are not unique to web-scale applications.  These requirements are have
+been addressed in the design of middleboxes such as firewalls,
+load-balancers, and software
 routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09};
 by integrating the networking stack and the application into a single
 \emph{dataplane}. The two remaining requirements -- resource
@@ -31,18 +31,16 @@ ways. First, they are designed to \emph{run each packet to
   completion}. All network protocol and application processing for a
 packet is done before moving on to the next packet.  In contrast, a
 commodity OS decouples protocol processing from the application itself
-in order to enable flexibility in terms of resource scheduling and
-flow control. For example, a commodity OS relies on device and soft
-interrupts, to context switch from application processing to protocol
-processing. Similarly, the kernel's networking stack will generate a
-TCP \texttt{ACK} and slide its receive window even when the
-application is not consuming data, up to some extent. Second,
-dataplanes are designed to operate in a \emph{flow-consistent,
-  coherence-free} manner.  Network flows are distributed into distinct
-queues via receive-side scaling
-(RSS)~\cite{url:rss}, so that the
-common case processing of a packet requires no synchronization or
-cache coherence interactions between cores.
+in order to provide scheduling and flow control flexibility.  For
+example, a commodity OS relies on device and soft interrupts to
+context switch from application to protocol processing. Similarly, the
+kernel's networking stack will generate a TCP \texttt{ACK} and slide
+its receive window even when the application is not consuming data, up
+to an extent. Second, dataplanes are designed to operate in a
+\emph{flow-consistent, coherence-free} manner.  Network flows are
+distributed into distinct queues via receive-side scaling
+(RSS)~\cite{url:rss} and the common case packet processing requires no
+synchronization or coherence traffic between cores.
 
 % Flow-consistency distributes flows
 % into distinct queues based on a L4-hash; this is routinely supported
@@ -61,17 +59,21 @@ following key design principles:
 % Software dataplanes are designed to operate on flows, not to
 % provision resources or manage them in an elastic and proportional
 % manner.
-Our design separates the control function, responsible for resource
-configuration, provisioning, scheduling, and monitoring, from the
-dataplane, which runs the networking stack and application logic.
-Like a conventional OS, the control plane multiplexes and schedules
-resources among dataplanes, but in a coarse-grained manner in space and
-time: cores are dedicated to applications until revoked, memory is
-allocated at large page granularity of physical memory; hardware queues are
-exclusively assigned to a single dataplane until explicitly revoked.
-Each dataplane runs a single application in a single address space.
-This is similar to the Exokernel approach of using library operating
-systems~\cite{DBLP:conf/sosp/EnglerKO95}.
+Our design separates the control function of the kernel, responsible
+for resource configuration, provisioning, scheduling, and monitoring,
+from the dataplane, which runs the networking stack and application
+logic.  Like a conventional OS, the control plane multiplexes and
+schedules resources among dataplanes, but in a coarse-grained manner
+in space and time: cores are dedicated to applications until revoked,
+memory is allocated at large page granularity of physical memory;
+hardware queues are exclusively assigned to a single dataplane until
+explicitly revoked.  The separation allows us to consider radically
+radically I/O APIs and implementations in the dataplane, while
+retaining full compatibility with a modern OS like Linux.  Similar to
+Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, each dataplane runs a
+single application in a single address space.
+
+ % of  using library operating systems~\cite{DBLP:conf/sosp/EnglerKO95}.
 
 \myparagraph{Native zero-copy API with explicit flow control:} We do
 not expose or emulate the POSIX API for networking.  Instead, the
@@ -79,18 +81,17 @@ dataplane and the application communicate asynchronously with each
 other via messages stored in
 memory~\cite{rizzo2012netmap,han2012megapipe}.  The API meets the
 commutativity rule~\cite{DBLP:conf/sosp/ClementsKZMK13} and allows for
-a true zero-copy operation in both receive and transfer
-directions. The dataplane and the application cooperatively manage the
-message buffer pool. Incoming packets are mapped read-only into the
-application that may hold onto message buffers and return them to the
-dataplane at a later point.  The application sends to the dataplane
-scatter/gather lists of memory locations for transmission but, since
-the contents are not copied, the application must keep the content
-immutable until the peer later acknowledges reception. The kernel
-implements all flow control mechanisms and may trim transmission
-requests that exceed the available size of the sliding
-window.  Essentially, the API directly, but safely, exposes
-flow control to applications.
+a true zero-copy operation in both directions. The dataplane and
+application cooperatively manage the message buffer pool. Incoming
+packets are mapped read-only into the application, which may hold onto
+message buffers and return them to the dataplane at a later point.
+The application sends to the dataplane scatter/gather lists of memory
+locations for transmission but, since contents are not copied, the
+application must keep the content immutable until the peer
+acknowledges reception. The kernel implements all flow control
+mechanisms and may trim transmission requests that exceed the
+available size of the sliding window.  Essentially, the API directly,
+but safely, exposes flow control to applications.
 
 
 % \myparagraph{Explicit flow control:} The API supports a zero-copy,
@@ -110,44 +111,41 @@ runs to completion all pipeline stages needed to receive or transmit a
 packet, interleaving protocol processing (kernel mode) and application
 logic (user mode) as needed. Hence, there is no need for intermediate
 buffering between pipeline stages or between the application logic and
-the TCP/IP stack. \adam{try to address mogul:} Run to completion has been
-previously proposed as a solution to receive livelock within the OS~\cite{receivelivelock}. We extend the approach to
-both kernel and user-level, improving
-end-to-end performance through better temporal locality and eliminating
-the need for interrupts in the common case.  Batch processing also minimizes instruction overheads and
-increases cache locality.  Unlike previous proposals that batch only
-at the API level in order to amortize system call
-overhead~\cite{jeong2014mtcp,han2012megapipe,soares2010flexsc}, we execute every
-pipeline stage on a small batch of packets or commands in order to
-fully amortize instruction caching effects and the overhead of PCIe
-transfers. To minimize the impact on latency and improve utilization on
-the outgoing wire, we perform adaptive batching as follows: (i) we
-never wait to batch requests, and as a result, batching only occurs
-in the presence of congestion; (ii) we set an upper bound on batch
-sizes to 128 packets, a value experimentally determined to effectively
-amortize startup overheads.
-\dm{Worth a citation of Mogul and Ramakrishnan eliminating receive
-  livelock paper?  They basically switch from interrupt-based to
-  bounded batch poll mode under load, though in their settings the
-  batches had to be a lot smaller.  They also articulated the
-  ``process every packet to completion'' principal, though didn't
-  carry it through to user mode.}
+the TCP/IP stack. Run to completion has been previously proposed to
+address receive livelock within the OS~\cite{receivelivelock}. We
+extend it to both kernel and user-level, which eliminates interrupts
+and improves data locality throughout the common case packet
+processing.
+
+Batch processing minimizes instruction overheads and increases
+instruction locality. Previous proposals batch only at the API level
+in order to amortize system call
+overhead~\cite{jeong2014mtcp,han2012megapipe,soares2010flexsc}. We
+execute every pipeline stage on a small batch of packets or commands
+to fully amortize instruction caching effects and the overhead of PCIe
+transfers. To minimize the impact on latency, we perform adaptive
+batching as follows: (i) we never wait to batch requests and batching
+only occurs in the presence of congestion; (ii) we set an upper bound
+on batches of 128 packets, a value experimentally determined to
+effectively amortize startup overheads.
+
 
 % Christos; this is essentially the other half of the "expose flow
 % control to applications". oh well...
 The combination of adaptive batch processing and zero copy means that
 queues for incoming packets can build up only at the NIC edge, before
-packets are processed by the dataplane. \ana{Emphasize that we are not wasting resources
-on packets that might have to be dropped; drop early at the NIC if can't handle. 
-Citation for Mogul and Ramakrishnan could go here.} The networking stack sends
+packets are processed by the dataplane. \ana{Emphasize that we are not
+  wasting resources on packets that might have to be dropped; drop
+  early at the NIC if can't handle.  Citation for Mogul and
+  Ramakrishnan could go here.} The networking stack sends
 acknowledgments to peers only as fast as the application can process
-them. Any slowdown in the application-processing rate quickly leads to
-shrinking windows in peers. The dataplane also monitors queue
-depths at the NIC edge and signals the control plane to allocate
-additional resources for the dataplane (more hardware threads,
-increase clock frequency), notify peers explicitly about congestion
-(e.g., via ECN~\cite{ramakrishnan2001addition}), and finally make
-policy decisions for congestion management (e.g., via
+them. Any slowdown in the application processing rate quickly leads to
+shrinking windows in peers. The dataplane also monitors queue depths
+at the NIC edge and signals the control plane to allocate additional
+resources for the dataplane (more hardware threads, increase clock
+frequency), notify peers explicitly about congestion (e.g., via
+ECN~\cite{ramakrishnan2001addition}), and make policy decisions for
+congestion management (e.g., via
 RED~\cite{DBLP:journals/ton/FloydJ93}).
 
 % \myparagraph{Buffering at the NIC edge:} The consequence of adaptive
