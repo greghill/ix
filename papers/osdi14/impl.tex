@@ -93,7 +93,7 @@ for a multi-threaded \texttt{memcached} server and another dataplane
 for a multi-threaded \texttt{nginx} server. The control plane allocates
 resources to each dataplane in a coarse-grained manner. Core allocation
 is controlled through real-time priorities and \texttt{cpusets};
-memory is allocated in large pages of 2MB in size; each NIC hardware queue is
+memory is allocated in large pages; each NIC hardware queue is
 assigned to a single dataplane. This approach avoids the overheads and
 unpredictability of fine-grained time multiplexing of resources between
 demanding applications~\cite{Leverich:RHSU:2014}.
@@ -164,9 +164,10 @@ development of new applications. Our library provides a functionally
 compatible interface to \texttt{libevent} and non-blocking POSIX
 socket operations. It also includes new interfaces for zero copy read
 and write operations that are more efficient, at the expense of
-requiring changes to existing applications. Our current implementation
-is missing certain features, such as support for timer events and
-high-level buffered I/O utilities.
+requiring changes to existing applications. 
+%Our current implementation
+%is missing certain features, such as support for timer events and
+%high-level buffered I/O utilities.
 
 \input{figs/float-pipeline} 
 
