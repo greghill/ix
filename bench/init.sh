@@ -37,8 +37,6 @@ if [ $SERVER == "1" ]; then
       echo "`whoami` hard nofile $NOFILE"
       exit 1
     fi
-    export DUNE_PATH=~/bmos/dune
-    export IGB_STUB_PATH=~/bmos/igb_stub
   fi
 else
   export IP=auto
