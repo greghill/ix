@@ -117,7 +117,7 @@ to three elastic threads and use one background thread to execute
 tasks such as garbage collection. When the control plane revokes or
 allocates an additional hyperthread using a protocol similar to the
 one used in Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, the dataplane
-must adjust the number of elastic threads it uses.
+must adjust its number of elastic threads.
 
 % We extended the Dune sandboxing mechanisms to support the initial load
 % of multi-threaded applications into the userlevel address space, to
@@ -336,7 +336,7 @@ done in a hypervisor~\cite{nsdi:nsx}. Our security model is as strong
 as conventional network stacks in commodity OSes and is missing from all
 the recently proposed user-level networking stacks.
 
-Our current implementation does does not utilize an IOMMU: we entrust
+Our current implementation does not utilize an IOMMU: we entrust
 the \ix kernel into the trusted code base by giving access to
 descriptor rings with host-physical addresses to avoid the possible
 performance overheads of using IOMMUs~\cite{iommu_overhead}.  This

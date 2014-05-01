@@ -57,7 +57,7 @@ Specialized FGPAs can replace conventional servers for important
 applications such as
 memcached~\cite{DBLP:conf/fpga/ChalamalasettiLWARM13,HPHA:Tanaka:2014,179402}.
 \ix is designed to allow TCP/IP to scale with architectural trends by
-elminating kernel bottlenecks.
+eliminating kernel bottlenecks.
 
 
 \myparagraph{Asynchronous and zero-copy interactions:} 
@@ -65,11 +65,11 @@ Systems with asynchronous, batched, or exception-less system calls
 substantially reduce the overheads associated with frequent kernel
 transitions and context switches~\cite{
   soares2010flexsc,han2012megapipe,rizzo2012netmap,jeong2014mtcp}.
-Zero-copy reduce data movement overheads and simplifies resource
-management~\cite{DBLP:journals/tocs/PaiDZ00}.  \ix's use of adaptive,
+Zero-copy reduces data movement overheads and simplifies resource
+management~\cite{DBLP:journals/tocs/PaiDZ00}, e.g., using page remapping and COW~\cite{solaris_zc}.
+\ix's use of adaptive,
 bounded batching is suitable for both low-latency and high-message
 rate, and its safe, cooperative memory management model enables
-zero-copy at the application level. Previous systems have supported
-zero-copy I/O through page remapping and COW, a more heavy weight mechanism~\cite{solaris_zc}.
+zero-copy at the application level without page remapping. 
 
 

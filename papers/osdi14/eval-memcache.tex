@@ -31,7 +31,7 @@ keys, 1B-1KB values, and 75\% GET requests; and the USR workload that
 represents deployment with most GET requests in Facebook, has short
 keys ($<$20B), 2B values, and 99\% GET requests. In USR, almost all
 traffic involves minimum-sized TCP packets. Each request is issued
-separately (no multiget operations).
+separately (no \texttt{multiget} operations).
 
 \dm{Paragraph needs editing.  Also, why not report 99\% or 99.9\%?}
 \adam{Are our linux graphs too noisy to do 99th? IX looks fine at
@@ -49,7 +49,7 @@ interrupt moderation thresholds. We believe that our baseline Linux
 numbers are as tuned as possible for this hardware using the
 open-source version of \texttt{memcached-1.4.18}. For our benchmark,
 we use 6 client machines and a total of 772 connections to the
-memcached server. \christos{check} We report the results for the
+memcached server.  We report the results for the
 server configuration that provides the best performance: 8 cores with
 Linux, but only 6 with \ix.
 

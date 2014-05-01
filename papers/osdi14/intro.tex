@@ -136,8 +136,8 @@ routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09}
 separates the control plane, which is responsible for basic kernel
 functionality such as provisioning and scheduling, from the dataplanes
 which run the networking stack and application logic. However, \ix
-uses hardware virtualization to isolate the control plane from the
-dataplanes~\cite{DBLP:journals/computer/UhligNRSMABKLS05} and offer
+uses hardware virtualization~\cite{DBLP:journals/computer/UhligNRSMABKLS05} to isolate the control plane from the
+dataplanes and offer
 the same protection model as commodity operating systems. In our
 implementation, the control plane runs on a vanilla Linux kernel and
 the dataplanes use Dune to run \ix as protected, library-based
@@ -270,8 +270,8 @@ set of APIs and services provided by a modern OS.
 organized as follows. \S \ref{sec:motivation} motivates the need
 for a new OS architecture for web-scale applications. \S\ref{sec:design} and \S\ref{sec:impl} present the design principles and
 implementation of \ix. \S\ref{sec:eval} presents the
-quantitative evaluation, while \S\ref{sec:related} discusses
-related work. 
+quantitative evaluation.\S\ref{sec:disc} and \S\ref{sec:related} discuss future and related work.
+
 
 
 
