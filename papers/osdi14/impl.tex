@@ -140,7 +140,9 @@ release them via the \texttt{recv\_done} batched system call.
 
 Both batched system calls and event conditions are passed through
 arrays of shared memory, managed by the user and the kernel
-respectively.  We provide a regular system (\texttt{poll}) that serves
+respectively.  We provide a regular system \dm{What does regular
+  system mean?  Even regular system \emph{call} would not make sense.}
+(\texttt{poll}) that serves
 to yield control to the kernel and initiate a new run to completion
 pass. As part of this process, the array of batched system call
 requests is overwritten with the corresponding return codes and an
@@ -191,7 +193,7 @@ server's main memory and the NIC is given a set of buffer descriptors
 that allow it to transfer incoming packets to memory using DMA\@.  The
 elastic thread (1) polls the receive queues it is responsible for and
 potentially posts fresh buffer descriptors to the NIC for use with
-future incoming packets. The elastic thread (2) processes a bounded
+future incoming packets. The elastic thread then (2) processes a bounded
 number of packets through the TCP/IP networking stack, thereby
 generating event conditions. Next, the elastic thread (3) passes
 control to the user-space applications, which consumes all event
