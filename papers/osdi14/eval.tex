@@ -120,7 +120,7 @@ between the three systems is most dramatic for small messages. Using
 64B messages, the one-way latency is 6.1\microsecond between two
 servers running \ix, 21\microsecond if they are running Linux, and
 95\microsecond if they are running mTCP.  The differences in system
-architecture explain such the dramatic gap. \ix has a dataplane model
+architecture explain the dramatic gap. \ix has a dataplane model
 that polls queues and runs them to completion. Linux has an interrupt
 model, which wakes up the blocked process. mTCP uses aggressive
 batching to offset the cost of context switching~\cite{jeong2014mtcp}.
@@ -157,12 +157,12 @@ an unfair advantage?}
 on the 10GbE setup.  For Linux and mTCP, our results are consistent
 with the ones published in the mTCP paper~\cite{jeong2014mtcp}.  For
 all three tests (core scaling, message count scaling, message size
-scaling), \ix scales linearly much better and is quickly able to
-saturatee the hardware resources.  When reaching saturation, it is never
+scaling), \ix scales more aggresively and is quickly able to
+saturate the hardware resources.  When reaching saturation, it is never
 CPU-bound, and appears to be limited by the NIC packet per second
 hardware limit (Fig.~\ref{fig:short10:mcore}) or Ethernet wire rates
-limitations (Fig.~\ref{fig:short10:size}).  In constast, mTCP needs
-all 6 cores to match the rate on Fig.~\ref{fig:short10:mcore}, and
+limitations (Fig.~\ref{fig:short10:size}).  By contrast, \adam{new:} mTCP,
+can only come close to matching \ix on Fig.~\ref{fig:short10:mcore} with all 6 cores, and
 delivers 46\% of the throughput of \ix on
 Fig.~\ref{fig:short10:roundtrips}.  Linux is never able to match \ix
 or mTCP on any configuration.
@@ -183,16 +183,16 @@ configuration that uses only one of the four
 links. Fig.~\ref{fig:short40:mcore} shows that \ix linearly scales and
 delivers 3.9MTPS on 4x10GbE with a single socket.
 Fig.~\ref{fig:short40:roundtrips} shows that going to 4x10GbE also
-improves throughput, but only by 30\%: the 10GbE configuration is CPU
+improves throughput, but only by 30\%: the 10GbE configuration is IO
 bound and within 90\% of the wire rate, resulting in small batches or
 \twiddle 3 packets processed at every iteration through the \ix
-pipeline.  At 4x10GbE, the pipeline automatically adapts to larger
-batches of \twiddle 113 packets, which amortizes transitions and
+pipeline.  At 4x10GbE, the workload becomes CPU bound and \ix automatically adapts to larger
+pipeline batches of \twiddle 113 packets, which amortizes transitions and
 improves temporal locality.  Finally, Fig.\ref{fig:short40:size} shows
 that \ix can deliver 8KB messages with a goodput of 35Gbps, for a wire
 throughput of 38Gpbs (out of a possible 39.7Gbps).  Overall, \ix makes
 it practical to scale protected TCP/IP processing beyond 10GbE, even
-with a single multi-core server.
+with a single socket multi-core server.
 
 
 \subsection{Connection Scalability}
@@ -227,6 +227,7 @@ from Fig.~\ref{fig:short40:roundtrips}.  With 100,000 connections and
 performance drop is not due to an increase in instruction counts, but
 rather primarily because the size of the TCP/IP protocol control block
 structures, which alone exceeds the size of the processor's layer-3
-cache.
+cache. \adam{new:} Moreover, there are algorithmic complexity and memory footprint overheads
+in our LWIP-based TCP implementation, so we believe even greater scalability is possible.
 
 \input{eval-memcache}
