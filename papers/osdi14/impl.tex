@@ -143,9 +143,9 @@ to yield control to the kernel and initiate a new run to completion
 pass through the \ix pipelining. As part of this process, the array
 of batched system call requests is overwritten with corresponding return
 codes and a new array of event conditions is populated. The handles
-defined in Table~\ref{tbl:api} are TCP flow
+defined in Table~\ref{tbl:api} are kernel-level flow
 identifiers. Each handle is associated with a cookie~\cite{han2012megapipe},
-an opaque identifier provided by the user at connection establishment
+an opaque value provided by the user at connection establishment
 to enable efficient user-level state lookup. %without an additional table lookup.
 
 \ix differs from POSIX sockets in that it directly exposes flow
