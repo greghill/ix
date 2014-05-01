@@ -4,8 +4,7 @@
 \label{sec:related}
 
 We organize the discussion topically, while avoiding redundancy with
-the commentary already exposed in \S\ref{sec:motivation:current}.
-
+the commentary in \S\ref{sec:motivation:current}.
 
 \myparagraph{Virtualization hardware:} Hardware support for
 virtualization naturally separates control and execution functions,
@@ -14,26 +13,24 @@ e.g., to build type-2 hypervisors
 appliances~\cite{DBLP:conf/lisa/SapuntzakisBCZCLR03}, or processes
 with access to privileged instructions~\cite{belay2012dune}.
 Arrakis~\cite{peter2013arrakis,arrakisTR13} uses virtualization
-hardware, the Barrelfish
-multikernel~\cite{DBLP:conf/sosp/BaumannBDHIPRSS09} for control, sharing
-s a similar separation of the dataplane from the control
-plane. \ix differs in that it uses Linux for
-control, has isolation of dataplane and application through use of Dune \adam{Arrakis runs the application and the network stack in the
-same protection domain, so this is a pretty large difference},
-and has a different execution model built around adaptive batching and run to completion.
+hardware and the Barrelfish multikernel for
+control~\cite{DBLP:conf/sosp/BaumannBDHIPRSS09}, sharing a similar
+separation of the dataplane from the control plane. \ix differs in
+that it uses Linux for control, isolates the control plane, the
+dataplane and applications through Dune, and has a different execution
+model built around adaptive batching and run to completion.
 
 
-\myparagraph{Library operating systems:}
-Exokernels proposed to implement system abstractions via library
-operating systems linked in with
-applications~\cite{DBLP:conf/sosp/EnglerKO95}, extending the
-end-to-end principle~\cite{DBLP:journals/tocs/SaltzerRC84} to the
-management of system resources.  Library operating systems typically
-run as virtual machines ~\cite{DBLP:journals/tocs/BugnionDGR97},
-e.g. to deploy cloud services
-~\cite{DBLP:conf/asplos/MadhavapeddyMRSSGSHC13}. The \ix kernel limits
-itself to the implementation of protocol stack, allowing applications
-to implement their own resource management policies, e.g. via the
+\myparagraph{Library operating systems:} Exokernels proposed to
+implement system abstractions via library operating systems linked in
+with applications~\cite{DBLP:conf/sosp/EnglerKO95}, extending the
+end-to-end principle to resource
+management~\cite{DBLP:journals/tocs/SaltzerRC84}.  Library operating
+systems typically run as virtual machines
+~\cite{DBLP:journals/tocs/BugnionDGR97}, e.g. to deploy cloud services
+~\cite{DBLP:conf/asplos/MadhavapeddyMRSSGSHC13}. \ix limits itself to
+the implementation of the protocol stack, allowing applications to
+implement their own resource management policies, e.g. via the
 \texttt{libevent} compatibility layer.
 
 
@@ -46,7 +43,6 @@ demonstrates that a specialized networking stack can offer performance
 and cooperate with applications without having to weaken security and
 isolation properties.
  
-
 \myparagraph{Hardware and protocol specialization:} Applications can
 use a connection-less UDP-based protocol for
 scalability~\cite{nishtala2013scaling}.  Latency-sensitive datacenter
