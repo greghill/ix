@@ -147,13 +147,10 @@ application.  By constrast, conventional OSes buffer send data beyond
 raw TCP constraints and apply flow control policy inside the kernel
 ~\cite{dynamicwindow}.
 
-\christos{Check} The handles defined in Table~\ref{tbl:api} are kernel
-identifiers. Cookies are user-level identifiers associated by the
-application, with kernel handles. To find its metadata, an application
-can simply cast the cookie as a pointer and reference it directly.
-This approach replaces the file descriptors used in the POSIX API and
-eliminates the scaling challenges associated with file descriptor
-numbering~\cite{DBLP:conf/sosp/ClementsKZMK13}
+\adam{new:} The handles defined in Table~\ref{tbl:api} are kernel
+identifiers. Cookies, a mechanism inspired by Megapipe~\cite{han2012megapipe},
+are opaque identifiers provided by the user at connection establishment
+so that it is easy to locate metadata for a flow without an additional table lookup.
 
 % it alleviates the file descriptor number is lowest available
 % requirement, which is not communative.  The reason for this
