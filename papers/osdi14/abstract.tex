@@ -13,14 +13,24 @@
   implementation of the networking stack.
 
   We present \ix, a {\it dataplane operating system} specifically
-  designed for web-scale, event-driven applications.  The \ix
-  architecture separates control plane from the dataplanes and
-  provides a native, zero-copy API that explicitly exposes flow
-  control to applications. However, \ix uses hardware virtualization
-  to offer the same protection model as commodity operating
-  systems. \ix optimizes for both bandwidth and latency by processing
-  bounded batches of packets to completion and by eliminating
-  coherence traffic and synchronization on multi-core systems.
+  designed for web-scale, event-driven applications.  It separates
+  management and scheduling functions of the kernel (control plane)
+  from the network processing functions (dataplane).  \ix optimizes
+  for both bandwidth and latency by dedicating hardware threads and
+  networking queues to dataplane instances, processing bounded batches
+  of packets to completion, and by eliminating coherence traffic and
+  multi-core synchronization.  \ix provides a native, zero-copy API
+  that explicitly exposes flow control to applications. However, \ix
+  uses hardware virtualization to offer the same protection model as
+  commodity operating systems.
+
+
+  % \ix provides a native, zero-copy API that explicitly exposes flow
+  % control to applications. However, \ix uses hardware virtualization
+  % to offer the same protection model as commodity operating
+  % systems. \ix optimizes for both bandwidth and latency by processing
+  % bounded batches of packets to completion and by eliminating
+  % coherence traffic and synchronization on multi-core systems.
 
   We demonstrate that \ix outperforms Linux by an order of magnitude
   for throughput and by 3x for latency. \ix also outperforms a
