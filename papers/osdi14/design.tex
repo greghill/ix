@@ -67,8 +67,8 @@ schedules resources among dataplanes, but in a coarse-grained manner
 in space and time: cores are dedicated to applications until revoked,
 memory is allocated at large page granularity of physical memory;
 hardware queues are exclusively assigned to a single dataplane until
-explicitly revoked.  The separation allows us to consider \george{double word?} radically
-radically I/O APIs and implementations in the dataplane, while
+explicitly revoked.  The separation allows us to consider radically
+different I/O APIs and implementations in the dataplane, while
 retaining full compatibility with a modern OS like Linux.  Similar to
 Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, each dataplane runs a
 single application in a single address space.
