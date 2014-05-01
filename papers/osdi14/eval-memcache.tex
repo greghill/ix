@@ -68,7 +68,9 @@ kernel this change works great, but it had to be disabled on the mavericks and a
 newer kernels have something wierd going on with thread spawning. In pratice,
 background threads didn't make any noticable difference on the Haswell. Should I say anything about this
 limitation?} Finally, we made some small changes to the behavior of the main
-event loop in order to better support our run to completion execution model.
+event loop in order to better support our run to completion execution model. We
+did not attempt to tune the internal scalability of memcached or adapt memcached
+to support zero-copy IO operations.
 
 \input{tbl-mutilate}
 
