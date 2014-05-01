@@ -142,8 +142,8 @@ the same protection model as commodity operating systems. In our
 implementation, the control plane runs on a vanilla Linux kernel and
 the dataplanes use Dune to run \ix as protected, library-based
 operating systems~\cite{belay2012dune}. \adam{new:} Dune makes this
-possible by directly exposing hardware protection mechanisms
-using virtualization hardware.
+possible by directly and safely exposing hardware protection mechanisms
+to Linux processes.
 
 \ix provides a native, zero-copy API that explicitly exposes network
 flow-control to applications.  This API enables dataplanes to optimize
