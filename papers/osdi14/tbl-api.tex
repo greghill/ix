@@ -3,18 +3,6 @@
 \begin{small}
 \begin{tabular}{|l|l|l|}
 \hline
-\multicolumn{3}{|c|}{{\bf Event Conditions}} \\
-\hline
-{\bf Type} &           {\bf Parameters}  &
-{\bf Description}\\
-\hline
-Knock  &               cookie, src\_IP, src\_port		& A remotely initiated connection was opened \\
-Connected &            cookie, outcome				& A locally initiated connection finished opening \\
-Recv &                 cookie, mbuf\_ptr, mbuf\_len		& A message buffer was received \\
-Sent &                 cookie, bytes\_sent, window\_size	& A send completed and/or the window size changed \\
-Dead &                 cookie, reason				& A connection was terminated \\
-\hline
-\hline
 \multicolumn{3}{|c|}{{\bf System Calls (batched)}} \\
 \hline
 connect &             cookie, dst\_IP, dst\_port		& Opens a connection\\
@@ -22,9 +10,20 @@ accept &              handle, cookie, allow			& Accepts a connection\\
 sendv &               handle, scatter\_gather\_array		& Transmits a scatter-gather array of data\\
 recv\_done &          handle, bytes\_acked			& Advances the receive window and frees memory buffers\\
 close &               handle					& Closes a connection\\
+\hline  \hline
+\multicolumn{3}{|c|}{{\bf Event Conditions}} \\
+\hline
+{\bf Type} &           {\bf Parameters}  &
+{\bf Description}\\
+Knock  &               cookie, src\_IP, src\_port		& A remotely initiated connection was opened \\
+Connected &            cookie, outcome				& A locally initiated connection finished opening \\
+Recv &                 cookie, mbuf\_ptr, mbuf\_len		& A message buffer was received \\
+Sent &                 cookie, bytes\_sent, window\_size	& A send completed and/or the window size changed \\
+Dead &                 cookie, reason				& A connection was terminated \\
 \hline
 \end{tabular}
-\caption{\ix event conditions and system calls API.}
+\caption{\ix system calls and event conditions API. 
+}
 \label{tbl:api}
 \end{small}
 \end{table*}
