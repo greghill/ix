@@ -28,7 +28,7 @@ massively deployed, event-based application.
 \subsection{Experimental Methodology}
 \label{sec:eval:setup}
 
-We use two experimental setups because we wish to simulanteously
+We use two experimental setups because we wish to simultaneously 
 compare with mTCP and scale to bandwidth beyond 10GbE.  Unfortunately,
 our 4x10GbE setup uses recent hardware not supported by mTCP out of the
 box.\footnote{We were able to port mTCP to the 4x10GbE setup, but
@@ -49,13 +49,15 @@ setups.
 
 %\george{possible false hope that mTCP can use 4 NICs. I am not sure about that.}}.
 
- 
+\input{figs/float-pingpong} 
 \myparagraph{10GbE setup:} This setup consists of a
 cluster of 28 Xeon E5-2630 @ 2.3 Ghz machines with a mixture of
 Intel 82599EB 10GbE and Solarflare SFC9000 10GbE NICs, configured
 with 64 GB of RAM each. They are connected with an Arista 7050S-64
 switch. One machine is used as the server, while the rest can be used
 as clients. The server socket has 6 cores and 12 hyperthreads.
+
+\input{figs/float-short-both}
 
 \myparagraph{4x10GbE setup:} This setup consists of a cluster of 19
 clients and one server connected by an HP 5820AF-24XG 10GbE switch.
@@ -82,11 +84,11 @@ experiments. Jumbo frames are never enabled.
 %   ~\cite{jeong2014mtcp}}
 
 
-\input{figs/float-pingpong}
+
 %\input{tbl-pingpong}
 
 %\input{figs/float-short10}
-\input{figs/float-short-both}
+
 
 The Linux client and server implementations of our benchmarks use the
 \texttt{libevent} framework with the \texttt{epoll} system call.  We
@@ -95,13 +97,14 @@ release~\cite{url:mtcp}, but had to write the benchmarks ourselves
 using the mTCP API.  To run mTCP, we switch to the 2.6.36 kernel, as
 this is the most recent supported kernel version.
 
+
 \subsection{Latency and Single-flow Bandwidth}
 \label{sec:eval:netpipe}
 
 We first evaluated the latency of \ix using NetPIPE, a popular
 ping-pong benchmark, using our 10GbE setup.  NetPIPE simply exchanges
 a fixed-size message between two servers and helps calibrate the
-latency and bandwdith of a single-flow~\cite{snell1996netpipe}.  In
+latency and bandwidth of a single-flow~\cite{snell1996netpipe}.  In
 all cases, the two servers use the same system (Linux, mTCP, or \ix).
 
 %%%
@@ -132,6 +135,7 @@ batching to offset the cost of context switching~\cite{jeong2014mtcp}.
 \subsection{Scalability and High Connection Churn}
 \label{sec:eval:short}
 
+
 %\input{figs/float-short40}
 
 Next, we evaluate \ix's multi-core scalability in handling workloads
@@ -158,7 +162,7 @@ Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} show the results
 on the 10GbE setup.  For Linux and mTCP, our results are consistent
 with the ones published in the mTCP paper~\cite{jeong2014mtcp}.  For
 all three tests (core scaling, message count scaling, message size
-scaling), \ix scales more aggresively and is quickly able to saturate
+scaling), \ix scales more aggressively and is quickly able to saturate
 the hardware resources.  When reaching saturation, it is never
 CPU-bound, and appears to be limited by the NIC packet per second
 hardware limit (Fig.~\ref{fig:short10:mcore}) or Ethernet wire rates

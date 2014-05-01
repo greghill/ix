@@ -104,13 +104,13 @@ two thread types within the shared, user-level address space: (i)
 initiate and consume network I/O and (ii) \emph{background threads}.
 Both elastic and background threads can issue arbitrary POSIX system
 calls that are intermediated and validated for security by the
-dataplane before being being forwarded to the Linux kernel.  Elastic
+dataplane before being forwarded to the Linux kernel.  Elastic
 threads are expected to \emph{not} issue blocking calls because of the
 adverse impact on network behavior and performance. Similarly, each
 elastic thread makes exclusive use of a core or hyperthread allocated
 to the dataplane in order to achieve high performance with predictable
 latency. In contrast, multiple background threads may timeshare an
-allocated hyperthread. For example, if an an application were
+allocated hyperthread. For example, if an application were
 allocated four hyperthreads, it could use all of them as elastic
 threads to serve external requests or it could temporarily transition
 to three elastic threads and use one background thread to execute
@@ -136,14 +136,14 @@ different from POSIX sockets and allows for zero-copy access to
 incoming network traffic.  The application can hold on to these
 message buffers until it asks the dataplane to release them via a
 batched system call.  \ix also differs in directly exposing flow
-control conditions to the application. The \texttt{sendv} system call
+control conditions to the application: the \texttt{sendv} system call
 does not return the number of bytes buffered. Instead, it indicates
 the number of bytes that were accepted and immediately sent by the TCP
 stack, as constrained by correct TCP sliding window operation. Then,
 when the bytes are acknowledged by the receiver, a \texttt{sent} event
 condition informs the application that it is possible to send more
 data. Thus send window sizing policy is determined entirely by the
-application.  By constrast, conventional OSes buffer send data beyond
+application.  By contrast, conventional OSes buffer send data beyond
 raw TCP constraints and apply flow control policy inside the kernel
 ~\cite{dynamicwindow}.
 
