@@ -138,7 +138,7 @@ message buffers until it asks the dataplane to release them via a
 batched system call.  \ix also differs in directly exposing flow
 control conditions to the application: the \texttt{sendv} system call
 does not return the number of bytes buffered. Instead, it indicates
-the number of bytes that were accepted and immediately sent by the TCP
+the number of bytes that were accepted and sent by the TCP
 stack, as constrained by correct TCP sliding window operation. Then,
 when the bytes are acknowledged by the receiver, a \texttt{sent} event
 condition informs the application that it is possible to send more
