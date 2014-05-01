@@ -1,6 +1,6 @@
 set terminal postscript eps enhanced solid lw 1 font 'Times'
-set style line 1 linecolor rgbcolor 'red'
-set style line 2 linecolor rgbcolor 'black'
+set style line 1 pointtype 4 linecolor rgbcolor 'red'
+set style line 2 pointtype 6 linecolor rgbcolor 'black'
 set style line 5 linecolor rgbcolor 'red'
 set style line 6 linecolor rgbcolor 'black'
 set output outfile
