@@ -57,7 +57,7 @@ as clients. The server socket has 6 cores and 12 hyperthreads.
 
 \input{figs/float-short-both}
 
-\myparagraph{4x10GbE setup:} This setup consists of a cluster of 19
+\myparagraph{4x10GbE setup:} This setup consists of a cluster of 18
 clients and one server connected by an HP 5820AF-24XG 10GbE switch.
 The client machines are a mix of Xeon E5-2637 @ 3.5 Ghz and Xeon
 E5-2650 @ 2.6 Ghz.  Each client has a single 82599EB 10GbE NIC
@@ -207,7 +207,7 @@ concurrent connections on the 4x10GbE setup. In this benchmark, each client mach
 $n$ threads, with each thread independently performing a 64B remote
 procedure call to the server.  Each RPC randomly chooses among $m$
 open sockets to perform the RPC.  In our setup with 18 clients, the
-server must multiplex among $19 \times n \times m$ open connections.
+server must multiplex among $18 \times n \times m$ open connections.
 We experimentally set $n \leq 24$ to maximize throughput.  We report
 the maximal throughput in messages per second for varying number of
 total established connections.
@@ -229,7 +229,7 @@ from Fig.~\ref{fig:short40:roundtrips}.  With 100,000 connections and
 4x10GbE, \ix is able to deliver 53\% of its own peak throughput.  The
 performance drop is not due to an increase in instruction counts, but
 rather primarily because the size of the TCP/IP protocol control block
-structures, which alone exceeds the size of the processor's L3
+structures, which alone exceed the size of the processor's L3
 cache. We believe we can improve further on the complexity and memory
 footprint of our lwIP-based stack in future work. 
 

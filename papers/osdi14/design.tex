@@ -8,7 +8,7 @@
 
 The first three requirements of \S\ref{sec:motivation:challenges} --
 high packet rate, microsecond latency, and connection scalability--
-are not unique to web-scale applications.  These requirements are have
+are not unique to web-scale applications.  These requirements have
 been addressed in the design of middleboxes such as firewalls,
 load-balancers, and software
 routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09};
@@ -67,7 +67,7 @@ schedules resources among dataplanes, but in a coarse-grained manner
 in space and time: cores are dedicated to applications until revoked,
 memory is allocated at large page granularity of physical memory;
 hardware queues are exclusively assigned to a single dataplane until
-explicitly revoked.  The separation allows us to consider radically
+explicitly revoked.  The separation allows us to consider \george{double word?} radically
 radically I/O APIs and implementations in the dataplane, while
 retaining full compatibility with a modern OS like Linux.  Similar to
 Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, each dataplane runs a
