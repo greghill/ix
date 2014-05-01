@@ -335,14 +335,21 @@ done in a hypervisor~\cite{nsdi:nsx}. Our security model is as strong
 as conventional network stacks in commodity OSes and is missing from all
 the recently proposed user-level networking stacks.
 
-Our current implementation does not yet utilize IOMMUs. As a result, a
-dataplane could potentially corrupt control plane memory through stray
-DMA operations. However, unlike user-level network stacks we do not
-strickly require IOMMU support, as untrusted application code is never
-is given direct access to NIC DMA engies. Rather, adding IOMMU support
-would improve security by creating a layer of in depth defense between
-dataplanes and control planes, possibly at the expensive of some
-performance overhead~\cite{iommu_overhead}.
+Our current implementation does does not utilize an IOMMU: we entrust
+the \ix kernel into the trusted code base by giving access to
+descriptor rings with host-physical addresses to avoid the possible
+performance overheads of using IOMMUs~\cite{iommu_overhead}.  This
+decision is not fundamental to our design, and does not extend to
+applications.
+
+%Our current implementation does not yet utilize IOMMUs. As a result, a
+%dataplane could potentially corrupt control plane memory through stray
+%DMA operations. However, unlike user-level network stacks we do not
+%strickly require IOMMU support, as untrusted application code is never
+%s given direct access to NIC DMA engies. Rather, adding IOMMU support
+%would improve security by creating a layer of in depth defense between
+%dataplanes and control planes, possibly at the expensive of some
+%performance overhead~\cite{iommu_overhead}.
 
 \dm{This raised a couple of questions for me.  First, is the
   immutability of transmit buffers enforced by memory protection, or
