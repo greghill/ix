@@ -147,6 +147,14 @@ application.  By contrast, conventional OSes buffer send data beyond
 raw TCP constraints and apply flow control policy inside the kernel
 ~\cite{dynamicwindow}.
 
+Both batched system calls and event conditions are passed through
+arrays of shared memory, managed by the user and the kernel respectively.
+We provide a regular system call called \texttt{poll} that serves
+to yield control to the kernel and initiate a new run to completion
+pass through the \ix pipelining. As part of this process, the array
+of batched system call requests is overwritten with corresponding return
+codes and a new array of event conditions is populated.
+
 \adam{new:} The handles defined in Table~\ref{tbl:api} are kernel
 identifiers. Cookies, a mechanism inspired by Megapipe~\cite{han2012megapipe},
 are opaque identifiers provided by the user at connection establishment
@@ -193,6 +201,10 @@ timers in order to ensure compliant TCP behavior and (6) places
 outgoing Ethernet frames in the NIC's descriptor rings for
 transmission. Finally, it notifies the NIC to initiate a DMA transfer
 for these frames by updating the transmit ring's tail register.
+This process operates continuously in a loop until there are no
+event conditions posted. In this case, we enter a quiescent, where
+we periodically poll the receive queues and potentially engage
+in power conservation states or yield to the control plane.
 
 The \ix dataplane consists of 37K SLOC~\cite{url:sloccount}.  We leveraged existing
 codebases in its development: 43\% is derived from the DPDK variant of
@@ -209,6 +221,7 @@ environments, we had to radically change its internal data structures
 for multi-core scalability and fine-grain timer management. We did not
 yet optimize the lwIP code for performance. Hence, there is room for
 improvement in the results shown in \S\ref{sec:eval}.
+
 
 
 \subsection{Multi-core Scalability}
