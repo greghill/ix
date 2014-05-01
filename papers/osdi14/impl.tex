@@ -87,7 +87,7 @@ code. %\christos{should we explicitly say that most web-scale apps are
 % allocated CPU resources are underutilized.
 
 
-Each \ix dataplane supports a single, multithreaded POSIX
+Each \ix dataplane supports a single, multithreaded
 application. For instance, Fig.~\ref{fig:cp-dp} shows one dataplane
 for a multi-threaded \texttt{memcached} server and another dataplane
 for a multi-threaded \texttt{nginx} server. The control plane allocates
@@ -194,12 +194,12 @@ outgoing Ethernet frames in the NIC's descriptor rings for
 transmission. Finally, it notifies the NIC to initiate a DMA transfer
 for these frames by updating the transmit ring's tail register.
 
-The \ix dataplane consists of 37 KSLOC\@. We leveraged existing
+The \ix dataplane consists of 37K SLOC~\cite{url:sloccount}.  We leveraged existing
 codebases in its development: 43\% is derived from the DPDK variant of
 the Intel NIC device driver~\cite{intel:dpdk}, 23\% from the lwIP
 TCP/IP stack~\cite{dunkels2001design}, and 16\% from the Dune library.
 All three code bases are highly modified for \ix. The rest is
-approximately 7 KSLOC of new code. We chose lwIP as a starting point
+approximately 7K SLOC of new code. We chose lwIP as a starting point
 for TCP/IP processing because of its modularity and its maturity as a
 RFC-compliant, feature-rich networking stack. We implemented
 RFC-compliant support for UDP, ARP, and ICMP.
@@ -246,7 +246,7 @@ flows. Hence, no synchronization or coherence occurs during the
 processing of incoming requests for a server application. For client
 applications with outbound connections, we need to ensure that the
 reply is assigned to the same elastic thread that made the
-request. Since we cannot reverse the Toeplitz hash used by RSS, we
+request. Since we cannot reverse the Toeplitz hash used by RSS~\cite{url:rss}, we
 simply probe the ephemeral port range to find a port number that
 would lead to the desired behavior. Note that this implies that two
 elastic threads in a client cannot share a flow to a server. % \edb{\sout{In

@@ -117,7 +117,7 @@ Protocol-processing techniques that reduce latency to \microsecond on
 average, but do not improve 95th or 99th percentile latency are
 unlikely to result into end-to-end application gains.
 
-\myparagraph{Connection scalability:} For applications that use thousands
+\myparagraph{Connection scalability:} For applications that use thousands of
 multi-core servers, it is desirable to efficiently support both a
 large number of concurrent connections per server, as well as high
 churn in these connections.  Ideally, the only limitation to a
@@ -152,7 +152,7 @@ datacenters~\cite{Hindman:2011:MPF,Schwarzkopf:2013:OFS,DBLP:journals/cacm/DeanB
 there is need for isolated network stacks. For single-tenant
 deployments where all services are administered by the same
 organization, the use of kernel-based networking largely addresses the
-problem.  Challenges emerge when networking is lifted into the
+problem.  However, security tradeoffs emerge when networking is lifted into the
 user-space and application bugs can corrupt the networking stack and
 impact other services.
 

@@ -41,7 +41,7 @@ for datacenter applications~\cite{DBLP:journals/cacm/DeanB13}. This
 graph provides insights into the full range of system behaviors. Most
 commercial \texttt{memcached} use such a latency-throughput graph to
 provision each server so that the 95th percentile latency does not
-exceed 200 to 500.  We carefully tune the Linux baseline setup
+exceed 200\microsecond to 500\microsecond.  We carefully tune the Linux baseline setup
 according to the guidelines in
 \cite{Leverich:RHSU:2014}. Specifically, we pin memcached threads,
 configure interrupt-distribution based on thread-affinity, and tune
@@ -81,9 +81,9 @@ or to support zero-copy IO operations.
 Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
 two \texttt{memcached} workloads for Linux and \ix, while
 Table~\ref{tbl:mutilate} reports the unloaded latencies and maximum
-query throughput that meets a service-level agreement of $<1ms$ at the
-95th percentile.  \ix noticeably reduces the unloaded latencies, also
-measured at the 95th percentile.  Note that we use Linux clients for
+query throughput that meets a service-level agreement, both measured at the 95th percentile.
+\ix noticeably reduces the unloaded latencies.
+Note that we use Linux clients for
 these experiments; running \ix on clients should further reduce
 latency.
 
@@ -92,7 +92,7 @@ latency.
 For both workloads, the distribution of CPU time shifts from being
 $>80\%$ in the kernel with Linux to $<30\%$ with \ix.  Since the
 application is unmodified, Amdahl's law predicts a speedup of 3x.  \ix
-actually increases the throughput of memcached by 1.8 and 2.7 for
+actually increases the throughput of memcached by 2.0 and 2.7 for
 \texttt{ETC} and \texttt{USR}, respectively.  The difference is due to
 the increased lock contention within the application itself, in
 particular for \texttt{ETC}, which has a higher write frequency.

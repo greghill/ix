@@ -1,11 +1,12 @@
 
-%%%
-%%%  use the ping-pong test to measure the half rountrip latency @ 64B
-%%% 
-
 %%
-%%  1477 / 800 = 1.84
-%%  1500 / 550 = 2.72
+%% see  figs/data/memcache-sla-qps.txt
+
+%82.5  139.6  650K
+%42.0  54.3   1320K  --> 2.03x     --> 2.0x
+%79.6  136.8  580K
+%37.7  44.5   1620K  -->  2.74519  --> 2.7x
+
 
 \begin{table}[b]
 \vspace{-1em}
@@ -15,17 +16,13 @@
 \hline
 %Config &  \multicolumn{2}{|c|}{Unloaded latency} &  QPS for SLA:\\
 Config &  Unloaded latency &  QPS for SLA:\\
-&  95th pct. &  $<1ms@95th$\\
+&  95th pct@10K QPS &  $<500$\microsecond@95th pct\\
 \hline
-%ETC-Linux & 56\microsecond & 70\microsecond & 800K\\
-ETC-Linux & 70\microsecond & 800K\\
-%ETC-IX    & 40\microsecond & 54\microsecond & 1477K\\
-ETC-IX   & 54\microsecond & 1477K\\
+ETC-Linux & 140\microsecond & 650K\\
+ETC-IX    & 54\microsecond & 1320K\\
 \hline
-%USR-Linux & 51\microsecond & 60\microsecond & 550K\\
-%USR-IX    & 37\microsecond & 44\microsecond & 1500K\\
-USR-Linux  & 60\microsecond & 550K\\
-USR-IX     & 44\microsecond & 1500K\\
+USR-Linux & 137\microsecond & 580K\\
+USR-IX    & 45\microsecond & 1620K\\
 
 \hline
 \end{tabular}
