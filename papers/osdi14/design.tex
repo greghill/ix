@@ -119,19 +119,18 @@ at the API level in order to amortize system call
 overhead~\cite{jeong2014mtcp,han2012megapipe}, we execute every
 pipeline stage on a small batch of packets or commands in order to
 fully amortize instruction caching effects and the overhead of PCIe
-transfers.  To minimize the impact on latency, and improve utilization
-on the outgoing wire, we adaptively batch and only in the presence of
-congestion.
+transfers. To minimize the impact on latency and improve utilization on
+the outgoing wire, we perform adaptive batching as follows: (i) We
+never wait to batch requests, and as a result, batching only occurs
+in the presence of congestion. (ii) We set an upper bound on batch
+sizes to 128 packets, a value experimentally determined to effectively
+amortize startup overheads.
 \dm{Worth a citation of Mogul and Ramakrishnan eliminating receive
   livelock paper?  They basically switch from interrupt-based to
   bounded batch poll mode under load, though in their settings the
   batches had to be a lot smaller.  They also articulated the
   ``process every packet to completion'' principal, though didn't
   carry it through to user mode.}
-We experimentally find that bounding batches to 128
-packets is sufficient to amortize all noticeable per-packet overheads.
-\ana{Elaborate on how adaptively batch; aside from bounding batches to 128 pkts, 
-what is the policy/mechanism for adapting to the congestion level?}
 
 % Christos; this is essentially the other half of the "expose flow
 % control to applications". oh well...
