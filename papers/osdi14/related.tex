@@ -47,16 +47,16 @@ and cooperate with applications without having to weaken security and
 isolation properties.
  
 
-\myparagraph{Hardware and protocol specialization:} 
-Applications can use a connection-less UDP-based protocol for
+\myparagraph{Hardware and protocol specialization:} Applications can
+use a connection-less UDP-based protocol for
 scalability~\cite{nishtala2013scaling}.  Latency-sensitive datacenter
 applications can use specialized Infiniband adapters to expose RDMA
 with $1-3$\microsecond latencies to
 applications~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH,mitchell:rdma,dragojevic14farm}.
 Specialized FGPAs can replace conventional servers for important
 applications such as
-memcached~\cite{DBLP:conf/fpga/ChalamalasettiLWARM13}.  \ix is
-designed to allow TCP/IP to scale with architectural trends by
+memcached~\cite{DBLP:conf/fpga/ChalamalasettiLWARM13,HPHA:Tanaka:2014,179402}.
+\ix is designed to allow TCP/IP to scale with architectural trends by
 elminating kernel bottlenecks.
 
 
