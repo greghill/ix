@@ -60,7 +60,10 @@ Finally, applications run VMX non-root ring 3. This
 approach provides dataplanes with direct access to hardware features,
 such as page tables and exceptions, and provides full protection
 between the control plane, dataplanes, and untrusted user
-code. %\christos{should we explicitly say that most web-scale apps are
+code. Moreover, dataplanes are provided direct passthrough
+access to the NIC.
+
+ %\christos{should we explicitly say that most web-scale apps are
 %  deployed without VMs so taking over VMX is not a problem?}\edb{not needed}
 
 % \myparagraph{Separation and protection of control and data plane:}
