@@ -69,6 +69,7 @@ Zero-copy reduce data movement overheads and simplifies resource
 management~\cite{DBLP:journals/tocs/PaiDZ00}.  \ix's use of adaptive,
 bounded batching is suitable for both low-latency and high-message
 rate, and its safe, cooperative memory management model enables
-zero-copy at the application level.
+zero-copy at the application level. Previous systems have supported
+zero-copy I/O through page remapping and COW, a more heavy weight mechanism~\cite{solaris_zc}.
 
 
