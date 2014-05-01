@@ -113,15 +113,15 @@ distributions of RPCs across thousands of
 servers~\cite{DBLP:journals/cacm/DeanB13}. Although tail-tolerance is
 actually an end-to-end challenge, the system software stack plays a
 significant role in exacerbating the problem~\cite{Leverich:RHSU:2014}.
-Protocol-processing techniques that reduce latency to \microsecond in
-the average, but do not improve 95th or 99th percentile latency are
+Protocol-processing techniques that reduce latency to \microsecond on
+average, but do not improve 95th or 99th percentile latency are
 unlikely to result into end-to-end application gains.
 
 \myparagraph{Connection scalability:} For applications that use thousands
 multi-core servers, it is desirable to efficiently support both a
 large number of concurrent connections per server, as well as high
 churn in these connections.  Ideally, the only limitation to a
-server's concurrent connection count should be its memory capacity, and
+server's concurrent connection count should be its memory capacity. Furthermore,
 the packet rate and tail latency should be independent of the number
 of concurrent connections or the rate of churn.
  
@@ -206,6 +206,6 @@ completely eliminate communication between cores, as the lack of
 commutativity in the POSIX socket API implies that cross-core
 communication is needed when connections are accepted or
 closed~\cite{DBLP:conf/sosp/ClementsKZMK13}. When microsecond
-latencies are irrelevant, such as Internet-facing communication
+latencies are irrelevant\ana{(tolerable?)}, such as Internet-facing communication
 services, properly tuned stacks can support millions of concurrent
 connections~\cite{whatsapp-2mil}.
