@@ -136,14 +136,14 @@ routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09}
 separates the control plane, which is responsible for basic kernel
 functionality such as provisioning and scheduling, from the dataplanes
 which run the networking stack and application logic. However, \ix
-uses hardware virtualization~\cite{DBLP:journals/computer/UhligNRSMABKLS05} to isolate the control plane from the
-dataplanes and offer
+uses hardware virtualization~\cite{DBLP:journals/computer/UhligNRSMABKLS05} to isolate the
+dataplanes from the applications they run and offer
 the same protection model as commodity operating systems. In our
 implementation, the control plane runs on a vanilla Linux kernel and
 the dataplanes use Dune to run \ix as protected, library-based
 operating systems~\cite{belay2012dune}. \adam{new:} Dune makes this
 possible by directly and safely exposing hardware protection mechanisms
-to Linux processes.
+to user-level.
 
 \ix provides a native, zero-copy API that explicitly exposes network
 flow-control to applications.  This API enables dataplanes to optimize
