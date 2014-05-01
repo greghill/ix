@@ -10,12 +10,12 @@ dataplane design with \texttt{memcached}, a massively deployed,
 in-memory key-value store built on top of the \texttt{libevent}
 framework~\cite{url:memcached}. It is frequently used as a
 high-throughput, low-latency caching tier in front of persistent
-database servers. \texttt{memcached} is a network-bound
-application, with threads spending over 80\% of execution time in
-kernel mode for network processing~\cite{Leverich:RHSU:2014}. It is a
-difficult application to scale, in particular because the
-common deployments involve high connection counts for
-\texttt{memcached} servers and small-sized requests and
+database servers. \texttt{memcached} is a network-bound application,
+with threads spending over 80\% of execution time in kernel mode for
+network processing~\cite{Leverich:RHSU:2014}. It is a difficult
+application to scale, in particular because the common deployments
+involve high connection counts for \texttt{memcached} servers and
+small-sized requests and
 replies~\cite{nishtala2013scaling,Atikoglu:2012:WAL}
 
 We use the \texttt{mutilate} load-generator to place a selected load
@@ -30,65 +30,69 @@ represents that highest capacity deployment in Facebook, has 20B - 70B
 keys, 1B-1KB values, and 90\% GET requests; and the USR workload that
 represents deployment with most GET requests in Facebook, has short
 keys ($<$20B), 2B values, and 99\% GET requests. In USR, almost all
-traffic involves minimum-sized TCP packets. Each request is issued 
-\dm{incomplete sentence?}
+traffic involves minimum-sized TCP packets. Each request is issued
+separately (no multiget operations).
 
 \dm{Paragraph needs editing.  Also, why not report 99\% or 99.9\%?}
-\adam{Are our linux graphs too noisy to do 99th? IX looks fine at 99th...}
-For all experiments, we report 95th percentile latency as a function
-of the achieved throughput as this is the relevant metric for
-datacenter
-applications\microsecond~\cite{DBLP:journals/cacm/DeanB13}. This graph
-provides insights the full range of system behaviors. Most commercial
-\texttt{memcached} use such a latency-throughput graph to provision
-each server so that the 95th percentile latency does not exceed 200 to
-500.  We carefully tune the Linux baseline setup according to the
-guidelines in \cite{Leverich:RHSU:2014}. Specifically, we pin
-memcached threads, configure interrupt-distribution based on
-thread-affinity, and tune interrupt moderation thresholds. We believe
-that our baseline Linux numbers are as tuned as possible for this
-hardware using the open-source version of
-\texttt{memcached-1.4.18}. For our benchmark, we use 6 client machines
-and a total of 772 connections to the memcached server. We report the
-results for the configuration that provides the best performance: 
-8 sockets with Linux, but only 6 with \ix.
+\adam{Are our linux graphs too noisy to do 99th? IX looks fine at
+  99th...}  For all experiments, we report 95th percentile latency as
+a function of the achieved throughput as this is the relevant metric
+for datacenter applications~\cite{DBLP:journals/cacm/DeanB13}. This
+graph provides insights into the full range of system behaviors. Most
+commercial \texttt{memcached} use such a latency-throughput graph to
+provision each server so that the 95th percentile latency does not
+exceed 200 to 500.  We carefully tune the Linux baseline setup
+according to the guidelines in
+\cite{Leverich:RHSU:2014}. Specifically, we pin memcached threads,
+configure interrupt-distribution based on thread-affinity, and tune
+interrupt moderation thresholds. We believe that our baseline Linux
+numbers are as tuned as possible for this hardware using the
+open-source version of \texttt{memcached-1.4.18}. For our benchmark,
+we use 6 client machines and a total of 772 connections to the
+memcached server. \christos{check} We report the results for the
+server configuration that provides the best performance: 8 cores with
+Linux, but only 6 with \ix.
 
-\christos{Should we discuss the porting process to IX?}
-\adam{new:} Porting memcached to IX primarly consisted of adapting it
-to use our event library. In most cases, the port was straightforward,
-replacing Linux and \texttt{libevent} function calls with their equivalent
-versions in our API. There were a few incompatibilities that required
-aditional effort. For example we don't yet support vectored write
-operations (e.g., \texttt{writev}) in our
-API (the benefits would be only marginal because we batch
-writes inside our event library). Morever, we had to make some internal changes
-to memcached in order to deliniate the spawning elastic threads and background
-threads.  \adam{On our haswell machine, which runs an older linux
-kernel this change works great, but it had to be disabled on the mavericks and at EPFL because
-newer kernels have something wierd going on with thread spawning. In pratice,
-background threads didn't make any noticable difference on the Haswell. Should I say anything about this
-limitation?} Finally, we made some small changes to the behavior of the main
-event loop in order to better support our run to completion execution model. We
-did not attempt to tune the internal scalability of memcached or adapt memcached
-to support zero-copy IO operations.
+Porting \texttt{memcached} to IX primarly consisted of adapting it to
+use our event library. In most cases, the port was straightforward,
+replacing Linux and \texttt{libevent} function calls with their
+equivalent versions in our API. % There were a few incompatibilities
+% that required additional effort. For example we don't yet support
+% vectored write operations (e.g., \texttt{writev}) in our API (the
+% benefits would be only marginal because we batch writes inside our
+% event library). Morever, we had to make some internal changes to
+% memcached in order to deliniate the spawning elastic threads and
+% background
+threads. % \adam{On our haswell machine, which runs an older
+% linux kernel this change works great, but it had to be disabled on
+% the mavericks and at EPFL because newer kernels have something wierd
+% going on with thread spawning. In pratice, background threads didn't
+% make any noticable difference on the Haswell. Should I say anything
+% about this limitation?}
+% Finally, we made some small changes to the
+% behavior of the main event loop in order to better support our run to
+% completion execution model.
+We did not attempt to tune the internal scalability of {\it memcached}
+or to support zero-copy IO operations.
 
 \input{tbl-mutilate}
 
-\edb{NEW with table:} Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
+Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
 two \texttt{memcached} workloads for Linux and \ix, while
-Table~\ref{tbl:mutilate} reports the unloaded latencies and maximum query throughput that meets a service-level agreement of $<1ms$ at the 95th percentile.
-\ix noticeably reduces the unloaded latencies, also measured
-at the 95th percentile.  We note here that the benchmark
-clients are running on Linux, and that running them on \ix should
-further reduce that latency. 
+Table~\ref{tbl:mutilate} reports the unloaded latencies and maximum
+query throughput that meets a service-level agreement of $<1ms$ at the
+95th percentile.  \ix noticeably reduces the unloaded latencies, also
+measured at the 95th percentile.  Note that we use Linux clients for
+these experiments; running \ix on clients should further reduce
+latency.
 
-\edb{NEW:}For both workloads, the distribution of CPU time shifts from being
+For both workloads, the distribution of CPU time shifts from being
 $>80\%$ in the kernel with Linux to $<30\%$ with \ix.  Since the
-application is unmodified, Amdahl's law would predict a speedup of 3x.
-\ix actually increases the throughput of memcached by 1.8 and 2.7
-for \texttt{ETC} and \texttt{USR}, respectively.  We explain the
-difference by the increased lock contention within the application
-itself, in particular for \texttt{ETC}, which has a higher write frequency.
+application is unmodified, Amdahl's law predicts a speedup of 3x.  \ix
+actually increases the throughput of memcached by 1.8 and 2.7 for
+\texttt{ETC} and \texttt{USR}, respectively.  The difference is due to
+the increased lock contention within the application itself, in
+particular for \texttt{ETC}, which has a higher write frequency.
 
 
 %\input{eval-mtier}
