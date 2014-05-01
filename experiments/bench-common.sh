@@ -3,7 +3,9 @@
 on_exit() {
   if [ ! -z ${SERVER_HOST+x} ]; then
     if [ $IX -eq 1 ]; then
-      ssh $SERVER_HOST sudo killall -KILL ix > /dev/null 2>&1 || true
+      if [ $MEMCACHED_SHOULD_DEPLOY -eq 1 ]; then
+        ssh $SERVER_HOST sudo killall -KILL ix > /dev/null 2>&1 || true
+      fi
     else
       ssh $SERVER_HOST sudo killall $MEMCACHED_EXEC > /dev/null 2>&1 || true
     fi
@@ -74,14 +76,15 @@ setup_and_run() {
     MEMCACHED_CORES=1,3,5,7,9,11
   elif [ $CLUSTER_ID = 'Stanford' ]; then
     export AGENT_SUBDIR="stanford/"
-    SERVER_HOST="maverick-17-10g"
+    SERVER_HOST="maverick-17"
     SERVER_HOST_EXPERIMENT="maverick-17-10g"
     SERVER_IF="p3p1"
     MEMCACHED_THREADS=12
     MEMCACHED_CORES=0,1,2,3,4,5,12,13,14,15,16,17
   elif [ $CLUSTER_ID = 'Stanford-IX' ]; then
     export AGENT_SUBDIR="stanford/"
-    SERVER_HOST="10.79.6.121:8000"
+    SERVER_HOST="maverick-13"
+    SERVER_HOST_EXPERIMENT="10.79.6.125"
     SERVER_IF=
     MEMCACHED_THREADS=
     MEMCACHED_CORES=
@@ -96,8 +99,8 @@ setup_and_run() {
   if [ $SERVER_SPEC = 'Linux-10' ]; then
     PREP=prep_linux
     OUTDIR='Linux-10'
-    QPS_SWEEP_MAX=1000000
-    QPS_NUM_POINTS=20
+    QPS_SWEEP_MAX=1500000
+    QPS_SWEEP_NUM_POINTS=30
     MEMCACHED_EXEC='memcached'
     MEMCACHED_BUILD_PATH='../apps/memcached-1.4.18'
     MEMCACHED_BUILD_TARGET=''
@@ -107,8 +110,8 @@ setup_and_run() {
   elif [ $SERVER_SPEC = 'Linux-40' ]; then
     PREP=prep_linux-40
     OUTDIR='Linux-40'
-    QPS_SWEEP_MAX=1000000
-    QPS_NUM_POINTS=20
+    QPS_SWEEP_MAX=1500000
+    QPS_SWEEP_NUM_POINTS=30
     MEMCACHED_EXEC='memcached'
     MEMCACHED_BUILD_PATH='../apps/memcached-1.4.18'
     MEMCACHED_BUILD_TARGET=''
@@ -118,26 +121,34 @@ setup_and_run() {
   elif [ $SERVER_SPEC = 'IX-10' ]; then
     PREP=prep_ix
     OUTDIR='IX-10'
-    QPS_SWEEP_MAX=3000000
-    QPS_NUM_POINTS=30
+    QPS_SWEEP_MAX=1500000
+    QPS_SWEEP_NUM_POINTS=30
     MEMCACHED_EXEC=memcached
     MEMCACHED_BUILD_PATH=../apps/memcached-1.4.18-ix
     MEMCACHED_BUILD_TARGET=''
     MEMCACHED_PARAMS='-m 8192 -u `whoami`'
-    MEMCACHED_SHOULD_DEPLOY=1
+    if [ $CLUSTER_ID = 'EPFL' ]; then
+      MEMCACHED_SHOULD_DEPLOY=1
+    else
+      MEMCACHED_SHOULD_DEPLOY=0
+    fi
     IX=1
     IX_PARAMS="-d 0000:42:00.1 -c $MEMCACHED_CORES"
     SERVER_HOST_EXPERIMENT=${SERVER_HOST_EXPERIMENT}:8000
   elif [ $SERVER_SPEC = 'IX-40' ]; then
     PREP=prep_ix-40
     OUTDIR='IX-40'
-    QPS_SWEEP_MAX=2800000
-    QPS_NUM_POINTS=20
+    QPS_SWEEP_MAX=1500000
+    QPS_SWEEP_NUM_POINTS=30
     MEMCACHED_EXEC=memcached
     MEMCACHED_BUILD_PATH=../apps/memcached-1.4.18-ix
     MEMCACHED_BUILD_TARGET=''
     MEMCACHED_PARAMS='-m 8192 -u `whoami`'
-    MEMCACHED_SHOULD_DEPLOY=1
+    if [ $CLUSTER_ID = 'EPFL' ]; then
+      MEMCACHED_SHOULD_DEPLOY=1
+    else
+      MEMCACHED_SHOULD_DEPLOY=0
+    fi
     IX=1
     IX_PARAMS="-d 0000:04:00.0,0000:04:00.1,0000:05:00.0,0000:05:00.1 -c 0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
     SERVER_HOST_EXPERIMENT=${SERVER_HOST_EXPERIMENT}:8000
@@ -154,8 +165,12 @@ setup_and_run() {
       ./configure
       cd $DIR
     fi
-    ../make.sh clean
-    ../make_memcached.sh
+    
+    if [ $IX -eq 1 ]; then
+      ../make.sh clean
+      ../make_memcached.sh
+    fi
+    
     make -C $MEMCACHED_BUILD_PATH
     scp $MEMCACHED_BUILD_PATH/$MEMCACHED_EXEC $SERVER_HOST:$MEMCACHED_EXEC
     
@@ -181,8 +196,8 @@ setup_and_run() {
   done
   
   # Set up the QPS sweep
-  QPS_MIN=$(($QPS_SWEEP_MAX / $QPS_NUM_POINTS))
-  QPS_STEP=$(($QPS_SWEEP_MAX / $QPS_NUM_POINTS))
+  QPS_MIN=$(($QPS_SWEEP_MAX / $QPS_SWEEP_NUM_POINTS))
+  QPS_STEP=$(($QPS_SWEEP_MAX / $QPS_SWEEP_NUM_POINTS))
   export MUTILATE_EXTRA_OPTS="--scan=$QPS_MIN:$QPS_SWEEP_MAX:$QPS_STEP"
   
   # Set up the output directory
