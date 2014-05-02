@@ -191,12 +191,12 @@ bound and within 90\% of the wire rate, resulting in small batches or
 \twiddle 3 packets processed at every iteration through the \ix
 pipeline.  At 4x10GbE, the workload becomes CPU bound and \ix
 automatically adapts to larger pipeline batches of \twiddle 113
-packets, which amortizes transitions and improves temporal locality.
-Finally, Fig.\ref{fig:short40:size} shows that \ix can deliver 8KB
-messages with a goodput of 35Gbps, for a wire throughput of 38Gpbs
-(out of a possible 39.7Gbps).  Overall, \ix makes it practical to
-scale protected TCP/IP processing beyond 10GbE, even with a single
-socket multi-core server.
+packets, which amortizes transitions and improves locality.  Finally,
+Fig.\ref{fig:short40:size} shows that \ix can deliver 8KB messages
+with a goodput of 35Gbps, for a wire throughput of 38Gpbs (out of a
+possible 39.7Gbps).  Overall, \ix makes it practical to scale
+protected TCP/IP processing beyond 10GbE, even with a single socket
+multi-core server.
 
 
 \subsection{Connection Scalability}

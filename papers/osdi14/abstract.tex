@@ -13,8 +13,10 @@
   implementation of the networking stack.
 
   We present \ix, a {\it dataplane operating system} specifically
-  designed for web-scale applications.  It separates management and
-  scheduling functions of the kernel (control plane) from network
+  designed for web-scale applications. \ix brings lessons from high
+  performance middleboxes such as firewalls and load-balancers to the
+  design of general systems and applications.  It separates management
+  and scheduling functions of the kernel (control plane) from network
   processing (dataplane).  \ix optimizes for both bandwidth and
   latency by dedicating hardware threads and networking queues to
   dataplane instances, processing bounded batches of packets to
