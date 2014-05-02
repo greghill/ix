@@ -162,7 +162,7 @@ adapters (NICs) and receive-side scaling (RSS)~\cite{url:rss} to
 implement flow-consistent hashing of incoming traffic to distinct
 hardware queues. Each dataplane instance exclusively controls a set of
 these queues and runs the networking stack and a single application,
-such as a webserver or a distributed caching server. Moreover, the \ix
+such as a web server or a distributed caching server. Moreover, the \ix
 API and companion user-level library meet the commutativity
 rule~\cite{DBLP:conf/sosp/ClementsKZMK13}, eliminating multi-core
 synchronization in the common case operation. The \ix user-level
