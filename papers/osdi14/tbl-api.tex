@@ -15,11 +15,11 @@ close &               handle					& Closes or rejects a connection\\
 \hline
 {\bf Type} &           {\bf Parameters}  &
 {\bf Description}\\
-Knock  &               handle, src\_IP, src\_port		& A remotely initiated connection was opened \\
-Connected &            cookie, outcome				& A locally initiated connection finished opening \\
-Recv &                 cookie, mbuf\_ptr, mbuf\_len		& A message buffer was received \\
-Sent &                 cookie, bytes\_sent, window\_size	& A send completed and/or the window size changed \\
-Dead &                 cookie, reason				& A connection was terminated \\
+knock  &               handle, src\_IP, src\_port		& A remotely initiated connection was opened \\
+connected &            cookie, outcome				& A locally initiated connection finished opening \\
+recv &                 cookie, mbuf\_ptr, mbuf\_len		& A message buffer was received \\
+sent &                 cookie, bytes\_sent, window\_size	& A send completed and/or the window size changed \\
+dead &                 cookie, reason				& A connection was terminated \\
 \hline
 \end{tabular}
 \caption{\ix system calls and event conditions API. 
