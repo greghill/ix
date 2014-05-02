@@ -139,7 +139,7 @@ packets are processed by the dataplane. \ana{Emphasize that we are not
   early at the NIC if can't handle.  Citation for Mogul and
   Ramakrishnan could go here.} The networking stack sends
 acknowledgments to peers only as fast as the application can process
-them. Any slowdown in the application processing rate quickly leads to
+them. Any slowdown in the application-processing rate quickly leads to
 shrinking windows in peers. The dataplane also monitors queue depths
 at the NIC edge and signals the control plane to allocate additional
 resources for the dataplane (more hardware threads, increased clock
