@@ -39,19 +39,19 @@ separately (no \texttt{multiget} operations).
 a function of the achieved throughput as this is the relevant metric
 for datacenter applications~\cite{DBLP:journals/cacm/DeanB13}. This
 graph provides insights into the full range of system behaviors. Most
-commercial \texttt{memcached} use such a latency-throughput graph to
-provision each server so that the 95th percentile latency does not
-exceed 200\microsecond to 500\microsecond.  We carefully tune the Linux baseline setup
-according to the guidelines in
-\cite{Leverich:RHSU:2014}. Specifically, we pin memcached threads,
+commercial \texttt{memcached} deployments use such a
+latency-throughput graph to provision each server so that the 95th
+percentile latency does not exceed 200\microsecond to 500\microsecond.
+We carefully tune the Linux baseline setup according to the guidelines
+in \cite{Leverich:RHSU:2014}. Specifically, we pin memcached threads,
 configure interrupt-distribution based on thread-affinity, and tune
 interrupt moderation thresholds. We believe that our baseline Linux
 numbers are as tuned as possible for this hardware using the
 open-source version of \texttt{memcached-1.4.18}. For our benchmark,
 we use 6 client machines and a total of 772 connections to the
-memcached server.  We report the results for the
-server configuration that provides the best performance: 8 cores with
-Linux, but only 6 with \ix.
+memcached server.  We report the results for the server configuration
+that provides the best performance: 8 cores with Linux, but only 6
+with \ix.
 
 Porting \texttt{memcached} to IX primarily consisted of adapting it to
 use our event library. In most cases, the port was straightforward,

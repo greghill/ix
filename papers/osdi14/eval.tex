@@ -4,7 +4,8 @@
 
 We compared \ix to a Linux baseline running a 3.11.10 kernel and to
 mTCP~\cite{jeong2014mtcp}. Our evaluation uses both networking
-microbenchmarks and a real-world, massively deployed, event-based application.
+microbenchmarks and a real-world, massively deployed, event-based
+application.
 
 % We
 % selected mTCP as it is the state-of-the-art user-space TCP alternative
@@ -26,12 +27,12 @@ microbenchmarks and a real-world, massively deployed, event-based application.
 \subsection{Experimental Methodology}
 \label{sec:eval:setup}
 
-We use two experimental setups because we wish to simultaneously 
+We use two experimental setups because we wish to simultaneously
 compare with mTCP and scale to bandwidth beyond 10GbE.  Unfortunately,
-our 4x10GbE setup uses recent hardware not supported by mTCP out of the
-box.\footnote{We were able to port mTCP to the 4x10GbE setup, but
+our 4x10GbE setup uses recent hardware not supported by mTCP out of
+the box\footnote{We were able to port mTCP to the 4x10GbE setup, but
   could not reach the expected performance.  We will attempt to unify
-  the setup by the camera-ready deadline.}  Linux and \ix run on both
+  the setup by the camera-ready deadline.}.  Linux and \ix run on both
 setups.
 
 %  more recent hardware that does not run mTCP out
@@ -47,13 +48,12 @@ setups.
 
 %\george{possible false hope that mTCP can use 4 NICs. I am not sure about that.}}.
 
-\input{figs/float-pingpong} 
-\myparagraph{10GbE setup:} This setup consists of a
-cluster of 28 Xeon E5-2630 @ 2.3 Ghz machines with a mixture of
-Intel 82599EB 10GbE and Solarflare SFC9000 10GbE NICs, configured
-with 64 GB of RAM each. They are connected with an Arista 7050S-64
-switch. One machine is used as the server, while the rest can be used
-as clients. The server socket has 6 cores and 12 hyperthreads.
+\input{figs/float-pingpong} \myparagraph{10GbE setup:} This setup
+consists of a cluster of 28 Xeon E5-2630 @ 2.3 Ghz machines with Intel
+82599EB 10GbE and Solarflare SFC9000 10GbE NICs, configured with 64 GB
+of RAM each. They are connected with an Arista 7050S-64 switch. One
+machine with an Intel NIC is used as the server, while the rest are
+used as clients. The server socket has 6 cores and 12 hyperthreads.
 
 \input{figs/float-short-both}
 
@@ -112,19 +112,19 @@ all cases, the two servers use the same system (Linux, mTCP, or \ix).
 %% Linux-mTCP (86.77us)
 %% mTCP-mTCP (95.53us)
 
-Fig.~\ref{fig:pingpong} shows the goodput achieved for
-different message sizes.  Two \ix servers achieve goodput of 5Gbps
-(half of the maximum) with messages as small as 20KB. In
-contrast, Linux requires 384KB messages to achieve 5Gbps, while
-mTCP requires messages larger than 500KB. The goodput difference
-between the three systems is most dramatic for small messages. Using
-64B messages, the one-way latency is 6.9\microsecond between two
-servers running \ix, 24.1\microsecond if they are running Linux, and
-95\microsecond if they are running mTCP.  The differences in system
-architecture explain the dramatic gap. \ix has a dataplane model
-that polls queues and runs them to completion. Linux has an interrupt
-model, which wakes up the blocked process. mTCP uses aggressive
-batching to offset the cost of context switching~\cite{jeong2014mtcp}.
+Fig.~\ref{fig:pingpong} shows the goodput achieved for different
+message sizes.  Two \ix servers achieve goodput of 5Gbps (half of the
+maximum) with messages as small as 20KB. In contrast, Linux requires
+384KB messages to achieve 5Gbps, while mTCP requires messages larger
+than 500KB. The goodput difference between the three systems is most
+dramatic for small messages. Using 64B messages, the one-way unloaded
+latency is 6.9\microsecond between two servers running \ix,
+24.1\microsecond if they are running Linux, and 95\microsecond if they
+are running mTCP.  The differences in system architecture explain the
+dramatic gap. \ix has a dataplane model that polls queues and
+processes packets to completion. Linux has an interrupt model, which
+wakes up the blocked process. mTCP uses aggressive batching to offset
+the cost of context switching~\cite{jeong2014mtcp}.
 
 %Nevertheless, even with high message sizes, \ix maintains a \edb{2x}
 %and \edb{3x} goodput advantage over mTCP and Linux respectively.
@@ -184,18 +184,19 @@ Figs.~\ref{fig:short40:mcore}-\ref{fig:short40:size} show the results
 on the 4x10GbE setup for Linux and \ix, as well as an \ix
 configuration that uses only one of the four
 links. Fig.~\ref{fig:short40:mcore} shows that \ix linearly scales and
-delivers 3.9MTPS on 4x10GbE with a single socket.
+delivers 3.9MTPS on 4x10GbE with a single multi-core socket.
 Fig.~\ref{fig:short40:roundtrips} shows that going to 4x10GbE also
 improves throughput, but only by 30\%: the 10GbE configuration is IO
 bound and within 90\% of the wire rate, resulting in small batches or
 \twiddle 3 packets processed at every iteration through the \ix
-pipeline.  At 4x10GbE, the workload becomes CPU bound and \ix automatically adapts to larger
-pipeline batches of \twiddle 113 packets, which amortizes transitions and
-improves temporal locality.  Finally, Fig.\ref{fig:short40:size} shows
-that \ix can deliver 8KB messages with a goodput of 35Gbps, for a wire
-throughput of 38Gpbs (out of a possible 39.7Gbps).  Overall, \ix makes
-it practical to scale protected TCP/IP processing beyond 10GbE, even
-with a single socket multi-core server.
+pipeline.  At 4x10GbE, the workload becomes CPU bound and \ix
+automatically adapts to larger pipeline batches of \twiddle 113
+packets, which amortizes transitions and improves temporal locality.
+Finally, Fig.\ref{fig:short40:size} shows that \ix can deliver 8KB
+messages with a goodput of 35Gbps, for a wire throughput of 38Gpbs
+(out of a possible 39.7Gbps).  Overall, \ix makes it practical to
+scale protected TCP/IP processing beyond 10GbE, even with a single
+socket multi-core server.
 
 
 \subsection{Connection Scalability}
