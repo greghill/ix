@@ -6178,7 +6178,7 @@ HWQ}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{2.8799999356269836, 110.90999954938889}, {185.0399958640337, 24}}</string>
+			<string>{{2.8799999356269836, 110.90999954938889}, {49.799999557435513, 24}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FontInfo</key>
@@ -6372,7 +6372,7 @@ HWQ}</string>
 	<key>MasterSheets</key>
 	<array/>
 	<key>ModificationDate</key>
-	<string>2014-04-27 19:28:11 +0000</string>
+	<string>2014-05-02 03:00:58 +0000</string>
 	<key>Modifier</key>
 	<string>Ed Bugnion</string>
 	<key>NotesVisible</key>
