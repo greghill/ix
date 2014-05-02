@@ -1,0 +1,138 @@
+diff --git a/bench/bench-common.sh b/bench/bench-common.sh
+index d9776bc..353b675 100644
+--- a/bench/bench-common.sh
++++ b/bench/bench-common.sh
+@@ -50,18 +50,18 @@ prepare() {
+   # clients have shared file system
+   scp $DEPLOY_FILES init.sh $HOST: > /dev/null
+   
+-  pids=''
+-  sudo SERVER=1 NET="$SERVER_NET" USE_IX=$BUILD_IX bash init.sh &
+-  pids="$pids $!"
+-  for CLIENT_DESC in $CLIENTS; do
+-    IFS='|'
+-    read -r HOST NIC IX_IP <<< "$CLIENT_DESC"
+-    ssh $HOST "sudo SERVER=0 NET='$CLIENT_NET' USE_IX=$BUILD_IX NIC=$NIC IX_IP=$IX_IP bash init.sh" &
+-    pids="$pids $!"
+-  done
+-  IFS=' '
++  #pids=''
++  #sudo SERVER=1 NET="$SERVER_NET" USE_IX=$BUILD_IX bash init.sh &
++  #pids="$pids $!"
++  #for CLIENT_DESC in $CLIENTS; do
++  #  IFS='|'
++  #  read -r HOST NIC IX_IP <<< "$CLIENT_DESC"
++  #  ssh $HOST "sudo SERVER=0 NET='$CLIENT_NET' USE_IX=$BUILD_IX NIC=$NIC IX_IP=$IX_IP bash init.sh" &
++  #  pids="$pids $!"
++  #done
++  #IFS=' '
+ 
+-  for pid in $pids; do
+-    wait $pid
+-  done
++  #for pid in $pids; do
++  #  wait $pid
++  #done
+ }
+diff --git a/bench/bench-pingpong.sh b/bench/bench-pingpong.sh
+index ca71f5b..1300586 100755
+--- a/bench/bench-pingpong.sh
++++ b/bench/bench-pingpong.sh
+@@ -22,6 +22,7 @@ if [ $CLUSTER_ID = 'EPFL' ]; then
+   SERVER_IP=192.168.21.1
+ elif [ $CLUSTER_ID = 'Stanford' ]; then
+   CLIENTS="$CLIENTS maverick-10|p7p1|10.79.6.21"
++  #CLIENTS="$CLIENTS maverick-11|xge0|10.79.6.22"
+   SERVER_IP=10.79.6.26
+ elif [ $CLUSTER_ID = 'Stanford-IX' ]; then
+   CLIENTS="$CLIENTS maverick-12|p3p1|10.79.6.23"
+@@ -364,17 +365,17 @@ run_single() {
+ 
+ run() {
+   run_single 64
+-  for i in {1..9}; do
++  for in in 1 2 3 4 5 6 7 8 9; do
+     run_single $[$i * 20000]
+   done
+-  for i in {2..9}; do
++  for i in 2 3 4 5 6 7 8 9; do
+     run_single $[$i * 100000]
+   done
+-  run_single $[1024 * 1024]
++  run_single 1048576
+ }
+ 
+ run_netpipe() {
+-  PARAMS="-r -n 100 -p 0 -l 64 -u $[2**20]"
++  PARAMS="-r -n 100 -p 0 -l 64 -u 1048576"
+   ./$NETPIPE_EXEC_SERVER $PARAMS > /dev/null 2>&1 &
+   ssh $HOST "./$NETPIPE_EXEC_CLIENT $PARAMS -h $SERVER_IP > /dev/null 2>&1 && awk '//{printf(\"0\\t%d\\t999999999\\t%f 0 0 0 0 0\\n\",\$1,\$2*1024*1024/8/2/\$1)}' np.out" > $OUTDIR/data
+ }
+diff --git a/bench/bench-short.sh b/bench/bench-short.sh
+index a403173..3d9e9f5 100755
+--- a/bench/bench-short.sh
++++ b/bench/bench-short.sh
+@@ -41,16 +41,17 @@ if [ $CLUSTER_ID = 'EPFL' ]; then
+   CLIENT_CONNECTIONS=50
+   MAX_CORES=16
+ elif [ $CLUSTER_ID = 'Stanford' ]; then
+-  CLIENTS="$CLIENTS maverick-1|p3p1|10.79.6.11"
+-  CLIENTS="$CLIENTS maverick-2|p3p1|10.79.6.13"
++  #CLIENTS="$CLIENTS maverick-1|p3p1|10.79.6.11"
++  #CLIENTS="$CLIENTS maverick-2|p3p1|10.79.6.13"
+   CLIENTS="$CLIENTS maverick-4|p3p1|10.79.6.15"
+   CLIENTS="$CLIENTS maverick-7|p3p1|10.79.6.18"
+   CLIENTS="$CLIENTS maverick-8|p3p1|10.79.6.19"
+   CLIENTS="$CLIENTS maverick-10|p7p1|10.79.6.21"
+   CLIENTS="$CLIENTS maverick-12|p3p1|10.79.6.23"
+   CLIENTS="$CLIENTS maverick-14|p3p1|10.79.6.25"
+-  #CLIENTS="$CLIENTS maverick-16|p3p1|10.79.6.27"
+-  #CLIENTS="$CLIENTS maverick-18|p3p1|10.79.6.29"
++  CLIENTS="$CLIENTS maverick-16|p3p1|10.79.6.27"
++  #CLIENTS="$CLIENTS maverick-17|p3p1|10.79.6.28"
++  CLIENTS="$CLIENTS maverick-18|p3p1|10.79.6.29"
+   SERVER_IP=10.79.6.26
+   CLIENT_CORES=24
+   CLIENT_CONNECTIONS=96
+@@ -322,27 +323,21 @@ run_single() {
+ }
+ 
+ run() {
+-  if [ $CLUSTER_ID = 'EPFL' ]; then
+-    for i in `eval echo "{1..$MAX_CORES}"`; do
++  for i in `eval echo "{1..$MAX_CORES}"`; do
++    if [ $i -ne 5 ]; then
++      CURRDIR=`pwd`
++      cd ~/mtcp/io_engine/driver
++      sudo ./install.py $i $i
++      cd $CURRDIR
+       run_single $i 64 1
+-    done
+-    for i in 2 8 32 64 128 256 512 1024; do
+-      run_single $MAX_CORES 64 $i
+-    done
+-    for i in 256 1024 4096 8192; do
+-      run_single $MAX_CORES $i 1
+-    done
+-  elif [ $CLUSTER_ID = 'Stanford-IX' ]; then
+-    for i in `eval echo "{1..$MAX_CORES}"`; do
+-      run_single $i 64 1
+-    done
+-    for i in 2 8 32 64 128 256 512 1024; do
+-      run_single $MAX_CORES 64 $i
+-    done
+-    for i in 256 1024 4096 8192; do
+-      run_single $MAX_CORES $i 1
+-    done
+-  fi
++    fi
++  done
++  for i in 2 8 32 64 128 256 512 1024; do
++    run_single $MAX_CORES 64 $i
++  done
++  for i in 256 1024 4096 8192; do
++    run_single $MAX_CORES $i 1
++  done
+ }
+ 
+ prepare $BUILD_IX $BUILD_TARGET_BENCH
