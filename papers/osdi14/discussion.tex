@@ -2,8 +2,6 @@
 \section{Discussion}
 \label{sec:disc}
 
-% We now discuss a number of important lessons, design issues, and
-% limitations of the current \ix implementation.
 
 \myparagraph{What makes \ix faster:} The results in \S\ref{sec:eval}
 show that a networking stack can be implemented in a protected OS
@@ -24,47 +22,6 @@ in tuning the implementation of \ix for multi-core scalability,
 eliminating constructs that introduce synchronization or coherence
 traffic.
 
-% \myparagraph{Selecting \ix's TCP stack:} 
-% The \ix kernel includes a complete network protocol stack with
-% RFC-compliant support for TCP, UDP, ARP, ICMP and LACP.  It however
-% explicitly lacks a complete IP-layer and is therefore only a capable
-% networking endpoint, but not of handling routing, bridging or
-% filtering functions.  It also totally lacks a socket layer and its
-% associated API and semantics.  For our implementation of TCP, we chose
-% to lwIP~\cite{dunkels2001design} as a starting point for our code base because of its
-% modularity and is maturity as a compliant, feature-rich networking
-% stack.  lwIP was however designed with memory-efficiency in mind,
-% primarily for embedded environments.  We radically changed the data
-% structures that organize protocol control blocks for scalability, as
-% well as for finer-grain, precise timer management.  However, we did
-% not (yet) attempt to optimize the code paths for performance, and
-% consequently believe that our results have room for improvement.
-
-% \myparagraph{Challenges in API design:} We iterated through many
-% designs for the \ix dataplane API in an effort to support simple, high
-% performance, flexible, and secure IO at user-level.  Batched system
-% calls, in particular, were a challenge to support correctly. In an
-% early design of \ix we ommited return codes from batched system calls,
-% instead opting to make the outcome of every operation be an event
-% condition. However, we discovered that the undefined order of event
-% condition delivery created uneccesary complexity. For example, if a
-% sent event condition is delivered before the status of the previous
-% sendv system call was provided, then it was difficult for our event
-% library to determine which pending data in the send window should be
-% enqueued next. We fixed this issue by handling system call return
-% codes seperately from event conditions. In our final design, the
-% kernel overwrites user memory containing batched system call requests
-% with corresponding return codes. We also discovered that we could
-% improve performance and error handling simplicity in our event libary
-% by issuing a single sendv system call per flow for each processing
-% round. Thus, if an application requests more than one write IO, we'll
-% coalesce them into a single system call.
-
-% \todo Lessons learned: importance of hardware knobs and
-% micro-architectural effects.  \christos{should we get into that? at
-%   least say that this will be better with Hasswell, more cores, better
-%   nics. the trends are in our favor}
-
 \myparagraph{Limitations of current prototype:} The current prototype
 supports any stateless offload NIC with multiple queues and RSS
 support. The NICs we currently use support RSS group of 16 queues,
@@ -78,8 +35,7 @@ does not exploit IOMMUs or VT-d. Instead, it uses Dune to map
 descriptor rings directly into \ix memory as a form of
 paravirtualization~\cite{DBLP:conf/sosp/BarhamDFHHHN03}.  Although
 this choice puts some level of trust into \ix, the applications remain
-securely isolated. % \christos{maybe something about the packet rate
-%  limitatations of nics}
+securely isolated.
 
 \myparagraph{Future work:} This paper focused on the \ix dataplane
 design. \ix is designed and implemented to support the dynamic
@@ -98,19 +54,4 @@ implementations of alternative APIs, such as
 MegaPipe~\cite{han2012megapipe}, cooperative
 threading~\cite{capriccio}, and rule-based
 models~\cite{stutsman_2013}.
-
-
- % Looking ahead, we envision that an
-% \ix-style model may provide a higher performance alternative to the
-% current OS-based and hypervisor-based implementations of virtual
-% switches~\cite{openvswitch} and IP-level features (e.g., iptables).
-% In particular, the security model of \ix, which enforces modularity
-% without introducing noticeable overheads, appears like a great match
-% to meet the protection, multi-tenancy, and scalability requirements of
-% network function virtualization~\cite{etsi:NFV}.
-
-
-
-
-%\todo Use of dataplane vs. virtual machines. 
 

@@ -56,22 +56,7 @@ with \ix.
 Porting \texttt{memcached} to IX primarily consisted of adapting it to
 use our event library. In most cases, the port was straightforward,
 replacing Linux and \texttt{libevent} function calls with their
-equivalent versions in our API. % There were a few incompatibilities
-% that required additional effort. For example we don't yet support
-% vectored write operations (e.g., \texttt{writev}) in our API (the
-% benefits would be only marginal because we batch writes inside our
-% event library). Morever, we had to make some internal changes to
-% memcached in order to deliniate the spawning elastic threads and
-% background
-% \adam{On our haswell machine, which runs an older
-% linux kernel this change works great, but it had to be disabled on
-% the mavericks and at EPFL because newer kernels have something wierd
-% going on with thread spawning. In pratice, background threads didn't
-% make any noticable difference on the Haswell. Should I say anything
-% about this limitation?}
-% Finally, we made some small changes to the
-% behavior of the main event loop in order to better support our run to
-% completion execution model.
+equivalent versions in our API.
 We did yet not attempt to tune the internal scalability of {\it
   memcached}~\cite{memC3} or to support zero-copy IO operations.
 

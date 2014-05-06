@@ -3,16 +3,6 @@
 \label{sec:intro}
 
 
-% \dm{The intro is very buzzword-heavy, which makes a fundamental
-%   contribution (architecture for super low-overhead networking) sound
-%   really artifactual.  The term ``web-scale'' does not do us any
-%   favors.  Yes right now the web and social networking are hot topics,
-%   but these should be presented as examples of services that can
-%   benefit from sub-microsecond receive paths.  Our contribution is not
-%   to fix twitter's or Amazon's problems in 2014.  It is a fundamental
-%   re-thinking of how to design network APIs for modern NIC hardware,
-%   which could enable new types of system down the line.}
-
 Web-scale applications such as search, social networking, and
 e-commerce platforms, are redefining the requirements on system
 software. A single application can consist of hundreds of software
@@ -30,55 +20,7 @@ churn~\cite{nishtala2013scaling}. It is also desirable to be elastic
 in resource usage, allowing other applications to use any available
 resources in a shared
 cluster~\cite{DBLP:journals/computer/BarrosoH07,Leverich:RHSU:2014}.
-% cores and memory in a shared cluster~\cite{Leverich:RHSU:2014} or
-% enabling cost reduction through power
-% management~\cite{DBLP:journals/computer/BarrosoH07}.
 
-
-% \christos{1-2 paragraphs on how mainstream approaches fail many 
-% of these requirements. A trimmed down version of what is shown below. }
-% At massive scale, these interactions constrain applications.  For
-% example, latency considerations force Facebook to restrict the number
-% of sequential data accesses to fewer than 150 per rendered web
-% page~\cite{rumble2011s}.  Also at Facebook, connection scalability
-% limitations have led the deployment of a UDP-based memcached service
-% tier~\cite{nishtala2013scaling} for \texttt{get} operations, which
-% therefore forgoes all of the benefits of the standard TCP-based model.
-% To ensure the reliable application of \texttt{put} operations, the
-% system relies on in-network TCP-proxies to aggregate requests, which
-% introduces complexity and latency in the architecture.
-
-% In a recent keynote, \edb{too personal?}Google's Luiz Barroso identified three additional challenges
-% for applications that must process large amounts of data in little
-% time: energy-proportionality, tail-tolerance, and microsecond
-% computing~\cite{luiz-isscc}.
-% Energy-proportionality~\cite{DBLP:journals/computer/BarrosoH07}
-% requires systems to perform with a high degree of energy-efficiency,
-% typically measured in transactions / Watt, across all typical levels
-% of load on the system, and not only at saturation. Tail
-% tolerance~\cite{DBLP:journals/cacm/DeanB13} describes the emerging
-% systems-building discipline that aims to deliver predictable response
-% times in a distributed system.  Finally, the microsecond computing
-% challenge describes the need to minimize the latency of interactions
-% within a datacenter: even though existing transmission and switching
-% technologies allow for microsecond-level messaging between any two
-% nodes in a datacenter, a combination of protocol processing, interrupt
-% delivery, and operating system overheads generally increase the
-% latency by two orders of magnitude.  Although each challenge is
-% non-trivial in itself, these challenges must be handled
-% simultaneously.  Unfortunately, techniques that improve one metric are
-% often at odds with another metric.  For example, dynamic voltage
-% scaling techniques improve energy-proportionality for batch
-% applications~\cite{DBLP:conf/asplos/DelimitrouK14}, but at the
-% expense of latency.  Similarly, batching techniques such as interrupt
-% coalescing improve performance at the expense of average and tail
-% latency~\cite{missing}.
-
-% \dm{Bad to rely on ``conventional wisdom'' without citation, but we
-%   can reasonably quantify such overheads ourselves to state a fact.
-%   E.g., ``Currently the only option for meeting XXX performance
-%   requirement is to bypass the kernel[cite], with the following
-%   disadvantages\ldots''} 
 The conventional wisdom is that there is a fundamental mismatch
 between the requirements of web-scale workloads and existing
 implementations of TCP/IP in commodity operating
@@ -95,33 +37,6 @@ counts. Moreover, user-level networking suffers from lack of
 protection. Application bugs and crashes can corrupt the networking
 stack and impact other workloads.
 
-% Christos: I have decided to postpone the discussion of all other
-% alternatives in section 2. Simplifies the message in the intro
-% The conventional wisdom is that these problems are rooted in a
-% mismatch between existing commodity operating systems, existing
-% network protocols, and the unique requirements of web-scale
-% applications.  Consequently, the proposed solutions generally involve
-% either: (i) improving the operating system's implementation and
-% interface~\cite{DBLP:conf/eurosys/PesterevSZM12,han2012megapipe}; (ii)
-% replacing network-level connections with
-% datagrams~\cite{nishtala2013scaling}; (iii) offloading connection and
-% protocol processing to a specialized hardware adapter, e.g, the
-% RAMcloud~\cite{DBLP:conf/sosp/OngaroRSOR11} key-value store relies on
-% RDMA~\cite{rdma-user-manual} to achieve 5~\microsecond latency; (iv)
-% bypassing the operating system and implementing the protocol stack in
-% user-space~\cite{jeong2014mtcp}; (v) merging the application logic
-% directly within a software data plane, as is commonly done in
-% middleboxes such as firewalls~\cite{missing},
-% load-balancers~\cite{missing}, and software
-% routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09};
-% or even (vi) replacing the general-purpose hardware with a specialized
-% FPGA implementation dedicated to serving a single, simple workload
-% such as memcached~\cite{DBLP:conf/fpga/ChalamalasettiLWARM13}.
-
-% \christos{This is where we bring up the design principles of IX:
-%   separation data/control plane; native zero-copy event-oriented API; 
-% data-plane architecture that runs to completion; design for multi-core
-% and multi-queue. Probably two paragraphs}
 
 \dm{Again, this makes it sound narrow.  Phrase in a more fundamental
   way.  Point is that currently people must achieve a delicate $n$-way
@@ -145,9 +60,8 @@ same protection model as commodity operating systems. In our
 implementation, the control plane runs on a full Linux kernel and the
 dataplanes use Dune to run \ix as protected, library-based operating
 systems on dedicated hardware
-threads~\cite{belay2012dune}. % \adam{new:} Dune makes this
-% possible by directly and safely exposing hardware protection
-% mechanisms to user-level.
+threads~\cite{belay2012dune}.
+
 
 \ix provides a native, zero-copy API that explicitly exposes network
 flow-control to applications.  This API enables dataplanes to optimize
@@ -189,38 +103,6 @@ compatibility between \ix and a wide range of existing applications.
   retaining a high degree of source code compatibility and remaining
   compatible with existing system configuration and management tool.}
 
-% \ix addresses the C10M problem through a careful separation of the
-% control plane and dataplane functions.  The control plane consists of a
-% vanilla Linux deployment running the Dune
-% framework~\cite{belay2012dune}. 
-
-% The dataplane is a special-purpose library operating system that
-% directly controls hardware I/O queues, runs the networking stack, and
-% generates the event callbacks of the application.  Each dataplane
-% instance exclusively controls a set of hardware I/O queues, and runs a
-% single application, e.g. a web sever listening to \texttt{:80} and
-% \texttt{:443}.  Unlike kernel-bypass approaches and middlebox designs,
-% \ix provides memory protection.  Like these designs however, \ix
-% offers a zero-copy solution both directions, eliminating all packet
-% copy overheads.
-
-
-% We introduce \ix, a specialized system software solution built for
-% event-driven applications, including applications built for the
-% libevent framework~\cite{provos2003libevent}.  \ix is designed to meet the
-% challenge of the C10M problem~\cite{theC10Mproblem}: for a given
-% server, scale to 10 million concurrent TCP connections, saturate one
-% or multiple 10 GbE interfaces, and deliver 10~\microsecond latency
-% (mean), with an additional latency jitter of not more than an extra
-% 10~\microsecond.
-
-% The primary contributions of the \ix design are: (i) the combined use
-% of commodity OS and virtualization hardware to separate control from
-% data plane in a protected networking stack; (ii) a run-to-completion
-% execution model with cooperating, untrusted applications; (iii) a
-% bounded, adaptive batching mechanism that provides both low-latency
-% and high throughput; (iv) an implementation carefully optimized for
-% multi-core scalability. 
 
 We compare \ix against Linux 3.11.10 and mTCP, a state-of-the-art
 user-level TCP stack~\cite{jeong2014mtcp}.  \ix outperforms Linux and
@@ -228,12 +110,7 @@ mTCP by up to 14x and 2.5x respectively for throughput. \ix even
 scales to 4x10GbE configuration using a single multi-core socket.  The
 unloaded uni-directional latency for two IX servers is
 6.9\microsecond, while Linux and mTCP lead to latencies of
-24\microsecond and 95\microsecond respectively.
-% On networking
-% microbenchmarks that are either latency-sensitive, require a high TCP
-% connection churn, or manage a large number of concurrent connections,
-% \ix outperforms Linux by an order of magnitude, and mTCP by up to
-% 2.5x.  
+21\microsecond and 95\microsecond respectively.
 Our evaluation with memcached, a massively deployed key-value store,
 shows that \ix improves upon Linux by up to 2.7x in terms of
 throughput at a given 95th percentile latency bound, as it can reduce
@@ -250,32 +127,8 @@ large performance gains, while retaining compatibility with the huge
 set of APIs and services provided by a modern OS like Linux.
 
 
-% \christos{I prefer to enumerate the main design principles and the
-%   list impressive numbers towards the goals rather than come up with
-%   another contribution list that is repetative}
-% The primary contributions of this paper are as follows:
 
-% \begin{itemize}
-
-% \item  the use of Linux and Dune as a mechanism to separate the control-plane from the dataplane in web-scale applications;
-
-% \item the design and implementation of \ix, a library operating system
-%   organized as a protected dataplane with zero-copy specifically
-%   designed to support event-driven applications;
-
-% \item an evaluation of \ix that shows that we meet the C10M challenge;
-%   despite the conventional wisdom, this is achieved through a
-%   specialized kernel (organized as dataplane);
-
-% \item the evaluation of \ix that shows that it outperforms the
-%   state-of-the-art userlevel stack by \edb{3x?} or more for all
-%   micro-benchmarks and real-world applications such as memcached;
-
-% \item XXX
-
-% \end{itemize} 
-
-\christos{Eliminate if we don't have space} The rest of the paper is 
+The rest of the paper is 
 organized as follows. \S \ref{sec:motivation} motivates the need
 for a new OS architecture for web-scale applications. \S\ref{sec:design} and \S\ref{sec:impl} present the design principles and
 implementation of \ix. \S\ref{sec:eval} presents the

@@ -10,21 +10,6 @@ servers~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. However, it can
 be ported to any architecture with virtualization support, such as ARM
 and Power.
 
-% We start
-% with an overview of the \ix kernel (\S\ref{sec:impl:kernel}), describe
-% the environment surrounding \ix (\S\ref{sec:impl:env}), and how \ix is
-% implemented as a coherency-free kernel (\S\ref{sec:impl:cohfree}).
-
-
-%the benefits of having \ix run as a guest
-%operating system (\S\ref{sec:impl:guest}), its native API at the
-%kernel/user boundary (\S\ref{sec:impl:api}), the implementation of the
-%networking stack (\S\ref{sec:impl:stack}), the implications on
-%congestion management and flow control (\S\ref{sec:impl:net}), the
-%benefits and consequences of coherence-free execution
-%(\S\ref{sec:impl:cohfree}), and finally our approach to compatibility
-%(\S\ref{sec:impl:libix}).
-
 \subsection{Overview}
 \label{sec:impl:overview}
 
@@ -54,39 +39,12 @@ run hypervisors in virtualized
 systems~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. We use the
 Dune system within Linux to enable dataplanes to run as library-based
 OSes in the VMX non-root ring 0, the mode typically used to run guest
-kernels in virtualized systems~\cite{belay2012dune}. % \ana{Elaborate on
-% role of Dune?}
+kernels in virtualized systems~\cite{belay2012dune}.
 Finally, applications run VMX non-root ring 3. This approach provides
 dataplanes with direct access to hardware features, such as page
 tables and exceptions, and provides full protection between the
 control plane, dataplanes, and untrusted user code. Moreover,
 dataplanes have direct passthrough access to  NICs.
-
- %\christos{should we explicitly say that most web-scale apps are
-%  deployed without VMs so taking over VMX is not a problem?}\edb{not needed}
-
-% \myparagraph{Separation and protection of control and data plane:}
-% Each \ix instance and its applications runs as a distinct Dune process
-% while control plane functions, including the control and monitoring of
-% dataplane, is performed by scripts and daemons of the host
-% environments.  This provides protection between control and
-% dataplanes. Within each dataplane, \ix further protects itself from
-% the untrusted application through virtual memory and by running it at
-% userlevel.
-
-% Section Move to the discussion session or future work
-% \myparagraph{Elasticity policies:} In contrast to the mechanisms,
-% which are generic, different policies can be envisioned to meet
-% different use cases and optimization functions.  If neither energy
-% proportionality or server consolidation is of any concern, the control
-% plane can obviously launch a single dataplane instance configured with
-% the maximal available physical resources.  In more realistic
-% scenarios, the dataplane is ``right-sized'' to meet its service-level
-% agreements with minimal resource allocations.  The control plane can
-% further dynamically add or revoke CPUs from a dataplane instances,
-% e.g., when the dataplane signals some sustained congestion or
-% violation of its service-level agreements, or conversely when the
-% allocated CPU resources are underutilized.
 
 
 Each \ix dataplane supports a single, multithreaded
@@ -120,10 +78,6 @@ tasks such as garbage collection. When the control plane revokes or
 allocates an additional hyperthread using a protocol similar to the
 one used in Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, the dataplane
 must adjust its number of elastic threads.
-
-% We extended the Dune sandboxing mechanisms to support the initial load
-% of multi-threaded applications into the userlevel address space, to
-% launch both elastic and background threads.
 
 \subsection{Dataplane API and Operation}
 \label{sec:impl:kernel}
@@ -162,12 +116,6 @@ application.  By contrast, conventional OSes buffer send data beyond
 raw TCP constraints and apply flow control policy inside the kernel
 ~\cite{dynamicwindow}.
 
-
-% it alleviates the file descriptor number is lowest available
-% requirement, which is not communative.  The reason for this
-% requirement appears to be to allow user apps to easily make tables of
-% meta-data pointers for each file descriptor.}
-
 In addition to the low-level native \ix API in Table~\ref{tbl:api}, we
 also built a user-level library that provides a compatible programming
 model for legacy applications and significantly simplifies the
@@ -176,9 +124,7 @@ compatible interface to \texttt{libevent} and non-blocking POSIX
 socket operations. It also includes new interfaces for zero copy read
 and write operations that are more efficient, at the expense of
 requiring changes to existing applications. 
-%Our current implementation
-%is missing certain features, such as support for timer events and
-%high-level buffered I/O utilities.
+
 
 \input{figs/float-pipeline} 
 
@@ -208,9 +154,6 @@ process repeats in a loop until there is no network activity. In this
 case, we enter a quiescent state which involves either power-efficient
 polling or yielding the hardware thread \george{the verb yield reminds me of a scheduler and i don't know if we want people to think that a dataplane and the control plane are analogous to a thread and the kernel scheduler} to the control plane.
 
-% where we periodically poll the
-% receive queues and potentially engage in power conservation states or
-% yield to the control plane.
 
 The \ix dataplane consists of 37K SLOC~\cite{url:sloccount}.  We
 leveraged existing codebases in its development: 43\% is derived from
@@ -221,7 +164,6 @@ from the Dune library.  All three code bases are highly modified for
 starting point for TCP/IP processing because of its modularity and its
 maturity as a RFC-compliant, feature-rich networking stack. We
 implemented RFC-compliant support for UDP, ARP, and ICMP.
-% It allows us to be RFC-compliant for TCP, UDP, ARP, and ICMP.
 Since lwIP was optimized for memory efficiency in embedded
 environments, we had to radically change its internal data structures
 for multi-core scalability and fine-grain timer management. We did not
@@ -268,18 +210,7 @@ reply is assigned to the same elastic thread that made the
 request. Since we cannot reverse the Toeplitz hash used by RSS~\cite{url:rss}, we
 simply probe the ephemeral port range to find a port number that
 would lead to the desired behavior. Note that this implies that two
-elastic threads in a client cannot share a flow to a server. % \edb{\sout{In
-% \S\ref{sec:eval}, we show that \ix scales wells to hundreds of
-% thousands of outgoing connections.}}
- 
-% ephemeral source port no longer form namespaces, which allows an \ix
-% client to support millions of outgoing connections.
-
-
-% \ix selects the source ephemeral port based on
-% the requesting elastic thread. Since the Toeplitz hash function cannot
-% be reversed, \ix simply probes the ephemeral range and computes the
-% Toepliz hash until a match is found.  
+elastic threads in a client cannot share a flow to a server.
 
 
 \ix does have a small number of shared structures, including some that
@@ -292,8 +223,7 @@ coherency-free but the rare updates are not.
   for RCU garbage collection, given that this is a very non-Linux
   API?}
 
-% Worth a paragraph break here, since reconfiguration is a big
-% deal. -dm
+
 \ix also requires
 synchronization when the control plane reallocates resources between
 dataplanes.  For instance, when a core is revoked from a dataplane,
@@ -305,11 +235,10 @@ not eliminate the need to develop scalable application code, it
 ensures that there are no scaling bottlenecks in the system and
 protocol processing code. 
 
-%\subsection{Cooperative Flow Control}
 \subsection{Security Model}
 \label{sec:impl:coop}
 
-%\adam{rename this section ``Security Design/Model'' ?}
+
 
 The \ix API and implementation leads to a cooperative flow control
 model between application code and the network-processing stack.  But
@@ -328,11 +257,8 @@ operation. Applications that hold on to message buffers for extensive
 periods of time must bound their use of this shared resource.  In the
 transmit direction, zero-copy operation implies that the application
 must not modify outgoing data
-% maintain outgoing data immutable
 until reception is
-acknowledged by the peer. % \edb{\sout{If there is recepient is not
-    % operating fast enough or there is network congestion, the sender
-    % will soon experience memory pressure as well.}}
+acknowledged by the peer.
 
 Since elastic threads in \ix execute both the network stack and
 application code, a long running application can block further network
@@ -341,7 +267,7 @@ applications or dataplanes. We use a timeout interrupt to detect
 elastic threads that spend excessive time in user mode (e.g., in
 excess of 10ms). We mark such applications as non-responsive and
 notify the control
-plane. %\edb{\sout{to potentially take resource allocation actions.}}
+plane.
 
 Note that all application code in \ix runs in user-mode, while the
 dataplane code is in protected ring 0. Applications cannot access
@@ -362,14 +288,6 @@ code that has access to descriptor rings with host-physical addresses.
 This decision is not fundamental to our design and does not affect the
 security model provided to applications. 
 
-%Our current implementation does not yet utilize IOMMUs. As a result, a
-%dataplane could potentially corrupt control plane memory through stray
-%DMA operations. However, unlike user-level network stacks we do not
-%strickly require IOMMU support, as untrusted application code is never
-%s given direct access to NIC DMA engies. Rather, adding IOMMU support
-%would improve security by creating a layer of in depth defense between
-%dataplanes and control planes, possibly at the expensive of some
-%performance overhead~\cite{iommu_overhead}.
 
 \dm{This raised a couple of questions for me.  First, is the
   immutability of transmit buffers enforced by memory protection, or

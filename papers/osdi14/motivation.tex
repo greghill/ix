@@ -5,14 +5,6 @@
 Our work focuses on improving operating systems for the large and
 well-defined class of web-scale applications. 
 
-%  In this section, we
-% first define the class of applications in our focus
-% (\S\ref{sec:motivation:web}), then describe the system software
-% challenges associated with that class of applications
-% (\S\ref{sec:motivation:challenges}), and identify an alternative model
-% -- the dataplane -- which addresses these challenges
-% (\S\ref{sec:motivation:dp}.
-
 \subsection{Event-driven, Web-scale Applications}
 \label{sec:motivation:web}
 
@@ -49,13 +41,7 @@ connections, data requests from existing connections, or replies to
 requests made to a downstream service.  The most efficient
 implementations use event-driven frameworks in which the service logic
 interacts with the framework exclusively via non-blocking
-calls~\cite{DBLP:conf/usenix/PaiDZ99,DBLP:conf/sosp/WelshCB01}. % This is in
-% contrast with the classic thread-oriented programming paradigm, in
-% which sessions are divided among a large pool of (kernel) threads,
-% which block while waiting for incoming traffic or outstanding
-% replies. For example, event-oriented nginx HTTP server and
-% proxy~\cite{reese2008nginx} outperforms the thread-oriented Apache
-% server~\cite{misc:apache}.
+calls~\cite{DBLP:conf/usenix/PaiDZ99,DBLP:conf/sosp/WelshCB01}.
 High-level libraries simplify the development of event-driven
 applications~\cite{provos2003libevent,libev,libuv}.  For example, the
 popular \texttt{libevent} library provides a level of abstraction that
@@ -72,8 +58,6 @@ applications~\cite{provos2003libevent}. For example,
 Web-scale applications pose unique challenges to system
 software and their networking stacks:
 
-% and in particular the ones that must respond
-% to short, latency-sensitive queries,
 
 \myparagraph{High packet rates:} The requests and, often times, the
 replies between services in web-scale applications are quite small. In
@@ -87,16 +71,13 @@ segmentation and receive side coalescing, have a marginal impact on
 performance.
 
 \myparagraph{Micro-second latency:} To enable rich interactions
-between a large number of services %in a web-scale application
+between a large number of services
 without impacting the overall latency experienced by the user, it is essential
 to minimize the latency for each service
 request~\cite{luiz-isscc,rumble2011s}. Today's networking technologies
 allow for one-way communication across a large-scale datacenter within
 a few \microsecond: 3\microsecond latency across a pair of 10 GbE
 NICs~\cite{cisco-sereno}, one to five switch crossings with
-% Avoid putting lower-case letters next to one another in math mode.
-% No need for italics in ns, anyway, unless you are denoting
-% multiplication between distinct variables.
 cut-through latencies of a few hundred ns each, and propagation delays
 of 500ns for 100 meters distance. Unfortunately, system software is
 designed to operate at a totally different timescale. Interrupt
@@ -168,8 +149,8 @@ bandwidth per server, 10 to 40 GbE interfaces, and \microsecond-level
 latency across datacenters).
 Alternative approaches have been proposed, each addressing a subset,
 but not all, of
-the requirements for web-scale applications. % However, no
-% proposal meets all requirements on commodity hardware. 
+the requirements for web-scale applications.
+
 
 \myparagraph{User-space networking stacks:} Systems such as
 OpenOnload~\cite{openonload}, mTCP~\cite{jeong2014mtcp} or
