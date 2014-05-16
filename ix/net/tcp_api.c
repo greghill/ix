@@ -309,7 +309,6 @@ static void mark_dead(struct tcpapi_pcb *api, unsigned long cookie)
 	}
 
 	api->alive = false;
-	api->pcb = NULL;
 	usys_tcp_dead(api->handle, api->cookie);
 }
 
@@ -368,14 +367,10 @@ static void on_err(void *arg, err_t err)
 	api = (struct tcpapi_pcb *) arg;
 	cookie = api->cookie;
 
-#if defined(OSDI_BENCHMARK) && !defined(OSDI_MEMCACHED)
-	if (err == ERR_ABRT || err == ERR_RST || err == ERR_CLSD)
-#elif !defined(OSDI_BENCHMARK) && defined(OSDI_MEMCACHED)
-	if (err == ERR_ABRT || err == ERR_CLSD)
-#else
-#error define OSDI_BENCHMARK or OSDI_MEMCACHED
-#endif
+	if (err == ERR_ABRT || err == ERR_RST || err == ERR_CLSD) {
 		mark_dead(api, cookie);
+		api->pcb = NULL;
+	}
 }
 
 static err_t on_sent(void *arg, struct tcp_pcb *pcb, u16_t len)

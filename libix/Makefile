@@ -8,14 +8,6 @@ AR	= ar
 SRCS	= main.c mem.c mempool.c ixev.c
 OBJS	= $(subst .c,.o,$(SRCS))
 
-ifneq ($(OSDI_BENCHMARK),)
-CFLAGS += -DOSDI_BENCHMARK
-endif
-
-ifneq ($(OSDI_MEMCACHED),)
-CFLAGS += -DOSDI_MEMCACHED
-endif
-
 all: libix.a
 
 depend: .depend

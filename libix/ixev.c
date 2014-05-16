@@ -147,10 +147,11 @@ static void ixev_tcp_sent(hid_t handle, unsigned long cookie, size_t len)
 	while (ref && ref->send_pos <= ctx->sent_total) {
 		ref->cb(ref);
 		ref = ref->next;
-		ctx->cur_buf = NULL; /* XXX: HACK */
 	}
 
 	ctx->ref_head = ref;
+	if (!ctx->ref_head)
+		ctx->cur_buf = NULL;
 
 	/* if there is pending data, make sure we try again to send it */
 	if (ctx->send_count)
@@ -212,6 +213,44 @@ ssize_t ixev_recv(struct ixev_ctx *ctx, void *buf, size_t len)
 
 	__ixev_recv_done(ctx, pos);
 	return pos;
+}
+
+/**
+ * ixev_recv_zc - read an exact amount of data without copying
+ * @ctx: the context
+ * @len: the length to read
+ *
+ * If a buffer is returned, it must be used immediately. Similar
+ * to alloca(), the buffer is no longer safe to access after the
+ * caller returns. Moreover, the buffer is no longer safe to
+ * access after the next command is issued to this library, except
+ * if that command is another recv on the same flow.
+ *
+ * Returns a pointer if the requested amount of data is available
+ * and contiguous, otherwise NULL. It may still be possible to
+ * read some or all of the data with ixev_recv() if the return
+ * value is NULL.
+ */
+void *ixev_recv_zc(struct ixev_ctx *ctx, size_t len)
+{
+	struct sg_entry *ent;
+	void *buf;
+
+	if (ctx->is_dead)
+		return NULL;
+
+	ent = &ctx->recv[ctx->recv_head & (IXEV_RECV_DEPTH - 1)];
+	if (len > ent->len)
+		return NULL;
+
+	buf = ent->base;
+	ent->base = (char *) ent->base + len;
+	ent->len -= len;
+	if (!ent->len)
+		ctx->recv_head++;
+
+	__ixev_recv_done(ctx, len);
+	return buf;
 }
 
 static struct sg_entry *ixev_next_entry(struct ixev_ctx *ctx)
@@ -448,20 +487,12 @@ static void ixev_handle_close_ret(struct ixev_ctx *ctx, long ret)
 		return;
 	}
 
-#if 0 /* XXX: hack */
 	while (ref) {
 		ref->cb(ref);
 		ref = ref->next;
 	}
-#endif
 
-#if defined(OSDI_BENCHMARK) && !defined(OSDI_MEMCACHED)
 	ixev_global_ops.release(ctx);
-#elif !defined(OSDI_BENCHMARK) && defined(OSDI_MEMCACHED)
-#else
-#error define OSDI_BENCHMARK or OSDI_MEMCACHED
-#endif
-
 }
 
 static void ixev_handle_one_ret(struct bsys_ret *r)

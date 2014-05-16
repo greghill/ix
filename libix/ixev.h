@@ -89,6 +89,7 @@ static inline void ixev_check_hacks(struct ixev_ctx *ctx)
 }
 
 extern ssize_t ixev_recv(struct ixev_ctx *ctx, void *addr, size_t len);
+extern void * ixev_recv_zc(struct ixev_ctx *ctx, size_t len);
 extern ssize_t ixev_send(struct ixev_ctx *ctx, void *addr, size_t len);
 extern ssize_t ixev_send_zc(struct ixev_ctx *ctx, void *addr, size_t len);
 extern void ixev_add_sent_cb(struct ixev_ctx *ctx, struct ixev_ref *ref);
