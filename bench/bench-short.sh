@@ -136,6 +136,7 @@ elif [ $SERVER_SPEC = 'mTCP-10-RPC' ]; then
   if [ $CLUSTER_ID = 'Stanford' ]; then
     MAX_CORES=6
   else
+    CORES="1,3,5,7,9,11,13,15"
     MAX_CORES=8
   fi
 elif [ $SERVER_SPEC = 'Linux-10-Stream' ]; then
