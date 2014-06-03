@@ -30,11 +30,13 @@ fi
 
 if [ $SERVER == "1" ]; then
   if [ $USE_IX == "1" ]; then
-    sysctl fs.nr_open=$NOFILE > /dev/null
     if [ `ulimit -n` -lt $NOFILE ]; then
-      echo 'Add the following lines into /etc/security/limits.conf and re-login.'
+      echo '1) Add the following lines into /etc/security/limits.conf:'
       echo "`whoami` soft nofile $NOFILE"
       echo "`whoami` hard nofile $NOFILE"
+      echo '2) Add the following line into /etc/rc.local:'
+      echo "sysctl fs.nr_open=$NOFILE"
+      echo '3) Reboot'
       exit 1
     fi
   fi
