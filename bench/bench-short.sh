@@ -288,11 +288,28 @@ server_linux_rpc() {
   $DIR/pingpongs $MSG_SIZE `echo $CORES|cut -d',' -f-$CORE_COUNT` &
 }
 
+flush_client_arp() {
+  pids=''
+  for CLIENT_DESC in $CLIENTS; do
+    IFS='|'
+    read -r HOST NIC IX_IP <<< "$CLIENT_DESC"
+    ssh $HOST "sudo ip -s -s neigh flush all > /dev/null" &
+    pids="$pids $!"
+  done
+  IFS=' '
+
+  for pid in $pids; do
+    wait $pid
+  done
+}
+
 server_mtcp_rpc() {
   CORE_COUNT=$1
   MSG_SIZE=$2
 
-  $DIR/pingpongs_mtcp $MSG_SIZE `echo $CORES|cut -d',' -f-$CORE_COUNT` &
+  sudo bash select_net.sh mtcp $CORE_COUNT
+  flush_client_arp
+  $DIR/pingpongs_mtcp $MSG_SIZE `echo $CORES|cut -d',' -f-$CORE_COUNT` 2>/dev/null &
 }
 
 server_linux_stream() {
@@ -316,7 +333,11 @@ run_single() {
 
   $SERVER $CORE_COUNT $MSG_SIZE
   ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then echo $HOST failed; exit 1; fi; done"
-  echo -ne "$CORE_COUNT\t$MSG_SIZE\t$MSG_PER_CONN\t" >> $OUTDIR/data
+  if [ $SERVER = server_mtcp_rpc ]; then
+    echo -ne "$[2*CORE_COUNT]\t$MSG_SIZE\t$MSG_PER_CONN\t" >> $OUTDIR/data
+  else
+    echo -ne "$CORE_COUNT\t$MSG_SIZE\t$MSG_PER_CONN\t" >> $OUTDIR/data
+  fi
   python $DIR/launch.py --time $TIME --clients $CLIENT_HOSTS --client-cmdline "`eval echo $CLIENT_CMDLINE`" >> $OUTDIR/data
   $ON_EXIT
 }
