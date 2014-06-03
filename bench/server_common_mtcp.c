@@ -46,7 +46,7 @@ static void close_mtcp_socket(struct worker *worker, struct ctx **sctx_map, int 
 static void initialize_worker(struct worker *worker)
 {
     // affinitize application thread to a CPU core
-    mtcp_core_affinitize(worker->cpu + 12);
+    mtcp_core_affinitize(mtcp_get_hyperthread_sibling(worker->cpu));
     
     // create mTCP context and spawn an mTCP thread
     worker->mctx = mtcp_create_context(worker->cpu);
