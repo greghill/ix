@@ -1,3 +1,13 @@
+all_used: client pingpongs pingpongs_mtcp NPtcp NPmtcp
+
+NPtcp:
+	$(MAKE) -C ../apps/NetPIPE-3.7.1/ tcp
+	mv ../apps/NetPIPE-3.7.1/NPtcp .
+
+NPmtcp:
+	$(MAKE) -C ../apps/NetPIPE-3.7.1/ mtcp
+	mv ../apps/NetPIPE-3.7.1/NPmtcp .
+
 all: client server latency pingpongs simple_client
 
 all_mtcp: all server_mtcp pingpongs_mtcp client_mtcp
@@ -27,4 +37,4 @@ latency: latency.c timer.c timer.h histogram.c histogram.h
 	gcc -O2 -Wall latency.c timer.c histogram.c -o latency -pthread -lrt
 
 clean:
-	rm -f server server_mtcp client client_mtcp latency pingpongs pingpongs_mtcp simple_client
+	rm -f server server_mtcp client client_mtcp latency pingpongs pingpongs_mtcp simple_client NPtcp NPmtcp
