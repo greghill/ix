@@ -26,6 +26,8 @@ foo=${SINGLE_NIC:=$DEF_SINGLE_NIC}
 foo=${IP:=$DEF_IP}
 foo=${PAGE_COUNT_2MB:=$DEF_PAGE_COUNT_2MB}
 foo=${NIC_MODULE:=$DEF_NIC_MODULE}
+foo=${DEVICE:=$DEF_DEVICE}
+foo=${PS_IXGBE_PATH:=$DEF_PS_IXGBE_PATH}
 
 tear_down() {
   service irqbalance stop >/dev/null 2>&1 || true
@@ -33,9 +35,11 @@ tear_down() {
   modprobe -r $NIC_MODULE
   rmmod dune 2>/dev/null || true
   rmmod igb_stub 2>/dev/null || true
+  rmmod ps_ixgbe 2>/dev/null || true
   for i in /sys/devices/system/node/node*/hugepages/hugepages-2048kB/nr_hugepages; do
     echo 0 > $i
   done
+  rm -f /dev/packet_shader
 }
 
 setup_linux() {
@@ -74,7 +78,13 @@ setup_ix() {
 }
 
 setup_mtcp() {
-  echo "Setting up mTCP - nothing implemented yet"
+  QUEUES=$1
+  tear_down
+  insmod $PS_IXGBE_PATH/ps_ixgbe.ko RXQ=$QUEUES TXQ=$QUEUES device=$DEVICE
+  ethtool -A xge0 autoneg off rx off tx off
+  ifconfig xge0 $IP mtu 1500 netmask 255.255.255.0
+  mknod /dev/packet_shader c 1010 0
+  chmod 666 /dev/packet_shader
 }
 
 invalid_params() {
@@ -87,7 +97,7 @@ print_help() {
   echo "  $0 none"
   echo "  $0 linux [single|bond] [opt]"
   echo "  $0 ix    [node0|node1|...]"
-  echo "  $0 mtcp"
+  echo "  $0 mtcp  QUEUES"
 }
 
 if [ $# -lt 1 ]; then
@@ -124,8 +134,8 @@ elif [ $1 = 'ix' ]; then
   else
     invalid_params
   fi
-elif [ $1 = 'mtcp' ]; then
-  setup_mtcp
+elif [[ $1 == 'mtcp' && $# -gt 1 ]]; then
+  setup_mtcp $2
 elif [ $1 = '--help' ]; then
   print_help
 else

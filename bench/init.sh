@@ -39,7 +39,11 @@ if [ $SERVER == "1" ]; then
     fi
   fi
 else
-  export IP=auto
+  if [ "$NET" = 'mtcp' ]; then
+    export IP=$IX_IP
+  else
+    export IP=auto
+  fi
   export ALL_IFS=$NIC
   export SINGLE_NIC=$NIC
   sudo -u $SUDO_USER bash -c 'cat > ix.cfg' <<EOF
@@ -48,4 +52,8 @@ arp $SERVER_IP $SERVER_MAC
 EOF
 fi
 
-bash select_net.sh $NET
+if [ "$NET" = 'mtcp' ]; then
+  bash select_net.sh $NET 16
+else
+  bash select_net.sh $NET
+fi
