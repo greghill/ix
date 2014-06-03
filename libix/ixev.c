@@ -90,6 +90,9 @@ static void ixev_tcp_dead(hid_t handle, unsigned long cookie)
 {
 	struct ixev_ctx *ctx = (struct ixev_ctx *) cookie;
 
+	if (!ctx)
+		return;
+
 	ctx->is_dead = true;
 	if (ctx->en_mask & IXEVHUP)
 		ctx->handler(ctx, IXEVHUP);
