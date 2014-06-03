@@ -23,13 +23,8 @@ bench_stop() {
 prepare() {
   if [ $# -lt 1 ]; then
     BUILD_IX=1
-    BUILD_TARGET_BENCH=
-  elif [ $# -eq 1 ]; then
+  else
     BUILD_IX=$1
-    BUILD_TARGET_BENCH=
-  elif [ $# -ge 2 ]; then
-    BUILD_IX=$1
-    BUILD_TARGET_BENCH=$2
   fi
   
   CLIENT_COUNT=0
@@ -43,9 +38,6 @@ prepare() {
   IFS=' '
   CLIENT_HOSTS=${CLIENT_HOSTS:1}
 
-  ## make
-  $DIR/../make.sh $BUILD_IX $BUILD_TARGET_BENCH
-  
   ## deploy
   # clients have shared file system
   scp $DEPLOY_FILES init.sh $HOST: > /dev/null

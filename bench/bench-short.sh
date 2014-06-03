@@ -98,7 +98,6 @@ elif [ $SERVER_SPEC = 'IX-10-RPC' ]; then
   SERVER_PORT=8000
   ON_EXIT=on_exit_ix
   BUILD_IX=1
-  BUILD_TARGET_BENCH=
   if [ $CLUSTER_ID = 'EPFL' ]; then
     SERVER_NET="ix node1"
     CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
@@ -115,7 +114,6 @@ elif [ $SERVER_SPEC = 'IX-40-RPC' ]; then
   ON_EXIT=on_exit_ix
   CORES="0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
   BUILD_IX=1
-  BUILD_TARGET_BENCH=
   IX_PARAMS="-d 0000:04:00.0,0000:04:00.1,0000:05:00.0,0000:05:00.1 -c \$IX_PARAMS_CORES"
 elif [ $SERVER_SPEC = 'Linux-10-RPC' ]; then
   SERVER_NET="linux single"
@@ -124,7 +122,6 @@ elif [ $SERVER_SPEC = 'Linux-10-RPC' ]; then
   ON_EXIT=on_exit_linux_rpc
   CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
   BUILD_IX=0
-  BUILD_TARGET_BENCH=
 elif [ $SERVER_SPEC = 'mTCP-10-RPC' ]; then
   SERVER_NET="mtcp"
   SERVER=server_mtcp_rpc
@@ -132,7 +129,6 @@ elif [ $SERVER_SPEC = 'mTCP-10-RPC' ]; then
   ON_EXIT=on_exit_mtcp_rpc
   CORES="0,1,2,3,4,5,6,7"
   BUILD_IX=0
-  BUILD_TARGET_BENCH="all_mtcp"
   if [ $CLUSTER_ID = 'Stanford' ]; then
     MAX_CORES=6
   else
@@ -146,7 +142,6 @@ elif [ $SERVER_SPEC = 'Linux-10-Stream' ]; then
   ON_EXIT=on_exit_linux_stream
   CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
   BUILD_IX=0
-  BUILD_TARGET_BENCH=
 elif [ $SERVER_SPEC = 'mTCP-10-Stream' ]; then
   SERVER_NET="mtcp"
   SERVER=server_mtcp_stream
@@ -154,7 +149,6 @@ elif [ $SERVER_SPEC = 'mTCP-10-Stream' ]; then
   ON_EXIT=on_exit_mtcp_stream
   CORES="0,1,2,3,4,5,6,7"
   BUILD_IX=0
-  BUILD_TARGET_BENCH="all_mtcp"
   if [ $CLUSTER_ID = 'Stanford' ]; then
     MAX_CORES=6
   else
@@ -167,7 +161,6 @@ elif [ $SERVER_SPEC = 'Linux-40-RPC' ]; then
   ON_EXIT=on_exit_linux_rpc
   CORES="0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
   BUILD_IX=0
-  BUILD_TARGET_BENCH=
 elif [ $SERVER_SPEC = 'Linux-40-Stream' ]; then
   SERVER_NET="linux bond"
   SERVER=server_linux_stream
@@ -175,13 +168,11 @@ elif [ $SERVER_SPEC = 'Linux-40-Stream' ]; then
   ON_EXIT=on_exit_linux_stream
   CORES="0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
   BUILD_IX=0
-  BUILD_TARGET_BENCH=
 elif [ $SERVER_SPEC = 'IX-10-Stream' ]; then
   SERVER=server_ix_rpc
   SERVER_PORT=8000
   ON_EXIT=on_exit_ix
   BUILD_IX=1
-  BUILD_TARGET_BENCH=
   if [ $CLUSTER_ID = 'EPFL' ]; then
     SERVER_NET="ix node1"
     CORES="1,17,3,19,5,21,7,23,9,25,11,27,13,29,15,31"
@@ -198,7 +189,6 @@ elif [ $SERVER_SPEC = 'IX-40-Stream' ]; then
   ON_EXIT=on_exit_ix
   CORES="0,16,2,18,4,20,6,22,8,24,10,26,12,28,14,30"
   BUILD_IX=1
-  BUILD_TARGET_BENCH=
   IX_PARAMS="-d 0000:04:00.0,0000:04:00.1,0000:05:00.0,0000:05:00.1 -c \$IX_PARAMS_CORES"
 else
   echo 'invalid parameters' >&2
@@ -367,7 +357,7 @@ run() {
   fi
 }
 
-prepare $BUILD_IX $BUILD_TARGET_BENCH
+prepare $BUILD_IX
 OUTDIR=`bench_start "short/$SERVER_SPEC/$CLIENT_SPEC"`
 trap $ON_EXIT EXIT
 run
