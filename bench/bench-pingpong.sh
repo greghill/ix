@@ -20,6 +20,7 @@ CLIENTS=
 if [ $CLUSTER_ID = 'EPFL' ]; then
   CLIENTS="$CLIENTS icnals1|eth1|192.168.21.11"
   SERVER_IP=192.168.21.1
+  PS_IXGBE_PATH=~/mtcp/io_engine/driver
 elif [ $CLUSTER_ID = 'Stanford' ]; then
   CLIENTS="$CLIENTS maverick-10|p7p1|10.79.6.21"
   SERVER_IP=10.79.6.26
@@ -212,7 +213,7 @@ elif [ $CLIENT_SPEC = 'Netpipe-Optimized' ]; then
   NETPIPE=$[$NETPIPE+1]
   NETPIPE_EXEC_CLIENT="NPtcp"
 elif [ $CLIENT_SPEC = 'Netpipe-mTCP' ]; then
-  DEPLOY_FILES="select_net.sh NPmtcp NPmtcp.conf"
+  DEPLOY_FILES="select_net.sh NPmtcp NPmtcp.conf $PS_IXGBE_PATH/ps_ixgbe.ko"
   CLIENT_NET="mtcp"
   KILL_CLIENT=""
   NETPIPE=$[$NETPIPE+1]
@@ -376,6 +377,7 @@ run() {
 run_netpipe() {
   PARAMS="-r -n 100 -p 0 -l 64 -u $[2**20]"
   ./$NETPIPE_EXEC_SERVER $PARAMS > /dev/null 2>&1 &
+  sleep 2
   ssh $HOST "./$NETPIPE_EXEC_CLIENT $PARAMS -h $SERVER_IP > /dev/null 2>&1 && awk '//{printf(\"0\\t%d\\t999999999\\t%f 0 0 0 0 0\\n\",\$1,\$2*1024*1024/8/2/\$1)}' np.out" > $OUTDIR/data
 }
 
