@@ -163,7 +163,7 @@ void Setup(ArgStruct *p)
  bzero((char *) lsin2, sizeof(*lsin2));
  
  if (!mctx) {
-   mtcp_core_affinitize(0);
+   mtcp_core_affinitize(mtcp_get_hyperthread_sibling(0));
    mctx = mtcp_create_context(0);
    ep = mtcp_epoll_create(mctx, NEVENTS);
  }
