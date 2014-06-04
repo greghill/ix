@@ -15,7 +15,7 @@ set grid y
 set border 3
 set tics out nomirror
 
-fig(infile) = "< awk '//{if ($1==6&&$2==64)print $0}' ".infile.'| sort -nk3'
+fig(infile) = "< export MAX=\`tail -1 ".infile."|cut -f1\`; awk '//{if ($1=='$MAX'&&$2==64)print $0 }' ".infile.'| sort -nk3'
 set xlabel 'Number of Messages per Connection'
 set ylabel 'Messages/sec (x 10^{6})'
 set xrange [0:*]

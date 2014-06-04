@@ -15,7 +15,7 @@ set grid y
 set border 3
 set tics out nomirror
 
-fig(infile) = "< awk '//{if ($1==6&&$3==1)print $0 }' ".infile.'| sort -nk2'
+fig(infile) = "< export MAX=\`tail -1 ".infile."|cut -f1\`; awk '//{if ($1=='$MAX'&&$3==1)print $0 }' ".infile.'| sort -nk2'
 set xlabel 'Message Size'
 set ylabel 'Goodput (Gbps)'
 set xrange [0:*]
