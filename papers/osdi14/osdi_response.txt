@@ -26,7 +26,7 @@ Review #136B
 C: The main issue is that the overall design of IX is not particulary new.
 We'd like to remphasize just a few of aspects that we think are particularly novel:
 1.) Many previous systems have explored batching, especially at the system call level. Our system is unique in that it batches adaptively, performing no batching at all for low utilization while reducing head of head of line blocking through batching during periods of congestion. Both behaviors work to lower overall latency. Our system is also unique in that it batches at every pipeline stage instead of just at the interface boundary, improving i-cache behavior.
-2.) Our execution model is unique in that we process packets to completion, through both the TCP layer and the application. Previous systems decouple the execution order of the application and the TCP stack. This encourages FIFO queuing behavior, which is superior for latency, and also improves d-cache hit rates.
+2.) Our execution model is unique in that we process packets to completion, through both the TCP layer and the application. While previous systems decouple the execution of the application and the TCP stack, our cooperative approach encourages FIFO queuing behavior, which is superior for latency, and also improves d-cache hit rates.
 3.) Many previous projects have argued that network stacks should run at user-level because kernel transition costs are necessarily high. We don't believe this to be the case, and show that it is possible to build a "kernel-level" stack with great throughput, latency, and security. IX can achieve all three of these properties at the same time and does each of them much better than  existing user-level stacks.
 
 Q: Near the end of section 3, the authors discuss how they use ECN and RED to handle congestion/overload. These are techniques typically deployed in routers and it would be interesting to see an evaluation of using these techniques to handle end host overload, instead of advertising a smaller receive window for example. Is that something that could be evaluated in a final submission?
@@ -45,4 +45,12 @@ A: It's not strictly necessary to ensure that replies are to assigned to the cor
 
 Q: What is the 99th percentile latency for memcached?
 A: The 99th latency for memcached is extremely good for IX and compares more favorably to Linux than the 95th percentile. In fact, our 99.9th percentile latency is less than Linux's average latency at any throughput. We're able to achieve these benefits because of adaptive batching and run to completion. We'll have an updated graph that shows more detailed latency numbers in the camera ready.
+
+Review #136D
+
+C: All major service providers significantly tune their Linux distributions. What kind of tuning is generally done, and how much more efficient is your system compared to that?
+A: We made an effort to aggresively tune Linux in our comparisons, and the results, especially latency, would have been much less favorable had we not. Specific tuning we performed includes pinning threads to cores, killing background tasks, adjusting interrupt stearing, applying custom parameters to the IXGBE NIC driver, and running a very recent Linux kernel. We're very open to further suggestions, as our goal is to evaluate Linux as it is realistically deployed in the datacenter.
+
+C: Can you isolate multiple of them and provide an analysis of performance with different combinations?
+A: Absolutely, we agree this would greatly add to the paper, and are very interested in adding this study to the evaluation for the camera ready.
 
