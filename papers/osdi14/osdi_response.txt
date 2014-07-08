@@ -1,3 +1,7 @@
+So far I'm just trying to answer every question. Once we have everthing on the table, let's do an edit pass and see if we can get some of the most important stuff inside the 500 word limit. We might also want to include an appendix that addresses specific questions. Do you think that would be safe to include? In any case, please add any questions or comments I might of missed as well as any edits to the responses I've made so far.
+
+-Adam
+
 
 C = comment
 Q = specific question
@@ -9,7 +13,7 @@ C: It seems like netmap or Arrakis would have made a better baseline:
 A: Netmap is a layer-2 raw packet system, so it is not possible to make a direct comparison to our full layer-4 TCP stack. mTCP, which does provide a full stack, makes use of a design that is very similar to netmap (based on Packet Shader). We'd be very interested in comparing our system against Arrakis. Unfortunately, at the time of our submission, the source code and many of the details for the system were not yet available. We'd like to follow up if possible for the camera ready.
 
 C: It's not clear IX can support multiple VM's
-A: While running Dune is possible in a nested virtualization environment, we favor a lightweight container approach built on top of Linux . We can run multiple instances of IX by leveraging VT-d and SR-IOV to multiplex network HW. Our prototype does not yet support these features, but we're working on developing this aspect further. \adam{: Note: I really think we should forgot virtualization HW and run multiple apps inside a single IX instance, but that's not the position we took in the paper. If queue allocation becomes more flexible than SR-IOV would be back on the table}
+A: While running Dune is possible in a nested virtualization environment, we favor a lightweight container approach built on top of Linux. We can run multiple instances of IX by leveraging VT-d and SR-IOV to multiplex network HW. Our prototype does not yet support these features, but we're working on developing this aspect further. \adam{: Note: I really think we should forgot virtualization HW and run multiple apps inside a single IX instance, but that's not the position we took in the paper. If queue allocation becomes more flexible than SR-IOV would be back on the table}
 
 C: TCP segmentation and receive size coalescing have a marginal impact on performance. Why?
 A: Our stack is so efficient that it's relatively easy for us to saturate even 40 GBPS links with packets that are full MTU-sized. Unfortunately TSO is only helpful for this case were we are already fast enough instead of the much more challenging small RPC case. Similarly, RSC is of limited utility because, at least as implemented in the 82599 NIC, it doesn't scale to large flow counts and adds extra latency, both of which are unacceptable for the goals of our system.
@@ -38,13 +42,13 @@ C:  I had a hard time following the authors’ claims about how IX exposes flow 
 A: Socket buffering has been traditionally implemented in the kernel. Facilitated by zero-copy in IX, we allow applications to directly manage their own buffers. The kernel only ensures correctness, for example by enforcing flow and congestion window limits
 
 C: The authors seem to imagine machines hosting multiple applications, but in practice machines are more often dedicated to a single application. What would be the implication of all data planes running the same application?
-A: Repeated above. \adam{anything we could expand on?}
+A: Discussed above. \adam{anything we could expand on?}
 
 Q: How does IX ensure that replies are assigned to the correct queue?
 A: It's not strictly necessary to ensure that replies are to assigned to the correct queue, but it's encouraged for performance, because otherwise the application would have to perform extra locking or other consistency algorithms. We address this issue by trying multiple port numbers and reverse engineering the RSS hash function each time a new connection is opened. As a result, each connection is guarunteed to be local to the core it was established. In typical cases, a seperate outgoing TCP flow might be established for each core in the system.
 
 Q: What is the 99th percentile latency for memcached?
-A: The 99th latency for memcached is extremely good for IX and compares more favorably to Linux than the 95th percentile. In fact, our 99.9th percentile latency is less than Linux's average latency at any throughput. We're able to achieve these benefits because of adaptive batching and run to completion. We'll have an updated graph that shows more detailed latency numbers in the camera ready.
+A: The 99th latency for memcached is extremely good on IX and compares more favorably to Linux than the 95th percentile. In fact, our 99.9th percentile latency is less than Linux's average latency at any throughput. We're able to achieve these benefits because of adaptive batching and run to completion. We'll have an updated graph that shows more detailed latency numbers in the camera ready.
 
 Review #136D
 
@@ -52,5 +56,26 @@ C: All major service providers significantly tune their Linux distributions. Wha
 A: We made an effort to aggresively tune Linux in our comparisons, and the results, especially latency, would have been much less favorable had we not. Specific tuning we performed includes pinning threads to cores, killing background tasks, adjusting interrupt stearing, applying custom parameters to the IXGBE NIC driver, and running a very recent Linux kernel. We're very open to further suggestions, as our goal is to evaluate Linux as it is realistically deployed in the datacenter.
 
 C: Can you isolate multiple of them and provide an analysis of performance with different combinations?
-A: Absolutely, we agree this would greatly add to the paper, and are very interested in adding this study to the evaluation for the camera ready.
+A: Absolutely, we appreciate the suggestion and are very interested in adding this study to the evaluation for the camera ready.
+
+Review #136E
+
+C: I didn't find the footnote promising a port of mTCP by the camera-ready a compelling thing - this is a fundamental part of the evaluation that really needs to be done before submission.
+A: Our apologies for not being clear about this. What we meant by the footnote is that we found that mTCP did not function correctly with more than a single 10 GBE NIC. Ideally we would have liked to compare all platforms with 4x10GBE NICs, as we did with Linux and IX. We were unable to do so because of a possible bug or configuration limitation in mTCP. mTCP was fully evaluated for a single 10 GBE.
+
+C: RE: A comparison to Megapipe
+A: Indeed we weren't readily able to get a copy of the Megapipe source code. We can however cite a comparison performed in the mTCP paper. http://shader.kaist.edu/mtcp/.  In summary, it appears that megapipe does a lot to address multicore scalability, but has little impact on per-core throughput and latency. The reason is that although the system call interface is more scalable, very little has been done to address the internal inefficiencies of the Linux network stack and it's execution model.
+
+C: in contrast to some of the recet scaling work, this paper tops out at a relatively modest scale. I don't mind that in general, but I do find it lacking that none of the servers were dual-socket machines, which are both common in industry as well as the point at which NUMA-related effects begin to appear.
+A: We haven't yet evaluated or tuned our system to run in NUMA environments but we're actively working on this issue. We note, however, that in many cases we can come close to saturating a 10GBE NIC with a single socket, even with very small messages, so the primary benefit would be for more compute intensive workloads.
+
+C: Another question about multiple apps...
+A: ...
+
+
+Summary:
+At a high-level I think we should make it much more clear why our paper is novel compared to previous work from previous work and we should include a very clear explanation of our plans for supporting multiple apps and our current limitations in this respect. Anything else?
+
+-Adam
+
 
