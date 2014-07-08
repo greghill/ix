@@ -1,3 +1,12 @@
+
+
+
+THIS IS ADAM's FIRST PASS.  
+SECOND PASS is in osdi-response.txt
+
+====================================
+
+
 So far I'm just trying to answer every question. Once we have everthing on the table, let's do an edit pass and see if we can get some of the most important stuff inside the 500 word limit. We might also want to include an appendix that addresses specific questions. Do you think that would be safe to include? In any case, please add any questions or comments I might of missed as well as any edits to the responses I've made so far.
 
 -Adam
