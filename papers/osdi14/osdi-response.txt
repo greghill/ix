@@ -3,6 +3,7 @@ We thank the reviewers, and will take all comments to heart.
 We agree that the writing can be much improved in form and
 substance.
 
+
 Design
 
  -[#B]Batching to completion: our system is unique in that it batches
@@ -10,6 +11,8 @@ Design
   at low load.  IX is also unique in batching all steps of the RX/TX processing 
   pipelines together rather than a single phase (such as the system call 
   interface), which eliminates intermediate buffers and improves cache behavior.
+
+ - ADD STATEMENT ABOUT CONTRIBUTIONS | WHY AN EVOLUTIONARY DESIGN NOT ENOUGH
 
  -[#A,#C] Our design partitions NIC queues and cores between IX
   instances.  IX is not designed to run within a VM which is 
@@ -22,6 +25,9 @@ Design
   outgoing connections, the ephemeral port is selected so that the RSS
   hash points to the CPU core that opened the connection.
 
+ - ADD STATEMENT ABOUT PROTECTION
+
+
 Comparison 
 
  - [#A]netmap is a raw Ethernet packet system, and therefore can't
@@ -33,8 +39,8 @@ Comparison
    (post-submission).
 
  - [#E]The Megapipe source code is not readily available on the web,
-   so our comparison with Megapipe is "transitive" in the submission:
-   [36] shows that mTCP clearly outperforms megapipe, and IX outperforms mTCP.
+   so our comparison with Megapipe is "transitive": [36] shows that mTCP clearly 
+   outperforms megapipe, and IX outperforms mTCP.
 
  - [#A] We'd be very interested in comparing our system against
    Arrakis as details emerge.
@@ -54,7 +60,7 @@ Evaluation:
    killing background tasks, adjusting interrupt steering, applying 
    custom parameters to the NIC driver, and running a very recent kernel 
    (further suggestions welcomed). This has a huge impact over untuned 
-   results, which we did chose not to publish.
+   results, which we did chose not to publish. ADD SPECIFIC COMMENT ON NUMBERS
 
  - [#E]We are actively looking at behavior of multiple sockets. Our
    initial focus was to deliver line rate (10 and 4x10GbE) using a
