@@ -1,0 +1,48 @@
+
+C = comment
+Q = specific question
+A = answer
+
+Review #136A
+
+C: It seems like netmap or Arrakis would have made a better baseline:
+A: Netmap is a layer-2 raw packet system, so it is not possible to make a direct comparison to our full layer-4 TCP stack. mTCP, which does provide a full stack, makes use of a design that is very similar to netmap (based on Packet Shader). We'd be very interested in comparing our system against Arrakis. Unfortunately, at the time of our submission, the source code and many of the details for the system were not yet available. We'd like to follow up if possible for the camera ready.
+
+C: It's not clear IX can support multiple VM's
+A: While running Dune is possible in a nested virtualization environment, we favor a lightweight container approach built on top of Linux . We can run multiple instances of IX by leveraging VT-d and SR-IOV to multiplex network HW. Our prototype does not yet support these features, but we're working on developing this aspect further. \adam{: Note: I really think we should forgot virtualization HW and run multiple apps inside a single IX instance, but that's not the position we took in the paper. If queue allocation becomes more flexible than SR-IOV would be back on the table}
+
+C: TCP segmentation and receive size coalescing have a marginal impact on performance. Why?
+A: Our stack is so efficient that it's relatively easy for us to saturate even 40 GBPS links with packets that are full MTU-sized. Unfortunately TSO is only helpful for this case were we are already fast enough instead of the much more challenging small RPC case. Similarly, RSC is of limited utility because, at least as implemented in the 82599 NIC, it doesn't scale to large flow counts and adds extra latency, both of which are unacceptable for the goals of our system.
+
+Q: Please explain what is going on with the x-axis in figures 4(a) + 4(d)
+A: Half ticks indeed indicate hyperthreads. We used hyperthreads only in cases where they improved performance. Here's a summary of hyperthread usage on each system:
+Linux: We found hyperthreads strictly improved performance so we enabled them
+IX: We found hyperthreads harmed performance slightly, so we disabled them
+mTCP: By design, one hyperthread is used to run the network stack and one to run the application. Since other configurations are not possible, each tick indicates a hyperthread pair.
+\adam{Why the heck is mTCP missing core 5????}
+
+Review #136B
+
+C: The main issue is that the overall design of IX is not particulary new.
+We'd like to remphasize just a few of aspects that we think are particularly novel:
+1.) Many previous systems have explored batching, especially at the system call level. Our system is unique in that it batches adaptively, performing no batching at all for low utilization while reducing head of head of line blocking through batching during periods of congestion. Both behaviors work to lower overall latency. Our system is also unique in that it batches at every pipeline stage instead of just at the interface boundary, improving i-cache behavior.
+2.) Our execution model is unique in that we process packets to completion, through both the TCP layer and the application. Previous systems decouple the execution order of the application and the TCP stack. This encourages FIFO queuing behavior, which is superior for latency, and also improves d-cache hit rates.
+3.) Many previous projects have argued that network stacks should run at user-level because kernel transition costs are necessarily high. We don't believe this to be the case, and show that it is possible to build a "kernel-level" stack with great throughput, latency, and security. IX can achieve all three of these properties at the same time and does each of them much better than  existing user-level stacks.
+
+Q: Near the end of section 3, the authors discuss how they use ECN and RED to handle congestion/overload. These are techniques typically deployed in routers and it would be interesting to see an evaluation of using these techniques to handle end host overload, instead of advertising a smaller receive window for example. Is that something that could be evaluated in a final submission?
+A: \adam{Ed, any further thoughts on this? Personally I think this would be very interesting}
+
+Review #136C
+
+C:  I had a hard time following the authors’ claims about how IX exposes flow control to applications.
+A: Socket buffering has been traditionally implemented in the kernel. Facilitated by zero-copy in IX, we allow applications to directly manage their own buffers. The kernel only ensures correctness, for example by enforcing flow and congestion window limits
+
+C: The authors seem to imagine machines hosting multiple applications, but in practice machines are more often dedicated to a single application. What would be the implication of all data planes running the same application?
+A: Repeated above. \adam{anything we could expand on?}
+
+Q: How does IX ensure that replies are assigned to the correct queue?
+A: It's not strictly necessary to ensure that replies are to assigned to the correct queue, but it's encouraged for performance, because otherwise the application would have to perform extra locking or other consistency algorithms. We address this issue by trying multiple port numbers and reverse engineering the RSS hash function each time a new connection is opened. As a result, each connection is guarunteed to be local to the core it was established. In typical cases, a seperate outgoing TCP flow might be established for each core in the system.
+
+Q: What is the 99th percentile latency for memcached?
+A: The 99th latency for memcached is extremely good for IX and compares more favorably to Linux than the 95th percentile. In fact, our 99.9th percentile latency is less than Linux's average latency at any throughput. We're able to achieve these benefits because of adaptive batching and run to completion. We'll have an updated graph that shows more detailed latency numbers in the camera ready.
+
