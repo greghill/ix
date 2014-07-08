@@ -74,7 +74,7 @@ A: ...
 
 
 Summary:
-At a high-level I think we should make it much more clear why our paper is novel compared to previous work from previous work and we should include a very clear explanation of our plans for supporting multiple apps and our current limitations in this respect. Anything else?
+At a high-level I think we should make it much more clear why our paper is novel compared to previous work and we should include a very clear explanation of our plans for supporting multiple apps and our current limitations in this respect. Anything else?
 
 -Adam
 
