@@ -1,20 +1,19 @@
 
-We thank the reviewers, and will take all editorial comments to
-heart. We agree that the writing can be much improved in form and
+We thank the reviewers, and will take all comments to heart. 
+We agree that the writing can be much improved in form and
 substance.
 
 Design
 
  -[#B]Batching to completion: our system is unique in that it batches
-  system calls adaptively based on congestion, and therefore without
-  impacting latency in low-utilization situations.  IX is also unique
-  in batching all steps of the processing pipeline together rather
-  than a single phase (such as the system call interface), which
-  eliminates intermediate buffers and improves cache behavior.
+  adaptively based on congestion, and therefore without impacting latency
+  at low load.  IX is also unique in batching all steps of the RX/TX processing 
+  pipelines together rather than a single phase (such as the system call 
+  interface), which eliminates intermediate buffers and improves cache behavior.
 
- -[#A,#C] The IX design partitions NIC queues and CPU cores between IX
-  instances.  IX is not designed to run within a VM
-  which is actually ok as most large website (Google, Facebook, ...)
+ -[#A,#C] Our design partitions NIC queues and cores between IX
+  instances.  IX is not designed to run within a VM which is 
+  actually ok as most large website (Google, Facebook, Twitter,…)
   don't use VMs for webscale workloads.
 
  -[#C]RSS only dictates the behavior of RX packets; TX packets can be
@@ -35,8 +34,7 @@ Comparison
 
  - [#E]The Megapipe source code is not readily available on the web,
    so our comparison with Megapipe is "transitive" in the submission:
-   the mTCP paper [36] shows that mTCP clearly outperforms megapipe,
-   and IX outperforms mTCP.
+   [36] shows that mTCP clearly outperforms megapipe, and IX outperforms mTCP.
 
  - [#A] We'd be very interested in comparing our system against
    Arrakis as details emerge.
@@ -44,7 +42,7 @@ Comparison
 Evaluation:
 
  - [#A]The half-ticks in Fig 4(a) and 4(b) correspond to
-   hyperthreads. We enabled and used hyperthreads only when it
+   hyperthreads. We enabled hyperthreads only when it
    improves performance. With mTCP, the two hyperthreads of a core are always
    used asymmetrically, as specified by the authors.
 
@@ -52,17 +50,15 @@ Evaluation:
    it to the paper.  IX compares even more favorably to Linux on the
    99th than on the 95th.
 
- - [#D]We made an aggressive effort to tune Linux in our comparison,
-   e.g. pinning threads to core, killing background tasks, adjusting
-   interrupt stearing, applying custom parameters to the NIC driver,
-   and running a very recent kernel (further suggestions welcomed).
-   This has a huge impact over untuned results, which we did chose not
-   to publish.
+ - [#D]We aggressively tuned Linux e.g. pinning threads to core, 
+   killing background tasks, adjusting interrupt steering, applying 
+   custom parameters to the NIC driver, and running a very recent kernel 
+   (further suggestions welcomed). This has a huge impact over untuned 
+   results, which we did chose not to publish.
 
  - [#E]We are actively looking at behavior of multiple sockets. Our
    initial focus was to deliver line rate (10 and 4x10GbE) using a
-   single socket.  Also, note that memcache has severe limitations
-   scaling even within a socket.
+   single socket.  
 
 Networking behavior:
 
@@ -74,7 +70,7 @@ Networking behavior:
  - [#B]ECN/RED traffic engineering: Yes, IX's adaptive,
    run-to-completion model ensures that receive queues build up only
    at the NIC edge, before processing.  Step (1) of Fig 2 can be
-   modelled as a software router from which batches of packets are
+   modeled as a software router from which batches of packets are
    delivered.  This papers focuses on system comparison using
    "standard" networking protocols.
 
