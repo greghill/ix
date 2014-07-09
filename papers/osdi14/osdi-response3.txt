@@ -4,18 +4,22 @@ writing will be improved in both form and substance.
 
 Design
 
- -[#B}Prior work inspired many elements of IX (batching,
+ -[#B]Prior work inspired many elements of IX (batching,
   run-to-completion, flow-consistent hashing, zero-copy). Unique to IX,
   we show how to bring all four together in a full TCP stack running an
   untrusted application with a novel user/kernel execution model.
-  The way we batch is also unique: (i) adaptively based on congestion,
+  
+ -[#B,#C]The way we batch is also unique: (i) adaptively based on congestion,
   and therefore without impacting latency (ii) in each step of the
   processing pipeline instead of a single phase (such as the system call
   boundary[73]).
 
- -[#A,#C]Our design partitions RSS-groups (of queues) using multiple
-  NICs or SR-IOV in the future.  IX is not designed to run in VMs.
+ -[#B,#C]The linux kernel (vmx-root) is protected from IX (ring 0), when
+  using IOMMU (not prototyped).  Linux and IX are always protected
+  from apps (ring 3).
 
+ -[#A,#C,#E]Our design partitions RSS-groups (of queues) using multiple
+  NICs or SR-IOV in the future.  IX is not designed to run in VMs.
 
  -[#C]RSS only dictates the behavior of RX packets; TX packets can be
   sent on any queue.  For incoming connections, the RSS hash
@@ -24,6 +28,8 @@ Design
   opened the connection.
 
  -[#D]Run-to-completion would particularly hard to retrofit into Linux.
+
+ -[#B]IX could expose storage to apps in future work.
 
 Comparison 
 
@@ -55,20 +61,15 @@ Evaluation:
    it to the graph.  IX compares even more favorably to Linux on
    99th than 95th latency.
 
- - [#D]We aggressively tuned Linux e.g. pinning threads to cores, 
+ - [#D,#E]We aggressively tuned Linux e.g. pinning threads to cores,
    killing background tasks, adjusting interrupt steering, applying 
-   custom parameters to the NIC driver, and running a very recent kernel 
-   (further suggestions welcomed). This had a huge impact over untuned 
+   custom parameters to the NIC driver, and running a recent kernel
+   (we will redo with 3.15+). This had a huge impact over untuned
    performance.
 
  - [#E]We are actively looking at behavior of multiple sockets. Our
    initial focus was to deliver line rate (1x and 4x10GbE) using a
    single socket.
-
- - [#B] The linux kernel (vmx-root) is protected from IX (ring 0),
-   when using IOMMU (not prototyped).  Linux and IX are always
-   protected from apps (ring 3).
-
 
 Networking behavior:
 
