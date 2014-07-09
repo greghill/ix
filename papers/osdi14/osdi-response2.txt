@@ -1,0 +1,97 @@
+
+We thank the reviewers, and will take all comments to heart. 
+We agree that the writing can be much improved in form and
+substance.
+
+
+Design
+
+ -[#B}Prior work inspired many elements of our design (batching,
+  run-to-completion, flow-consistent hashing, and zero-copy). Unique to IX,
+  we show how to bring all four together in a full TCP stack running an
+  untrusted application with a novel user/kernel execution model.
+  The way we batch is also unique: (i) adaptively based on congestion,
+  and therefore without impacting latency (ii) in each step of the
+  processing pipeline instead of a single phase (such as the system call
+  boundary[73]).
+\adam{this is my take at contributions, reviewer called our system a mashup, so not sure if this is the right approach. Can we say
+combining these design elements together makes the system more than the sum of it's parts? What was really hard with IX was getting
+these concepts to compose together nicely. That being said, all previous systems either miss one of the concepts or apply one of
+the concepts incorrectly, including Sandstorm, mTCP, and Arrakis}
+ 
+ - ADD STATEMENT ABOUT CONTRIBUTIONS | WHY AN EVOLUTIONARY DESIGN NOT ENOUGH
+\adam{Many concepts from IX could be applied to Linux. Some like flow-consistent hashing already have been in Megapipe and Affinity Accept.
+Run to completion and batching would be very hard because it would be retrofitting a new execution model on an existing OS}
+
+ -[#A,#C]Our design partitions NIC queues and cores between IX
+  instances.  IX is not designed to run within a VM which is 
+  actually ok as most large website (Google, Facebook, Twitter,…)
+  don't use VMs for webscale workloads.
+
+ -[#C]RSS only dictates the behavior of RX packets; TX packets can be
+  sent on any queue.  For incoming connections, the RSS hash
+  determines the core.  For outgoing connections, the ephemeral
+  port is selected so that the RSS hash affinitizes to the core that
+  opened the connection.
+
+ - ADD STATEMENT ABOUT PROTECTION
+\adam{would need to discuss IOMMU's, SRIOV, the fact that storage is soon multiqueue. It's hard in 500 words}
+
+
+Comparison 
+
+ - [#A]netmap is a raw Ethernet packet system, and therefore can't
+   directly run a TCP-based workload.
+
+ - [#E]We compare thoroughly with mTCP in our evaluation; the limitation
+   described in the footnote is specific to our 4x10GbE configuration,
+   for which mTCP could not run correctly without non-trivial source
+   modifications.
+
+ - [#E]The Megapipe source code is not readily available on the web,
+   so our comparison with Megapipe is "transitive": [36] shows that
+   mTCP clearly outperforms megapipe, and IX outperforms mTCP.
+
+ - [#A]We'd be excited to compare against Arrakis. It was not
+   available at time of submission.
+
+Evaluation:
+
+ - [#A]The half-ticks in Fig 4(a) and 4(b) correspond to
+   hyperthreads. We enabled hyperthreading only when it
+   improved performance. With mTCP, app and network
+   stack each run on a hyperthread (by design).
+   We stopped scaling on 1x10GbE with a few cores because
+   we reached the NIC's limit. 4x10GbE demonstrates
+   our stack can go beyond it.
+
+ - [#C] We have measured 99th latency for memcached and will add
+   it to the graph.  IX compares even more favorably to Linux on the
+   99th than on the 95th.
+
+ - [#D]We aggressively tuned Linux e.g. pinning threads to cores, 
+   killing background tasks, adjusting interrupt steering, applying 
+   custom parameters to the NIC driver, and running a very recent kernel 
+   (further suggestions welcomed). This had a huge impact over untuned 
+   results.
+\adam{impossible to compare numbers with 500 word limit, different # of cores, different setups, different workloads}
+
+ - [#E]We are actively looking at behavior of multiple sockets. Our
+   initial focus was to deliver line rate (10 and 4x10GbE) using a
+   single socket.  
+
+Networking behavior:
+
+ - [#A]TSO cannot improve small-message performance. When
+   streaming, IX is optimized enough to easily achieve
+   line-rate, even without TSO. Intel's implementations of RSC does not
+   scale to large flow counts and adds latency.
+
+ - [#B]ECN/RED traffic engineering: Yes, IX's adaptive,
+   run-to-completion model ensures that receive queues build up only
+   at the NIC edge, before processing.  Step (1) of Fig 2 can be
+   modeled as a software router from which batches of packets are
+   delivered.  This papers focuses on system comparison using
+   "standard" networking protocols.
+\adam{they specifically asked if we could evaluate this in the camera ready}
+
