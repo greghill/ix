@@ -17,7 +17,7 @@ Design
 \adam{this is my take at contributions, reviewer called our system a mashup, so not sure if this is the right approach. Can we say
 combining these design elements together makes the system more than the sum of it's parts? What was really hard with IX was getting
 these concepts to compose together nicely. That being said, all previous systems either miss one of the concepts or apply one of
-the concepts incorrectly, including Sandstorm, mTCP, and Arrakis}
+the concepts incorrectly or apply the concepts to something trivially easy like UDP, including Sandstorm, mTCP, and Arrakis}
  
  - ADD STATEMENT ABOUT CONTRIBUTIONS | WHY AN EVOLUTIONARY DESIGN NOT ENOUGH
 \adam{Many concepts from IX could be applied to Linux. Some like flow-consistent hashing already have been in Megapipe and Affinity Accept.
