@@ -46,7 +46,7 @@ Comparison
 
 Evaluation:
 
- - [#A]The half-ticks in Fig 4(a) and 4(b) correspond to
+ - [#A] Half-ticks in Fig 4(a)(b) correspond to
    hyperthreads. We enabled hyperthreading only when it
    improved performance. With mTCP, each app hyperthread
    is paired with network stack hyperthread (by design).
@@ -75,7 +75,7 @@ Networking behavior:
    line-rate, even without TSO. Intel's implementations of RSC does not
    scale to large flow counts and adds latency.
 
- - [#B]ECN/RED traffic engineering: Indeed, something that we are
-   actively working on.  However, this first paper focuses on OS comparison 
-   using "standard" networking protocols. 
+ - [#B]ECN/RED at the end-layer: Indeed, something that we are
+   actively working on.  However, this paper focuses on OS comparison 
+   without protocol or traffic engineering changes.
 
