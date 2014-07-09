@@ -13,10 +13,9 @@ Design
   processing pipeline instead of a single phase (such as the system call
   boundary[73]).
 
- -[#A,#C]Our design partitions RSS-groups (of queues) and cores between IX
-  instances.  IX is not designed to run within a VM which is 
-  actually ok as most large website (Google, Facebook, Twitter,…)
-  don't use VMs for webscale workloads.
+ -[#A,#C]Our design partitions RSS-groups (of queues) using multiple
+  NICs or SR-IOV in the future.  IX is not designed to run in VMs.
+
 
  -[#C]RSS only dictates the behavior of RX packets; TX packets can be
   sent on any queue.  For incoming connections, the RSS hash
@@ -66,8 +65,10 @@ Evaluation:
    initial focus was to deliver line rate (1x and 4x10GbE) using a
    single socket.
 
- - [#B] The linux kernel (vmx-root) is protected from errors in IX dataplanes
-     (ring0), which are protected from errors in apps (ring3). 
+ - [#B] The linux kernel (vmx-root) is protected from IX (ring 0),
+   when using IOMMU (not prototyped).  Linux and IX are always
+   protected from apps (ring 3).
+
 
 Networking behavior:
 
