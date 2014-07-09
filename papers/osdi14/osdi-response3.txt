@@ -1,12 +1,11 @@
-
-We thank the reviewers, and will take all comments to heart; the
-writing will be much improved in both form and substance.
+We thank reviewers, and will take all comments to heart; the
+writing will be improved in both form and substance.
 
 
 Design
 
- -[#B}Prior work inspired many elements of our design (batching,
-  run-to-completion, flow-consistent hashing, and zero-copy). Unique to IX,
+ -[#B}Prior work inspired many elements of IX (batching,
+  run-to-completion, flow-consistent hashing, zero-copy). Unique to IX,
   we show how to bring all four together in a full TCP stack running an
   untrusted application with a novel user/kernel execution model.
   The way we batch is also unique: (i) adaptively based on congestion,
@@ -29,19 +28,18 @@ Design
 
 Comparison 
 
- - [#A]netmap is a raw Ethernet packet system, and therefore can't
+ - [#A]netmap is a raw Ethernet packet system and cannot
    directly run a TCP-based workload.
 
- - [#E]We compare thoroughly with mTCP in our evaluation; the limitation
-   described in the footnote is specific to our 4x10GbE configuration,
-   for which mTCP could not run correctly without non-trivial source
-   modifications (now fixed).
+ - [#E]We compare thoroughly with mTCP; the limitation
+   in the footnote is specific to our 4x10GbE configuration,
+   for which mTCP could not run correctly at the time (now fixed).
 
- - [#E]The Megapipe source code is not readily available on the web,
-   so our comparison with Megapipe is "transitive": [36] shows that
-   mTCP clearly outperforms megapipe, and IX outperforms mTCP.
+ - [#E]The Megapipe code is not readily available on the web,
+   so our comparison is "transitive": [36] shows that
+   mTCP clearly outperforms Megapipe, and IX outperforms mTCP.
 
- - [#A]We'd be excited to compare against Arrakis. It was not
+ - [#A]We'd be excited to compare to Arrakis. It was not
    available at time of submission.
 
 Evaluation:
@@ -49,24 +47,27 @@ Evaluation:
  - [#A] Half-ticks in Fig 4(a)(b) correspond to
    hyperthreads. We enabled hyperthreading only when it
    improved performance. With mTCP, each app hyperthread
-   is paired with network stack hyperthread (by design).
+   is paired with network hyperthread by design.
    We stopped scaling on 1x10GbE with a few cores because
    we saturated the NIC. 4x10GbE demonstrates our stack
    can go beyond a single NIC.
 
  - [#C] We have measured 99th latency for memcached and will add
-   it to the graph.  IX compares even more favorably to Linux on the
-   99th than on the 95th.
+   it to the graph.  IX compares even more favorably to Linux on
+   99th than 95th latency.
 
- - [#D]We did aggressively tune Linux e.g. pinning threads to cores, 
+ - [#D]We aggressively tuned Linux e.g. pinning threads to cores, 
    killing background tasks, adjusting interrupt steering, applying 
    custom parameters to the NIC driver, and running a very recent kernel 
    (further suggestions welcomed). This had a huge impact over untuned 
-   results.
+   performance.
 
  - [#E]We are actively looking at behavior of multiple sockets. Our
    initial focus was to deliver line rate (1x and 4x10GbE) using a
    single socket.
+
+ - [#B] The linux kernel (vmx-root) is protected from errors in IX dataplanes
+     (ring0), which are protected from errors in apps (ring3). 
 
 Networking behavior:
 
@@ -75,7 +76,7 @@ Networking behavior:
    line-rate, even without TSO. Intel's implementations of RSC does not
    scale to large flow counts and adds latency.
 
- - [#B]ECN/RED at the end-layer: Indeed, something that we are
+ - [#B]ECN/RED at the end-layer is something we are
    actively working on.  However, this paper focuses on OS comparison 
-   without protocol or traffic engineering changes.
+   without protocol changes.
 
