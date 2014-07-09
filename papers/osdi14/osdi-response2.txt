@@ -27,7 +27,7 @@ Run to completion and batching would be very hard because it would be retrofitti
   instances.  IX is not designed to run within a VM which is 
   actually ok as most large website (Google, Facebook, Twitter,…)
   don't use VMs for webscale workloads.
-\adam{in order to satisfy E (who asked this even more specifically), we have to explain that either we assign whole NIC's to IX instances or we rely on SR-IOV. There's really no other viable option as plain RSS (and flow director) is not flexible enough to work. This is why I tend to favor a single IX instance and multiple apps}
+\adam{in order to satisfy E (who asked this even more specifically), we have to explain that either we assign whole NIC's to IX instances or we rely on SR-IOV. There's really no other viable option as plain RSS (and flow director) is not flexible enough to work, but multiqueue is crippled in SR-IOV. This is why I tend to favor a single IX instance and multiple apps}
 
  -[#C]RSS only dictates the behavior of RX packets; TX packets can be
   sent on any queue.  For incoming connections, the RSS hash
