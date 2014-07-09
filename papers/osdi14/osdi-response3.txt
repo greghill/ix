@@ -1,44 +1,47 @@
-We thank reviewers, and will take all comments to heart; the
+We thank reviewers and will take all comments to heart; the
 writing will be improved in both form and substance.
 
 
 Design
 
- -[#B]Prior work inspired many elements of IX (batching,
-  run-to-completion, flow-consistent hashing, zero-copy). Unique to IX,
-  we show how to bring all four together in a full TCP stack running an
-  untrusted application with a novel user/kernel execution model.
+ - [#B]Prior work inspired many elements of IX (batching,
+   run-to-completion, flow-consistent hashing, zero-copy).
+   Unique to IX, we show how to bring all four together in a
+   full TCP stack running an untrusted application with a
+   novel user/kernel execution model.
   
- -[#B,#C]The way we batch is also unique: (i) adaptively based on congestion,
-  and therefore without impacting latency (ii) in each step of the
-  processing pipeline instead of a single phase (such as the system call
-  boundary[73]).
+ - [#B,#C]The way we batch is also unique: (i) adaptively
+   based on congestion, and therefore without impacting latency
+   (ii) in each step of the processing pipeline instead of a
+   single phase (such as the system call boundary[73]).
 
- -[#B,#C]The linux kernel (vmx-root) is protected from IX (ring 0), when
-  using an IOMMU (not prototyped).  Linux and IX are always protected
-  from apps (ring 3).
+ - [#B,#C]The linux kernel (vmx-root) is protected from IX
+   (ring 0), when using an IOMMU (not prototyped).  Linux and
+   IX are always protected from apps (ring 3).
 
- -[#A,#C,#E]Our design partitions RSS-groups (of queues) using multiple
-  NICs or SR-IOV in the future.  IX is not designed to run in VMs.
+ - [#A,#C,#E]Our design partitions RSS-groups (of queues) using
+   multiple NICs or SR-IOV in the future.  IX is not designed to
+   run in VMs.
 
- -[#C]RSS only dictates the behavior of RX packets; TX packets can be
-  sent on any queue.  For incoming connections, the RSS hash
-  determines the core.  For outgoing connections, the ephemeral
-  port is selected so that the RSS hash affinitizes to the core that
-  opened the connection.
+ - [#C]RSS only dictates the behavior of RX packets; TX packets
+   can be sent on any queue.  For incoming connections, the RSS
+   hash determines the core.  For outgoing connections, the
+   ephemeral port is selected so the RSS hash affinitizes to the
+   core that opened the connection.
 
- -[#D]Run-to-completion would be particularly hard to retrofit into Linux.
+ - [#D]Run-to-completion would be particularly hard to retrofit
+   into Linux.
 
- -[#B]IX could expose storage to apps in future work.
+ - [#B]IX could expose storage to apps in future work.
 
 Comparison 
 
- - [#A]netmap is a raw Ethernet packet system and cannot
-   directly run a TCP-based workload.
+ - [#A]netmap is a raw Ethernet packet system and cannot directly
+   run a TCP-based workload.
 
- - [#E]We compare thoroughly with mTCP; the limitation
-   in the footnote is specific to our 4x10GbE configuration,
-   for which mTCP could not run correctly at the time (now fixed).
+ - [#E]We compare thoroughly with mTCP; the limitation in the
+   footnote is specific to our 4x10GbE configuration, for which
+   mTCP could not run correctly at the time (now fixed).
 
  - [#E]The Megapipe code is not readily available on the web,
    so our comparison is "transitive": [36] shows that
@@ -49,15 +52,14 @@ Comparison
 
 Evaluation:
 
- - [#A] Half-ticks in Fig 4(a)(b) correspond to
-   hyperthreads. We enabled hyperthreading only when it
-   improved performance. With mTCP, each app hyperthread
-   is paired with network hyperthread by design.
-   We stopped scaling on 1x10GbE with a few cores because
-   we saturated the NIC. 4x10GbE demonstrates our stack
-   can go beyond a single NIC.
+ - [#A]Half-ticks in Fig 4(a)(b) correspond to hyperthreads.
+   We enabled hyperthreading only when it improved performance.
+   With mTCP, each app hyperthread is paired with network
+   hyperthread by design. We stopped scaling on 1x10GbE with a
+   few cores because we saturated the NIC. 4x10GbE demonstrates
+   our stack can go beyond a single NIC.
 
- - [#C] We have measured 99th latency for memcached and will add
+ - [#C]We have measured 99th latency for memcached and will add
    it to the graph.  IX compares even more favorably to Linux on
    99th than 95th latency.
 
@@ -73,12 +75,11 @@ Evaluation:
 
 Networking behavior:
 
- - [#A]TSO cannot improve small-message performance. When
-   streaming, IX is optimized enough to easily achieve
-   line-rate, even without TSO. Intel's implementations of RSC does not
-   scale to large flow counts and adds latency.
+ - [#A]TSO cannot improve small message performance. When streaming,
+   IX is optimized enough to easily achieve line-rate, even without
+   TSO. Intel's implementations of RSC does not scale to large flow
+   counts and adds latency.
 
- - [#B]ECN/RED at the end-layer is something we are
-   actively working on.  However, this paper focuses on OS comparison 
-   without protocol changes.
-
+ - [#B]ECN/RED at the end-layer is something we are actively working
+   on.  However, this paper focuses on OS comparison without
+   protocol changes.
