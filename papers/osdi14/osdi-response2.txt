@@ -59,11 +59,11 @@ Evaluation:
 
  - [#A]The half-ticks in Fig 4(a) and 4(b) correspond to
    hyperthreads. We enabled hyperthreading only when it
-   improved performance. With mTCP, app and network
-   stack each run on a hyperthread (by design).
+   improved performance. With mTCP, each app hyperthread
+   is paired with network stack hyperthread (by design).
    We stopped scaling on 1x10GbE with a few cores because
-   we reached the NIC's limit. 4x10GbE demonstrates
-   our stack can go beyond it.
+   we saturated the NIC. 4x10GbE demonstrates our stack
+   can go beyond a single NIC.
 
  - [#C] We have measured 99th latency for memcached and will add
    it to the graph.  IX compares even more favorably to Linux on the
