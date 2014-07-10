@@ -55,6 +55,13 @@ static inline int copy_from_user(void *user_src, void *kern_dst, size_t len)
 	if (!uaccess_okay(user_src, len))
 		return -EFAULT;
 
+	if (__builtin_constant_p(len)) {
+		if (len == sizeof(uint64_t)) {
+			*((uint64_t *) kern_dst) = uaccess_peekq(user_src);
+			return uaccess_check_fault() ? -EFAULT : 0;
+		}
+	}
+
 	return uaccess_copy_user(user_src, kern_dst, len);
 }
 
@@ -70,6 +77,13 @@ static inline int copy_to_user(void *kern_src, void *user_dst, size_t len)
 {
 	if (!uaccess_okay(user_dst, len))
 		return -EFAULT;
+
+	if (__builtin_constant_p(len)) {
+		if (len == sizeof(uint64_t)) {
+			uaccess_pokeq(user_dst, *((uint64_t *) kern_src));
+			return uaccess_check_fault() ? -EFAULT : 0;
+		}
+	}
 
 	return uaccess_copy_user(kern_src, user_dst, len);
 }
