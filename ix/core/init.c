@@ -73,6 +73,7 @@ extern int tcp_echo_server_init(int port);
 extern int sandbox_init(int argc, char *argv[]);
 extern void tcp_init(void);
 extern void toeplitz_init(void);
+extern int cp_init(void);
 
 volatile int uaccess_fault;
 
@@ -709,6 +710,12 @@ int main(int argc, char *argv[])
 	ret = net_init();
 	if (ret) {
 		log_err("init: failed to initialize net\n");
+		return ret;
+	}
+
+	ret = cp_init();
+	if (ret) {
+		log_err("init: failed to initialize control plane\n");
 		return ret;
 	}
 

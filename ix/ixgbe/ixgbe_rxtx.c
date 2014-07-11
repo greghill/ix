@@ -15,6 +15,7 @@
 #include <ix/mbuf.h>
 #include <ix/cpu.h>
 #include <ix/queue.h>
+#include <ix/control_plane.h>
 
 #include "ixgbe_api.h"
 #include "ixgbe_vf.h"
@@ -223,6 +224,8 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		/* inform HW that more descriptors have become available */
 		IXGBE_PCI_REG_WRITE(rxq->rdt_reg_addr,
 			(rxq->pos - 1) & (rxq->len - 1));
+
+		cp_queue_depth(rxq->queue_id, rxq->inmem_ring->tail - rxq->inmem_ring->head);
 	}
 
 	return nb_descs;
@@ -244,6 +247,8 @@ static int ixgbe_rx_process(struct eth_rx_queue *rx, unsigned int max_packets)
 		KSTATS_POP(&save);
 		max_packets--;
 	}
+
+	cp_queue_depth(rxq->queue_id, rxq->inmem_ring->tail - rxq->inmem_ring->head);
 
 	return rxq->inmem_ring->head == rxq->inmem_ring->tail ? 1 : 0;
 }
