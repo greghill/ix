@@ -329,7 +329,7 @@ struct tcp_seg {
 #endif /* LWIP_WND_SCALE */
 
 /* Global variables: */
-DECLARE_PERQUEUE(struct tcp_pcb *, tcp_input_pcb);
+DECLARE_PERCPU(struct tcp_pcb *, tcp_input_pcb);
 DECLARE_PERQUEUE(u32_t, tcp_ticks);
 DECLARE_PERQUEUE(u8_t, tcp_active_pcbs_changed);
 
