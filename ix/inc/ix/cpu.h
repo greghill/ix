@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <ix/stddef.h>
 #include <asm/cpu.h>
 
 #define NCPU	128
@@ -49,8 +50,42 @@ static inline void * __percpu_get(void *key)
 #define percpu_get(var)						\
 	(*((typeof(var) *) (__percpu_get(&var))))
 
+/**
+ * cpu_is_active - is the CPU being used?
+ * @cpu: the cpu number
+ *
+ * Returns true if yes, false if no.
+ */
+#define cpu_is_active(cpu)					\
+	(percpu_offsets[(cpu)] != NULL)
+
+static inline unsigned int __cpu_next_active(unsigned int cpu)
+{
+	while (cpu < cpu_count) {
+		cpu++;
+
+		if (cpu_is_active(cpu))
+			return cpu;
+	}
+
+	return cpu;
+}
+
+/**
+ * for_each_active_cpu - iterates over each active (used by IX) CPU
+ * @cpu: an integer to store the cpu
+ */
+#define for_each_active_cpu(cpu)				\
+	for ((cpu) = -1; (cpu) = __cpu_next_active(cpu); (cpu) < cpu_count)
+
 DECLARE_PERCPU(unsigned int, cpu_numa_node);
 DECLARE_PERCPU(unsigned int, cpu_id);
+
+extern void cpu_do_bookkeeping(void);
+
+typedef void (*cpu_func_t)(void *data);
+extern int cpu_run_on_one(cpu_func_t func, void *data,
+			  unsigned int cpu);
 
 extern int cpu_init_one(unsigned int cpu);
 extern int cpu_init(void);

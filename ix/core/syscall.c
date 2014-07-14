@@ -125,6 +125,10 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 		return ret;
 
 again:
+	KSTATS_PUSH(percpu_bookkepping, NULL);
+	cpu_do_bookkeeping();
+	KSTATS_POP(NULL);
+
 	KSTATS_PUSH(timer, NULL);
 	timer_run();
 	KSTATS_POP(NULL);

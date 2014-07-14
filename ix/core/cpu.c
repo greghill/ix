@@ -28,6 +28,76 @@ extern const char __percpu_end[];
 extern int dune_enter_ex(void *percpu);
 #define PERCPU_DUNE_LEN	512
 
+struct cpu_runner {
+	struct cpu_runner *next;
+	cpu_func_t func;
+	void *data;
+};
+
+struct cpu_runlist {
+	spinlock_t lock;
+	struct cpu_runner *next_runner;
+} __aligned(CACHE_LINE_SIZE);
+
+static DEFINE_PERCPU(struct cpu_runlist, runlist);
+
+/**
+ * cpu_run_on_one - calls a function on the specified CPU
+ * @func: the function to call
+ * @data: an argument for the function
+ * @cpu: the CPU to run on
+ *
+ * Returns 0 if successful, otherwise fail.
+ */
+int cpu_run_on_one(cpu_func_t func, void *data, unsigned int cpu)
+{
+	struct cpu_runner *runner;
+	struct cpu_runlist *rlist;
+
+	if (cpu >= cpu_count)
+		return -EINVAL;
+
+	runner = malloc(sizeof(*runner));
+	if (!runner)
+		return -ENOMEM;
+
+	runner->func = func;
+	runner->data = data;
+	runner->next = NULL;
+
+	rlist = &percpu_get_remote(runlist, cpu);
+
+	spin_lock(&rlist->lock);
+	runner->next = rlist->next_runner;
+	rlist->next_runner = runner;
+	spin_unlock(&rlist->lock);
+
+	return 0;
+}
+
+/**
+ * cpu_do_bookkepping - runs periodic per-cpu tasks
+ */
+void cpu_do_bookkeeping(void)
+{
+	struct cpu_runlist *rlist = &percpu_get(runlist);
+	struct cpu_runner *runner;
+
+	if (rlist->next_runner) {
+		spin_lock(&rlist->lock);
+		runner = rlist->next_runner;
+		rlist->next_runner = NULL;
+		spin_unlock(&rlist->lock);
+
+		do {
+			struct cpu_runner *last = runner;
+			runner->func(runner->data);
+			runner = runner->next;
+			free(last);
+		} while (runner);
+	}
+}
+
 static void * cpu_init_percpu(unsigned int cpu, unsigned int numa_node)
 {
 	size_t len = __percpu_end - __percpu_start;

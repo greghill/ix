@@ -23,6 +23,8 @@
 
 #define __WORD_SIZE	__64BIT_WORDS
 
+#define CACHE_LINE_SIZE	64
+
 #define cpu_relax() \
 	asm volatile("pause")
 
