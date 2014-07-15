@@ -191,6 +191,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 
 		b = rxqe->mbuf;
 		b->len = le32_to_cpu(rxd.wb.upper.length);
+		b->flow_group = le32_to_cpu(rxd.wb.lower.hi_dword.rss) & (ETH_RSS_RETA_NUM_ENTRIES - 1);
 
 		new_b = mbuf_alloc_local();
 		if (unlikely(!new_b)) {
