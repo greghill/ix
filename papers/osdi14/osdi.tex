@@ -17,6 +17,7 @@
 \usepackage{fullpage}
 
 % added for our purpose
+%\usepackage{authblk}
 \usepackage{xspace}
 \usepackage{url}
 \usepackage{upgreek}
@@ -83,11 +84,25 @@
 %\title{\bf IX: A Dataplane Architecture for \break Event-driven, Web-scale Applications}
 \title{\bf IX: A Dataplane Operating System for \break Event-driven, Web-scale Applications}
 
-% author list to be finalized at camera-ready time. 
-% placeholder for now. -EdB
-%\author{Adam Belay \and Georgios Prekas \and Edouard Bugnion \and Christos Kozyrakis}
+\author{\textsuperscript{1}Adam Belay \and 
+  \textsuperscript{2}George Prekas \and 
+  \textsuperscript{1}Samuel Grossman \and
+  \textsuperscript{1}Ana Klimovic \and 
+  \textsuperscript{1}Christos Kozyrakis\\\textsuperscript{1}Stanford \and
+  \textsuperscript{2}Edouard Bugnion\\\textsuperscript{2}EPFL}
 
-\author{Paper \# 136}
+%if using the authblk package
+%\author[1]{Adam Belay}
+%\author[2]{George Prekas} 
+%\author[1]{Samuel Grossman}
+%\author[1]{Ana Klimovic}
+%\author[1]{\break Christos Kozyrakis}
+%\author[2]{Edouard Bugnion}
+%\affil[1]{Stanford University}
+%\affil[2]{EPFL}
+
+%\author{Paper \# 136}  #Submission number
+
 \date{}
 \maketitle
 \thispagestyle{empty}
@@ -101,7 +116,7 @@
 \input{discussion}
 \input{related}
 \input{conclusion}
-%input{acks}
+\input{acks}
 
 
 \bibliography{../common/dblp,../common/gscholar,../common/misc}
