@@ -1,0 +1,345 @@
+Dear Adam Belay,
+
+The 11th USENIX Symposium on Operating Systems Design and Implementation
+(OSDI '14) program committee is delighted to inform you that your paper
+#136 has been accepted to appear in the conference.
+
+       Title: IX: A Dataplane Operating System for Event-driven, Web-scale
+              Applications
+     Authors: Adam Belay (Stanford)
+              George Prekas (EPFL)
+              Edouard Bugnion (EPFL)
+              Christos Kozyrakis (Stanford)
+  Paper site: https://osdi14.usenix.hotcrp.com/paper/136?cap=0136aNyrTzWw3OO8
+
+Your paper was one of 42 accepted out of 228 submissions. Congratulations!
+
+Reviews and comments on your paper are appended to this email. The
+submissions site also has the paper's reviews and comments, as well as more
+information about review scores.
+
+All papers for the conference are being shepherded.   Your shepherd will be
+Andrew Warfield <andy@cs.ubc.ca>.
+
+We plan to publicize the program shortly.   Therefore, please mail us ASAP
+with any corrections to the author list, affiliations, or title for your
+paper (compared to what is in the conference site).
+
+We will send more details about camera ready dates and format in the near
+future.
+
+Contact OSDI '14 Chairs <osdi14chairs@usenix.org> with any questions or
+concerns.
+
+- OSDI '14 Submissions
+
+===========================================================================
+                           OSDI '14 Review #136A
+                    Updated 28 May 2014 11:13:28pm PDT
+---------------------------------------------------------------------------
+  Paper #136: IX: A Dataplane Operating System for Event-driven, Web-scale
+              Applications
+---------------------------------------------------------------------------
+
+                      Overall merit: 5. Accept
+
+                         ===== Paper summary =====
+
+IX augments Linux for scalable high-speed networking applications by
+treating Linux as a control plane for networking, and replaces the
+Linux network stack with a set of per-application “data planes” each
+consisting of a network stack that is specialized for a run-to-completion,
+batching, zero-copy, polling-based approach.  The network stack is
+isolated from the application via Dune-style use of virtualization
+hardware.  The API is designed to avoid most locking via the “commutivity
+rule”.  Performance (throughput/latency/scaling) exceeds stock Linux
+and the mTCP user-level networking stack.
+
+                      ===== Comments for author =====
+
+Although the presentation has its annoying aspects, I think the ideas
+behind the paper are a useful and important in our ability to deliver
+scalable, high-performance networking to applications.
+
+Clearly, the authors are aware of essentially all of the prior work
+in this area.  In fact, one of the annoying aspects of the paper is
+that it seems like every sentence ends with a citation (or several of
+them).  In many cases, it’s not clear that the citation actually has
+any value beyond pointing out that a different paper mentioned the
+same topic.
+
+In any case, though, while the authors are aware of systems like netmap
+and Arrakis (which, per the first paragraph in section 7, seems to be
+the most closely related recent work), the authors choose to compare
+IX to stock linux and mTCP.  It seems like netmap or Arrakis would have
+made a better baseline; the paper explains the structural differences
+between IX and Arrakis, but never even speculates about the quantitative
+differences in the results.
+
+Another annoying aspect of the paper is the sloppiness: lots of grammar
+glitches, some punctuation problems, the unordered sets of citations,
+and some clear mistakes in the references — aside from the all-too-common
+screwup of failing to capitalize words in the titles properly, a quick
+skim revealed botched author names in [28] and [55], a lack of any publication
+venue for [64], and a botched title in [68].
+
+The paper correctly points out that scaling, throughput, and tail latency
+are important for data center systems.  But so is, increasingly, the
+ability to split up a server into multiple VMs, and it’s not clear whether
+IX can support this, since it’s already using the virtualization HW
+for Dune support.
+
+page 3 (top) says “TCP segmentation and receive size coalescing [have]
+a marginal impact on performance.”  It’s not clear that the paper actually
+provides any evidence for this statement (which might be true, but
+in a paper with an absurd number of citations, this statement isn’t
+backed up with any).
+
+the citation on page 4 to [17] illustrates why simply citing other
+papers every few lines is missing the point.  Since the commutivity
+rule is a key aspect of your system’s scalability, you can’t just say
+that the rule comes from [17]; you need to state it.  [17] actually
+has a concise statement that you could have quoted: “Whenever interface
+operations commute, they can be implemented in a way that scales.”
+Citations are not a replacement for providing this kind of clarity in
+your own text.
+
+Figure 4(a) seems to show some scalability loss for IX starting at 4
+cores.  It could be an artifact of the hardware (perhaps the cache
+is too small or the memory bus is overloaded), especially since fig
+4(d) shows good scaling to 8 cores for IX-40Gbps (but notably a
+scaling decline for IX-10Gbps, above 3 cores).  These effects deserve
+an explanation.
+
+Also, I am not quite sure why 4(d) shows twice as many data points
+as cores.  My guess is that the x-axis is actually hyperthreads/2,
+but then it’s not clear whether your hyperthreads are spread out in
+a way that effectively gives you 8 cores for the “x=4” point on the
+graph, or whether you’re using both hyperthreads on each of N cores
+before going to N+1 cores.
+
+And 4(a) shows twice as many data points on the Linux curve as on
+the other two, to add to the confusion (i.e., it’s strange, but not
+in the same way as 4(d) is strange).
+
+             ===== Questions to address in the response =====
+
+Please explain what is going on with the x-axis in figures 4(a) + 4(d).
+
+===========================================================================
+                           OSDI '14 Review #136B
+                     Updated 14 Jul 2014 7:59:37am PDT
+---------------------------------------------------------------------------
+  Paper #136: IX: A Dataplane Operating System for Event-driven, Web-scale
+              Applications
+---------------------------------------------------------------------------
+
+                      Overall merit: 4. Weak accept
+
+                         ===== Paper summary =====
+
+This paper describes the design of IX, a framework targeted at building high-performance network applications. The design of IX follows common design principles of other network systems (routers, firewall, etc.) by separating the control and data planes. The IX control plane runs under Linux while the data plane runs in a container isolated using processor virtualization support.
+
+The main contribution seems to be in a system where a network application dataplane can be built and executed in a Library OS style container but where the embedded network stack is protected from the application.
+
+                      ===== Comments for author =====
+
+Overall, the paper is well written and the authors seem to have built an interesting artifact which they will hopefully make available publicly.
+
+The main issue with the paper is that the overall design of IX is not particularly new. Many of the scalability/performance design principles described in the paper (multi-queue NICs, RSS, assigning queues to core, avoid core crosstalk, etc.) are well known and understood nowadays in both academia and industry. The paper spends a lot of time discussing these design principles which have already been described in many of the papers cited. The papers spends a fair bit of time in section 2, 3, and 4 discussing this topic.
+
+Asynchronous batched system calls to improve performance is an interesting concept but it also has been previously discussed in the literature.
+
+I think the paper would gain significantly from more discussions on the protection trade-offs: the vmx-root host is now exposed to errors in the IX kernel, what other host OS resources could be exposed to applications, etc.  Currently, these trade-offs are only scratched in the paper.
+
+There are also a few issues with the structure of the paper. The research question that this paper tries to answer is buried in page 4. It should probably be brought forward along with concrete examples of the kind of problems this protected network stack solves (not violating the other TCP endpoint receiver window for example (Sec. 4.4)). Currently, it is fairly easy for a reader to miss the paper's contribution and view this paper solely as a mashup of existing techniques.
+
+             ===== Questions to address in the response =====
+
+Near the end of section 3, the authors discuss how they use ECN and RED to handle congestion/overload. These are techniques typically deployed in routers and it would be interesting to see an evaluation of using these techniques to handle end host overload, instead of advertising a smaller receive window for example.  Is that something that could be evaluated in a final submission?
+
+===========================================================================
+                           OSDI '14 Review #136C
+                    Updated 11 Jun 2014 12:20:53am PDT
+---------------------------------------------------------------------------
+  Paper #136: IX: A Dataplane Operating System for Event-driven, Web-scale
+              Applications
+---------------------------------------------------------------------------
+
+                      Overall merit: 5. Accept
+
+                         ===== Paper summary =====
+
+This paper uses exo-kernel like supervisory libraries to accelerate event processing.
+
+                      ===== Comments for author =====
+
+Of all your stated requirements, protection seems to be the weakest. Of course, protection is wonderful, but do you get it for free or did you have to trade something else off to get it? A better characterization might be that protection is an added bonus of IX rather than a strict requirement.
+
+The key insight here is that requests should be run sequentially, i.e., processing that conventionally occurs in the kernel and in user space should happen in a single sequential run.
+
+I had a hard time following the authors’ claims about how XI exposes flow control to applications.
+
+This is really exciting work. Even with relatively simple policies, the benefits are striking. I imagine there will be a lot of interesting future work done on tuning policies for specific workloads.
+
+The authors seem to imagine machines hosting multiple applications, but in practice machines are more often dedicated to a single application. What would be the implication of all data planes running the same application?
+
+Because elastic threads do not block and run to complete, all data must reside in physical memory. memcached is a perfect fit for this kind of requirement, but it would be nice to see a list of applications that do and do not work with IX.
+
+The real key to IX seems to be flow-consistent hashing at the NICs and exposing these queues to a libos. Once a a request is dispatched to the right data plane, IX applies a stream-processing like programming model to quickly process the request. Efficient use of the instruction cache is a really nice side-effect.
+
+“we simply probe the ephemeral port range to find a port number that would lead to the desired behavior” What does this mean? What is the desired behavior and how does code know if it has been achieved?
+
+The evaluation numbers are very positive and mostly convincing. I would like to see clearer, more informative latency numbers though. memcached most struggles with latency, not throughput, and I worry that IX’s request batching will lead to worse tail-end request latency. At the very least, your evaluation should do a more thorough job of characterizing its impact on latency.
+
+             ===== Questions to address in the response =====
+
+How does IX ensure that replies are assigned to the correct queue?
+
+What is the 99th percentile latency for memcached?
+
+===========================================================================
+                           OSDI '14 Review #136D
+                     Updated 30 Jun 2014 4:48:33pm PDT
+---------------------------------------------------------------------------
+  Paper #136: IX: A Dataplane Operating System for Event-driven, Web-scale
+              Applications
+---------------------------------------------------------------------------
+
+                      Overall merit: 5. Accept
+
+                         ===== Paper summary =====
+
+The paper describes IX, a new network stack architecture for Web server OSes.  Web applications pose huge requirements on the throughput, latency, and number of simultaneous connections that must be sustained by the OS.  This paper argues for a new organization of the network stack, which eliminates many of the inefficiencies in today's OSes for server side workloads.  A key idea is to process packets in full -- through the TCP/IP protocol stack and all the way through the application -- before going on next to the next packet.  Isolated, the protocol and application processing stacks communicate via shared memory.  This architecture eliminates multiple layers of buffering, the need for signaling and timers, scheduling inefficiencies, etc.  Unlike prior work, some of which has considered this architecture, the system is described to uniquely provide high throughput, low latency, high connection counts, and protection from malicious apps.
+
+                      ===== Comments for author =====
+
+This is a very solid paper.  Given my low expertise in this area, I cannot comment on the work's originality.  However, the work is sound, design decisions are well motivated, and the evaluation is well done and in strong favor of the proposed system.  The problem is also important, although not new -- optimizing OSes for modern Web application requirements is important.  
+
+One question I had was how does your system compare to the performance of heavily-optimized Linux distributions that are often deployed in service settings.  All major service providers significantly tune their Linux distributions.  What kind of tuning is generally done, and how much more efficient is your system compared to that?  Just the comparison with vanilla Linux does not seem appropriate to me.  You do compare to mTCP, but I would have liked to see a discussion about highly tuned OSes, too.
+
+I was also curious to see some quantitative evaluation of the value of each design aspects in IX to improve throughput or tail latencies.  IX consists of a number of mechanisms, which together seem to work very nicely.  Can you isolate multiple of them and provide an analysis of performance with different combinations?  The discussion in Section 6 tries to address this question, but it would have been so much more educative for the reader to see a quantitative analysis of that.
+
+There are a lot of typos, which I won't enumerate here, but I strongly suggest doing a full re-read.
+
+===========================================================================
+                           OSDI '14 Review #136E
+                     Updated 7 Jul 2014 11:15:58am PDT
+---------------------------------------------------------------------------
+  Paper #136: IX: A Dataplane Operating System for Event-driven, Web-scale
+              Applications
+---------------------------------------------------------------------------
+
+                      Overall merit: 4. Weak accept
+
+                      ===== Comments for author =====
+
+The Exokernel:  An idea that never dies.  Will its time come some day?
+
+Snarkiness aside, I like this paper for the same reason I liked the exokernel paper -- it's always fun to see what a more "bare metal" approach can do and should look like.  Am I convinced this is a good idea?  Not in the slightest, but that shouldn't stop us from having more papers to add to the debate between fixing the OS in various ways, going more bare metal, and stuffing more different services onto our machines to take advantage of the flexibility afforded by a modern OS vs the potential performance gains from building single-purpose appliances.
+
+My biggest concern with the paper is the relative weakness of the comparison to other approaches that might provide 80% of the gains with 20% of the pain -- batched system calls, improved TCP stacks (3.12, for example, improved aspects of VFS lock handling that are relevant to the networking stack), etc.  I don't think it's reasonable to ask for a comparison against all of these, but given that the paper uses the same benchmark as megapipe for some of its experiments, for example, it seems like a comparison there deserves a graph.  I note that the megapipe project page says "Source code is available upon request and will be publicly available soon" -- if the authors are *not* making it available, they deserve to be publicly castigated (via a very polite footnote), and if they're willing to hand it out, it seems like a reasonable comparison point.  I didn't find the footnote promising a port of mTCP by the camera-ready a compelling thing - this is a fundamental part of the ev!
+ aluation that really needs to be done before submission.
+
+I have some nitty technical concerns - for example, is it realistic that RSS will scale in a reasonable way for this application if running multiple "dataplane apps" atop it?  This may simply be a description issue:  RSS cannot, to my knowledge, subdivide the available hardware queues based upon destination port while still doing 5tuple hashing within that subset (and neither can Flow Director?  Or am I wrong?)  As a result, it seems like the answer must be that a single hardware thread might have to service multiple dataplane apps for different packets, but that seems to conflict with some of the other promises about dedicated cores.  Or did I still get that wrong, and what's happening is that there's a lower layer of NIC virtualization, and that those different dataplanes are addressed, e.g., by MAC-level virtualization?  A concrete example explaining this would be very helpful for this slightly befuddled reviewer.
+
+in contrast to some of the recet scaling work, this paper tops out at a relatively modest scale.  I don't mind that in general, but I do find it lacking that none of the servers were dual-socket machines, which are both common in industry as well as the point at which NUMA-related effects begin to appear.  The consequence of this may make the performance and scaling results appear either too rosy *or too pessimal*, but either way it goes, it would be very helpful to know.
+
+
+===========================================================================
+           Response by Edouard Bugnion <edouard.bugnion@epfl.ch>
+  Paper #136: IX: A Dataplane Operating System for Event-driven, Web-scale
+              Applications
+---------------------------------------------------------------------------
+We thank reviewers and will take all comments to heart in both form and substance.
+
+Design
+
+ - [#B]Prior work inspired many elements of IX (batching,
+   run-to-completion, flow-consistent hashing, zero-copy).
+   Unique to IX, we show how to bring all four together in a
+   full TCP stack running an untrusted application with a
+   novel user/kernel execution model.
+  
+ - [#B,#C]The way we batch is also unique: (i) adaptively
+   based on congestion, and therefore without impacting latency
+   (ii) in each step of the processing pipeline instead of a
+   single phase (such as the system call boundary[73]).
+
+ - [#B,#C]The linux kernel (vmx-root) is protected from IX
+   (ring 0), when using an IOMMU (not prototyped).  Linux and
+   IX are always protected from apps (ring 3).
+
+ - [#A,#C,#E]Our design partitions RSS-groups (of queues) using
+   multiple NICs or SR-IOV in the future.  IX is not designed to
+   run in VMs.
+
+ - [#C]RSS only dictates the behavior of RX packets; TX packets
+   can be sent on any queue.  For incoming connections, the RSS
+   hash determines the core.  For outgoing connections, the
+   ephemeral port is selected so the RSS hash affinitizes to the
+   core that opened the connection.
+
+ - [#E]Run-to-completion would be particularly hard to retrofit
+   into Linux.
+
+ - [#B]IX could expose storage to apps in future work.
+
+Comparison
+
+ - [#A]netmap is a raw Ethernet packet system and cannot directly
+   run a TCP-based workload.
+
+ - [#E]We compare thoroughly with mTCP; the limitation in the
+   footnote is specific to our 4x10GbE configuration, for which
+   mTCP could not run correctly at the time (now fixed).
+
+ - [#E]The Megapipe code is not readily available on the web,
+   so our comparison is "transitive": [36] shows that
+   mTCP clearly outperforms Megapipe, and IX outperforms mTCP.
+
+ - [#A]We'd be excited to compare to Arrakis. It was not
+   available at time of submission.
+
+Evaluation:
+
+ - [#A]Half-ticks in Fig 4(a)(b) correspond to hyperthreads.
+   We enabled hyperthreading only when it improved performance.
+   With mTCP, each app hyperthread is paired with network
+   hyperthread by design. We stopped scaling on 1x10GbE with a
+   few cores because we saturated the NIC. 4x10GbE demonstrates
+   our stack can go beyond a single NIC.
+
+ - [#C]We have measured 99th latency for memcached and will add
+   it to the graph.  IX compares even more favorably to Linux on
+   99th than 95th latency.
+
+ - [#D,#E]We aggressively tuned Linux e.g. pinning threads to cores,
+   killing background tasks, adjusting interrupt steering, applying
+   custom parameters to the NIC driver, and running a recent kernel
+   (we will redo with 3.15+). This had a huge impact over untuned
+   performance.
+
+ - [#E]We are actively looking at behavior of multiple sockets. Our
+   initial focus was to deliver line rate (1x and 4x10GbE) using a
+   single socket.
+
+Networking behavior:
+
+ - [#A]TSO cannot improve small message performance. When streaming,
+   IX is optimized enough to easily achieve line-rate, even without
+   TSO. Intel's implementations of RSC does not scale to large flow
+   counts and adds latency.
+
+ - [#B]ECN/RED at the end-layer is something we are actively working
+   on.  However, this paper focuses on OS comparison without
+   protocol changes.
+
+
+===========================================================================
+                                  Comment
+  Paper #136: IX: A Dataplane Operating System for Event-driven, Web-scale
+              Applications
+---------------------------------------------------------------------------
+The PC was very positive about this paper and accepted it before the PC meeting. It was not discussed at the PC meeting.
+
