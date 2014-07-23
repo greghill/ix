@@ -10,6 +10,7 @@
 #include <ix/uaccess.h>
 #include <ix/vm.h>
 #include <ix/kstats.h>
+#include <ix/cfg.h>
 
 #include <asm/chksum.h>
 
@@ -17,7 +18,6 @@
 #include <net/udp.h>
 
 #include "net.h"
-#include "cfg.h"
 
 #define UDP_PKT_SIZE		  \
 	(sizeof(struct eth_hdr) + \
@@ -84,6 +84,7 @@ static int udp_output(struct mbuf *__restrict pkt,
 	struct udp_hdr *udphdr = mbuf_nextd(iphdr, struct udp_hdr *);
 	size_t full_len = len + sizeof(struct udp_hdr);
 	struct ip_addr dst_addr;
+	int ret;
 
 	dst_addr.addr = id->dst_ip;
 	if (arp_lookup_mac(&dst_addr, &ethhdr->dhost))
@@ -106,8 +107,9 @@ static int udp_output(struct mbuf *__restrict pkt,
 
 	pkt->len = UDP_PKT_SIZE;
 
-	if (eth_tx_xmit_batched(percpu_get(eth_tx), pkt))
-		return -RET_NOBUFS;
+	ret = eth_send(pkt);
+	if (ret)
+		return ret;
 
 	return 0;
 }

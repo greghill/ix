@@ -9,6 +9,7 @@
 #include <ix/errno.h>
 #include <ix/log.h>
 #include <ix/queue.h>
+#include <ix/cfg.h>
 
 #include <asm/chksum.h>
 
@@ -18,7 +19,6 @@
 /* FIXME: remove when we integrate better with LWIP */
 #include <lwip/pbuf.h>
 
-#include "cfg.h"
 #include "net.h"
 
 /**
@@ -170,12 +170,13 @@ int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest, uint8_t
 	pkt->ol_flags = PKT_TX_IP_CKSUM;
 	pkt->ol_flags |= PKT_TX_TCP_CKSUM;
 
-	ret = eth_tx_xmit_one(percpu_get(eth_tx), pkt, sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + p->tot_len);
+	ret = eth_send_one(pkt, sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + p->tot_len);
 
-	if (unlikely(ret != 1)) {
+	if (unlikely(ret)) {
 		mbuf_free(pkt);
 		return -EIO;
 	}
 
 	return 0;
 }
+

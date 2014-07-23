@@ -11,22 +11,13 @@
 #include <ix/cpu.h>
 #include <ix/queue.h>
 #include <ix/toeplitz.h>
+#include <ix/cfg.h>
 
 #include <net/ethernet.h>
 
-#define MAX_ETH_DEVICES 16
-
 int eth_dev_count;
-struct rte_eth_dev *eth_dev[MAX_ETH_DEVICES];
-DEFINE_PERCPU(uint16_t, eth_rx_count);
-DEFINE_PERCPU(struct eth_rx_queue **, eth_rx);
-DEFINE_PERCPU(struct eth_tx_queue *, eth_tx);
-DEFINE_PERCPU(uint64_t, eth_rx_bitmap);
-
-DEFINE_PERCPU(int, tx_batch_cap);
-DEFINE_PERCPU(int, tx_batch_len);
-DEFINE_PERCPU(int, tx_batch_pos);
-DEFINE_PERCPU(struct mbuf *, tx_batch[ETH_DEV_TX_QUEUE_SZ]);
+struct rte_eth_dev *eth_dev[NETHDEV];
+static DEFINE_SPINLOCK(eth_dev_lock);
 
 static uint8_t rss_key[40];
 
@@ -72,6 +63,64 @@ void eth_dev_set_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr)
 }
 
 /**
+ * eth_dev_add - registers an ethernet device
+ * @dev: the ethernet device
+ *
+ * Returns 0 if successful, otherwise failure.
+ */
+int eth_dev_add(struct rte_eth_dev *dev)
+{
+	int ret, pos;
+	struct rte_eth_dev_info dev_info;
+
+	dev->dev_ops->dev_infos_get(dev, &dev_info);
+
+	dev->data->nb_rx_queues = 0;
+	dev->data->nb_tx_queues = 0;
+
+	dev->data->max_rx_queues =
+		min(dev_info.max_rx_queues, ETH_RSS_RETA_MAX_QUEUE);
+	dev->data->max_tx_queues = dev_info.max_tx_queues;
+
+	dev->data->rx_queues = malloc(sizeof(struct eth_rx_queue *) *
+				      dev->data->max_rx_queues);
+	if (!dev->data->rx_queues)
+		return -ENOMEM;
+
+	dev->data->tx_queues = malloc(sizeof(struct eth_tx_queue *) *
+				      dev->data->max_tx_queues);
+	if (!dev->data->tx_queues) {
+		ret = -ENOMEM;
+		goto err;
+	}
+
+	spin_lock(&eth_dev_lock);
+	pos = eth_dev_count++;
+	spin_unlock(&eth_dev_lock);
+
+	eth_dev[pos] = dev;
+	return 0;
+
+err:
+	free(dev->data->rx_queues);
+	return ret;
+
+}
+
+static void eth_dev_setup_mac(struct rte_eth_dev *dev)
+{
+	static int first = true;
+
+	/* FIXME: this is awfully bonding-specific */
+	if (first) {
+		eth_dev_get_hw_mac(dev, &cfg_mac);
+		first = false;
+	} else {
+		eth_dev_set_hw_mac(dev, &cfg_mac);
+	}
+}
+
+/**
  * eth_dev_start - starts an ethernet device
  * @dev: the ethernet device
  *
@@ -80,30 +129,12 @@ void eth_dev_set_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr)
 int eth_dev_start(struct rte_eth_dev *dev)
 {
 	int ret;
-	int max_rx_queues;
 	struct eth_addr macaddr;
 	struct rte_eth_link link;
-	struct rte_eth_dev_info dev_info;
-
-	dev->dev_ops->dev_infos_get(dev, &dev_info);
-
-	dev->data->nb_rx_queues = 0;
-	dev->data->nb_tx_queues = 0;
-
-	max_rx_queues = min(dev_info.max_rx_queues, ETH_RSS_RETA_MAX_QUEUE);
-	dev->data->rx_queues = malloc(sizeof(struct eth_rx_queue *) * max_rx_queues);
-	if (!dev->data->rx_queues)
-		return -ENOMEM;
-
-	dev->data->tx_queues = malloc(sizeof(struct eth_tx_queue *) * dev_info.max_tx_queues);
-	if (!dev->data->tx_queues) {
-		ret = -ENOMEM;
-		goto err;
-	}
 
 	ret = dev->dev_ops->dev_start(dev);
 	if (ret)
-		goto err_start;
+		return ret;
 
 	dev->dev_ops->promiscuous_disable(dev);
 	dev->dev_ops->allmulticast_enable(dev);
@@ -127,17 +158,32 @@ int eth_dev_start(struct rte_eth_dev *dev)
 			 ("full-duplex") : ("half-duplex\n"));
 	}
 
-	eth_dev[eth_dev_count++] = dev;
+	eth_dev_setup_mac(dev);
 
 	return 0;
-
-
-err_start:
-	free(dev->data->tx_queues);
-err:
-	free(dev->data->rx_queues);
-	return ret;
 }
+
+/**
+ * eth_dev_stop - stops an ethernet device
+ * @dev: the ethernet device
+ */
+void eth_dev_stop(struct rte_eth_dev *dev)
+{
+	int i;
+
+	dev->dev_ops->dev_stop(dev);
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++)
+		dev->dev_ops->tx_queue_release(dev->data->tx_queues[i]);
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++)
+		dev->dev_ops->rx_queue_release(dev->data->rx_queues[i]);
+
+	dev->data->nb_rx_queues = 0;
+	dev->data->nb_tx_queues = 0;
+	free(dev->data->tx_queues);
+	free(dev->data->rx_queues);
+} 
 
 /**
  * eth_dev_get_rx_queue - get the next available rx queue
@@ -146,44 +192,42 @@ err:
  *
  * Returns 0 if successful, otherwise failure.
  */
-int eth_dev_get_rx_queue(struct rte_eth_dev *dev, struct eth_rx_queue **rx_queue)
+int eth_dev_get_rx_queue(struct rte_eth_dev *dev,
+			 struct eth_rx_queue **rx_queue)
 {
-	int rx_queue_id;
-	int ret;
-	int max_rx_queues;
-	struct rte_eth_dev_info dev_info;
+	int rx_idx, ret;
 
-	rx_queue_id = dev->data->nb_rx_queues;
+	spin_lock(&eth_dev_lock);
+	rx_idx = dev->data->nb_rx_queues;
 
-	dev->dev_ops->dev_infos_get(dev, &dev_info);
-	max_rx_queues = min(dev_info.max_rx_queues, ETH_RSS_RETA_MAX_QUEUE);
-
-	if (rx_queue_id >= max_rx_queues)
+	if (rx_idx >= dev->data->max_rx_queues) {
+		spin_unlock(&eth_dev_lock);
 		return -EMFILE;
+	}
 
-	ret = dev->dev_ops->rx_queue_setup(dev, rx_queue_id, -1, ETH_DEV_RX_QUEUE_SZ);
-	if (ret)
+
+	ret = dev->dev_ops->rx_queue_setup(dev, rx_idx, -1,
+					   ETH_DEV_RX_QUEUE_SZ);
+	if (ret) {
+		spin_unlock(&eth_dev_lock);
 		return ret;
+	}
 
-	ret = queue_init_one(dev->data->rx_queues[rx_queue_id]);
+	ret = queue_init_one(dev->data->rx_queues[rx_idx]);
 	if (ret)
 		goto err;
 
-	/* Needed here in order to correctly fill in the redirection table. */
 	dev->data->nb_rx_queues++;
+	spin_unlock(&eth_dev_lock);
 
-	ret = dev->dev_ops->rx_queue_init(dev, rx_queue_id);
-	if (ret)
-		goto err;
-
-	*rx_queue = dev->data->rx_queues[rx_queue_id];
-	(*rx_queue)->queue_idx = rx_queue_id;
+	*rx_queue = dev->data->rx_queues[rx_idx];
+	(*rx_queue)->queue_idx = rx_idx;
 
 	return 0;
 
 err:
-	dev->data->nb_rx_queues--;
-	dev->dev_ops->rx_queue_release(dev->data->rx_queues[rx_queue_id]);
+	spin_unlock(&eth_dev_lock);
+	dev->dev_ops->rx_queue_release(dev->data->rx_queues[rx_idx]);
 	return ret;
 }
 
@@ -194,55 +238,33 @@ err:
  *
  * Returns 0 if successful, otherwise failure.
  */
-int eth_dev_get_tx_queue(struct rte_eth_dev *dev, struct eth_tx_queue **tx_queue)
+int eth_dev_get_tx_queue(struct rte_eth_dev *dev,
+			 struct eth_tx_queue **tx_queue)
 {
-	int tx_queue_id;
-	int ret;
-	struct rte_eth_dev_info dev_info;
+	int tx_idx, ret;
 
-	dev->dev_ops->dev_infos_get(dev, &dev_info);
+	spin_lock(&eth_dev_lock);
+	tx_idx = dev->data->nb_tx_queues;
 
-	tx_queue_id = dev->data->nb_tx_queues;
-	if (tx_queue_id >= dev_info.max_tx_queues)
+	if (tx_idx > dev->data->max_tx_queues) {
+		spin_unlock(&eth_dev_lock);
 		return -EMFILE;
+	}
 
-	ret = dev->dev_ops->tx_queue_setup(dev, tx_queue_id, -1, ETH_DEV_TX_QUEUE_SZ);
-	if (ret)
+	ret = dev->dev_ops->tx_queue_setup(dev, tx_idx, -1,
+					   ETH_DEV_TX_QUEUE_SZ);
+	if (ret) {
+		spin_unlock(&eth_dev_lock);
 		return ret;
+	}
 
-	ret = dev->dev_ops->tx_queue_init(dev, tx_queue_id);
-	if (ret)
-		goto err;
-
-	*tx_queue = dev->data->tx_queues[tx_queue_id];
 	dev->data->nb_tx_queues++;
+	spin_unlock(&eth_dev_lock);
+
+	*tx_queue = dev->data->tx_queues[tx_idx];
 
 	return 0;
-
-err:
-	dev->dev_ops->tx_queue_release(dev->data->tx_queues[tx_queue_id]);
-	return ret;
 }
-
-/**
- * eth_dev_stop - stops an ethernet device
- * @dev: the ethernet device
- */
-void eth_dev_stop(struct rte_eth_dev *dev)
-{
-	dev->dev_ops->dev_stop(dev);
-	dev->dev_ops->tx_queue_release(dev->data->tx_queues[0]);
-	dev->dev_ops->rx_queue_release(dev->data->rx_queues[0]);
-	dev->data->nb_rx_queues = 0;
-	dev->data->nb_tx_queues = 0;
-	free(dev->data->tx_queues);
-	free(dev->data->rx_queues);
-
-	/* FIXME: we do not have a way to gracefully stop an ethernet device */
-	eth_dev[0] = NULL;
-	eth_rx = NULL;
-	eth_tx = NULL;
-} 
 
 /**
  * eth_dev_alloc - allocates an ethernet device

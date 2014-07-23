@@ -36,15 +36,9 @@ static void * queue_init_perqueue(unsigned int numa_node)
  */
 int queue_init_one(struct eth_rx_queue *rx_queue)
 {
-	int ret;
-	unsigned int tmp, numa_node;
 	void *pqueue;
 
-	ret = syscall(SYS_getcpu, &tmp, &numa_node, NULL);
-	if (ret)
-		return -ENOSYS;
-
-	pqueue = queue_init_perqueue(numa_node);
+	pqueue = queue_init_perqueue(percpu_get(cpu_numa_node));
 	if (!pqueue)
 		return -ENOMEM;
 
@@ -60,17 +54,24 @@ void set_current_queue(struct eth_rx_queue *rx_queue)
 
 int set_current_queue_by_index(unsigned int index)
 {
+#if 0
        if (index >= percpu_get(eth_rx_count)) {
                unset_current_queue();
                return 1;
        }
 
        set_current_queue(percpu_get(eth_rx)[index]);
+#endif
 
-       return 0;
+	if (index > 0)
+		return 1;
+
+	set_current_queue(percpu_get(eth_rx));
+	return 0;
 }
 
 void unset_current_queue()
 {
 	percpu_get(current_perqueue) = NULL;
 }
+

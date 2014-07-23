@@ -4,9 +4,9 @@
 
 #include <ix/stddef.h>
 #include <ix/log.h>
+#include <ix/cfg.h>
 
 #include "net.h"
-#include "cfg.h"
 
 static void net_dump_cfg(void)
 {
@@ -25,12 +25,14 @@ static void net_dump_cfg(void)
 	log_info("\tsubnet mask:\t%s\n", str);
 }
 
+/**
+ * net_init - initializes the network stack
+ *
+ * Returns 0 if successful, otherwise fail.
+ */
 int net_init(void)
 {
 	int ret;
-	int i;
-
-	log_info("net: starting networking\n");
 
 	ret = arp_init();
 	if (ret) {
@@ -38,18 +40,17 @@ int net_init(void)
 		return ret;
 	}
 
-	ret = read_configuration("ix.cfg");
-	if (ret) {
-		log_err("init: failed to read and parse configuration\n");
-		return ret;
-	}
+	return 0;
+}
 
+/**
+ * net_cfg - load the network configuration parameters
+ *
+ * Returns 0 if successful, otherwise fail.
+ */
+int net_cfg(void)
+{
 	net_dump_cfg();
-
-	eth_dev_get_hw_mac(eth_dev[0], &cfg_mac);
-
-	for (i = 1; i < eth_dev_count; i++)
-		eth_dev_set_hw_mac(eth_dev[i], &cfg_mac);
 
 	return 0;
 }

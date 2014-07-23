@@ -37,15 +37,13 @@
 #include <ix/pci.h>
 #include <ix/mbuf.h>
 #include <ix/errno.h>
+#include <ix/ethqueue.h>
 
 #include <net/ethernet.h>
 
 #ifdef ENABLE_PCAP
 #include <net/pcap.h>
 #endif
-
-#define ETH_DEV_RX_QUEUE_SZ     512
-#define ETH_DEV_TX_QUEUE_SZ     1024
 
 /* FIXME: figure out the right size for this */
 #define RTE_ETHDEV_QUEUE_STAT_CNTRS	16
@@ -728,20 +726,12 @@ typedef int (*eth_rx_queue_setup_t)(struct rte_eth_dev *dev,
 				    int rx_queue_id,
 				    int numa_node,
 				    uint16_t nb_rx_desc);
-/**< @internal Set up a receive queue of an Ethernet device. */
-
-typedef int (*eth_rx_queue_init_t)(struct rte_eth_dev *dev,
-				    int rx_queue_id);
 /**< @internal Initialize a receive queue of an Ethernet device. */
 
 typedef int (*eth_tx_queue_setup_t)(struct rte_eth_dev *dev,
 				    int tx_queue_id,
 				    int numa_node,
 				    uint16_t nb_tx_desc);
-/**< @internal Setup a transmit queue of an Ethernet device. */
-
-typedef int (*eth_tx_queue_init_t)(struct rte_eth_dev *dev,
-				    int tx_queue_id);
 /**< @internal Initialize a transmit queue of an Ethernet device. */
 struct eth_rx_queue;
 struct eth_tx_queue;
@@ -900,10 +890,8 @@ struct eth_dev_ops {
 	vlan_strip_queue_set_t     vlan_strip_queue_set; /**< VLAN Stripping on queue. */
 	vlan_offload_set_t         vlan_offload_set; /**< Set VLAN Offload. */
 	eth_rx_queue_setup_t       rx_queue_setup;/**< Set up device RX queue.*/
-	eth_rx_queue_init_t        rx_queue_init;/**< Initialize a receive queue of an Ethernet device.*/
 	eth_rx_queue_release_t     rx_queue_release;/**< Release RX queue.*/
 	eth_tx_queue_setup_t       tx_queue_setup;/**< Set up device TX queue.*/
-	eth_tx_queue_init_t        tx_queue_init;/**< Initialize a transmit queue of an Ethernet device.*/
 	eth_tx_queue_release_t     tx_queue_release;/**< Release TX queue.*/
 	eth_dev_led_on_t           dev_led_on;    /**< Turn on LED. */
 	eth_dev_led_off_t          dev_led_off;   /**< Turn off LED. */
@@ -967,122 +955,6 @@ struct rte_eth_dev_sriov {
 #define RTE_ETH_DEV_SRIOV(dev)         ((dev)->data->sriov)
 
 
-/*
- * The Queue API
- */
-
-struct eth_rx_queue {
-	int (*poll) (struct eth_rx_queue *rx);
-	int (*process) (struct eth_rx_queue *rx, unsigned int max_packets);
-	void *perqueue_offset;
-	int queue_idx;
-};
-
-/**
- * eth_rx_poll - fetches into the memory ring all pending packets on an RX queue
- * @rx: the RX queue
- *
- * Returns the number of packets fetched.
- */
-static inline int eth_rx_poll(struct eth_rx_queue *rx)
-{
-	return rx->poll(rx);
-}
-
-/**
- * eth_rx_process - processes all packets on an RX queue from memory ring
- * @rx: the RX queue
- * @max_packets: the maximum number of packets to process
- *
- * Returns 1 if all available packets have been processed.
- */
-static inline int eth_rx_process(struct eth_rx_queue *rx, unsigned int max_packets)
-{
-	return rx->process(rx, max_packets);
-}
-
-struct eth_tx_queue {
-	int (*reclaim) (struct eth_tx_queue *tx);
-	int (*xmit) (struct eth_tx_queue *tx, int nr, struct mbuf **mbufs);
-};
-
-/**
- * eth_tx_reclaim - scans the queue and reclaims finished buffers
- * @tx: the TX queue
- *
- * NOTE: scatter-gather mbuf's can span multiple descriptors, so
- * take that into account when interpreting the count provided by
- * this function.
- *
- * Returns an available descriptor count.
- */
-static inline int eth_tx_reclaim(struct eth_tx_queue *tx)
-{
-	return tx->reclaim(tx);
-}
-
-/**
- * eth_tx_xmit - transmits packets on a TX queue
- * @tx: the TX queue
- * @nr: the number of mbufs to transmit
- * @mbufs: an array of mbufs to process
- *
- * Returns the number of mbuf's transmitted.
- */
-static inline int eth_tx_xmit(struct eth_tx_queue *tx,
-			      int nr, struct mbuf **mbufs)
-{
-#ifdef ENABLE_PCAP
-	int i;
-
-	for (i = 0; i < nr; i++)
-		pcap_write(mbufs[i]);
-#endif
-	return tx->xmit(tx, nr, mbufs);
-}
-
-DECLARE_PERCPU(int, tx_batch_cap);
-DECLARE_PERCPU(int, tx_batch_len);
-DECLARE_PERCPU(int, tx_batch_pos);
-DECLARE_PERCPU(struct mbuf *, tx_batch[ETH_DEV_TX_QUEUE_SZ]);
-
-static inline int eth_tx_xmit_batched(struct eth_tx_queue *tx,
-				      struct mbuf *mbuf)
-{
-	if (percpu_get(tx_batch_len) + 1 + mbuf->nr_iov >=
-	    percpu_get(tx_batch_cap))
-		return -ENOMEM;
-
-	percpu_get(tx_batch[percpu_get(tx_batch_pos)++]) = mbuf;
-	percpu_get(tx_batch_len) += 1 + mbuf->nr_iov;
-
-	return 0;
-}
-
-/**
- * eth_tx_xmit_one - transmits a single packet on a TX queue
- * @tx: the TX queue
- * @mbuf: the packet
- * @len: the length of the packet
- *
- * Returns 1 if successful, otherwise the packet wasn't sent.
- */
-static inline int eth_tx_xmit_one(struct eth_tx_queue *tx,
-				  struct mbuf *mbuf, size_t len)
-{
-	mbuf->len = len;
-	mbuf->nr_iov = 0;
-
-#ifdef ENABLE_PCAP
-	pcap_write(mbuf);
-#endif
-
-	return !eth_tx_xmit_batched(tx, mbuf);
-}
-
-extern bool eth_rx_idle_wait(uint64_t usecs);
-
-
 /**
  * @internal
  * The data part, with no function pointers, associated with each ethernet device.
@@ -1095,6 +967,8 @@ struct rte_eth_dev_data {
 	struct eth_tx_queue **tx_queues; /**< Array of pointers to TX queues. */
 	uint16_t nb_rx_queues; /**< Number of RX queues. */
 	uint16_t nb_tx_queues; /**< Number of TX queues. */
+	uint16_t max_rx_queues;
+	uint16_t max_tx_queues;
 	
 	struct rte_eth_dev_sriov sriov;    /**< SRIOV data */
 
@@ -1124,19 +998,20 @@ extern void
 eth_dev_get_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr);
 extern void eth_dev_set_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr);
 extern struct rte_eth_dev *eth_dev_alloc(size_t private_len);
+extern void eth_dev_destroy(struct rte_eth_dev *dev);
+extern int eth_dev_add(struct rte_eth_dev *dev);
 extern int eth_dev_start(struct rte_eth_dev *dev);
+extern void eth_dev_stop(struct rte_eth_dev *dev);
 extern int eth_dev_get_rx_queue(struct rte_eth_dev *dev, struct eth_rx_queue **rx_queue);
 extern int eth_dev_get_tx_queue(struct rte_eth_dev *dev, struct eth_tx_queue **tx_queue);
-extern void eth_dev_stop(struct rte_eth_dev *dev);
-extern void eth_dev_destroy(struct rte_eth_dev *dev);
+
 
 /*
  * globals
  */
+
+#define NETHDEV	16
+
 extern int eth_dev_count;
 extern struct rte_eth_dev *eth_dev[];
-DECLARE_PERCPU(uint16_t, eth_rx_count);
-DECLARE_PERCPU(struct eth_rx_queue **, eth_rx);
-DECLARE_PERCPU(struct eth_tx_queue *, eth_tx);
-DECLARE_PERCPU(uint64_t, eth_rx_bitmap);
 

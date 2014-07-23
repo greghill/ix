@@ -106,15 +106,12 @@ static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
  */
 static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 {
-	int ret;
-	unsigned int i;
-	int done;
-	const int batch_size = 128;
+	int ret, empty;
 
 	usys_reset();
 
 	KSTATS_PUSH(tx_reclaim, NULL);
-	percpu_get(tx_batch_cap) = eth_tx_reclaim(percpu_get(eth_tx));
+	eth_process_reclaim();
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(bsys, NULL);
@@ -134,25 +131,19 @@ again:
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(rx_poll, NULL);
-	for_each_queue(i)
-		eth_rx_poll(percpu_get(eth_rx)[i]);
+	eth_process_poll();
 	KSTATS_POP(NULL);
 
-	done = 1;
-	for_each_queue(i)
-		done = done && eth_rx_process(percpu_get(eth_rx)[i], batch_size);
+	KSTATS_PUSH(rx_recv, NULL);
+	empty = eth_process_recv();
+	KSTATS_POP(NULL);
 
-	KSTATS_PUSH(tx_xmit, NULL);
-	i = eth_tx_xmit(percpu_get(eth_tx), percpu_get(tx_batch_pos),
-		        percpu_get(tx_batch));
-	if (unlikely(i != percpu_get(tx_batch_pos)))
-		panic("transmit failed\n");
-	percpu_get(tx_batch_len) = 0;
-	percpu_get(tx_batch_pos) = 0;
+	KSTATS_PUSH(tx_send, NULL);
+	eth_process_send();
 	KSTATS_POP(NULL);
 
 	if (!percpu_get(usys_arr)->len) {
-		if (done) {
+		if (empty) {
 			uint64_t deadline = timer_deadline(10 * ONE_MS);
 			if (deadline > 0) { 
 				KSTATS_PUSH(idle, NULL);
@@ -162,7 +153,7 @@ again:
 		}
 		
 		KSTATS_PUSH(tx_reclaim, NULL);
-		percpu_get(tx_batch_cap) = eth_tx_reclaim(percpu_get(eth_tx));
+		eth_process_reclaim();
 		KSTATS_POP(NULL);
 
 		goto again;
@@ -180,23 +171,18 @@ again:
  */
 static int sys_bcall(struct bsys_desc __user *d, unsigned int nr)
 {
-	int ret, i;
+	int ret;
 
 	KSTATS_PUSH(tx_reclaim, NULL);
-	percpu_get(tx_batch_cap) = eth_tx_reclaim(percpu_get(eth_tx));
+	eth_process_reclaim();
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(bsys, NULL);
 	ret = bsys_dispatch(d, nr);
 	KSTATS_POP(NULL);
 
-	KSTATS_PUSH(tx_xmit, NULL);
-	i = eth_tx_xmit(percpu_get(eth_tx), percpu_get(tx_batch_pos),
-		        percpu_get(tx_batch));
-	if (unlikely(i != percpu_get(tx_batch_pos)))
-		panic("transmit failed\n");
-	percpu_get(tx_batch_len) = 0;
-	percpu_get(tx_batch_pos) = 0;
+	KSTATS_PUSH(tx_send, NULL);
+	eth_process_send();
 	KSTATS_POP(NULL);
 
 	return ret;

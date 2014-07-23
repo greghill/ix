@@ -8,6 +8,7 @@
 #include <ix/errno.h>
 #include <ix/log.h>
 #include <ix/timer.h>
+#include <ix/cfg.h>
 
 #include <asm/chksum.h>
 
@@ -16,7 +17,6 @@
 #include <net/icmp.h>
 
 #include "net.h"
-#include "cfg.h"
 
 static int icmp_reflect(struct mbuf *pkt, struct icmp_hdr *hdr, int len)
 {
@@ -35,9 +35,9 @@ static int icmp_reflect(struct mbuf *pkt, struct icmp_hdr *hdr, int len)
 	hdr->chksum = chksum_internet((void *) hdr, len);
 
 	pkt->ol_flags = 0;	
-	ret = eth_tx_xmit_one(percpu_get(eth_tx), pkt, pkt->len);
+	ret = eth_send_one(pkt, pkt->len);
 
-	if (unlikely(ret != 1)) {
+	if (unlikely(ret)) {
 		mbuf_free(pkt);
 		return -EIO;
 	}
@@ -142,9 +142,9 @@ int icmp_echo(struct ip_addr *dest, uint16_t id, uint16_t seq, uint64_t timestam
 	icmppkt->hdr.chksum = chksum_internet((void *) icmppkt, len);
 
 	pkt->ol_flags = 0;	
-	ret = eth_tx_xmit_one(percpu_get(eth_tx), pkt, sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + len);
+	ret = eth_send_one(pkt, sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + len);
 
-	if (unlikely(ret != 1)) {
+	if (unlikely(ret)) {
 		mbuf_free(pkt);
 		return -EIO;
 	}

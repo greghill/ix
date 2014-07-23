@@ -11,10 +11,9 @@
 #include <ix/ethdev.h>
 #include <ix/toeplitz.h>
 #include <ix/kstats.h>
+#include <ix/cfg.h>
 
 #include <lwip/tcp.h>
-
-#include "cfg.h"
 
 #define MAX_PCBS	65536
 
@@ -62,7 +61,7 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 	if (unlikely(idx >= MAX_PCBS))
 		return NULL;
 
-	set_current_queue(percpu_get(eth_rx)[queue]);
+	set_current_queue(percpu_get(eth_rx));
 	p = &perqueue_get(pcb_mempool);
 
 	api = (struct tcpapi_pcb *) ((uintptr_t) p->buf +
@@ -453,12 +452,18 @@ static err_t on_connected(void *arg, struct tcp_pcb *pcb, err_t err)
 /* FIXME: we should maintain a bitmap to hold the available TCP ports */
 int get_local_port_and_set_queue(struct ip_tuple *id)
 {
+#if 0
 	int i;
 	uint32_t hash;
 	uint32_t queue_idx;
+#endif
 
 	if (!percpu_get(local_port))
 		percpu_get(local_port) = percpu_get(cpu_id) * PORTS_PER_CPU;
+
+	percpu_get(local_port)++;
+	return 0;
+#if 0
 	while (1) {
 		percpu_get(local_port)++;
 		if (percpu_get(local_port) >= (percpu_get(cpu_id) + 1) * PORTS_PER_CPU)
@@ -479,6 +484,7 @@ int get_local_port_and_set_queue(struct ip_tuple *id)
 	}
 
 	return 1;
+#endif
 }
 
 long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
