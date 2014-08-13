@@ -33,7 +33,7 @@ static const struct rte_eth_conf default_conf = {
         },
 	.rx_adv_conf = {
 		.rss_conf = {
-			.rss_hf = ETH_RSS_IPV4_TCP,
+			.rss_hf = ETH_RSS_IPV4_TCP | ETH_RSS_IPV4_UDP,
 			.rss_key = rss_key,
 		},
 	},
@@ -70,7 +70,7 @@ void eth_dev_set_hw_mac(struct rte_eth_dev *dev, struct eth_addr *mac_addr)
  */
 int eth_dev_add(struct rte_eth_dev *dev)
 {
-	int ret, pos;
+	int ret, i;
 	struct rte_eth_dev_info dev_info;
 
 	dev->dev_ops->dev_infos_get(dev, &dev_info);
@@ -91,17 +91,33 @@ int eth_dev_add(struct rte_eth_dev *dev)
 				      dev->data->max_tx_queues);
 	if (!dev->data->tx_queues) {
 		ret = -ENOMEM;
-		goto err;
+		goto err_tx_queues;
+	}
+
+	dev->data->nb_rx_fgs = dev_info.nb_rx_fgs;
+	dev->data->rx_fgs = malloc(sizeof(struct eth_fg) *
+				   dev->data->nb_rx_fgs);
+	if (!dev->data->rx_fgs) {
+		ret = -ENOMEM;
+		goto err_fgs;
+	}
+
+	for (i = 0; i < dev->data->nb_rx_fgs; i++) {
+		struct eth_fg *fg = &dev->data->rx_fgs[i];
+		spin_lock_init(&fg->lock);
+		fg->idx = i;
 	}
 
 	spin_lock(&eth_dev_lock);
-	pos = eth_dev_count++;
+	i = eth_dev_count++;
 	spin_unlock(&eth_dev_lock);
 
-	eth_dev[pos] = dev;
+	eth_dev[i] = dev;
 	return 0;
 
-err:
+err_fgs:
+	free(dev->data->tx_queues);
+err_tx_queues:
 	free(dev->data->rx_queues);
 	return ret;
 
@@ -222,6 +238,7 @@ int eth_dev_get_rx_queue(struct rte_eth_dev *dev,
 
 	*rx_queue = dev->data->rx_queues[rx_idx];
 	(*rx_queue)->queue_idx = rx_idx;
+	bitmap_init((*rx_queue)->assigned_fgs, dev->data->nb_rx_fgs, false);
 
 	return 0;
 

@@ -7,6 +7,8 @@
 #include <ix/cpu.h>
 #include <ix/mbuf.h>
 #include <ix/errno.h>
+#include <ix/bitmap.h>
+#include <ix/ethfg.h>
 
 #define ETH_DEV_RX_QUEUE_SZ     512
 #define ETH_DEV_TX_QUEUE_SZ     1024
@@ -22,6 +24,7 @@ struct eth_rx_queue {
 	int (*poll) (struct eth_rx_queue *rx);
 	void *perqueue_offset;
 	int queue_idx;
+	DEFINE_BITMAP(assigned_fgs, ETH_MAX_NUM_FG);
 };
 
 DECLARE_PERCPU(struct eth_rx_queue *, eth_rx);

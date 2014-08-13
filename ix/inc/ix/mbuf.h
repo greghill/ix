@@ -53,15 +53,15 @@ struct mbuf {
 	struct mbuf_iov *iovs;	/* transmit scatter-gather array */
 	unsigned int nr_iov;	/* the number of scatter-gather vectors */
 
-	/* Should be able to store up to ETH_RSS_RETA_NUM_ENTRIES - 1. */
-	unsigned char flow_group;
-	void (*done) (struct mbuf *m);
-	unsigned long done_data;
-	uint16_t ol_flags;	/* offload flags */
+	uint16_t fg_id;		/* the flow group identifier */
+	uint16_t ol_flags;	/* which offloads to enable? */
+
+	void (*done) (struct mbuf *m); /* called on free */
+	unsigned long done_data; /* extra data to pass to done() */
 };
 
 #define MBUF_HEADER_LEN		64	/* one cache line */
-#define MBUF_DATA_LEN		2048	/* 2 kb */
+#define MBUF_DATA_LEN		2048	/* 2 KB */
 #define MBUF_LEN		(MBUF_HEADER_LEN + MBUF_DATA_LEN)
 
 /* Offload flag bits */

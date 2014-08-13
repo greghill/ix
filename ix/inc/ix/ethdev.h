@@ -38,6 +38,7 @@
 #include <ix/mbuf.h>
 #include <ix/errno.h>
 #include <ix/ethqueue.h>
+#include <ix/ethfg.h>
 
 #include <net/ethernet.h>
 
@@ -660,6 +661,7 @@ struct rte_eth_dev_info {
 	uint32_t max_rx_pktlen; /**< Maximum configurable length of RX pkt. */
 	uint16_t max_rx_queues; /**< Maximum number of RX queues. */
 	uint16_t max_tx_queues; /**< Maximum number of TX queues. */
+	uint16_t nb_rx_fgs;	/**< The number of flow groups. */
 	uint32_t max_mac_addrs; /**< Maximum number of MAC addresses. */
 	uint32_t max_hash_mac_addrs; 
 	/** Maximum number of hash MAC addresses for MTA and UTA. */
@@ -965,10 +967,12 @@ struct rte_eth_dev_sriov {
 struct rte_eth_dev_data {
 	struct eth_rx_queue **rx_queues; /**< Array of pointers to RX queues. */
 	struct eth_tx_queue **tx_queues; /**< Array of pointers to TX queues. */
+	struct eth_fg *rx_fgs; /**< An array of flow groups. */
 	uint16_t nb_rx_queues; /**< Number of RX queues. */
 	uint16_t nb_tx_queues; /**< Number of TX queues. */
 	uint16_t max_rx_queues;
 	uint16_t max_tx_queues;
+	uint16_t nb_rx_fgs;
 	
 	struct rte_eth_dev_sriov sriov;    /**< SRIOV data */
 
