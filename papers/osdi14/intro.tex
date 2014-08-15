@@ -104,15 +104,15 @@ compatibility between \ix and a wide range of existing applications.
   compatible with existing system configuration and management tool.}
 
 
-We compare \ix against Linux 3.11.10 and mTCP, a state-of-the-art
+We compare \ix against Linux \data{3.11.10}{3.16} and mTCP, a state-of-the-art
 user-level TCP stack~\cite{jeong2014mtcp}.  \ix outperforms Linux and
-mTCP by up to 14x and 2.5x respectively for throughput. \ix even
+mTCP by up to \data{14x}{XXX} and \data{2.5x}{XXX} respectively for throughput. \ix even
 scales to 4x10GbE configuration using a single multi-core socket.  The
 unloaded uni-directional latency for two IX servers is
-6.9\microsecond, while Linux and mTCP lead to latencies of
-21\microsecond and 95\microsecond respectively.
+\data{6.9}{XXX}\microsecond, while Linux and mTCP lead to latencies of
+\data{21}{XXX}\microsecond and \data{95}{95}\microsecond respectively.
 Our evaluation with memcached, a massively deployed key-value store,
-shows that \ix improves upon Linux by up to 2.7x in terms of
+shows that \ix improves upon Linux by up to \data{2.7}{XXX}x in terms of
 throughput at a given 95th percentile latency bound, as it can reduce
 kernel mode processing from $>80\%$ with Linux to $<33\%$ with \ix.
 

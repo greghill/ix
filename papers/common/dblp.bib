@@ -25,6 +25,7 @@
 @string{ISCA08 = "Proceedings of the 35th International Symposium on Computer Architecture (ISCA)"}
 @string{ISCA12 = "Proceedings of the 39th International Symposium on Computer Architecture (ISCA)"}
 @string{ISCA13 = "Proceedings of the 40th International Symposium on Computer Architecture (ISCA)"}
+@string{ISCA14 = "Proceedings of the 41st International Symposium on Computer Architecture (ISCA)"}
 
 
 @string{ASPLOS91 = "Proceedings of the 4th International Conference on Architectural Support for Programming Languages and Operating Systems (ASPLOS-VII)"}
@@ -42,12 +43,20 @@
 @string{OSDI04 = "Proceedings of the 6th Symposium on Operating System Design and Implementation (OSDI)"}
 @string{OSDI08 = "Proceedings of the 8th Symposium on Operating System Design and Implementation (OSDI)"}
 @string{OSDI10 = "Proceedings of the 9th Symposium on Operating System Design and Implementation (OSDI)"}
+@string{OSDI12 = "Proceedings of the 10th Symposium on Operating System Design and Implementation (OSDI)"}
+@string{OSDI14 = "Proceedings of the 11th Symposium on Operating System Design and Implementation (OSDI)"}
 
 
 
-@string{NSDI05 = "Proceedings of the 2nd Symposium on Networked Systems Design and Implementation(NSDI)"}
-@string{NSDI06 = "Proceedings of the 3rd Symposium on Networked Systems Design and Implementation(NSDI)"}
-@string{NSDI11 = "Proceedings of the 8th Symposium on Networked Systems Design and Implementation(NSDI)"}
+
+@string{NSDI05 = "Proceedings of the 2nd Symposium on Networked Systems Design and Implementation (NSDI)"}
+@string{NSDI06 = "Proceedings of the 3rd Symposium on Networked Systems Design and Implementation (NSDI)"}
+
+@string{NSDI11 = "Proceedings of the 8th Symposium on Networked Systems Design and Implementation (NSDI)"}
+@string{NSDI12 = "Proceedings of the 9th Symposium on Networked Systems Design and Implementation (NSDI)"}
+@string{NSDI13 = "Proceedings of the 10th Symposium on Networked Systems Design and Implementation (NSDI)"}
+@string{NSDI14 = "Proceedings of the 11th Symposium on Networked Systems Design and Implementation (NSDI)"}
+
 
 @string{CGO03 = "Proceedings of the 1st IEEE / ACM International Symposium on Code Generation and Optimization (CGO)"}
 
@@ -973,6 +982,15 @@
   ee        = {http://doi.ieeecomputersociety.org/10.1109/2.485843},
   bibsource = {DBLP, http://dblp.uni-trier.de}
 }
+
+@inproceedings{DBLP:conf/usenix/Chu96,
+  author    = {Hsiao-Keng Jerry Chu},
+  title     = {{Zero-Copy TCP in Solaris}},
+  booktitle = {USENIX Annual Technical Conference},
+  year      = {1996},
+  pages     = {253-264},
+   bibsource = {DBLP, http://dblp.uni-trier.de}
+}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% 1997 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1117,6 +1135,19 @@
   year      = {1997},
   pages     = {170-183},
   ee        = {http://doi.acm.org/10.1145/268998.266675},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
+}
+
+
+@article{DBLP:journals/tocs/MogulR97,
+  author    = {Jeffrey C. Mogul and K. K. Ramakrishnan},
+  title     = {{Eliminating Receive Livelock in an Interrupt-Driven Kernel}},
+  journal   = {ACM Trans. Comput. Syst.},
+  volume    = {15},
+  number    = {3},
+  year      = {1997},
+  pages     = {217-252},
+  ee        = {http://doi.acm.org/10.1145/263326.263335},
   bibsource = {DBLP, http://dblp.uni-trier.de}
 }
 
@@ -1577,6 +1608,20 @@
   ee        = {http://doi.acm.org/10.1145/945445.945450},
   bibsource = {DBLP, http://dblp.uni-trier.de}
 }
+
+@inproceedings{DBLP:conf/sosp/BehrenCZNB03,
+  author    = {J. Robert von Behren and
+               Jeremy Condit and
+               Feng Zhou and
+               George C. Necula and
+               Eric A. Brewer},
+  title     = {Capriccio: scalable threads for internet services},
+  booktitle = SOSP03,
+  year      = {2003},
+  pages     = {268-281},
+  ee        = {http://doi.acm.org/10.1145/945445.945471},
+  bibsource = {DBLP, http://dblp.uni-trier.de}
+}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%% 2004 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2000,7 +2045,7 @@
                Swaminathan Sivasubramanian and
                Peter Vosshall and
                Werner Vogels},
-  title     = {Dynamo: amazon's highly available key-value store},
+  title     = {{Dynamo: Amazon's highly available key-value store}},
   booktitle = SOSP07,
   year      = {2007},
   pages     = {205-220},
@@ -2257,8 +2302,8 @@
                Timothy Roscoe and
                Adrian Sch{\"u}pbach and
                Akhilesh Singhania},
-  title     = {The multikernel: a new OS architecture for scalable multicore
-               systems},
+  title     = {{The multikernel: a new OS architecture for scalable multicore
+               systems}},
   booktitle = SOSP09,
   year      = {2009},
   pages     = {29-44},
@@ -2734,7 +2779,7 @@
                Balaji Prabhakar and
                Sudipta Sengupta and
                Murari Sridharan},
-  title     = {Data center TCP (DCTCP)},
+  title     = {{Data center TCP (DCTCP)}},
   booktitle = SIGCOMM10,
   year      = {2010},
   pages     = {63-74},
@@ -3018,8 +3063,8 @@
                Mendel Rosenblum and
                Jeremy Sugerman and
                Edward Y. Wang},
-  title     = {Bringing Virtualization to the x86 Architecture with the
-               Original VMware Workstation},
+  title     = {{Bringing Virtualization to the x86 Architecture with the
+               Original VMware Workstation}},
   journal   = {ACM Trans. Comput. Syst.},
   volume    = {30},
   number    = {4},
@@ -3206,8 +3251,7 @@
 @inproceedings{DBLP:conf/nsdi/LiuHKA13,
  author = {Liu, Vincent and Halperin, Daniel and Krishnamurthy, Arvind and Anderson, Thomas},
  title = {F10: a fault-tolerant engineered network},
- booktitle = {Proceedings of the 10th USENIX conference on Networked Systems Design and Implementation},
- series = {nsdi'13},
+ booktitle = NSDI13,
  year = {2013},
  location = {Lombard, IL},
  pages = {399--412},
@@ -3294,7 +3338,7 @@
                Alvin AuYoung and
                Parthasarathy Ranganathan and
                Martin Margala},
-  title     = {An FPGA memcached appliance},
+  title     = {{An FPGA memcached appliance}},
   booktitle = FPGA13,
   year      = {2013},
   pages     = {245-254},
@@ -3309,7 +3353,7 @@
                Vasileios Trigonakis},
   title     = {Everything you always wanted to know about synchronization
                but were afraid to ask},
-  booktitle = {SOSP},
+  booktitle = SOSP13,
   year      = {2013},
   pages     = {33-48},
   ee        = {http://doi.acm.org/10.1145/2517349.2522714},
@@ -3322,7 +3366,7 @@
 @inproceedings{DBLP:conf/asplos/DelimitrouK14,
   author    = {Christina Delimitrou and
                Christos Kozyrakis},
-  title     = {Quasar: resource-efficient and QoS-aware cluster management},
+  title     = {{Quasar: resource-efficient and QoS-aware cluster management}},
   booktitle = ASPLOS14,
   year      = {2014},
   pages     = {127-144},
