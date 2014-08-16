@@ -16,20 +16,20 @@ messages~\cite{Atikoglu:2012:WAL}, microsecond-level responses to
 remote requests with tight tail latency
 guarantees~\cite{DBLP:journals/cacm/DeanB13}, and support for hundreds
 of thousands of connections with high connection
-churn~\cite{nishtala2013scaling}. It is also desirable to be elastic
+churn~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}. It is also desirable to be elastic
 in resource usage, allowing other applications to use any available
 resources in a shared
-cluster~\cite{DBLP:journals/computer/BarrosoH07,Leverich:RHSU:2014}.
+cluster~\cite{DBLP:journals/computer/BarrosoH07,DBLP:conf/eurosys/LeverichK14}.
 
 The conventional wisdom is that there is a fundamental mismatch
 between the requirements of web-scale workloads and existing
 implementations of TCP/IP in commodity operating
 systems. Consequently, many proposed solutions bypass the OS and
 implement the networking stack in
-user-space~\cite{jeong2014mtcp,Kapoor:2012:CPL,openonload,marinos2013network,Thekkath:1993:INP}. Some
+user-space~\cite{jeong2014mtcp,DBLP:conf/cloud/KapoorPTVV12,openonload,DBLP:conf/sigcomm/MarinosWH14,DBLP:conf/sigcomm/ThekkathNML93}. Some
 systems go one step further by also replacing TCP/IP with RDMA in
 order to offload protocol processing to Infiniband
-adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH,mitchell:rdma,dragojevic14farm}. While
+adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,dragojevic14farm}. While
 kernel bypass eliminates context switch overheads, on its own it does
 not eliminate the difficult tradeoffs between high packet rates and
 low latency or the challenges of managing large connections
@@ -60,7 +60,7 @@ same protection model as commodity operating systems. In our
 implementation, the control plane runs on a full Linux kernel and the
 dataplanes use Dune to run \ix as protected, library-based operating
 systems on dedicated hardware
-threads~\cite{belay2012dune}.
+threads~\cite{DBLP:conf/osdi/BelayBMTMK12}.
 
 
 \ix provides a native, zero-copy API that explicitly exposes network

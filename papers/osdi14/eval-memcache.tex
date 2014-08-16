@@ -12,11 +12,11 @@ framework~\cite{url:memcached}. It is frequently used as a
 high-throughput, low-latency caching tier in front of persistent
 database servers. \texttt{memcached} is a network-bound application,
 with threads spending over 80\% of execution time in kernel mode for
-network processing~\cite{Leverich:RHSU:2014}. It is a difficult
+network processing~\cite{DBLP:conf/eurosys/LeverichK14}. It is a difficult
 application to scale, in particular because the common deployments
 involve high connection counts for \texttt{memcached} servers and
 small-sized requests and
-replies~\cite{nishtala2013scaling,Atikoglu:2012:WAL}
+replies~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13,Atikoglu:2012:WAL}
 
 We use the \texttt{mutilate} load-generator to place a selected load
 on the server in terms of requests per second (RPS) and measure
@@ -43,7 +43,7 @@ commercial \texttt{memcached} deployments use such a
 latency-throughput graph to provision each server so that the 95th
 percentile latency does not exceed 200\microsecond to 500\microsecond.
 We carefully tune the Linux baseline setup according to the guidelines
-in \cite{Leverich:RHSU:2014}. Specifically, we pin memcached threads,
+in \cite{DBLP:conf/eurosys/LeverichK14}. Specifically, we pin memcached threads,
 configure interrupt-distribution based on thread-affinity, and tune
 interrupt moderation thresholds. We believe that our baseline Linux
 numbers are as tuned as possible for this hardware using the
@@ -58,7 +58,7 @@ use our event library. In most cases, the port was straightforward,
 replacing Linux and \texttt{libevent} function calls with their
 equivalent versions in our API.
 We did yet not attempt to tune the internal scalability of {\it
-  memcached}~\cite{memC3} or to support zero-copy IO operations.
+  memcached}~\cite{DBLP:conf/nsdi/FanAK13} or to support zero-copy IO operations.
 
 
 \input{tbl-mutilate}

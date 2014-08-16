@@ -74,7 +74,7 @@ performance.
 between a large number of services
 without impacting the overall latency experienced by the user, it is essential
 to minimize the latency for each service
-request~\cite{luiz-isscc,rumble2011s}. Today's networking technologies
+request~\cite{luiz-isscc,DBLP:conf/hotos/RumbleOSRO11}. Today's networking technologies
 allow for one-way communication across a large-scale datacenter within
 a few \microsecond: 3\microsecond latency across a pair of 10 GbE
 NICs~\cite{cisco-sereno}, one to five switch crossings with
@@ -93,7 +93,7 @@ distributions of RPCs across thousands of
 servers~\cite{DBLP:journals/cacm/DeanB13}. Although tail-tolerance is
 actually an end-to-end challenge, the system software stack plays a
 significant role in exacerbating the
-problem~\cite{Leverich:RHSU:2014}.  Protocol-processing techniques
+problem~\cite{DBLP:conf/eurosys/LeverichK14}.  Protocol-processing techniques
 that reduce average latency, but do not improve 95th or 99th
 percentile latency are unlikely to result in end-to-end application
 gains.
@@ -115,7 +115,7 @@ between application and \texttt{memcached} servers at Facebook made it
 impractical to use TCP sockets between these two tiers, resulting in
 deployments that use UDP datagrams for \texttt{get} operations and an
 aggregation proxy for \texttt{put}
-operations~\cite{nishtala2013scaling}.
+operations~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}.
 
 \myparagraph{Resource elasticity:} The load of web-scale applications
 varies significantly due to diurnal patterns and unexpected spikes in
@@ -124,9 +124,9 @@ resources (cores, memory, or IOPS) needed to satisfy packet rate
 and tail latency requirements at any point. The remaining
 resources can be allocated to other applications in a shared
 datacenter (e.g., background
-analytics)~\cite{Hindman:2011:MPF,DBLP:conf/asplos/DelimitrouK14,Leverich:RHSU:2014}
+analytics)~\cite{Hindman:2011:MPF,DBLP:conf/asplos/DelimitrouK14,DBLP:conf/eurosys/LeverichK14}
 or placed into low power modes in order to achieve energy
-proportionality~\cite{DBLP:journals/computer/BarrosoH07, Lo:2014:TWE}.
+proportionality~\cite{DBLP:journals/computer/BarrosoH07, DBLP:conf/isca/LoCGBK14}.
 
 \myparagraph{Protection:} Finally, as multiple foreground and
 background services share multi-core servers even in private
@@ -154,7 +154,7 @@ the requirements for web-scale applications.
 
 \myparagraph{User-space networking stacks:} Systems such as
 OpenOnload~\cite{openonload}, mTCP~\cite{jeong2014mtcp} or
-Sandstorm~\cite{marinos2013network} run the entire networking stack in
+Sandstorm~\cite{DBLP:conf/sigcomm/MarinosWH14} run the entire networking stack in
 user-space, offering either low latency or connection scalability at
 the expense of protection. There are still tradeoffs between packet
 rate and latency. For instance, mTCP uses dedicated threads for the
@@ -165,16 +165,16 @@ of higher latency.
 \myparagraph{Alternatives to TCP:} Some low-latency object stores rely on
 kernel-bypass and RDMA to offload protocol processing on dedicated
 Infiniband host channel
-adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,Jose:2011:MDH,mitchell:rdma,dragojevic14farm}.
+adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,dragojevic14farm}.
 Using commodity Ethernet networking, Facebook's memcached deployment
 uses UDP to avoid connection scalability
-limitations~\cite{nishtala2013scaling}. Even though UDP is running in
+limitations~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}. Even though UDP is running in
 the kernel, reliable communication and congestion management are
 entrusted to applications.
 
 \myparagraph{Alternatives to POSIX API:} MegaPipe replaces the POSIX
 API with lightweight sockets implemented with in-memory command
-rings~\cite{han2012megapipe}. This substantially reduces software
+rings~\cite{DBLP:conf/osdi/HanMCR12}. This substantially reduces software
 overheads and increases packet rates, but retains all other challenges
 of using an existing, kernel-based networking stack.
 

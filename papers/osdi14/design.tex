@@ -55,7 +55,7 @@ single application in a single address space.
 not expose or emulate the POSIX API for networking.  Instead, the
 dataplane and the application communicate asynchronously with each
 other via messages stored in
-memory~\cite{rizzo2012netmap,han2012megapipe}.  The API meets the
+memory~\cite{DBLP:journals/cacm/Rizzo12,DBLP:conf/osdi/HanMCR12}.  The API meets the
 commutativity rule~\cite{DBLP:conf/sosp/ClementsKZMK13} and allows for
 a true zero-copy operation in both directions. The dataplane and
 application cooperatively manage the message buffer pool. Incoming
@@ -76,7 +76,7 @@ packet, interleaving protocol processing (kernel mode) and application
 logic (user mode) as needed. Hence, there is no need for intermediate
 buffering between pipeline stages or between the application logic and
 the TCP/IP stack. Run to completion has been previously proposed to
-address receive livelock within the OS~\cite{DBLP:journals/tocs/MogulR97}. We
+address receive livelock within the OS~\cite{receive-livelock}. We
 extend it to both kernel and user-level, which eliminates interrupts
 and improves data locality throughout the common case packet
 processing.
@@ -84,7 +84,7 @@ processing.
 Batch processing minimizes instruction overheads and increases
 instruction locality. Previous proposals batch only at the API level
 in order to amortize system call
-overhead~\cite{jeong2014mtcp,han2012megapipe,soares2010flexsc}. We
+overhead~\cite{jeong2014mtcp,DBLP:conf/osdi/HanMCR12,DBLP:conf/osdi/SoaresS10}. We
 execute every pipeline stage on a small batch of packets or commands
 to fully amortize instruction caching effects and the overhead of PCIe
 transfers. To minimize the impact on latency, we perform adaptive

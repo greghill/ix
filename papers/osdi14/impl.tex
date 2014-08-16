@@ -30,7 +30,7 @@ resource allocation policies. The development of efficient allocation
 policies involves understanding difficult tradeoffs between dataplane
 performance, energy proportionality, and resource sharing between
 co-located applications as their load varies over
-time~\cite{Leverich:RHSU:2014,Lo:2014:TWE}. We leave the design of
+time~\cite{DBLP:conf/eurosys/LeverichK14}. We leave the design of
 such policies to future work and focus this paper on the \ix dataplane
 architecture.
 
@@ -39,7 +39,7 @@ run hypervisors in virtualized
 systems~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. We use the
 Dune system within Linux to enable dataplanes to run as library-based
 OSes in the VMX non-root ring 0, the mode typically used to run guest
-kernels in virtualized systems~\cite{belay2012dune}.
+kernels in virtualized systems~\cite{DBLP:conf/osdi/BelayBMTMK12}.
 Finally, applications run VMX non-root ring 3. This approach provides
 dataplanes with direct access to hardware features, such as page
 tables and exceptions, and provides full protection between the
@@ -56,7 +56,7 @@ is controlled through real-time priorities and \texttt{cpusets};
 memory is allocated in large pages; each NIC hardware queue is
 assigned to a single dataplane. This approach avoids the overheads and
 unpredictability of fine-grained time multiplexing of resources between
-demanding applications~\cite{Leverich:RHSU:2014}.
+demanding applications~\cite{DBLP:conf/eurosys/LeverichK14}.
 
 The \ix dataplane operates as a single address-space OS and supports
 two thread types within the shared, user-level address space: (i)
@@ -100,7 +100,7 @@ to completion cycle. As part of the
 cycle, the kernel overwrites the array of batched system call requests with
 corresponding return codes and populates the array of event conditions.
 The handles defined in Table~\ref{tbl:api} are kernel-level flow identifiers. Each handle is
-associated with a cookie~\cite{han2012megapipe}, an opaque value
+associated with a cookie~\cite{DBLP:conf/osdi/HanMCR12}, an opaque value
 provided by the user at connection establishment to enable efficient
 user-level state lookup. %without an additional table lookup.
 
@@ -283,7 +283,7 @@ conventional network stacks in commodity OSes and is missing from all
 the recently proposed user-level networking stacks.
 
 Our current implementation does not use an IOMMU due to their
-performance overheads~\cite{iommu_overhead}. The \ix kernel is trusted
+performance overheads~\cite{iommu:overhead}. The \ix kernel is trusted
 code that has access to descriptor rings with host-physical addresses.
 This decision is not fundamental to our design and does not affect the
 security model provided to applications. 
