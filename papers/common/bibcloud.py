@@ -6,6 +6,8 @@
 ####
 ####  usage:  bibcloud.py <main> where <main> is the main latex file (without .tex extension)
 ####      - run this AFTER pdflatex and BEFORE bibtex
+####      - in the $cwd, "bibalias.txt" can be used to alias pretty names to full DBLP citations
+####          (each line: <pretty> <dblp>)
 ####
 ####  bibcloud does the following:
 ####     - it scans the <main>.aux file for references from DBLP
@@ -39,8 +41,11 @@ DBLP_conf_fieldlist = {'title':'double',
                       'year':'id',
                       'pages':'id'}
 
+ALIAS = {}
+REVALIAS = {}
 
 cachefile = ".bibcloud/DBLP.xml"
+aliasfile = "dblp-alias.txt"
 
 
 ##### extraction from bibtex .aux file
@@ -72,7 +77,12 @@ def update_dblp():
 
  ## finding missing DBLP files
     nr_misses = 0
-    for c in citations:
+    for cit in citations:
+        if ALIAS.has_key(cit):
+            c = ALIAS[cit]
+        else:
+            c = cit
+
         if c.find("DBLP")>=0:
             if not(DBLP_article.has_key(c)):
                 key = c[5:]
@@ -145,16 +155,31 @@ if (os.path.isfile(bibname)):
             citations.append(l)
     citations.sort()
 
-
 else:
     print "File "+bibname+".aux does not exist"
     exit
 
+if os.path.isfile(aliasfile):
+    lines = [line.strip() for line in open(aliasfile)]
+    for l in lines:
+        # remove comments
+        pos = l.find("%")
+        if pos >=0:
+            l = l[:pos]
+
+        x = l.split(" ")
+        if len(x)>=2 and x[1].find("DBLP:")>=0:
+            print "found alias ",x[0],x[1]
+            ALIAS[x[0]] = x[1]
+            REVALIAS[x[1]] = x[0] 
+
+       
+else:
+    print "no ",aliasfile," file!"
     
 update_dblp()
 
 # reload DBLP file
-
 tree = ET.parse(cachefile)
 root = tree.getroot()
 num_children = 0
@@ -163,18 +188,29 @@ for child in root:
     if child.tag == "article" or child.tag=="inproceedings":
         DBLP_article["DBLP:"+child.attrib['key']] = child
         
+
+
 F = open("dblp.bib","w")
 F.write("%%% This file is automatically genreated by bibcloud.py\n")
 F.write("%%% DO NOT EDIT\n\n\n")
 
 # generate dblp.bib file from XML
-for c in citations:
+for cit in citations:
+    if ALIAS.has_key(cit):
+        c = ALIAS[cit]
+    else:
+        c = cit
+
+    if REVALIAS.has_key(cit) and REVALIAS[cit] in citations:
+        print "FATAL: Citation cannot be used both aliased and non-aliased: ",REVALIAS[cit],cit
+        sys.exit(1)
+
     if DBLP_article.has_key(c):
         xml = DBLP_article[c] 
         authorlist = [a.text for a in xml if a.tag=="author"]
         authorlist = [html_to_bibtex(a) for a in authorlist]
         if xml.tag == "article":
-            F.write("\n@article{"+c+",\n")
+            F.write("\n@article{"+cit+",\n")
             print "ARTICLE ",c
             F.write("  author = {"+  " and ".join(authorlist) + "},\n")
             for a in xml:
@@ -186,10 +222,10 @@ for c in citations:
                     else:
                         print "BAD code",DBLP_article_fieldlist[a.tag]
                         sys.exit()
-            F.write("}\n")
+    
         elif xml.tag == "inproceedings":
-            F.write("\n@inproceedings{"+c+",\n")
-            print "INPROCEEDINGS ",c
+            F.write("\n@inproceedings{"+cit+",\n")
+            print "INPROCEEDINGS ",c,cit
             F.write("  author = {"+  " and ".join(authorlist) + "},\n")
             for a in xml:
                 if DBLP_conf_fieldlist.has_key(a.tag):
@@ -210,9 +246,11 @@ for c in citations:
                 else:
                     print "Unknonw conference",booktitle
                     sys.exit(1)
-
             F.write("  booktitle = "+booktitle+year+",\n")
-            F.write("}\n")
+            
+        if c != cit:
+             F.write("  bibsource = {DBLP alias: "+c+"}\n")
+        F.write("}\n")
 
         
 

@@ -1,0 +1,7 @@
+%%
+%% bibalias
+%% first column is the alias, second column is the DBLP key
+%% References cannot be used both via alias and non-alias in a paper (leads to duplicates)
+
+dune DBLP:conf/osdi/BelayBMTMK12
+megapipe DBLP:conf/osdi/HanMCR12
