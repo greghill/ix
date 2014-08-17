@@ -35,7 +35,7 @@ implement their own resource management policies, e.g. via the
 
 
 \myparagraph{User-level networking stacks:} User-level network
-stacks~\cite{jeong2014mtcp, DBLP:conf/sigcomm/MarinosWH14, openonload} can
+stacks~\cite{jeong2014mtcp, sandstorm, openonload} can
 outperform kernel-based implementations through specialization and
 elimination of redundant layers and abstractions, but trade-off
 performance for a weaker security model.  The \ix dataplane
@@ -48,10 +48,10 @@ use a connection-less UDP-based protocol for
 scalability~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}.  Latency-sensitive datacenter
 applications can use specialized Infiniband adapters to expose RDMA
 with $1-3$\microsecond latencies to
-applications~\cite{DBLP:conf/sosp/OngaroRSOR11,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,dragojevic14farm}.
+applications~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11, mitchell:rdma, DBLP:conf/sosp/OngaroRSOR11}.
 Specialized FGPAs can replace conventional servers for important
 applications such as
-memcached~\cite{DBLP:conf/fpga/ChalamalasettiLWARM13,HPHA:Tanaka:2014,DBLP:conf/hotcloud/BlottKLVBI13}.
+memcached~\cite{DBLP:conf/hotcloud/BlottKLVBI13,DBLP:conf/fpga/ChalamalasettiLWARM13,HPHA:Tanaka:2014}.
 \ix is designed to allow TCP/IP to scale with architectural trends by
 eliminating kernel bottlenecks.
 
@@ -59,7 +59,7 @@ eliminating kernel bottlenecks.
 \myparagraph{Asynchronous and zero-copy interactions:} 
 Systems with asynchronous, batched, or exception-less system calls
 substantially reduce the overheads associated with frequent kernel
-transitions and context switches~\cite{DBLP:conf/osdi/SoaresS10,DBLP:conf/osdi/HanMCR12,DBLP:journals/cacm/Rizzo12,jeong2014mtcp}.
+transitions and context switches~\cite{DBLP:conf/osdi/HanMCR12,jeong2014mtcp,DBLP:journals/cacm/Rizzo12,DBLP:conf/osdi/SoaresS10}.
 Zero-copy reduces data movement overheads and simplifies resource
 management~\cite{DBLP:journals/tocs/PaiDZ00}, e.g., using page remapping and COW~\cite{DBLP:conf/usenix/Chu96}.
 \ix's use of adaptive,

@@ -23,7 +23,7 @@ consist of tens of distinct, well-defined services such as
 load-balancing and HTTP proxies, web and application serving, content
 distribution and streaming, memory caching, queuing services,
 relational databases and object
-storage~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07,Alonso:2010:WSC,Eriksen:2013:YSF}.
+storage~\cite{Alonso:2010:WSC,DBLP:conf/sosp/DeCandiaHJKLPSVV07,Eriksen:2013:YSF}.
 Collectively, these services occupy hundreds to thousands of servers
 connected through high-speed networking. An incoming request from an
 external user leads to tens to hundreds of internal requests across
@@ -32,8 +32,7 @@ dependencies in application logic, while other requests are issued in
 a parallel, fan-out manner.  Different services are routinely
 implemented using different programming languages, but are connected
 through a unifying framework for RPC, serialization, service
-discovery, and logging~\cite{protocolbuffers, thrift,
-  finagle} and most commonly use TCP/IP as their transport
+discovery, and logging~\cite{finagle, protocolbuffers, thrift} and most commonly use TCP/IP as their transport
 layer.
 
 Each node for these services responds to requests such as new incoming
@@ -43,7 +42,7 @@ implementations use event-driven frameworks in which the service logic
 interacts with the framework exclusively via non-blocking
 calls~\cite{DBLP:conf/usenix/PaiDZ99,DBLP:conf/sosp/WelshCB01}.
 High-level libraries simplify the development of event-driven
-applications~\cite{provos2003libevent,libev,libuv}.  For example, the
+applications~\cite{libev,libuv,provos2003libevent}.  For example, the
 popular \texttt{libevent} library provides a level of abstraction that
 exposes the paradigm to Linux, *BSD, and Windows
 applications~\cite{provos2003libevent}. For example,
@@ -124,13 +123,13 @@ resources (cores, memory, or IOPS) needed to satisfy packet rate
 and tail latency requirements at any point. The remaining
 resources can be allocated to other applications in a shared
 datacenter (e.g., background
-analytics)~\cite{Hindman:2011:MPF,DBLP:conf/asplos/DelimitrouK14,DBLP:conf/eurosys/LeverichK14}
+analytics)~\cite{DBLP:conf/asplos/DelimitrouK14,Hindman:2011:MPF,DBLP:conf/eurosys/LeverichK14}
 or placed into low power modes in order to achieve energy
 proportionality~\cite{DBLP:journals/computer/BarrosoH07, DBLP:conf/isca/LoCGBK14}.
 
 \myparagraph{Protection:} Finally, as multiple foreground and
 background services share multi-core servers even in private
-datacenters~\cite{Hindman:2011:MPF,Schwarzkopf:2013:OFS,DBLP:journals/cacm/DeanB13},
+datacenters~\cite{DBLP:journals/cacm/DeanB13,Hindman:2011:MPF,Schwarzkopf:2013:OFS},
 there is need for isolated network stacks. For single-tenant
 deployments where all services are administered by the same
 organization, the use of kernel-based networking largely addresses the
@@ -154,7 +153,7 @@ the requirements for web-scale applications.
 
 \myparagraph{User-space networking stacks:} Systems such as
 OpenOnload~\cite{openonload}, mTCP~\cite{jeong2014mtcp} or
-Sandstorm~\cite{DBLP:conf/sigcomm/MarinosWH14} run the entire networking stack in
+Sandstorm~\cite{sandstorm} run the entire networking stack in
 user-space, offering either low latency or connection scalability at
 the expense of protection. There are still tradeoffs between packet
 rate and latency. For instance, mTCP uses dedicated threads for the
@@ -165,7 +164,7 @@ of higher latency.
 \myparagraph{Alternatives to TCP:} Some low-latency object stores rely on
 kernel-bypass and RDMA to offload protocol processing on dedicated
 Infiniband host channel
-adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,dragojevic14farm}.
+adapters~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,DBLP:conf/sosp/OngaroRSOR11}.
 Using commodity Ethernet networking, Facebook's memcached deployment
 uses UDP to avoid connection scalability
 limitations~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}. Even though UDP is running in

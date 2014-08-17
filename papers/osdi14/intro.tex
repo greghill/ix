@@ -26,10 +26,11 @@ between the requirements of web-scale workloads and existing
 implementations of TCP/IP in commodity operating
 systems. Consequently, many proposed solutions bypass the OS and
 implement the networking stack in
-user-space~\cite{jeong2014mtcp,DBLP:conf/cloud/KapoorPTVV12,openonload,DBLP:conf/sigcomm/MarinosWH14,DBLP:conf/sigcomm/ThekkathNML93}. Some
+user-space~\cite{jeong2014mtcp,DBLP:conf/cloud/KapoorPTVV12,sandstorm,openonload,DBLP:conf/sigcomm/ThekkathNML93}. Some
 systems go one step further by also replacing TCP/IP with RDMA in
 order to offload protocol processing to Infiniband
-adapters~\cite{DBLP:conf/sosp/OngaroRSOR11,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,dragojevic14farm}. While
+adapters~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11, mitchell:rdma, DBLP:conf/sosp/OngaroRSOR11}.
+While
 kernel bypass eliminates context switch overheads, on its own it does
 not eliminate the difficult tradeoffs between high packet rates and
 low latency or the challenges of managing large connections
@@ -49,7 +50,7 @@ We propose \ix, an operating system designed specifically to meet the
 requirements of event-driven, web-scale applications.  Its
 architecture builds upon the lessons from high performance
 middleboxes, such as firewalls, load-balancers, and software
-routers~\cite{DBLP:journals/tocs/KohlerMCJK00,DBLP:conf/sosp/DobrescuEACFIKMR09}. \ix
+routers~\cite{routebricks,click}. \ix
 separates the control plane, which is responsible for basic kernel
 functionality such as provisioning and scheduling, from the dataplanes
 which run the networking stack and application logic. However, \ix

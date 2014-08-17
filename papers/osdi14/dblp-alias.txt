@@ -5,3 +5,7 @@
 
 dune DBLP:conf/osdi/BelayBMTMK12
 megapipe DBLP:conf/osdi/HanMCR12
+sandstorm DBLP:conf/sigcomm/MarinosWH14
+click DBLP:journals/tocs/KohlerMCJK00
+routebricks DBLP:conf/sosp/DobrescuEACFIKMR09
+
