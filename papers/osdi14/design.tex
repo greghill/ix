@@ -90,7 +90,7 @@ to fully amortize instruction caching effects and the overhead of PCIe
 transfers. To minimize the impact on latency, we perform adaptive
 batching as follows: (i) we never wait to batch requests and batching
 only occurs in the presence of congestion; (ii) we set an upper bound
-on batches of 128 packets, a value experimentally determined to
+on batches of \data{128}{XXX -- RETHINK} packets, a value experimentally determined to
 effectively amortize startup overheads.
 
 The combination of adaptive batch processing and zero copy means that
@@ -114,8 +114,8 @@ RED~\cite{DBLP:journals/ton/FloydJ93}).
 
 \myparagraph{Flow consistent, coherence-free processing:} We use
 multi-queue NICs with RSS support to provide flow-consistent hashing
-of incoming traffic to distinct hardware queues. Each queue is served
-by a single hardware thread all the way to the application layer,
+of incoming traffic to distinct hardware queues. \data{Each queue is served
+by a single hardware thread}{XXX REDO} all the way to the application layer,
 eliminating the need for synchronization and cache coherence traffic
 between cores. Similarly, memory management is organized in distinct
 pools for each hardware thread. The absence of a socket layer

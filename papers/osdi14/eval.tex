@@ -2,7 +2,7 @@
 \section{Evaluation}
 \label{sec:eval}
 
-We compared \ix to a Linux baseline running a 3.11.10 kernel and to
+We compared \ix to a baseline running the most recent Linux kernel and to
 mTCP~\cite{jeong2014mtcp}. Our evaluation uses both networking
 microbenchmarks and a real-world, massively deployed, event-based
 application.
@@ -10,35 +10,41 @@ application.
 \subsection{Experimental Methodology}
 \label{sec:eval:setup}
 
-We use two experimental setups because we wish to simultaneously
-compare with mTCP and scale to bandwidth beyond 10GbE.  Unfortunately,
-our 4x10GbE setup uses recent hardware not supported by mTCP out of
-the box\footnote{We were able to port mTCP to the 4x10GbE setup, but
-  could not reach the expected performance.  We will attempt to unify
-  the setup by the camera-ready deadline.}.  Linux and \ix run on both
-setups.
 
-\input{figs/float-pingpong} \myparagraph{10GbE setup:} This setup
-consists of a cluster of 28 Xeon E5-2630 @ 2.3 Ghz machines with Intel
-82599EB 10GbE and Solarflare SFC9000 10GbE NICs, configured with 64 GB
-of RAM each. They are connected with an Arista 7050S-64 switch. One
-machine with an Intel NIC is used as the server, while the rest are
-used as clients. The server socket has 6 cores and 12 hyperthreads.
+%We use two experimental setups because we wish to simultaneously
+%compare with mTCP and scale to bandwidth beyond 10GbE.  Unfortunately,
+%our 4x10GbE setup uses recent hardware not supported by mTCP out of
+%the box\footnote{We were able to port mTCP to the 4x10GbE setup, but
+%  could not reach the expected performance.  We will attempt to unify
+%  the setup by the camera-ready deadline.}.  Linux and \ix run on both
+%setups.
+
+\input{figs/float-pingpong} 
+
+%\myparagraph{10GbE setup:} This setup
+%consists of a cluster of 28 Xeon E5-2630 @ 2.3 Ghz machines with Intel
+%82599EB 10GbE and Solarflare SFC9000 10GbE NICs, configured with 64 GB
+%of RAM each. They are connected with an Arista 7050S-64 switch. One
+%machine with an Intel NIC is used as the server, while the rest are
+%used as clients. The server socket has 6 cores and 12 hyperthreads.
 
 \input{figs/float-short-both}
 
-\myparagraph{4x10GbE setup:} This setup consists of a cluster of 18
-clients and one server connected by an HP 5820AF-24XG 10GbE switch.
+\myparagraph{4x10GbE setup:} 
+
+The experimental setup consists of a cluster of \data{18}{XXX} clients
+and one server connected by \sout{an HP 5820AF-24XG 10GbE switch} 
+a Quanta/Cumulus 48x10GbE switch with a Broadcom Trident+ ASIC.
 The client machines are a mix of Xeon E5-2637 @ 3.5 Ghz and Xeon
 E5-2650 @ 2.6 Ghz.  Each client has a single 82599EB 10GbE NIC
 connecting to the switch.  The server is a Xeon E5-2665 @ 2.4 Ghz with
-256 GB of DRAM and four Intel 2P X520 NICs.  Each client or server
+256 GB of DRAM and five Intel x520 NIC ports.  Each client or server
 socket has 8 cores and 16 hyperthreads.  The server is connected
-to the switch via a 4x10GbE bond configured as a L2+L3 hash.
+to the switch both via a single 10GbE interface and a 4x10GbE bond configured as a L2+L3 hash.  The former is used for all of our \emph{10GbE} experiments, and the latter for our \emph{4x10GbE} experiments. 
 
-\myparagraph{Common elements:} Our baseline configuration in each
-machine is the Ubuntu 12.04.4 LTS distribution running the 3.11.10
-Linux kernel.  When reporting multi-core scalability, we report
+Our baseline configuration in each
+machine is an Ubuntu LTS 14.0.4 distribution running the 3.16.1 (most-recent) Linux kernel.
+When reporting multi-core scalability, we report
 results on a per-core basis. We enable hyperthreading when it improves performance. Except for
 \S\ref{sec:eval:netpipe}, client machines always run Linux. All power
 management features are disabled for all systems in all
@@ -50,7 +56,8 @@ The Linux client and server implementations of our benchmarks use the
 downloaded and installed mTCP from the public-domain
 release~\cite{url:mtcp}, but had to write the benchmarks ourselves
 using the mTCP API.  To run mTCP, we switch to the 2.6.36 kernel, as
-this is the most recent supported kernel version.
+this is the most recent supported kernel version.  We report only
+10GbE results for mTCP as it does not support device bonds.
 
 
 \subsection{Latency and Single-flow Bandwidth}
