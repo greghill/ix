@@ -94,7 +94,7 @@ setup_mtcp() {
   tear_down
   insmod $PS_IXGBE_PATH/ps_ixgbe.ko RXQ=$QUEUES TXQ=$QUEUES device=$DEVICE
   ethtool -A xge0 autoneg off rx off tx off
-  ifconfig xge0 $IP mtu 1500 netmask 255.255.255.0
+  ifconfig xge0 $IP mtu 1500 netmask 255.255.0.0
   mknod /dev/packet_shader c 1010 0
   chmod 666 /dev/packet_shader
 }
@@ -127,7 +127,7 @@ elif [[ $1 == 'linux' && $# -gt 1 && "$2" == 'single' && ( $# -lt 3 || "$3" == '
   if [ $IP = 'auto' ]; then
     ifup $SINGLE_NIC >/dev/null
   else
-    ifconfig $SINGLE_NIC $IP
+    ifconfig $SINGLE_NIC $IP netmask 255.255.0.0
   fi
   set_irq_affinity $SINGLE_NIC
   if [[ $# -ge 3 && "$3" == 'opt' ]]; then
