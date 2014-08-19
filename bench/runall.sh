@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MTCP_CLIENT="icnals1"
+MTCP_CLIENT="icnals2"
 GRUB_2_6="Linux 2.6.32"
 
 set -x
