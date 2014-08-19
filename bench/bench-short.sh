@@ -317,13 +317,27 @@ server_mtcp_stream() {
   $DIR/server_mtcp `echo $CORES|cut -d',' -f-$CORE_COUNT` &
 }
 
+wait_alive() {
+  HOST=$1
+  SERVER_IP=$2
+  SERVER_PORT=$3
+  TIMEOUT=$4
+  if ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq $TIMEOUT ]; then exit 1; fi; done"; then
+    return 1
+  fi
+  return 0
+}
+
 run_single() {
   CORE_COUNT=$1
   MSG_SIZE=$2
   MSG_PER_CONN=$3
 
   $SERVER $CORE_COUNT $MSG_SIZE
-  ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then echo $HOST failed; exit 1; fi; done"
+  while wait_alive $HOST $SERVER_IP $SERVER_PORT 30; do
+    $ON_EXIT
+    $SERVER $CORE_COUNT $MSG_SIZE
+  done
   if [ $SERVER = server_mtcp_rpc ]; then
     echo -ne "$[2*CORE_COUNT]\t$MSG_SIZE\t$MSG_PER_CONN\t" >> $OUTDIR/data
   else
