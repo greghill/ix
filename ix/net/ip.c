@@ -150,7 +150,7 @@ int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest,
 	ethhdr->shost = cfg_mac;
 	ethhdr->type = hton16(ETHTYPE_IP);
 
-	ip_setup_header(iphdr, proto, src->addr, dest->addr, p->tot_len);
+	ip_setup_header(iphdr, proto, ntoh32(src->addr), ntoh32(dest->addr), p->tot_len);
 	iphdr->tos = tos;
 	iphdr->ttl = ttl;
 	
