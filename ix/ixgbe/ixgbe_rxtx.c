@@ -27,6 +27,8 @@
 #define IXGBE_MIN_RING_DESC	64
 #define IXGBE_MAX_RING_DESC	4096
 
+#define IXGBE_RDT_THRESH	32
+
 struct rx_entry {
 	struct mbuf *mbuf;
 };
@@ -42,7 +44,8 @@ struct rx_queue {
 	uint16_t		reg_idx;
 	uint16_t		queue_id;
 
-	uint16_t		pos;
+	uint16_t		head;
+	uint16_t		tail;
 	uint16_t		len;
 };
 
@@ -99,7 +102,8 @@ static void ixgbe_clear_rx_queue(struct rx_queue *rxq)
 		}
 	}
 
-	rxq->pos = 0;
+	rxq->head = 0;
+	rxq->tail = rxq->len - 1;
 }
 
 static int ixgbe_alloc_rx_mbufs(struct rx_queue *rxq)
@@ -139,7 +143,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 	bool valid_checksum;
 
 	while (1) {
-		rxdp = &rxq->ring[rxq->pos & (rxq->len - 1)];
+		rxdp = &rxq->ring[rxq->head & (rxq->len - 1)];
 		status = le32_to_cpu(rxdp->wb.upper.status_error);
 		valid_checksum = true;
 
@@ -147,7 +151,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 			break;
 
 		rxd = *rxdp;
-		rxqe = &rxq->ring_entries[rxq->pos & (rxq->len -1)];
+		rxqe = &rxq->ring_entries[rxq->head & (rxq->len -1)];
 
 		/* Check IP checksum calculated by hardware (if applicable) */
 		if (unlikely((rxdp->wb.upper.status_error & IXGBE_RXD_STAT_IPCS) &&
@@ -171,7 +175,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		new_b = mbuf_alloc_local();
 		if (unlikely(!new_b)) {
 			log_err("ixgbe: unable to allocate RX mbuf\n");
-			return nb_descs;
+			goto out;
 		}
 
 		maddr = mbuf_get_data_machaddr(new_b);
@@ -184,14 +188,23 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 			mbuf_free(b);
 		}
 
-		rxq->pos++;
+		rxq->head++;
 		nb_descs++;
 	}
 
-	if (nb_descs) {
+out:
+	/*
+	* We threshold updates to the RX tail register because when it
+	* is updated too frequently (e.g. when written to on multiple
+	* cores even through separate queues) PCI performance
+	* bottlenecks have been observed.
+	*/
+	if ((uint16_t) (rxq->head - rxq->tail) >= IXGBE_RDT_THRESH) {
+		rxq->tail = rxq->head - 1;
+
 		/* inform HW that more descriptors have become available */
 		IXGBE_PCI_REG_WRITE(rxq->rdt_reg_addr,
-			(rxq->pos - 1) & (rxq->len - 1));
+				   (rxq->tail & (rxq->len - 1)));
 	}
 
 	return nb_descs;
@@ -204,7 +217,7 @@ bool eth_rx_idle_wait(uint64_t usecs)
 	unsigned long start, cycles = usecs * cycles_per_us;
 	struct eth_rx_queue *rx = percpu_get(eth_rx);
 	struct rx_queue *rxq = eth_rx_queue_to_drv(rx);
-	addr = &rxq->ring[rxq->pos & (rxq->len - 1)];
+	addr = &rxq->ring[rxq->head & (rxq->len - 1)];
 
 	start = rdtsc();
 
@@ -229,7 +242,7 @@ bool eth_rx_idle_wait(uint64_t usecs)
 	for_each_queue(i) {
 		struct eth_rx_queue *rx = percpu_get(eth_rx)[i];
 		struct rx_queue *rxq = eth_rx_queue_to_drv(rx);
-		addrs[i] = &rxq->ring[rxq->pos & (rxq->len - 1)];
+		addrs[i] = &rxq->ring[rxq->head & (rxq->len - 1)];
 	}
 
 	start = rdtsc();
@@ -304,7 +317,8 @@ int ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 	rxq->ring_entries = (struct rx_entry *) ((uintptr_t) rxq->ring +
 		sizeof(union ixgbe_adv_rx_desc) * nb_desc);
 	rxq->len = nb_desc;
-	rxq->pos = 0;
+	rxq->head = 0;
+	rxq->tail = rxq->len - 1;
 
 	ret = mem_lookup_page_machine_addr(page, PGSIZE_2MB, &page_phys);
 	if (ret)
@@ -1841,7 +1855,8 @@ void ixgbe_dev_rxtx_start(struct rte_eth_dev *dev)
 			log_err("ixgbe: Could not enable "
 				"Rx Queue %d\n", i);
 		wmb();
-		IXGBE_WRITE_REG(hw, IXGBE_RDT(rxq->reg_idx), rxq->len - 1);
+		IXGBE_WRITE_REG(hw, IXGBE_RDT(rxq->reg_idx),
+				(rxq->tail & (rxq->len - 1)));
 	}
 
 	/* Enable Receive engine */
