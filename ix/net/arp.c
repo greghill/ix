@@ -175,6 +175,9 @@ static int arp_send_pkt(uint16_t op,
 	ethip->target_ip.addr = hton32(target_ip->addr);
 
 	pkt->ol_flags = 0;
+
+	/* FIXME: need an API to specify default TX queue */
+	set_current_queue(percpu_get(eth_rxqs[0]));
 	ret = eth_send_one(pkt, ARP_PKT_SIZE);
 
 	if (unlikely(ret)) {

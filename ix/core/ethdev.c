@@ -104,8 +104,7 @@ int eth_dev_add(struct rte_eth_dev *dev)
 
 	for (i = 0; i < dev->data->nb_rx_fgs; i++) {
 		struct eth_fg *fg = &dev->data->rx_fgs[i];
-		spin_lock_init(&fg->lock);
-		fg->idx = i;
+		eth_fg_init(fg, i);
 	}
 
 	spin_lock(&eth_dev_lock);

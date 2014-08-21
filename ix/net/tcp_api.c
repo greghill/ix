@@ -61,7 +61,7 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 	if (unlikely(idx >= MAX_PCBS))
 		return NULL;
 
-	set_current_queue(percpu_get(eth_rx));
+	set_current_queue(percpu_get(eth_rxqs[queue]));
 	p = &perqueue_get(pcb_mempool);
 
 	api = (struct tcpapi_pcb *) ((uintptr_t) p->buf +

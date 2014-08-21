@@ -100,17 +100,30 @@ err:
 	return ret;
 }
 
-static int network_init_cpu(struct rte_eth_dev *eth)
+static DEFINE_SPINLOCK(assign_lock);
+
+static int network_init_cpu(void)
 {
-	int ret, idx;
+	int ret, idx, i;
 
-	ret = eth_dev_get_rx_queue(eth, &percpu_get(eth_rx));
-	if (ret)
-		return ret;
+	spin_lock(&assign_lock);
+	for (i = 0; i < eth_dev_count; i++) {
+		struct rte_eth_dev *eth = eth_dev[i];
+		ret = eth_dev_get_rx_queue(eth, &percpu_get(eth_rxqs[i]));
+		if (ret) {
+			spin_unlock(&assign_lock);
+			return ret;
+		}
 
-	ret = eth_dev_get_tx_queue(eth, &percpu_get(eth_tx));
-	if (ret)
-		return ret;
+		ret = eth_dev_get_tx_queue(eth, &percpu_get(eth_txqs[i]));
+		if (ret) {
+			spin_unlock(&assign_lock);
+			return ret;
+		}
+	}
+	spin_unlock(&assign_lock);
+
+	percpu_get(eth_num_queues) = eth_dev_count;
 
 	ret = memp_init();
 	if (ret) {
@@ -118,8 +131,10 @@ static int network_init_cpu(struct rte_eth_dev *eth)
 		return ret;
 	}
 
-	for_each_queue(idx)
+	for_each_queue(idx) {
+		perqueue_get(eth_txq) = percpu_get(eth_txqs[idx]);
 		tcp_init();
+	}
 
 	ret = tcp_api_init();
 	if (ret) {
@@ -127,50 +142,9 @@ static int network_init_cpu(struct rte_eth_dev *eth)
 		return ret;
 	}
 
-	set_current_queue(percpu_get(eth_rx));
+	unset_current_queue();
 
 	return 0;
-}
-
-static DEFINE_SPINLOCK(assign_lock);
-
-static struct rte_eth_dev *assign_eth_dev(unsigned int cpu)
-{
-	static int counts[NETHDEV];
-	unsigned int numa = percpu_get(cpu_numa_node);
-	int i, min_idx = -1, min;
-
-	spin_lock(&assign_lock);
-	for (i = 0; i < eth_dev_count; i++) {
-		struct rte_eth_dev *eth = eth_dev[i];
-		if (eth->pci_dev->numa_node == (int) -1 ||
-		    eth->pci_dev->numa_node == numa) {
-			if (min_idx == (int) -1 || counts[i] < min) {
-				min_idx = i;
-				min = counts[i];
-			}
-		}
-	}
-
-	if (min_idx == (int) -1)
-		log_warn("init: no queues have numa affinity to CPU %d\n", cpu);
-	else {
-		counts[min_idx]++;
-		spin_unlock(&assign_lock);
-		return eth_dev[min_idx];
-	}
-
-	for (i = 0; i < eth_dev_count; i++) {
-		if (min_idx == (int) -1 || counts[i] < min) {
-			min_idx = i;
-			min = counts[i];
-		}
-	}
-
-	counts[min_idx]++;
-	spin_unlock(&assign_lock);
-
-	return eth_dev[min_idx];
 }
 
 /**
@@ -183,7 +157,6 @@ static struct rte_eth_dev *assign_eth_dev(unsigned int cpu)
 static int init_create_cpu(unsigned int cpu)
 {
 	int ret;
-	struct rte_eth_dev *eth;
 
 	ret = cpu_init_one(cpu);
 	if (ret) {
@@ -206,13 +179,7 @@ static int init_create_cpu(unsigned int cpu)
 	timer_init_cpu();
 	kstats_init_cpu();
 
-	eth = assign_eth_dev(cpu);
-	if (!eth) {
-		log_err("init: unable to assigned ethernet device to CPU %d\n", cpu);
-		return -ENODEV;
-	}
-
-	ret = network_init_cpu(eth);
+	ret = network_init_cpu();
 	if (ret) {
 		log_err("init: unable to initialize per-CPU network stack\n");
 		return ret;

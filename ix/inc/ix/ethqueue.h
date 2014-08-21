@@ -9,10 +9,11 @@
 #include <ix/errno.h>
 #include <ix/bitmap.h>
 #include <ix/ethfg.h>
+#include <ix/queue.h>
 
 #define ETH_DEV_RX_QUEUE_SZ     512
 #define ETH_DEV_TX_QUEUE_SZ     1024
-#define ETH_RX_MAX_DEPTH	16384
+#define ETH_RX_MAX_DEPTH	1024
 #define ETH_RX_MAX_BATCH	16
 
 
@@ -21,13 +22,19 @@
  */
 
 struct eth_rx_queue {
-	int (*poll) (struct eth_rx_queue *rx);
 	void *perqueue_offset;
-	int queue_idx;
+
+	struct mbuf *head; /* pointer to first recieved buffer */
+	struct mbuf *tail; /* pointer to last recieved buffer */
+	int len;	   /* the total number of buffers */
+	int queue_idx;	   /* the queue index number */
+
+	/* poll for new packets */
+	int (*poll) (struct eth_rx_queue *rx);
+
+	/* a bitmap of flow groups directed to this queue */
 	DEFINE_BITMAP(assigned_fgs, ETH_MAX_NUM_FG);
 };
-
-DECLARE_PERCPU(struct eth_rx_queue *, eth_rx);
 
 /**
  * eth_rx_poll - recieve pending packets on an RX queue
@@ -40,53 +47,34 @@ static inline int eth_rx_poll(struct eth_rx_queue *rx)
 	return rx->poll(rx);
 }
 
-struct eth_recv_data {
-	struct mbuf *head, *tail;
-	int len;
-};
-
-DECLARE_PERCPU(struct eth_recv_data, eth_rdata);
-
 /**
  * eth_recv - enqueues a received packet
+ * @rxq: the receive queue
  * @mbuf: the packet
  *
  * Typically called by the device driver's poll() routine.
  *
  * Returns 0 if successful, otherwise the packet should be dropped.
  */
-static inline int eth_recv(struct mbuf *mbuf)
+static inline int eth_recv(struct eth_rx_queue *rxq, struct mbuf *mbuf)
 {
-	struct eth_recv_data *rdata = &percpu_get(eth_rdata);
-
-	if (unlikely(rdata->len >= ETH_RX_MAX_DEPTH))
+	if (unlikely(rxq->len >= ETH_RX_MAX_DEPTH))
 		return -EBUSY;
 
 	mbuf->next = NULL;
 
-	if (!rdata->head) {
-		rdata->head = mbuf;
-		rdata->tail = mbuf;
+	if (!rxq->head) {
+		rxq->head = mbuf;
+		rxq->tail = mbuf;
 	} else {
-		rdata->tail->next = mbuf;
-		rdata->tail = mbuf;
+		rxq->tail->next = mbuf;
+		rxq->tail = mbuf;
 	}
 
-	rdata->len++;
+	rxq->len++;
 	return 0;
 }
 
-/**
- * eth_process_poll - polls for new packets
- *
- * Returns the number of new packets available.
- */
-static inline int eth_process_poll(void)
-{
-	return eth_rx_poll(percpu_get(eth_rx));
-}
-
-extern int eth_process_recv(void);
 extern bool eth_rx_idle_wait(uint64_t max_usecs);
 
 
@@ -95,11 +83,13 @@ extern bool eth_rx_idle_wait(uint64_t max_usecs);
  */
 
 struct eth_tx_queue {
+	int cap;	/* number of available buffers left */
+	int len;	/* number of buffers used so far */
+	struct mbuf *bufs[ETH_DEV_TX_QUEUE_SZ];
+
 	int (*reclaim) (struct eth_tx_queue *tx);
 	int (*xmit) (struct eth_tx_queue *tx, int nr, struct mbuf **mbufs);
 };
-
-DECLARE_PERCPU(struct eth_tx_queue *, eth_tx);
 
 /**
  * eth_tx_reclaim - scans the queue and reclaims finished buffers
@@ -136,12 +126,8 @@ static inline int eth_tx_xmit(struct eth_tx_queue *tx,
 	return tx->xmit(tx, nr, mbufs);
 }
 
-struct eth_send_data {
-	int cap, len;
-};
-
-DECLARE_PERCPU(struct eth_send_data, eth_sdata);
-DECLARE_PERCPU(struct mbuf *, eth_send_buf[ETH_DEV_TX_QUEUE_SZ]);
+/* FIXME: convert to per-flowgroup */
+DECLARE_PERQUEUE(struct eth_tx_queue *, eth_txq);
 
 /**
  * eth_send - enqueues a packet to be sent
@@ -151,14 +137,14 @@ DECLARE_PERCPU(struct mbuf *, eth_send_buf[ETH_DEV_TX_QUEUE_SZ]);
  */
 static inline int eth_send(struct mbuf *mbuf)
 {
-	struct eth_send_data *sdata = &percpu_get(eth_sdata);
+	struct eth_tx_queue *txq = perqueue_get(eth_txq);
 	int nr = 1 + mbuf->nr_iov;
 
-	if (unlikely(nr > sdata->cap))
+	if (unlikely(nr > txq->cap))
 		return -EBUSY;
 
-	percpu_get(eth_send_buf[sdata->len++]) = mbuf;
-	sdata->cap -= nr;
+	txq->bufs[txq->len++] = mbuf;
+	txq->cap -= nr;
 
 	return 0;
 }
@@ -178,13 +164,12 @@ static inline int eth_send_one(struct mbuf *mbuf, size_t len)
 	return eth_send(mbuf);
 }
 
-/**
- * eth_process_reclaim - processes completed sends
- */
-static inline void eth_process_reclaim(void)
-{
-	percpu_get(eth_sdata).cap = eth_tx_reclaim(percpu_get(eth_tx));
-}
+DECLARE_PERCPU(int, eth_num_queues);
+DECLARE_PERCPU(struct eth_rx_queue *, eth_rxqs[]);
+DECLARE_PERCPU(struct eth_tx_queue *, eth_txqs[]);
 
+extern int eth_process_poll(void);
+extern int eth_process_recv(void);
 extern void eth_process_send(void);
+extern void eth_process_reclaim(void);
 

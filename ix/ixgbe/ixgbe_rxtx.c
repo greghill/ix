@@ -183,7 +183,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		rxdp->read.hdr_addr = cpu_to_le32(maddr);
 		rxdp->read.pkt_addr = cpu_to_le32(maddr);
 
-		if (unlikely(!valid_checksum || eth_recv(b))) {
+		if (unlikely(!valid_checksum || eth_recv(rx, b))) {
 			log_info("ixgbe: dropping packet\n");
 			mbuf_free(b);
 		}
@@ -193,18 +193,20 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 	}
 
 out:
+
 	/*
-	* We threshold updates to the RX tail register because when it
-	* is updated too frequently (e.g. when written to on multiple
-	* cores even through separate queues) PCI performance
-	* bottlenecks have been observed.
-	*/
-	if ((uint16_t) (rxq->head - rxq->tail) >= IXGBE_RDT_THRESH) {
-		rxq->tail = rxq->head - 1;
+	 * We threshold updates to the RX tail register because when it
+	 * is updated too frequently (e.g. when written to on multiple
+	 * cores even through separate queues) PCI performance
+	 * bottlnecks have been observed.
+	 */
+	if ((uint16_t) (rxq->len - (rxq->tail + 1 - rxq->head)) >=
+	    IXGBE_RDT_THRESH) {
+		rxq->tail = rxq->head + rxq->len - 1;
 
 		/* inform HW that more descriptors have become available */
 		IXGBE_PCI_REG_WRITE(rxq->rdt_reg_addr,
-				   (rxq->tail & (rxq->len - 1)));
+				    (rxq->tail & (rxq->len - 1)));
 	}
 
 	return nb_descs;
@@ -213,34 +215,15 @@ out:
 /* FIXME: make this driver independent */
 bool eth_rx_idle_wait(uint64_t usecs)
 {
-	volatile union ixgbe_adv_rx_desc *addr;
-	unsigned long start, cycles = usecs * cycles_per_us;
-	struct eth_rx_queue *rx = percpu_get(eth_rx);
-	struct rx_queue *rxq = eth_rx_queue_to_drv(rx);
-	addr = &rxq->ring[rxq->head & (rxq->len - 1)];
-
-	start = rdtsc();
-
-	do {
-		if (addr->wb.upper.status_error &
-		    cpu_to_le32(IXGBE_RXDADV_STAT_DD))
-			return true;
-
-		cpu_relax();
-	} while (rdtsc() - start < cycles);
-
-	return false;
-
-#if 0
 	volatile union ixgbe_adv_rx_desc **addrs;
 	unsigned int i;
 	unsigned long start, cycles = usecs * cycles_per_us;
 
 	addrs = alloca(sizeof(union ixgbe_adv_rx_desc *) *
-		       percpu_get(eth_rx_count));
+		       percpu_get(eth_num_queues));
 
 	for_each_queue(i) {
-		struct eth_rx_queue *rx = percpu_get(eth_rx)[i];
+		struct eth_rx_queue *rx = percpu_get(eth_rxqs[i]);
 		struct rx_queue *rxq = eth_rx_queue_to_drv(rx);
 		addrs[i] = &rxq->ring[rxq->head & (rxq->len - 1)];
 	}
@@ -248,7 +231,7 @@ bool eth_rx_idle_wait(uint64_t usecs)
 	start = rdtsc();
 
 	do {
-		for (i = 0; i < percpu_get(eth_rx_count); i++) {
+		for (i = 0; i < percpu_get(eth_num_queues); i++) {
 			if (addrs[i]->wb.upper.status_error &
 			    cpu_to_le32(IXGBE_RXDADV_STAT_DD))
 				return true;
@@ -258,7 +241,6 @@ bool eth_rx_idle_wait(uint64_t usecs)
 	} while (rdtsc() - start < cycles);
 
 	return false;
-#endif
 }
 
 /**

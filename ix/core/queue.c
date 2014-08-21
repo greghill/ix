@@ -54,19 +54,12 @@ void set_current_queue(struct eth_rx_queue *rx_queue)
 
 int set_current_queue_by_index(unsigned int index)
 {
-#if 0
-       if (index >= percpu_get(eth_rx_count)) {
-               unset_current_queue();
-               return 1;
-       }
-
-       set_current_queue(percpu_get(eth_rx)[index]);
-#endif
-
-	if (index > 0)
+	if (index >= percpu_get(eth_num_queues)) {
+		unset_current_queue();
 		return 1;
+	}
 
-	set_current_queue(percpu_get(eth_rx));
+	set_current_queue(percpu_get(eth_rxqs)[index]);
 	return 0;
 }
 
