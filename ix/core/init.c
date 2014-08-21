@@ -131,8 +131,10 @@ static int network_init_cpu(void)
 		return ret;
 	}
 
+	/* initialize perqueue data structures */
 	for_each_queue(idx) {
 		perqueue_get(eth_txq) = percpu_get(eth_txqs[idx]);
+		perqueue_get(queue_id) = idx;
 		tcp_init();
 	}
 
