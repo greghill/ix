@@ -126,7 +126,7 @@ setup_and_run() {
     MEMCACHED_EXEC=memcached
     MEMCACHED_BUILD_PATH=../apps/memcached-1.4.18-ix
     MEMCACHED_BUILD_TARGET=''
-    MEMCACHED_PARAMS='-m 8192 -u `whoami`'
+    MEMCACHED_PARAMS='-m 8192'
     if [ $CLUSTER_ID = 'EPFL' ]; then
       MEMCACHED_SHOULD_DEPLOY=1
     else
@@ -143,7 +143,7 @@ setup_and_run() {
     MEMCACHED_EXEC=memcached
     MEMCACHED_BUILD_PATH=../apps/memcached-1.4.18-ix
     MEMCACHED_BUILD_TARGET=''
-    MEMCACHED_PARAMS='-m 8192 -u `whoami`'
+    MEMCACHED_PARAMS='-m 8192'
     if [ $CLUSTER_ID = 'EPFL' ]; then
       MEMCACHED_SHOULD_DEPLOY=1
     else
