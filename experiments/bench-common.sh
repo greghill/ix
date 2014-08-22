@@ -158,20 +158,14 @@ setup_and_run() {
   fi
   
   if [ $MEMCACHED_SHOULD_DEPLOY -eq 1 ]; then
-    # Build, deploy, and run memcached
+    # Deploy and run memcached
     if [ ! -e $MEMCACHED_BUILD_PATH/Makefile ]; then
       DIR=`pwd`
       cd $MEMCACHED_BUILD_PATH
-      ./configure
       cd $DIR
     fi
     
-    if [ $IX -eq 1 ]; then
-      ../make.sh clean
-      ../make_memcached.sh
-    fi
     
-    make -C $MEMCACHED_BUILD_PATH
     scp $MEMCACHED_BUILD_PATH/$MEMCACHED_EXEC $SERVER_HOST:$MEMCACHED_EXEC
     
     $PREP
@@ -184,11 +178,7 @@ setup_and_run() {
     fi
   fi
   
-  # Build and deploy mutilate
-  DIR=`pwd`
-  cd $MUTILATE_BUILD_PATH
-  scons
-  cd $DIR
+  # Deploy mutilate
   cp $MUTILATE_BUILD_PATH/mutilate .
   
   for i in `${AGENT_SUBDIR}/${AGENT_PROFILE}_agentlist.sh`; do
