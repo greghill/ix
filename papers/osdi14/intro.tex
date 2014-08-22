@@ -2,6 +2,10 @@
 \section{Introduction}
 \label{sec:intro}
 
+\christos{We should stress IX's stregnts. Apart from separation of
+  CP-DP, we should mention a) we show how to architect high perf I/O
+  stacks (TCP and beyond), b) strong security model, c) compatibility
+  with Linux}
 
 Web-scale applications such as search, social networking, and
 e-commerce platforms, are redefining the requirements on system
@@ -29,11 +33,12 @@ implement the networking stack in
 user-space~\cite{jeong2014mtcp,DBLP:conf/cloud/KapoorPTVV12,sandstorm,openonload,DBLP:conf/sigcomm/ThekkathNML93}. Some
 systems go one step further by also replacing TCP/IP with RDMA in
 order to offload protocol processing to Infiniband
-adapters~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11, mitchell:rdma, DBLP:conf/sosp/OngaroRSOR11}.
-While
-kernel bypass eliminates context switch overheads, on its own it does
-not eliminate the difficult tradeoffs between high packet rates and
-low latency or the challenges of managing large connections
+adapters~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11,
+  mitchell:rdma, DBLP:conf/sosp/OngaroRSOR11}.  \christos{ people also
+  use many lightly loaded servers to get low latency} While kernel
+bypass eliminates context switch overheads, on its own it does not
+eliminate the difficult tradeoffs between high packet rates and low
+latency or the challenges of managing large connections
 counts. Moreover, user-level networking suffers from lack of
 protection. Application bugs and crashes can corrupt the networking
 stack and impact other workloads.
