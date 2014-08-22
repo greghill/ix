@@ -35,6 +35,9 @@ the following question: {\it \ana{how} can the dataplane architecture be
   \S\ref{sec:motivation:challenges}?}  The answer relies on the
 following key design principles:
 
+\christos{this list must be aligned with the list in 2.2. Ie we should
+  be able to explain how each approach helps with the
+  requirements. This is critical}
 
 \myparagraph{Separation and protection of control and data plane:} 
 Our design separates the control function of the kernel, responsible
@@ -49,7 +52,12 @@ explicitly revoked.  The separation allows us to consider radically
 different I/O APIs and implementations in the dataplane, while
 retaining full compatibility with a modern OS like Linux.  Similar to
 Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, each dataplane runs a
-single application in a single address space.
+single application in a single address space. 
+
+\christos{we should bring up HW virtualization here, likely as a
+  independent part of the approach or merged with the one above. It is
+  a big part of the protection story. The discussion on CP/DP
+  seperation must be linked to elasticity too}
 
 \myparagraph{Native zero-copy API with explicit flow control:} We do
 not expose or emulate the POSIX API for networking.  Instead, the

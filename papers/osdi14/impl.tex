@@ -4,6 +4,9 @@
 
 \input{tbl-api}
 
+\christos{We should stress that the same pattern/architecture can be
+  used to implement any high performance stack, not just TCP/IP}
+
 We now describe the \ix prototype.  The current implementation uses
 the VT-x features available on all x86-64
 servers~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. However, it can
@@ -78,6 +81,11 @@ tasks such as garbage collection. When the control plane revokes or
 allocates an additional hyperthread using a protocol similar to the
 one used in Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, the dataplane
 must adjust its number of elastic threads.
+
+\christos{We should stress that queues are a central concept in our
+  work.  we should add some discussion about elasticity/load balancing
+  here. Should we discuss how traffic is seperated between queues in
+  this section?}
 
 \subsection{Dataplane API and Operation}
 \label{sec:impl:kernel}
@@ -238,7 +246,8 @@ protocol processing code.
 \subsection{Security Model}
 \label{sec:impl:coop}
 
-
+\christos{We need to clean up this section, make a bigger deal out of
+  this, and explain why this is the right way to architect IO stacks/libOS}
 
 The \ix API and implementation leads to a cooperative flow control
 model between application code and the network-processing stack.  But
@@ -299,3 +308,6 @@ security model provided to applications.
   modifications to a message buffer I just received and then
   retransmit it?  Or is the point that one would use scatter gather IO
   for such surgical edits?}
+
+\christos{adam wants another implementation section or subsection with
+  more code details -- add outline}
