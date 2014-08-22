@@ -34,7 +34,7 @@ make -C $DIR/bench      $PARAMS $BENCH_TARGET
 if [ $BUILD_IX -eq 1 ]; then
   make -C $DIR/dune     $PARAMS $COMMON_TARGET
   make -C $DIR/igb_stub $PARAMS $COMMON_TARGET
-  make -C $DIR/ix       $PARAMS $COMMON_TARGET OSDI_BENCHMARK=1
-  make -C $DIR/libix    $PARAMS $COMMON_TARGET OSDI_BENCHMARK=1
+  make -C $DIR/ix       $PARAMS $COMMON_TARGET
+  make -C $DIR/libix    $PARAMS $COMMON_TARGET
   make -C $DIR/apps/event $PARAMS $COMMON_TARGET
 fi
