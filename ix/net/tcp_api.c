@@ -461,6 +461,7 @@ int get_local_port_and_set_queue(struct ip_tuple *id)
 	if (!percpu_get(local_port))
 		percpu_get(local_port) = percpu_get(cpu_id) * PORTS_PER_CPU;
 
+	set_current_queue(percpu_get(eth_rxqs[0]));
 	percpu_get(local_port)++;
 	return 0;
 #if 0
