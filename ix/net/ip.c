@@ -9,6 +9,7 @@
 #include <ix/errno.h>
 #include <ix/log.h>
 #include <ix/queue.h>
+#include <ix/cfg.h>
 
 #include <asm/chksum.h>
 
@@ -18,7 +19,6 @@
 /* FIXME: remove when we integrate better with LWIP */
 #include <lwip/pbuf.h>
 
-#include "cfg.h"
 #include "net.h"
 
 /**
@@ -121,7 +121,8 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 
 /* FIXME: change when we integrate better with LWIP */
 /* NOTE: This function is only called for TCP */
-int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest, uint8_t ttl, uint8_t tos, uint8_t proto)
+int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest,
+	      uint8_t ttl, uint8_t tos, uint8_t proto)
 {
 	int ret;
 	struct mbuf *pkt;
@@ -149,17 +150,10 @@ int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest, uint8_t
 	ethhdr->shost = cfg_mac;
 	ethhdr->type = hton16(ETHTYPE_IP);
 
-	iphdr->header_len = sizeof(struct ip_hdr) / 4;
-	iphdr->version = 4;
+	ip_setup_header(iphdr, proto, ntoh32(src->addr),
+			ntoh32(dest->addr), p->tot_len);
 	iphdr->tos = tos;
-	iphdr->len = hton16(sizeof(struct ip_hdr) + p->tot_len);
-	iphdr->id = 0;
-	iphdr->off = 0;
 	iphdr->ttl = ttl;
-	iphdr->chksum = 0;
-	iphdr->proto = proto;
-	iphdr->src_addr.addr = src->addr;
-	iphdr->dst_addr.addr = dest->addr;
 	
 	for (curp = p; curp; curp = curp->next) {
 		memcpy(payload, curp->payload, curp->len);
@@ -170,12 +164,13 @@ int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest, uint8_t
 	pkt->ol_flags = PKT_TX_IP_CKSUM;
 	pkt->ol_flags |= PKT_TX_TCP_CKSUM;
 
-	ret = eth_tx_xmit_one(percpu_get(eth_tx), pkt, sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + p->tot_len);
-
-	if (unlikely(ret != 1)) {
+	ret = eth_send_one(pkt, sizeof(struct eth_hdr) +
+				sizeof(struct ip_hdr) + p->tot_len);
+	if (unlikely(ret)) {
 		mbuf_free(pkt);
 		return -EIO;
 	}
 
 	return 0;
 }
+

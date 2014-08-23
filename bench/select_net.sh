@@ -21,6 +21,7 @@ fi
 foo=${DUNE_PATH:=$DEF_DUNE_PATH}
 foo=${IGB_STUB_PATH:=$DEF_IGB_STUB_PATH}
 foo=${ALL_IFS:=$DEF_ALL_IFS}
+foo=${BOND:=$DEF_BOND}
 foo=${BOND_SLAVES:=$DEF_BOND_SLAVES}
 foo=${SINGLE_NIC:=$DEF_SINGLE_NIC}
 foo=${IP:=$DEF_IP}
@@ -42,9 +43,20 @@ tear_down() {
   rm -f /dev/packet_shader
 }
 
+set_irq_affinity() {
+  IFACE=$1
+  x=0
+  for i in `grep $IFACE-TxRx /proc/interrupts| cut -d: -f1`; do
+    printf '%x' $((1<<$x)) > /proc/irq/$i/smp_affinity
+    x=$[x+1]
+    if [ $x -gt 31 ]; then
+      x=0
+    fi
+  done
+}
+
 setup_linux() {
   tear_down
-  service irqbalance start >/dev/null
   modprobe $NIC_MODULE
   ifdown $ALL_IFS 2>/dev/null
 
@@ -82,7 +94,7 @@ setup_mtcp() {
   tear_down
   insmod $PS_IXGBE_PATH/ps_ixgbe.ko RXQ=$QUEUES TXQ=$QUEUES device=$DEVICE
   ethtool -A xge0 autoneg off rx off tx off
-  ifconfig xge0 $IP mtu 1500 netmask 255.255.255.0
+  ifconfig xge0 $IP mtu 1500 netmask 255.255.0.0
   mknod /dev/packet_shader c 1010 0
   chmod 666 /dev/packet_shader
 }
@@ -115,14 +127,18 @@ elif [[ $1 == 'linux' && $# -gt 1 && "$2" == 'single' && ( $# -lt 3 || "$3" == '
   if [ $IP = 'auto' ]; then
     ifup $SINGLE_NIC >/dev/null
   else
-    ifconfig $SINGLE_NIC $IP
+    ifconfig $SINGLE_NIC $IP netmask 255.255.0.0
   fi
+  set_irq_affinity $SINGLE_NIC
   if [[ $# -ge 3 && "$3" == 'opt' ]]; then
     optimize_linux
   fi
 elif [[ $1 == 'linux' && $# -gt 1 && "$2" == 'bond' && ( $# -lt 3 || "$3" == 'opt' ) ]]; then
   setup_linux
-  ifup $BOND_SLAVES >/dev/null
+  ifup $BOND $BOND_SLAVES >/dev/null
+  for IFACE in $BOND_SLAVES; do
+    set_irq_affinity $IFACE
+  done
   if [[ $# -ge 3 && "$3" == 'opt' ]]; then
     optimize_linux
   fi

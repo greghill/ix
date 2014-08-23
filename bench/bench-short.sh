@@ -18,24 +18,26 @@ fi
 CLIENTS=
 
 if [ $CLUSTER_ID = 'EPFL' ]; then
-  CLIENTS="$CLIENTS icnals1|eth1|192.168.21.11"
-  CLIENTS="$CLIENTS icnals2|eth1|192.168.21.12"
-  CLIENTS="$CLIENTS icnals3|eth1|192.168.21.13"
-  CLIENTS="$CLIENTS icnals4|eth1|192.168.21.14"
-  CLIENTS="$CLIENTS icnals5|eth1|192.168.21.15"
-  CLIENTS="$CLIENTS icnals6|eth1|192.168.21.16"
-  CLIENTS="$CLIENTS icnals7|eth1|192.168.21.17"
-  CLIENTS="$CLIENTS icnals8|eth1|192.168.21.18"
-  CLIENTS="$CLIENTS icnals9|eth1|192.168.21.19"
-  CLIENTS="$CLIENTS icnals10|eth1|192.168.21.20"
-  CLIENTS="$CLIENTS icnals11|eth2|192.168.21.21"
-  CLIENTS="$CLIENTS icnals12|eth2|192.168.21.22"
-  CLIENTS="$CLIENTS icnals13|eth2|192.168.21.23"
-  CLIENTS="$CLIENTS icnals14|eth2|192.168.21.24"
-  CLIENTS="$CLIENTS icnals15|eth2|192.168.21.25"
-  CLIENTS="$CLIENTS icnals16|eth2|192.168.21.26"
-  CLIENTS="$CLIENTS icnals17|eth2|192.168.21.27"
-  CLIENTS="$CLIENTS icnals18|eth2|192.168.21.28"
+  CLIENTS="$CLIENTS icnals1|cu1|192.168.1.1"
+  CLIENTS="$CLIENTS icnals2|cu1|192.168.2.1"
+  CLIENTS="$CLIENTS icnals3|cu1|192.168.3.1"
+  CLIENTS="$CLIENTS icnals4|cu1|192.168.4.1"
+  CLIENTS="$CLIENTS icnals5|cu1|192.168.5.1"
+  CLIENTS="$CLIENTS icnals6|cu1|192.168.6.1"
+  CLIENTS="$CLIENTS icnals7|cu1|192.168.7.1"
+  CLIENTS="$CLIENTS icnals8|cu1|192.168.8.1"
+  CLIENTS="$CLIENTS icnals9|cu1|192.168.9.1"
+  CLIENTS="$CLIENTS icnals10|cu1|192.168.10.1"
+  CLIENTS="$CLIENTS icnals11|cu1|192.168.11.1"
+  CLIENTS="$CLIENTS icnals12|cu1|192.168.12.1"
+  CLIENTS="$CLIENTS icnals13|cu1|192.168.13.1"
+  CLIENTS="$CLIENTS icnals14|cu1|192.168.14.1"
+  CLIENTS="$CLIENTS icnals15|cu1|192.168.15.1"
+  CLIENTS="$CLIENTS icnals16|cu1|192.168.16.1"
+  CLIENTS="$CLIENTS icnals17|cu1|192.168.17.1"
+  CLIENTS="$CLIENTS icnals18|cu1|192.168.18.1"
+  #CLIENTS="$CLIENTS icnals19|cu1|192.168.19.1"
+  #CLIENTS="$CLIENTS icnals20|eth2|192.168.20.1"
   SERVER_IP=192.168.21.1
   CLIENT_CORES=16
   CLIENT_CONNECTIONS=50
@@ -317,13 +319,27 @@ server_mtcp_stream() {
   $DIR/server_mtcp `echo $CORES|cut -d',' -f-$CORE_COUNT` &
 }
 
+wait_alive() {
+  HOST=$1
+  SERVER_IP=$2
+  SERVER_PORT=$3
+  TIMEOUT=$4
+  if ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq $TIMEOUT ]; then exit 1; fi; done"; then
+    return 1
+  fi
+  return 0
+}
+
 run_single() {
   CORE_COUNT=$1
   MSG_SIZE=$2
   MSG_PER_CONN=$3
 
   $SERVER $CORE_COUNT $MSG_SIZE
-  ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then echo $HOST failed; exit 1; fi; done"
+  while wait_alive $HOST $SERVER_IP $SERVER_PORT 30; do
+    $ON_EXIT
+    $SERVER $CORE_COUNT $MSG_SIZE
+  done
   if [ $SERVER = server_mtcp_rpc ]; then
     echo -ne "$[2*CORE_COUNT]\t$MSG_SIZE\t$MSG_PER_CONN\t" >> $OUTDIR/data
   else

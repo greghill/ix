@@ -16,13 +16,13 @@
 #include <ix/mempool.h>
 #include <ix/log.h>
 #include <ix/lock.h>
+#include <ix/cfg.h>
 
 #include <net/ethernet.h>
 #include <net/ip.h>
 #include <net/arp.h>
 
 #include "net.h"
-#include "cfg.h"
 
 #define ARP_PKT_SIZE (sizeof(struct eth_hdr) +		\
 		      sizeof(struct arp_hdr) +		\
@@ -175,9 +175,12 @@ static int arp_send_pkt(uint16_t op,
 	ethip->target_ip.addr = hton32(target_ip->addr);
 
 	pkt->ol_flags = 0;
-	ret = eth_tx_xmit_one(percpu_get(eth_tx), pkt, ARP_PKT_SIZE);
 
-	if (unlikely(ret != 1)) {
+	/* FIXME: need an API to specify default TX queue */
+	set_current_queue(percpu_get(eth_rxqs[0]));
+	ret = eth_send_one(pkt, ARP_PKT_SIZE);
+
+	if (unlikely(ret)) {
 		mbuf_free(pkt);
 		return -EIO;
 	}
@@ -201,9 +204,9 @@ static int arp_send_response_reuse(struct mbuf *pkt,
 	ethip->sender_mac = cfg_mac;
 
 	pkt->ol_flags = 0;
-	ret = eth_tx_xmit_one(percpu_get(eth_tx), pkt, ARP_PKT_SIZE);
+	ret = eth_send_one(pkt, ARP_PKT_SIZE);
 
-	if (unlikely(ret != 1)) {
+	if (unlikely(ret)) {
 		mbuf_free(pkt);
 		return -EIO;
 	}

@@ -26,7 +26,7 @@ CFLAGS += -DENABLE_KSTATS
 endif
 
 SRCS =
-DIRS = core ixgbe libdune lwip net sandbox vnic
+DIRS = core ixgbe libdune lwip net sandbox
 
 define register_dir
 SRCS += $(patsubst %, $(1)/%, $(2))

@@ -18,7 +18,7 @@ fi
 CLIENTS=
 
 if [ $CLUSTER_ID = 'EPFL' ]; then
-  CLIENTS="$CLIENTS icnals1|eth1|192.168.21.11"
+  CLIENTS="$CLIENTS icnals2|cu1|192.168.2.1"
   SERVER_IP=192.168.21.1
   PS_IXGBE_PATH=~/mtcp/io_engine/driver
 elif [ $CLUSTER_ID = 'Stanford' ]; then

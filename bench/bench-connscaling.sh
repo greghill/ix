@@ -18,24 +18,24 @@ fi
 CLIENTS=
 
 if [ $CLUSTER_ID = 'EPFL' ]; then
-  CLIENTS="$CLIENTS icnals1|eth1"
-  CLIENTS="$CLIENTS icnals2|eth1"
-  CLIENTS="$CLIENTS icnals3|eth1"
-  CLIENTS="$CLIENTS icnals4|eth1"
-  CLIENTS="$CLIENTS icnals5|eth1"
-  CLIENTS="$CLIENTS icnals6|eth1"
-  CLIENTS="$CLIENTS icnals7|eth1"
-  CLIENTS="$CLIENTS icnals8|eth1"
-  CLIENTS="$CLIENTS icnals9|eth1"
-  CLIENTS="$CLIENTS icnals10|eth1"
-  CLIENTS="$CLIENTS icnals11|eth2"
-  CLIENTS="$CLIENTS icnals12|eth2"
-  CLIENTS="$CLIENTS icnals13|eth2"
-  CLIENTS="$CLIENTS icnals14|eth2"
-  CLIENTS="$CLIENTS icnals15|eth2"
-  CLIENTS="$CLIENTS icnals16|eth2"
-  CLIENTS="$CLIENTS icnals17|eth2"
-  CLIENTS="$CLIENTS icnals18|eth2"
+  CLIENTS="$CLIENTS icnals1|cu1"
+  CLIENTS="$CLIENTS icnals2|cu1"
+  CLIENTS="$CLIENTS icnals3|cu1"
+  CLIENTS="$CLIENTS icnals4|cu1"
+  CLIENTS="$CLIENTS icnals5|cu1"
+  CLIENTS="$CLIENTS icnals6|cu1"
+  CLIENTS="$CLIENTS icnals7|cu1"
+  CLIENTS="$CLIENTS icnals8|cu1"
+  CLIENTS="$CLIENTS icnals9|cu1"
+  CLIENTS="$CLIENTS icnals10|cu1"
+  CLIENTS="$CLIENTS icnals11|cu1"
+  CLIENTS="$CLIENTS icnals12|cu1"
+  CLIENTS="$CLIENTS icnals13|cu1"
+  CLIENTS="$CLIENTS icnals14|cu1"
+  CLIENTS="$CLIENTS icnals15|cu1"
+  CLIENTS="$CLIENTS icnals16|cu1"
+  CLIENTS="$CLIENTS icnals17|cu1"
+  CLIENTS="$CLIENTS icnals18|cu1"
   SERVER_IP=192.168.21.1
 elif [ $CLUSTER_ID = 'Stanford' ]; then
   CLIENTS="$CLIENTS maverick-1|p3p1|10.79.6.11"
@@ -212,6 +212,17 @@ server_linux_stream() {
   $DIR/server $CORES &
 }
 
+wait_alive() {
+  HOST=$1
+  SERVER_IP=$2
+  SERVER_PORT=$3
+  TIMEOUT=$4
+  if ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq $TIMEOUT ]; then exit 1; fi; done"; then
+    return 1
+  fi
+  return 0
+}
+
 run_single() {
   CONNECTIONS=$1
 
@@ -223,7 +234,10 @@ run_single() {
   CLIENT_CONNECTIONS=$[$CONNECTIONS_PER_THREAD * $THREADS]
   CONNECTIONS=$[$CONNECTIONS_PER_THREAD * $CLIENT_COUNT * $THREADS]
   $SERVER
-  ssh $HOST "while ! nc -w 1 $SERVER_IP $SERVER_PORT; do sleep 1; i=\$[i+1]; if [ \$i -eq 30 ]; then exit 1; fi; done"
+  while wait_alive $HOST $SERVER_IP $SERVER_PORT 30; do
+    $ON_EXIT
+    $SERVER
+  done
   echo -ne "$CONNECTIONS\t64\t999999999\t" >> $OUTDIR/data
   python $DIR/launch.py --time $TIME --clients $CLIENT_HOSTS --client-cmdline "`eval echo $CLIENT_CMDLINE`" >> $OUTDIR/data
   $ON_EXIT

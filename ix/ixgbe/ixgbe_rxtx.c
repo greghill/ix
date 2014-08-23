@@ -27,47 +27,25 @@
 #define IXGBE_MIN_RING_DESC	64
 #define IXGBE_MAX_RING_DESC	4096
 
-#define IXGBE_MAX_INMEM_RING	131072
+#define IXGBE_RDT_THRESH	32
 
 struct rx_entry {
 	struct mbuf *mbuf;
 };
-
-struct inmem_ring_entry {
-	struct mbuf	*mbuf;
-};
-
-struct inmem_ring {
-	struct inmem_ring_entry	*entries;
-	uint64_t		head;
-	uint64_t		tail;
-	uint64_t		len;
-};
-
-#define RING_HEAD(ring) (&ring->entries[(ring)->head & ((ring)->len - 1)])
-#define RING_TAIL(ring) (&ring->entries[(ring)->tail & ((ring)->len - 1)])
-
-static void ring_init(struct inmem_ring *ring, struct inmem_ring_entry	*entries, uint64_t len)
-{
-	ring->head = 0;
-	ring->tail = 0;
-	ring->len = len;
-	ring->entries = entries;
-}
 
 struct rx_queue {
 	struct eth_rx_queue	erxq;
 	volatile union ixgbe_adv_rx_desc *ring;
 	machaddr_t		ring_physaddr;
 	struct rx_entry		*ring_entries;
-	struct inmem_ring	*inmem_ring;
 
 	volatile uint32_t	*rdt_reg_addr;
 	volatile uint32_t	*rdh_reg_addr;
 	uint16_t		reg_idx;
 	uint16_t		queue_id;
 
-	uint16_t		pos;
+	uint16_t		head;
+	uint16_t		tail;
 	uint16_t		len;
 };
 
@@ -124,7 +102,8 @@ static void ixgbe_clear_rx_queue(struct rx_queue *rxq)
 		}
 	}
 
-	rxq->pos = 0;
+	rxq->head = 0;
+	rxq->tail = rxq->len - 1;
 }
 
 static int ixgbe_alloc_rx_mbufs(struct rx_queue *rxq)
@@ -162,10 +141,9 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 	uint32_t status;
 	int nb_descs = 0;
 	bool valid_checksum;
-	struct inmem_ring_entry *mre;
 
 	while (1) {
-		rxdp = &rxq->ring[rxq->pos & (rxq->len - 1)];
+		rxdp = &rxq->ring[rxq->head & (rxq->len - 1)];
 		status = le32_to_cpu(rxdp->wb.upper.status_error);
 		valid_checksum = true;
 
@@ -173,7 +151,7 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 			break;
 
 		rxd = *rxdp;
-		rxqe = &rxq->ring_entries[rxq->pos & (rxq->len -1)];
+		rxqe = &rxq->ring_entries[rxq->head & (rxq->len -1)];
 
 		/* Check IP checksum calculated by hardware (if applicable) */
 		if (unlikely((rxdp->wb.upper.status_error & IXGBE_RXD_STAT_IPCS) &&
@@ -191,13 +169,13 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 
 		b = rxqe->mbuf;
 		b->len = le32_to_cpu(rxd.wb.upper.length);
-		b->flow_group = le32_to_cpu(rxd.wb.lower.hi_dword.rss) & (ETH_RSS_RETA_NUM_ENTRIES - 1);
-		cp_flow_group_depth(b->flow_group, 1);
+		b->fg_id = (le32_to_cpu(rxd.wb.lower.hi_dword.rss) &
+				        (ETH_RSS_RETA_NUM_ENTRIES - 1));
 
 		new_b = mbuf_alloc_local();
 		if (unlikely(!new_b)) {
 			log_err("ixgbe: unable to allocate RX mbuf\n");
-			return nb_descs;
+			goto out;
 		}
 
 		maddr = mbuf_get_data_machaddr(new_b);
@@ -205,55 +183,33 @@ static int ixgbe_rx_poll(struct eth_rx_queue *rx)
 		rxdp->read.hdr_addr = cpu_to_le32(maddr);
 		rxdp->read.pkt_addr = cpu_to_le32(maddr);
 
-		if (likely(valid_checksum)) {
-			if (rxq->inmem_ring->tail >= rxq->inmem_ring->head + rxq->inmem_ring->len) {
-				log_info("ixgbe: dropping packet\n");
-				mbuf_free(b);
-			} else {
-				mre = RING_TAIL(rxq->inmem_ring);
-				rxq->inmem_ring->tail++;
-				mre->mbuf = b;
-			}
-		} else {
+		if (unlikely(!valid_checksum || eth_recv(rx, b))) {
+			log_info("ixgbe: dropping packet\n");
 			mbuf_free(b);
 		}
 
-		rxq->pos++;
+		rxq->head++;
 		nb_descs++;
 	}
 
-	if (nb_descs) {
+out:
+
+	/*
+	 * We threshold updates to the RX tail register because when it
+	 * is updated too frequently (e.g. when written to on multiple
+	 * cores even through separate queues) PCI performance
+	 * bottlnecks have been observed.
+	 */
+	if ((uint16_t) (rxq->len - (rxq->tail + 1 - rxq->head)) >=
+	    IXGBE_RDT_THRESH) {
+		rxq->tail = rxq->head + rxq->len - 1;
+
 		/* inform HW that more descriptors have become available */
 		IXGBE_PCI_REG_WRITE(rxq->rdt_reg_addr,
-			(rxq->pos - 1) & (rxq->len - 1));
-
-		cp_queue_depth(rxq->queue_id, rxq->inmem_ring->tail - rxq->inmem_ring->head);
+				    (rxq->tail & (rxq->len - 1)));
 	}
 
 	return nb_descs;
-}
-
-static int ixgbe_rx_process(struct eth_rx_queue *rx, unsigned int max_packets)
-{
-	struct rx_queue *rxq = eth_rx_queue_to_drv(rx);
-	struct inmem_ring_entry *mre;
-#ifdef ENABLE_KSTATS
-	kstats_accumulate save;
-#endif
-
-	while (max_packets && rxq->inmem_ring->head < rxq->inmem_ring->tail) {
-		mre = RING_HEAD(rxq->inmem_ring);
-		rxq->inmem_ring->head++;
-		KSTATS_PUSH(eth_input, &save);
-		cp_flow_group_depth(mre->mbuf->flow_group, -1);
-		eth_input(rx, mre->mbuf);
-		KSTATS_POP(&save);
-		max_packets--;
-	}
-
-	cp_queue_depth(rxq->queue_id, rxq->inmem_ring->tail - rxq->inmem_ring->head);
-
-	return rxq->inmem_ring->head == rxq->inmem_ring->tail ? 1 : 0;
 }
 
 /* FIXME: make this driver independent */
@@ -264,18 +220,18 @@ bool eth_rx_idle_wait(uint64_t usecs)
 	unsigned long start, cycles = usecs * cycles_per_us;
 
 	addrs = alloca(sizeof(union ixgbe_adv_rx_desc *) *
-		       percpu_get(eth_rx_count));
+		       percpu_get(eth_num_queues));
 
 	for_each_queue(i) {
-		struct eth_rx_queue *rx = percpu_get(eth_rx)[i];
+		struct eth_rx_queue *rx = percpu_get(eth_rxqs[i]);
 		struct rx_queue *rxq = eth_rx_queue_to_drv(rx);
-		addrs[i] = &rxq->ring[rxq->pos & (rxq->len - 1)];
+		addrs[i] = &rxq->ring[rxq->head & (rxq->len - 1)];
 	}
 
 	start = rdtsc();
 
 	do {
-		for (i = 0; i < percpu_get(eth_rx_count); i++) {
+		for (i = 0; i < percpu_get(eth_num_queues); i++) {
 			if (addrs[i]->wb.upper.status_error &
 			    cpu_to_le32(IXGBE_RXDADV_STAT_DD))
 				return true;
@@ -317,9 +273,7 @@ int ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 
 	BUILD_ASSERT(align_up(sizeof(struct rx_queue), IXGBE_ALIGN) +
 		     (sizeof(union ixgbe_adv_rx_desc) + sizeof(struct rx_entry))
-		     * IXGBE_MAX_RING_DESC + sizeof(struct inmem_ring) +
-		     sizeof(struct inmem_ring_entry) * IXGBE_MAX_INMEM_RING <
-		     PGSIZE_2MB);
+		     * IXGBE_MAX_RING_DESC < PGSIZE_2MB);
 
 	/*
 	 * Additionally, for purely software performance optimization reasons,
@@ -344,12 +298,9 @@ int ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 		align_up(sizeof(struct rx_queue), IXGBE_ALIGN));
 	rxq->ring_entries = (struct rx_entry *) ((uintptr_t) rxq->ring +
 		sizeof(union ixgbe_adv_rx_desc) * nb_desc);
-	rxq->inmem_ring = (struct inmem_ring *) ((uintptr_t) rxq->ring_entries +
-		sizeof(struct rx_entry) * nb_desc);
-	ring_init(rxq->inmem_ring, (struct inmem_ring_entry *) ((uintptr_t)
-		rxq->inmem_ring + sizeof(struct inmem_ring)), IXGBE_MAX_INMEM_RING);
 	rxq->len = nb_desc;
-	rxq->pos = 0;
+	rxq->head = 0;
+	rxq->tail = rxq->len - 1;
 
 	ret = mem_lookup_page_machine_addr(page, PGSIZE_2MB, &page_phys);
 	if (ret)
@@ -375,7 +326,6 @@ int ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 	}
 
 	rxq->erxq.poll = ixgbe_rx_poll;
-	rxq->erxq.process = ixgbe_rx_process;
 
 	ret = ixgbe_alloc_rx_mbufs(rxq);
 	if (ret)
@@ -1532,6 +1482,7 @@ ixgbe_dev_mq_rx_configure(struct rte_eth_dev *dev)
  */
 int ixgbe_dev_rx_init(struct rte_eth_dev *dev)
 {
+	int i;
 	struct ixgbe_hw *hw;
 	uint32_t rxctrl, fctrl, hlreg0, maxfrs, rxcsum, rdrxctl;
 
@@ -1575,6 +1526,51 @@ int ixgbe_dev_rx_init(struct rte_eth_dev *dev)
 
 	IXGBE_WRITE_REG(hw, IXGBE_HLREG0, hlreg0);
 
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		struct rx_queue *rxq = eth_rx_queue_to_drv(dev->data->rx_queues[i]);
+		physaddr_t bus_addr = rxq->ring_physaddr;
+		uint32_t srrctl;
+
+		/* Configure descriptor ring base and length */
+		IXGBE_WRITE_REG(hw, IXGBE_RDBAL(rxq->reg_idx),
+				(uint32_t)(bus_addr & 0x00000000ffffffffULL));
+		IXGBE_WRITE_REG(hw, IXGBE_RDBAH(rxq->reg_idx),
+				(uint32_t)(bus_addr >> 32));
+		IXGBE_WRITE_REG(hw, IXGBE_RDLEN(rxq->reg_idx),
+				rxq->len * sizeof(union ixgbe_adv_rx_desc));
+		IXGBE_WRITE_REG(hw, IXGBE_RDH(rxq->reg_idx), 0);
+		IXGBE_WRITE_REG(hw, IXGBE_RDT(rxq->reg_idx), 0);
+
+		/* Configure the SRRCTL register */
+#ifdef RTE_HEADER_SPLIT_ENABLE
+		/* Configure Header Split */
+		if (dev->data->dev_conf.rxmode.header_split) {
+			if (hw->mac.type == ixgbe_mac_82599EB) {
+				/* Must setup the PSRTYPE register */
+				uint32_t psrtype;
+				psrtype = IXGBE_PSRTYPE_TCPHDR |
+					IXGBE_PSRTYPE_UDPHDR   |
+					IXGBE_PSRTYPE_IPV4HDR  |
+					IXGBE_PSRTYPE_IPV6HDR;
+				IXGBE_WRITE_REG(hw, IXGBE_PSRTYPE(rxq->reg_idx), psrtype);
+			}
+			srrctl = ((dev->data->dev_conf.rxmode.split_hdr_size <<
+				IXGBE_SRRCTL_BSIZEHDRSIZE_SHIFT) &
+				IXGBE_SRRCTL_BSIZEHDR_MASK);
+			srrctl |= E1000_SRRCTL_DESCTYPE_HDR_SPLIT_ALWAYS;
+		} else
+#endif
+			srrctl = IXGBE_SRRCTL_DESCTYPE_ADV_ONEBUF;
+
+		/* Drop packets when no room is left in the descriptor ring */
+		srrctl |= IXGBE_SRRCTL_DROP_EN;
+
+		/* Configure the buffer size (increments of KB) */
+		srrctl |= ((MBUF_DATA_LEN >> IXGBE_SRRCTL_BSIZEPKT_SHIFT) &
+			   IXGBE_SRRCTL_BSIZEPKT_MASK);
+		IXGBE_WRITE_REG(hw, IXGBE_SRRCTL(rxq->reg_idx), srrctl);
+	}
+
 	/*
 	 * Device configured with multiple RX queues.
 	 */
@@ -1603,85 +1599,6 @@ int ixgbe_dev_rx_init(struct rte_eth_dev *dev)
 		rdrxctl &= ~IXGBE_RDRXCTL_RSCFRSTSIZE;
 		IXGBE_WRITE_REG(hw, IXGBE_RDRXCTL, rdrxctl);
 	}
-
-	return 0;
-}
-
-/**
- * ixgbe_dev_rx_init - initializes an RX queue
- * @dev: the ethernet device
- * @rx_queue_id: the RX queue to initialize
- *
- * Returns 0 if successful, otherwise failure.
- */
-int ixgbe_dev_rx_queue_init(struct rte_eth_dev *dev, int rx_queue_id)
-{
-	struct ixgbe_hw *hw;
-	uint32_t rxdctl;
-	struct rx_queue *rxq = eth_rx_queue_to_drv(dev->data->rx_queues[rx_queue_id]);
-	physaddr_t bus_addr = rxq->ring_physaddr;
-	uint32_t srrctl;
-	int poll_ms;
-
-	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	/* Configure descriptor ring base and length */
-	IXGBE_WRITE_REG(hw, IXGBE_RDBAL(rxq->reg_idx),
-			(uint32_t)(bus_addr & 0x00000000ffffffffULL));
-	IXGBE_WRITE_REG(hw, IXGBE_RDBAH(rxq->reg_idx),
-			(uint32_t)(bus_addr >> 32));
-	IXGBE_WRITE_REG(hw, IXGBE_RDLEN(rxq->reg_idx),
-			rxq->len * sizeof(union ixgbe_adv_rx_desc));
-	IXGBE_WRITE_REG(hw, IXGBE_RDH(rxq->reg_idx), 0);
-	IXGBE_WRITE_REG(hw, IXGBE_RDT(rxq->reg_idx), 0);
-
-	/* Configure the SRRCTL register */
-#ifdef RTE_HEADER_SPLIT_ENABLE
-	 /* Configure Header Split */
-	if (dev->data->dev_conf.rxmode.header_split) {
-		if (hw->mac.type == ixgbe_mac_82599EB) {
-			/* Must setup the PSRTYPE register */
-			uint32_t psrtype;
-			psrtype = IXGBE_PSRTYPE_TCPHDR |
-				IXGBE_PSRTYPE_UDPHDR   |
-				IXGBE_PSRTYPE_IPV4HDR  |
-				IXGBE_PSRTYPE_IPV6HDR;
-			IXGBE_WRITE_REG(hw, IXGBE_PSRTYPE(rxq->reg_idx), psrtype);
-		}
-		srrctl = ((dev->data->dev_conf.rxmode.split_hdr_size <<
-			   IXGBE_SRRCTL_BSIZEHDRSIZE_SHIFT) &
-			  IXGBE_SRRCTL_BSIZEHDR_MASK);
-		srrctl |= E1000_SRRCTL_DESCTYPE_HDR_SPLIT_ALWAYS;
-	} else
-#endif
-		srrctl = IXGBE_SRRCTL_DESCTYPE_ADV_ONEBUF;
-
-	/* Drop packets when no room is left in the descriptor ring */
-	srrctl |= IXGBE_SRRCTL_DROP_EN;
-
-	/* Configure the buffer size (increments of KB) */
-	srrctl |= ((MBUF_DATA_LEN >> IXGBE_SRRCTL_BSIZEPKT_SHIFT) &
-		   IXGBE_SRRCTL_BSIZEPKT_MASK);
-	IXGBE_WRITE_REG(hw, IXGBE_SRRCTL(rxq->reg_idx), srrctl);
-
-	/* Enable queue and start receiving packets */
-	rxdctl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(rxq->reg_idx));
-	rxdctl |= IXGBE_RXDCTL_ENABLE;
-	IXGBE_WRITE_REG(hw, IXGBE_RXDCTL(rxq->reg_idx), rxdctl);
-
-	/* Wait until RX Enable ready */
-	poll_ms = 10;
-	do {
-		delay_ms(1);
-		rxdctl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(rxq->reg_idx));
-	} while (--poll_ms && !(rxdctl & IXGBE_RXDCTL_ENABLE));
-	if (!poll_ms)
-		log_err("ixgbe: Could not enable "
-			"Rx Queue %d\n", rx_queue_id);
-	wmb();
-	IXGBE_WRITE_REG(hw, IXGBE_RDT(rxq->reg_idx), rxq->len - 1);
-
-	ixgbe_dev_mq_rx_configure(dev);
 
 	return 0;
 }
@@ -1784,8 +1701,9 @@ ixgbe_dev_mq_tx_configure(struct rte_eth_dev *dev)
 
 void ixgbe_dev_tx_init(struct rte_eth_dev *dev)
 {
+	int i;
 	struct ixgbe_hw *hw;
-	uint32_t hlreg0;
+	uint32_t hlreg0, txctrl;
 
         hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
@@ -1794,80 +1712,46 @@ void ixgbe_dev_tx_init(struct rte_eth_dev *dev)
 	hlreg0 |= IXGBE_HLREG0_TXCRCEN;
 	IXGBE_WRITE_REG(hw, IXGBE_HLREG0, hlreg0);
 
+	/* Setup the Base and Length of the Tx Descriptor Rings */
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		struct tx_queue *txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
+		uint64_t bus_addr = txq->ring_physaddr;
+
+		IXGBE_WRITE_REG(hw, IXGBE_TDBAL(txq->reg_idx),
+				(uint32_t)(bus_addr & 0x00000000ffffffffULL));
+		IXGBE_WRITE_REG(hw, IXGBE_TDBAH(txq->reg_idx),
+				(uint32_t)(bus_addr >> 32));
+		IXGBE_WRITE_REG(hw, IXGBE_TDLEN(txq->reg_idx),
+				txq->len * sizeof(union ixgbe_adv_tx_desc));
+		/* Setup the HW Tx Head and TX Tail descriptor pointers */
+		IXGBE_WRITE_REG(hw, IXGBE_TDH(txq->reg_idx), 0);
+		IXGBE_WRITE_REG(hw, IXGBE_TDT(txq->reg_idx), 0);
+
+		/*
+		 * Disable Tx Head Writeback RO bit, since this hoses
+		 * bookkeeping if things aren't delivered in order.
+		 */
+		switch (hw->mac.type) {
+		case ixgbe_mac_82598EB:
+			txctrl = IXGBE_READ_REG(hw, IXGBE_DCA_TXCTRL(txq->reg_idx));
+			txctrl &= ~IXGBE_DCA_TXCTRL_DESC_WRO_EN;
+			IXGBE_WRITE_REG(hw, IXGBE_DCA_TXCTRL(txq->reg_idx), txctrl);
+			break;
+
+		case ixgbe_mac_82599EB:
+		case ixgbe_mac_X540:
+		default:
+			txctrl = IXGBE_READ_REG(hw,
+						IXGBE_DCA_TXCTRL_82599(txq->reg_idx));
+			txctrl &= ~IXGBE_DCA_TXCTRL_DESC_WRO_EN;
+			IXGBE_WRITE_REG(hw, IXGBE_DCA_TXCTRL_82599(txq->reg_idx),
+					txctrl);
+			break;
+		}
+	}
+
 	/* Device configured with multiple TX queues. */
 	ixgbe_dev_mq_tx_configure(dev);
-}
-
-int ixgbe_dev_tx_queue_init(struct rte_eth_dev *dev, int tx_queue_id)
-{
-	struct ixgbe_hw *hw;
-	uint32_t txctrl;
-	uint32_t txdctl;
-	int poll_ms;
-
-        hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	/* Setup the Base and Length of the Tx Descriptor Ring */
-	struct tx_queue *txq = eth_tx_queue_to_drv(dev->data->tx_queues[tx_queue_id]);
-	uint64_t bus_addr = txq->ring_physaddr;
-
-	IXGBE_WRITE_REG(hw, IXGBE_TDBAL(txq->reg_idx),
-			(uint32_t)(bus_addr & 0x00000000ffffffffULL));
-	IXGBE_WRITE_REG(hw, IXGBE_TDBAH(txq->reg_idx),
-			(uint32_t)(bus_addr >> 32));
-	IXGBE_WRITE_REG(hw, IXGBE_TDLEN(txq->reg_idx),
-			txq->len * sizeof(union ixgbe_adv_tx_desc));
-	/* Setup the HW Tx Head and TX Tail descriptor pointers */
-	IXGBE_WRITE_REG(hw, IXGBE_TDH(txq->reg_idx), 0);
-	IXGBE_WRITE_REG(hw, IXGBE_TDT(txq->reg_idx), 0);
-
-	/*
-	 * Disable Tx Head Writeback RO bit, since this hoses
-	 * bookkeeping if things aren't delivered in order.
-	 */
-	switch (hw->mac.type) {
-	case ixgbe_mac_82598EB:
-		txctrl = IXGBE_READ_REG(hw, IXGBE_DCA_TXCTRL(txq->reg_idx));
-		txctrl &= ~IXGBE_DCA_TXCTRL_DESC_WRO_EN;
-		IXGBE_WRITE_REG(hw, IXGBE_DCA_TXCTRL(txq->reg_idx), txctrl);
-		break;
-
-	case ixgbe_mac_82599EB:
-	case ixgbe_mac_X540:
-	default:
-		txctrl = IXGBE_READ_REG(hw,
-					IXGBE_DCA_TXCTRL_82599(txq->reg_idx));
-		txctrl &= ~IXGBE_DCA_TXCTRL_DESC_WRO_EN;
-		IXGBE_WRITE_REG(hw, IXGBE_DCA_TXCTRL_82599(txq->reg_idx),
-				txctrl);
-		break;
-	}
-
-	/* Enable queue */
-	txdctl = IXGBE_TXDCTL_ENABLE;
-	txdctl |= (8 << 16); /* set WTHRESH = 8 */
-	txdctl |= (1 << 8);  /* set HTHRESH = 1 */
-	txdctl |= 32;	     /* set PTHRESH = 32 */
-	IXGBE_WRITE_REG(hw, IXGBE_TXDCTL(txq->reg_idx), txdctl);
-
-	/* Wait until TX Enable ready */
-	if (hw->mac.type == ixgbe_mac_82599EB) {
-		poll_ms = 10;
-		do {
-			delay_ms(1);
-			txdctl = IXGBE_READ_REG(hw, IXGBE_TXDCTL(txq->reg_idx));
-		} while (--poll_ms && !(txdctl & IXGBE_TXDCTL_ENABLE));
-		if (!poll_ms)
-			log_err("ixgbe: Could not enable "
-				"Tx Queue %d\n", tx_queue_id);
-	}
-
-	/* Add context descriptor at idx 0 for IP and TCP checksum offload on NIC */
-	int ol_flags = PKT_TX_IP_CKSUM;
-	ol_flags |= PKT_TX_TCP_CKSUM;
-	ixgbe_tx_xmit_ctx(txq, ol_flags, 0);
-	
-	return 0;
 }
 
 /*
@@ -1900,9 +1784,10 @@ static void ixgbe_setup_loopback_link_82599(struct ixgbe_hw *hw)
  */
 void ixgbe_dev_rxtx_start(struct rte_eth_dev *dev)
 {
+	int i, poll_ms;
 	struct ixgbe_hw *hw;
 	uint32_t dmatxctl;
-	uint32_t rxctrl;
+	uint32_t rxctrl, txdctl, rxdctl;
 
 	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
@@ -1910,6 +1795,50 @@ void ixgbe_dev_rxtx_start(struct rte_eth_dev *dev)
 		dmatxctl = IXGBE_READ_REG(hw, IXGBE_DMATXCTL);
 		dmatxctl |= IXGBE_DMATXCTL_TE;
 		IXGBE_WRITE_REG(hw, IXGBE_DMATXCTL, dmatxctl);
+	}
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		struct tx_queue *txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
+		txdctl = IXGBE_TXDCTL_ENABLE;
+		txdctl |= (8 << 16); /* set WTHRESH = 8 */
+		txdctl |= (1 << 8);  /* set HTHRESH = 1 */
+		txdctl |= 32;        /* set PTHRESH = 32 */
+		IXGBE_WRITE_REG(hw, IXGBE_TXDCTL(txq->reg_idx), txdctl);
+
+		/* Wait until TX Enable ready */
+		if (hw->mac.type == ixgbe_mac_82599EB) {
+			poll_ms = 10;
+			do {
+				delay_ms(1);
+				txdctl = IXGBE_READ_REG(hw, IXGBE_TXDCTL(txq->reg_idx));
+			} while (--poll_ms && !(txdctl & IXGBE_TXDCTL_ENABLE));
+			if (!poll_ms)
+				log_err("ixgbe: Could not enable "
+					"Tx Queue %d\n", i);
+		}
+
+		/* setup context descriptor 0 for IP/TCP checksums */
+		ixgbe_tx_xmit_ctx(txq, PKT_TX_IP_CKSUM | PKT_TX_TCP_CKSUM, 0);
+	}
+
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+		struct rx_queue *rxq = eth_rx_queue_to_drv(dev->data->rx_queues[i]);
+		rxdctl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(rxq->reg_idx));
+		rxdctl |= IXGBE_RXDCTL_ENABLE;
+		IXGBE_WRITE_REG(hw, IXGBE_RXDCTL(rxq->reg_idx), rxdctl);
+
+		/* Wait until RX Enable ready */
+		poll_ms = 10;
+		do {
+			delay_ms(1);
+			rxdctl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(rxq->reg_idx));
+		} while (--poll_ms && !(rxdctl & IXGBE_RXDCTL_ENABLE));
+		if (!poll_ms)
+			log_err("ixgbe: Could not enable "
+				"Rx Queue %d\n", i);
+		wmb();
+		IXGBE_WRITE_REG(hw, IXGBE_RDT(rxq->reg_idx),
+				(rxq->tail & (rxq->len - 1)));
 	}
 
 	/* Enable Receive engine */
