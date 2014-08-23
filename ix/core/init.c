@@ -265,6 +265,8 @@ static int init_hw(void)
 {
 	int i, ret;
 	pthread_t tid;
+	struct rte_eth_rss_reta rss_reta;
+	int j, step;
 
 	for (i = 0; i < cfg_dev_nr; i++) {
 		ret = init_create_ethdev(&cfg_dev[i]);
@@ -297,6 +299,12 @@ static int init_hw(void)
 		pthread_barrier_wait(&start_barrier);
 	}
 
+	rss_reta.mask_hi = -1;
+	rss_reta.mask_lo = -1;
+	step = cfg_dev_nr * ETH_RSS_RETA_NUM_ENTRIES / cfg_cpu_nr;
+	if (cfg_dev_nr * ETH_RSS_RETA_NUM_ENTRIES % cfg_cpu_nr != 0)
+		step++;
+
 	for (i = 0; i < cfg_dev_nr; i++) {
 		struct rte_eth_dev *eth = eth_dev[i];
 
@@ -308,6 +316,10 @@ static int init_hw(void)
 			log_err("init: failed to start eth%d\n", i);
 			return ret;
 		}
+
+		for (j = 0; j < ETH_RSS_RETA_NUM_ENTRIES; j++)
+			rss_reta.reta[j] = (i * ETH_RSS_RETA_NUM_ENTRIES + j) / step;
+		eth->dev_ops->reta_update(eth, &rss_reta);
 	}
 
 	return 0;
