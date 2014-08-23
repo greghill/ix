@@ -167,10 +167,12 @@ unsigned long umm_mmap(void *addr, size_t len, int prot,
 	int adjust_mmap_len = 0;
 	int ret;
 
-	/* FIXME: mmap handling of large pages is broken */
-#if USE_BIG_MEM && 0
-	if (len >= BIG_PGSIZE && (flags & MAP_ANONYMOUS) && !addr)
+#if USE_BIG_MEM
+	if (len >= BIG_PGSIZE / 2 &&
+	    (flags & MAP_ANONYMOUS) && !addr &&
+	    !(flags & MAP_STACK) && prot) {
 		return umm_map_big(len, prot);
+	}
 #endif
 
 	if (!addr) {
