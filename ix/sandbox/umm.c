@@ -17,7 +17,7 @@
 
 #include "sandbox.h"
 
-#define USE_BIG_MEM 0
+#define USE_BIG_MEM 1
 
 #define UMM_ADDR_START	MEM_USER_DIRECT_BASE_ADDR
 #define UMM_ADDR_END	MEM_USER_DIRECT_END_ADDR
@@ -167,7 +167,8 @@ unsigned long umm_mmap(void *addr, size_t len, int prot,
 	int adjust_mmap_len = 0;
 	int ret;
 
-#if USE_BIG_MEM
+	/* FIXME: mmap handling of large pages is broken */
+#if USE_BIG_MEM && 0
 	if (len >= BIG_PGSIZE && (flags & MAP_ANONYMOUS) && !addr)
 		return umm_map_big(len, prot);
 #endif
