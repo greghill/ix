@@ -177,7 +177,7 @@ DIR=`dirname $0`
 on_exit_ix() {
   PID=`pidof ix||echo 0`
   if [ $PID -eq 0 ]; then return; fi
-  sudo kill -KILL $PID
+  sudo kill -KILL $PID 2>/dev/null || true
 }
 
 on_exit_linux_rpc() {
