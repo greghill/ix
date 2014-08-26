@@ -66,7 +66,7 @@ else
   exit 1
 fi
 
-TIME=10
+TIME=30
 
 if [ $# -lt 2 ]; then
   echo "Usage: $0 SERVER_SPEC CLIENT_SPEC [CLUSTER_ID]"
