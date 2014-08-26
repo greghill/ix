@@ -85,6 +85,15 @@ int eth_process_recv(void)
 
 	KSTATS_PACKETS_INC(count);
 	KSTATS_BATCH_INC(count);
+#ifdef ENABLE_KSTATS
+	int backlog = 0;
+	for (i = 0; i < percpu_get(eth_num_queues); i++) {
+		struct eth_rx_queue *rxq = percpu_get(eth_rxqs[i]);
+		backlog += rxq->len;
+	}
+	backlog = div_up(backlog, ETH_RX_MAX_BATCH);
+	KSTATS_BACKLOG_INC(backlog);
+#endif
 
 	return empty;
 }

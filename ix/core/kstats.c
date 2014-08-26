@@ -19,6 +19,7 @@ DEFINE_PERCPU(kstats, _kstats);
 DEFINE_PERCPU(kstats_accumulate, _kstats_accumulate);
 DEFINE_PERCPU(int, _kstats_packets);
 DEFINE_PERCPU(int, _kstats_batch_histogram[KSTATS_BATCH_HISTOGRAM_SIZE]);
+DEFINE_PERCPU(int, _kstats_backlog_histogram[KSTATS_BACKLOG_HISTOGRAM_SIZE]);
 
 static DEFINE_PERCPU(struct timer, _kstats_timer);
 
@@ -114,19 +115,22 @@ static void histogram_to_str(int *histogram, int size, char *buffer, int *avg)
 static void kstats_print(struct timer *t)
 {
   uint64_t total_cycles = (uint64_t) cycles_per_us * KSTATS_INTERVAL;
-  char batch_histogram[2048];
-  int avg_batch;
+  char batch_histogram[2048], backlog_histogram[2048];
+  int avg_batch, avg_backlog;
 
   histogram_to_str(percpu_get(_kstats_batch_histogram), KSTATS_BATCH_HISTOGRAM_SIZE, batch_histogram, &avg_batch);
+  histogram_to_str(percpu_get(_kstats_backlog_histogram), KSTATS_BACKLOG_HISTOGRAM_SIZE, backlog_histogram, &avg_backlog);
 
   kstats *ks = &(percpu_get(_kstats));
-  log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys (%d pkts, avg batch=%d [%s])\n",
+  log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys (%d pkts, avg batch=%d [%s], avg backlog=%d [%s])\n",
 	   ks->idle.tot_lat * 100 / total_cycles,
 	   ks->user.tot_lat * 100 / total_cycles,
 	   max(0, (int64_t) (total_cycles - ks->idle.tot_lat - ks->user.tot_lat)) * 100 / total_cycles,
 	   percpu_get(_kstats_packets),
 	   avg_batch,
-	   batch_histogram);
+	   batch_histogram,
+	   avg_backlog,
+	   backlog_histogram);
 #undef DEF_KSTATS
 #define DEF_KSTATS(_c)  kstats_printone(&ks->_c, # _c, total_cycles);
 #include <ix/kstatvectors.h>
@@ -135,6 +139,7 @@ static void kstats_print(struct timer *t)
   KSTATS_VECTOR(print_kstats);
   bzero(ks,sizeof(*ks));
   bzero(percpu_get(_kstats_batch_histogram),sizeof(*percpu_get(_kstats_batch_histogram))*KSTATS_BATCH_HISTOGRAM_SIZE);
+  bzero(percpu_get(_kstats_backlog_histogram),sizeof(*percpu_get(_kstats_backlog_histogram))*KSTATS_BACKLOG_HISTOGRAM_SIZE);
   percpu_get(_kstats_packets) = 0;
 
   timer_add(&percpu_get(_kstats_timer), KSTATS_INTERVAL);
