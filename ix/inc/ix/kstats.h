@@ -1,8 +1,11 @@
 
 #pragma once
 
+#include <stdlib.h>
+
 #include <ix/stddef.h>
 #include <ix/cpu.h>
+#include <ix/log.h>
 
 typedef struct kstats_distr {
   uint64_t count;
@@ -33,6 +36,10 @@ typedef struct kstats {
 
 DECLARE_PERCPU(kstats,_kstats);
 DECLARE_PERCPU(kstats_accumulate, _kstats_accumulate);
+DECLARE_PERCPU(int, _kstats_packets);
+DECLARE_PERCPU(int, _kstats_batch_histogram[]);
+
+#define KSTATS_BATCH_HISTOGRAM_SIZE 512
 
 extern void kstats_enter(kstats_distr *n, kstats_accumulate *saved_accu);
 extern void kstats_leave(kstats_accumulate *saved_accu);
@@ -42,6 +49,20 @@ static inline void kstats_vector(kstats_distr *n)
   percpu_get(_kstats_accumulate).cur = n; 
 }
 
+static inline void kstats_packets_inc(int count)
+{
+	percpu_get(_kstats_packets) += count;
+}
+
+static inline void kstats_batch_inc(int count)
+{
+	if (count > KSTATS_BATCH_HISTOGRAM_SIZE)
+		panic("kstats batch histogram overflow\n");
+
+	if (count)
+		percpu_get(_kstats_batch_histogram)[count - 1]++;
+}
+
 #define KSTATS_PUSH(TYPE,_save) \
 	kstats_enter(&(percpu_get(_kstats)).TYPE,_save)
 #define KSTATS_VECTOR(TYPE)     \
@@ -49,6 +70,10 @@ static inline void kstats_vector(kstats_distr *n)
 #define KSTATS_POP(_save)       \
 	kstats_leave(_save)
 //#define KSTATS_CURRENT_IS(TYPE)	(percpu_get(_kstats_accumulate).cur==&kstatsCounters.TYPE)
+#define KSTATS_PACKETS_INC(_count) \
+	kstats_packets_inc(_count)
+#define KSTATS_BATCH_INC(_count) \
+	kstats_batch_inc(_count)
 
 extern void kstats_init_cpu(void);
 
@@ -58,6 +83,8 @@ extern void kstats_init_cpu(void);
 #define KSTATS_VECTOR(TYPE)         
 #define KSTATS_POP(_save)           
 #define KSTATS_CURRENT_IS(TYPE)     0
+#define KSTATS_PACKETS_INC(_count)
+#define KSTATS_BATCH_INC(_count)
 
 static inline void kstats_init_cpu(void) { }
 

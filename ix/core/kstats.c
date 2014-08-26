@@ -7,6 +7,7 @@
 
 
 
+#include <stdio.h>
 #include <strings.h>
 #include <ix/kstats.h>
 #include <ix/log.h>
@@ -16,6 +17,8 @@
 
 DEFINE_PERCPU(kstats, _kstats);
 DEFINE_PERCPU(kstats_accumulate, _kstats_accumulate);
+DEFINE_PERCPU(int, _kstats_packets);
+DEFINE_PERCPU(int, _kstats_batch_histogram[KSTATS_BATCH_HISTOGRAM_SIZE]);
 
 static DEFINE_PERCPU(struct timer, _kstats_timer);
 
@@ -89,12 +92,23 @@ static void kstats_printone(kstats_distr *d, const char *name, long total_cycles
 static void kstats_print(struct timer *t)
 {
   uint64_t total_cycles = (uint64_t) cycles_per_us * KSTATS_INTERVAL;
+  char buffer[4096];
+  char *target = buffer;
+  int i, *histogram;
+
+  buffer[0] = 0;
+  histogram = percpu_get(_kstats_batch_histogram);
+  for (i=0;i<KSTATS_BATCH_HISTOGRAM_SIZE;i++)
+    if (histogram[i])
+      target += sprintf(target, "%d:%d ", i+1, histogram[i]);
 
   kstats *ks = &(percpu_get(_kstats));
-  log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys\n",
+  log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys (%d pkts [%s])\n",
 	   ks->idle.tot_lat * 100 / total_cycles,
 	   ks->user.tot_lat * 100 / total_cycles,
-	   max(0, (int64_t) (total_cycles - ks->idle.tot_lat - ks->user.tot_lat)) * 100 / total_cycles);
+	   max(0, (int64_t) (total_cycles - ks->idle.tot_lat - ks->user.tot_lat)) * 100 / total_cycles,
+	   percpu_get(_kstats_packets),
+	   buffer);
 #undef DEF_KSTATS
 #define DEF_KSTATS(_c)  kstats_printone(&ks->_c, # _c, total_cycles);
 #include <ix/kstatvectors.h>
@@ -102,6 +116,8 @@ static void kstats_print(struct timer *t)
 
   KSTATS_VECTOR(print_kstats);
   bzero(ks,sizeof(*ks));
+  bzero(histogram,sizeof(*histogram)*KSTATS_BATCH_HISTOGRAM_SIZE);
+  percpu_get(_kstats_packets) = 0;
 
   timer_add(&percpu_get(_kstats_timer), KSTATS_INTERVAL);
 }

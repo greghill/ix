@@ -83,6 +83,9 @@ int eth_process_recv(void)
 		}
 	} while (!empty && count < ETH_RX_MAX_BATCH);
 
+	KSTATS_PACKETS_INC(count);
+	KSTATS_BATCH_INC(count);
+
 	return empty;
 }
 
