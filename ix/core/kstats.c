@@ -94,20 +94,31 @@ static void kstats_print(struct timer *t)
   uint64_t total_cycles = (uint64_t) cycles_per_us * KSTATS_INTERVAL;
   char buffer[4096];
   char *target = buffer;
-  int i, *histogram;
+  int i, *histogram, avg_batch, sum;
 
   buffer[0] = 0;
   histogram = percpu_get(_kstats_batch_histogram);
-  for (i=0;i<KSTATS_BATCH_HISTOGRAM_SIZE;i++)
-    if (histogram[i])
+  avg_batch = 0;
+  sum = 0;
+  for (i=0;i<KSTATS_BATCH_HISTOGRAM_SIZE;i++) {
+    if (histogram[i]) {
       target += sprintf(target, "%d:%d ", i+1, histogram[i]);
+      avg_batch += histogram[i] * (i+1);
+      sum += histogram[i];
+    }
+  }
+  if (sum)
+    avg_batch /= sum;
+  else
+    avg_batch = -1;
 
   kstats *ks = &(percpu_get(_kstats));
-  log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys (%d pkts [%s])\n",
+  log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys (%d pkts, avg batch=%d [%s])\n",
 	   ks->idle.tot_lat * 100 / total_cycles,
 	   ks->user.tot_lat * 100 / total_cycles,
 	   max(0, (int64_t) (total_cycles - ks->idle.tot_lat - ks->user.tot_lat)) * 100 / total_cycles,
 	   percpu_get(_kstats_packets),
+	   avg_batch,
 	   buffer);
 #undef DEF_KSTATS
 #define DEF_KSTATS(_c)  kstats_printone(&ks->_c, # _c, total_cycles);
