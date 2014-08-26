@@ -56,11 +56,10 @@ static inline void kstats_packets_inc(int count)
 
 static inline void kstats_batch_inc(int count)
 {
-	if (count > KSTATS_BATCH_HISTOGRAM_SIZE)
+	if (count >= KSTATS_BATCH_HISTOGRAM_SIZE)
 		panic("kstats batch histogram overflow\n");
 
-	if (count)
-		percpu_get(_kstats_batch_histogram)[count - 1]++;
+	percpu_get(_kstats_batch_histogram)[count]++;
 }
 
 #define KSTATS_PUSH(TYPE,_save) \

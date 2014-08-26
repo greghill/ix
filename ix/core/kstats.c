@@ -86,31 +86,38 @@ static void kstats_printone(kstats_distr *d, const char *name, long total_cycles
   }
 }
 
+static void histogram_to_str(int *histogram, int size, char *buffer, int *avg)
+{
+  int i, avg_, sum;
+  char *target;
+
+  target = buffer;
+  buffer[0] = 0;
+  avg_ = 0;
+  sum = 0;
+  for (i=0;i<size;i++) {
+    if (histogram[i]) {
+      target += sprintf(target, "%d:%d ", i, histogram[i]);
+      avg_ += histogram[i] * i;
+      sum += histogram[i];
+    }
+  }
+  if (sum)
+    *avg = avg_ / sum;
+  else
+    *avg = -1;
+}
+
 /*
  * print and reinitialize
  */
 static void kstats_print(struct timer *t)
 {
   uint64_t total_cycles = (uint64_t) cycles_per_us * KSTATS_INTERVAL;
-  char buffer[4096];
-  char *target = buffer;
-  int i, *histogram, avg_batch, sum;
+  char batch_histogram[2048];
+  int avg_batch;
 
-  buffer[0] = 0;
-  histogram = percpu_get(_kstats_batch_histogram);
-  avg_batch = 0;
-  sum = 0;
-  for (i=0;i<KSTATS_BATCH_HISTOGRAM_SIZE;i++) {
-    if (histogram[i]) {
-      target += sprintf(target, "%d:%d ", i+1, histogram[i]);
-      avg_batch += histogram[i] * (i+1);
-      sum += histogram[i];
-    }
-  }
-  if (sum)
-    avg_batch /= sum;
-  else
-    avg_batch = -1;
+  histogram_to_str(percpu_get(_kstats_batch_histogram), KSTATS_BATCH_HISTOGRAM_SIZE, batch_histogram, &avg_batch);
 
   kstats *ks = &(percpu_get(_kstats));
   log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys (%d pkts, avg batch=%d [%s])\n",
@@ -119,7 +126,7 @@ static void kstats_print(struct timer *t)
 	   max(0, (int64_t) (total_cycles - ks->idle.tot_lat - ks->user.tot_lat)) * 100 / total_cycles,
 	   percpu_get(_kstats_packets),
 	   avg_batch,
-	   buffer);
+	   batch_histogram);
 #undef DEF_KSTATS
 #define DEF_KSTATS(_c)  kstats_printone(&ks->_c, # _c, total_cycles);
 #include <ix/kstatvectors.h>
@@ -127,7 +134,7 @@ static void kstats_print(struct timer *t)
 
   KSTATS_VECTOR(print_kstats);
   bzero(ks,sizeof(*ks));
-  bzero(histogram,sizeof(*histogram)*KSTATS_BATCH_HISTOGRAM_SIZE);
+  bzero(percpu_get(_kstats_batch_histogram),sizeof(*percpu_get(_kstats_batch_histogram))*KSTATS_BATCH_HISTOGRAM_SIZE);
   percpu_get(_kstats_packets) = 0;
 
   timer_add(&percpu_get(_kstats_timer), KSTATS_INTERVAL);
