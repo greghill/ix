@@ -90,8 +90,8 @@ in the common case. However, we still rely on interrupts as a fallback to regain
 for example, if the application becomes unresponsive.
 
 We also make extensive use of batching. Batching can increase throughput because it
-improves instruction locality as well as the effectiveness of hardware
-prefetching and branch prediction. When applied correctly, batching can also
+improves instruction locality, prefetching effectiveness and branch prediction accuracy.
+When applied correctly, batching can also
 decrease latency because these same efficiencies can reduce head-of-line blocking.
 Batching has been shown to improve performance when applied at the system call
 boundary~\cite{DBLP:conf/osdi/HanMCR12, DBLP:conf/osdi/SoaresS10}. Similarly,
