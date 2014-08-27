@@ -9,6 +9,10 @@
 
 #include <stdio.h>
 #include <strings.h>
+#include <unistd.h>
+#include <linux/perf_event.h>
+#include <sys/ioctl.h>
+#include <sys/syscall.h>
 #include <ix/kstats.h>
 #include <ix/log.h>
 #include <ix/timer.h>
@@ -20,6 +24,7 @@ DEFINE_PERCPU(kstats_accumulate, _kstats_accumulate);
 DEFINE_PERCPU(int, _kstats_packets);
 DEFINE_PERCPU(int, _kstats_batch_histogram[KSTATS_BATCH_HISTOGRAM_SIZE]);
 DEFINE_PERCPU(int, _kstats_backlog_histogram[KSTATS_BACKLOG_HISTOGRAM_SIZE]);
+DEFINE_PERCPU(int, llc_load_misses_fd);
 
 static DEFINE_PERCPU(struct timer, _kstats_timer);
 
@@ -109,6 +114,18 @@ static void histogram_to_str(int *histogram, int size, char *buffer, int *avg)
     *avg = -1;
 }
 
+static long long read_perf_event(int fd)
+{
+  int ret;
+  long long value;
+
+  ret = read(fd, &value, sizeof(long long));
+  if (ret != sizeof(long long))
+    value = -1;
+  ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+  return value;
+}
+
 /*
  * print and reinitialize
  */
@@ -122,11 +139,12 @@ static void kstats_print(struct timer *t)
   histogram_to_str(percpu_get(_kstats_backlog_histogram), KSTATS_BACKLOG_HISTOGRAM_SIZE, backlog_histogram, &avg_backlog);
 
   kstats *ks = &(percpu_get(_kstats));
-  log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys, non idle cycles=%lld (%d pkts, avg batch=%d [%s], avg backlog=%d [%s])\n",
+  log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys, non idle cycles=%lld, LLC load misses=%lld (%d pkts, avg batch=%d [%s], avg backlog=%d [%s])\n",
 	   ks->idle.tot_lat * 100 / total_cycles,
 	   ks->user.tot_lat * 100 / total_cycles,
 	   max(0, (int64_t) (total_cycles - ks->idle.tot_lat - ks->user.tot_lat)) * 100 / total_cycles,
 	   total_cycles - ks->idle.tot_lat,
+	   read_perf_event(percpu_get(llc_load_misses_fd)),
 	   percpu_get(_kstats_packets),
 	   avg_batch,
 	   batch_histogram,
@@ -146,9 +164,29 @@ static void kstats_print(struct timer *t)
   timer_add(&percpu_get(_kstats_timer), KSTATS_INTERVAL);
 }
 
+static long perf_event_open(struct perf_event_attr *hw_event, pid_t pid, int cpu, int group_fd, unsigned long flags)
+{
+  return syscall(__NR_perf_event_open, hw_event, pid, cpu, group_fd, flags);
+}
+
+static int init_perf_event(struct perf_event_attr *attr)
+{
+  int fd;
+
+  attr->size = sizeof(struct perf_event_attr);
+  fd = perf_event_open(attr, 0, -1, -1, 0);
+  ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+  ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+  return fd;
+}
+
 void kstats_init_cpu(void)
 {
+  struct perf_event_attr llc_load_misses_attr = {.type = PERF_TYPE_HW_CACHE, .config = (PERF_COUNT_HW_CACHE_LL) | (PERF_COUNT_HW_CACHE_OP_READ << 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16)};
+
   timer_init_entry(&percpu_get(_kstats_timer), kstats_print);
   timer_add(&percpu_get(_kstats_timer), KSTATS_INTERVAL);
+
+  percpu_get(llc_load_misses_fd) = init_perf_event(&llc_load_misses_attr);
 }
 
