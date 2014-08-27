@@ -8,6 +8,9 @@ clean:
 		*~ *.dvi *.vrb *.nav *.snm texput.* *.synctex.gz
 	latexmk -C $(PAPER).tex
 
+bib: 
+	../common/bibcloud.py $(PAPER)
+	bibtex $(PAPER)
 spell:
 	../common/linearize.pl word $(PAPER).tex; open -a /Applications/Microsoft\ Office\ 2011/Microsoft\ Word.app/ latex-all.tex
 

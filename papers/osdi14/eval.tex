@@ -35,7 +35,7 @@ application.
 
 \input{figs/float-short-both}
 
-\myparagraph{4x10GbE setup:} 
+%\myparagraph{4x10GbE setup:} 
 
 The experimental setup consists of a cluster of \data{18}{XXX} clients
 and one server connected by \edb{\sout{an HP 5820AF-24XG 10GbE switch}} 
@@ -81,13 +81,14 @@ maximum) with messages as small as 20KB. In contrast, Linux requires
 384KB messages to achieve 5Gbps, while mTCP requires messages larger
 than 500KB. The goodput difference between the three systems is most
 dramatic for small messages. Using 64B messages, the one-way unloaded
-latency is 6.9\microsecond between two servers running \ix,
-21\microsecond if they are running Linux, and 95\microsecond if they
+latency is \data{6.9}{5.7}\microsecond between two servers running \ix,
+\data{21}{24}\microsecond if they are running Linux, and \data{95}{127-XXX}\microsecond if they
 are running mTCP.  The differences in system architecture explain the
 dramatic gap. \ix has a dataplane model that polls queues and
 processes packets to completion. Linux has an interrupt model, which
 wakes up the blocked process. mTCP uses aggressive batching to offset
-the cost of context switching~\cite{jeong2014mtcp}.
+the cost of context switching~\cite{jeong2014mtcp}, \edb{at the expense of low latency.}
+
 
 
 
@@ -126,15 +127,15 @@ CPU-bound, and appears to be limited by the NIC packet per second
 hardware limit (Fig.~\ref{fig:short10:mcore}) or Ethernet wire rates
 limitations (Fig.~\ref{fig:short10:size}).  By contrast, mTCP, can
 only come close to matching \ix on Fig.~\ref{fig:short10:mcore} with
-all 6 cores, and delivers 46\% of the throughput of \ix on
+all \data{6}{XXX} cores, and delivers \data{46}{XXX}\% of the throughput of \ix on
 Fig.~\ref{fig:short10:roundtrips}.  Linux is never able to match \ix
-or mTCP on any configuration.
+or mTCP on any configuration \edb{CHECK}.
 
 %%
 %%  see data in figs/data/connection-scaling-kstats.tex
 %%
 
-\myparagraph{40GbE results:}
+\myparagraph{4x10GbE results:}
 Figs.~\ref{fig:short40:mcore}-\ref{fig:short40:size} show the results
 on the 4x10GbE setup for Linux and \ix, as well as an \ix
 configuration that uses only one of the four
@@ -159,12 +160,10 @@ multi-core server.
 \label{sec:eval:scale}
 
 We also evaluate \ix's scalability when handling a large number of
-concurrent connections on the 4x10GbE setup. In this benchmark, each client machine runs
-$n$ threads, with each thread independently performing a 64B remote
-procedure call to the server.  Each RPC randomly chooses among $m$
-open sockets to perform the RPC.  In our setup with 18 clients, the
-server must multiplex among $18 \times n \times m$ open connections.
-We experimentally set $n \leq 24$ to maximize throughput.  We report
+concurrent connections on the 4x10GbE setup. In this benchmark, the 18 client machine each run
+$n$ threads, with each thread repeatetly performing a 64B remote
+procedure call to the server for all of its open connections.
+We experimentally set $n=24$ to maximize throughput.  We report
 the maximal throughput in messages per second for varying number of
 total established connections.
 
@@ -175,18 +174,47 @@ total established connections.
 %13.15085
 
 
-Fig.~\ref{fig:connscaling} shows up to to 100,000 connections, which
+Fig.~\ref{fig:connscaling} shows up to to \data{100,000}{250,000} connections, which
 is the upper bound we can reach with the available client machines.
 As expected, throughput increases with the degree of concurrency, but
 then decreases for very large connections counts due to the
 increasingly high cost of multiplexing among open connections.  At the
-peak, \ix performs 13x better than Linux, consistent with the results
-from Fig.~\ref{fig:short40:roundtrips}.  With 100,000 connections and
-4x10GbE, \ix is able to deliver 53\% of its own peak throughput.  The
-performance drop is not due to an increase in instruction counts, but
-rather primarily because the size of the TCP/IP protocol control block
-structures, which alone exceed the size of the processor's L3
-cache. We believe we can improve further on the complexity and memory
-footprint of our lwIP-based stack in future work. 
+peak, \ix performs \data{13x}{XXX} better than Linux, consistent with the results
+from Fig.~\ref{fig:short40:roundtrips}.  With 250,000 connections and
+4x10GbE, \ix is able to deliver  \data{53}{XXX}\% of its own peak throughput.
+
+Fig.~\ref{fig:connscaling-hw} provides insights into \ix's connection
+scalability using hardware performance counters for the 4x10GbE setup:
+even though the average instruction count is nearly constant for all
+data points, the performance, as measured in \emph{cycles-per-msg}
+(excluding the idle loop) clearly shows that the workload has an
+efficiency sweep spot between 1000 and 10,000 concurrent connections.
+Within the sweet spot, \ix's adaptive batching mechanism processes at
+least 10 packets per iteration. Intel's x520 direct cache access
+technology~\cite{DBLP:conf/isca/HuggahalliIT05} eliminates nearly all
+cache misses associated with DMA, resulting in as little as 1.4 L3
+cache misses per message within the sweet spot.
+
+On the left of the sweet spot, with fewer than 1000 connections, this
+microbenchmark does not have enough concurrency to satisfy the 16
+elastic threads with the server clearly overprovisioned: the average
+batch size is as low as XXX, and the L3 cache behavior is poor, likely
+because of prefetching interference and false sharing on the
+descriptor rings between the NIC and the driver.
+
+On the right side of the sweet spot, with more than 10,000
+connections, the server is CPU-bound, and the average batch size
+matches the configured bound.  The performance gradually worsens as
+the working set size scales with the number of outstanding
+connections, as each connection requires a distinct protocol control
+block (in the kernel) and connection context data structure (in user
+space).  At peak, the workload averages 25 L3 cache misses per
+message.  Clearly, the working set of this workload, which is
+dominated by the TCP connection state, cannot fit into the processor's
+L3 cache.  Nevertheless, we believe that further optimizations in the
+size and access pattern of lwIP's TCP/IP protocol control block
+structures could substantially reduce the impact of the memory
+subsystem.
+
 
 \input{eval-memcache}
