@@ -69,6 +69,7 @@ setup_linux() {
   sysctl net.ipv4.tcp_rmem='4096 87380 6291456' > /dev/null
   sysctl net.ipv4.tcp_tso_win_divisor=3 > /dev/null
   sysctl net.ipv4.tcp_wmem='4096 16384 4194304' > /dev/null
+  sysctl net.ipv4.tcp_low_latency=1 > /dev/null
 }
 
 optimize_linux() {
