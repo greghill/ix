@@ -84,9 +84,9 @@ is likely to reuse many of the same cache lines).
 Our use of run to completion is inspired by work on receive livelock
 ~\cite{receive-livelock}, which uses a similar approach
 to guaruntee forward progress during periods of unmanagable recieve packet load.
-By contrast, we apply run to completion in all situations, allowing
-us to use polling and avoid interrupt overhead in the common case. However,
-we still rely on interrupts as a fallback to regain control,
+Our execution model allows us to go a step further and apply run to completion to
+all packet processing. Thus we are able to use polling and avoid interrupt overhead
+in the common case. However, we still rely on interrupts as a fallback to regain control,
 for example, if the application becomes unresponsive.
 
 We also make extensive use of batching. Batching can increase throughput because it
