@@ -14,7 +14,7 @@
 #define ETH_DEV_RX_QUEUE_SZ     512
 #define ETH_DEV_TX_QUEUE_SZ     1024
 #define ETH_RX_MAX_DEPTH	16384
-#define ETH_RX_MAX_BATCH	16
+#define ETH_RX_MAX_BATCH	128
 
 
 /*
