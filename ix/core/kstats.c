@@ -122,10 +122,11 @@ static void kstats_print(struct timer *t)
   histogram_to_str(percpu_get(_kstats_backlog_histogram), KSTATS_BACKLOG_HISTOGRAM_SIZE, backlog_histogram, &avg_backlog);
 
   kstats *ks = &(percpu_get(_kstats));
-  log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys (%d pkts, avg batch=%d [%s], avg backlog=%d [%s])\n",
+  log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys, non idle cycles=%lld (%d pkts, avg batch=%d [%s], avg backlog=%d [%s])\n",
 	   ks->idle.tot_lat * 100 / total_cycles,
 	   ks->user.tot_lat * 100 / total_cycles,
 	   max(0, (int64_t) (total_cycles - ks->idle.tot_lat - ks->user.tot_lat)) * 100 / total_cycles,
+	   total_cycles - ks->idle.tot_lat,
 	   percpu_get(_kstats_packets),
 	   avg_batch,
 	   batch_histogram,
