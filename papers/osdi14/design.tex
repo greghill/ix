@@ -45,19 +45,82 @@ for resource configuration, provisioning, scheduling, and monitoring,
 from the dataplane, which runs the networking stack and application
 logic.  Like a conventional OS, the control plane multiplexes and
 schedules resources among dataplanes, but in a coarse-grained manner
-in space and time: cores are dedicated to applications until revoked,
-memory is allocated at large page granularity of physical memory;
-hardware queues are exclusively assigned to a single dataplane until
-explicitly revoked.  The separation allows us to consider radically
+in space and time: entire cores are dedicated to dataplanes,
+memory is allocated at large page granularity, and
+network device queues are partitioned among dataplanes.
+Moreover, the control plane plays a coordination role in elatistically
+adjusting the allocation of these resources between dataplanes.
+
+The separation of control and data plane allows us to consider radically
 different I/O APIs and implementations in the dataplane, while
-retaining full compatibility with a modern OS like Linux.  Similar to
-Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, each dataplane runs a
-single application in a single address space. 
+permitting other OS functionality (e.g., file system
+support) to be passed through to the control plane for compatibilility.
+Similar to the
+Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, each data plane runs a
+single application in a single address space. However,
+we use modern virtualization hardware and Dune~\cite{dune} to
+safely and efficiently expose privileged hardware features directly to
+dataplanes. As a result, dataplanes have capabilities similar to
+virtualization guest OSes; they can manage
+their own address translations (on top of the address space provided by
+the control plane) and can prevent application logic from corrupting
+the network stack through use of privilege ring hardware.
 
 \christos{we should bring up HW virtualization here, likely as a
   independent part of the approach or merged with the one above. It is
   a big part of the protection story. The discussion on CP/DP
   seperation must be linked to elasticity too}
+
+
+\myparagraph{Run to completion with adaptive batching:} Our dataplane
+runs to completion all pipeline stages needed to receive and transmit a
+packet, interleaving protocol processing (kernel mode) and application
+logic (user mode) at fixed transition points. Hence, there is no need for intermediate
+buffering between pipeline stages or between the application logic and
+the TCP/IP stack. Run to completion is beneficial for both throughput
+and latency because it improves d-cache behavior (each processing stage
+is likely to reuse many of the same cache lines).
+
+Our use of run to completion is inspired by work on receive livelock
+~\cite{receive-livelock}, which uses a similar approach
+to guaruntee forward progress during periods of unmanagable recieve packet load.
+By contrast, we apply run to completion in all situations, allowing
+us to use polling and avoid interrupt overhead in the common case. However,
+we still rely on interrupts as a fallback to regain control,
+for example, if the application becomes unresponsive.
+
+We also make extensive use of batching. Batching can increase throughput because it
+improves instruction locality as well as the effectiveness of hardware
+prefetching and branch prediction. When applied correctly, batching can also
+decrease latency because these same efficiencies can reduce head-of-line blocking.
+Batching has been shown to improve performance when applied at the system call
+boundary~\cite{DBLP:conf/osdi/HanMCR12, DBLP:conf/osdi/SoaresS10}. Similarly,
+mTCP~\cite{jeong2014mtcp}, a user-level network stack, applies batching
+at the API level and at the hardware queue level.
+We improves upon previous batching systems in two ways.
+Firstly, we batch at each processing stage in our pipeline. Secondly, we
+minimize the impact on latency and maximize efficiency by using batching
+\emph{adaptively} as follows: (i) we never wait to batch requests and batching
+only occurs in the presence of congestion; (ii) we set an upper bound on
+the number of batched packets to avoid exceeding the size of the data cache.
+
+The combination of bounded batch sizes and run to completion means that
+queues for incoming packets can build up only at the NIC edge, before
+packets are processed by the dataplane. \ana{Emphasize that we are not
+  wasting resources on packets that might have to be dropped; drop
+  early at the NIC if can't handle.  Citation for Mogul and
+  Ramakrishnan could go here.} The networking stack sends
+acknowledgments to peers only as fast as the application can process
+them. Any slowdown in the application-processing rate quickly leads to
+shrinking windows in peers. The dataplane also monitors queue depths
+at the NIC edge and signals the control plane to allocate additional
+resources for the dataplane (more hardware threads, increased clock
+frequency), notify peers explicitly about congestion (e.g., via
+ECN~\cite{ramakrishnan2001addition}), and make policy decisions for
+congestion management (e.g., via
+RED~\cite{DBLP:journals/ton/FloydJ93}).
+
+\input{figs/float-cp-dp}
 
 \myparagraph{Native zero-copy API with explicit flow control:} We do
 not expose or emulate the POSIX API for networking.  Instead, the
@@ -76,48 +139,6 @@ acknowledges reception. The kernel implements all flow control
 mechanisms and may trim transmission requests that exceed the
 available size of the sliding window.  Essentially, the API directly,
 but safely, exposes flow control to applications.
-
-
-\myparagraph{Run to completion with adaptive batching:} Our dataplane
-runs to completion all pipeline stages needed to receive or transmit a
-packet, interleaving protocol processing (kernel mode) and application
-logic (user mode) as needed. Hence, there is no need for intermediate
-buffering between pipeline stages or between the application logic and
-the TCP/IP stack. Run to completion has been previously proposed to
-address receive livelock within the OS~\cite{receive-livelock}. We
-extend it to both kernel and user-level, which eliminates interrupts
-and improves data locality throughout the common case packet
-processing.
-
-Batch processing minimizes instruction overheads and increases
-instruction locality. Previous proposals batch only at the API level
-in order to amortize system call
-overhead~\cite{DBLP:conf/osdi/HanMCR12,jeong2014mtcp,DBLP:conf/osdi/SoaresS10}. We
-execute every pipeline stage on a small batch of packets or commands
-to fully amortize instruction caching effects and the overhead of PCIe
-transfers. To minimize the impact on latency, we perform adaptive
-batching as follows: (i) we never wait to batch requests and batching
-only occurs in the presence of congestion; (ii) we set an upper bound
-on batches of \data{128}{XXX -- RETHINK} packets, a value experimentally determined to
-effectively amortize startup overheads.
-
-The combination of adaptive batch processing and zero copy means that
-queues for incoming packets can build up only at the NIC edge, before
-packets are processed by the dataplane. \ana{Emphasize that we are not
-  wasting resources on packets that might have to be dropped; drop
-  early at the NIC if can't handle.  Citation for Mogul and
-  Ramakrishnan could go here.} The networking stack sends
-acknowledgments to peers only as fast as the application can process
-them. Any slowdown in the application-processing rate quickly leads to
-shrinking windows in peers. The dataplane also monitors queue depths
-at the NIC edge and signals the control plane to allocate additional
-resources for the dataplane (more hardware threads, increased clock
-frequency), notify peers explicitly about congestion (e.g., via
-ECN~\cite{ramakrishnan2001addition}), and make policy decisions for
-congestion management (e.g., via
-RED~\cite{DBLP:journals/ton/FloydJ93}).
-
-\input{figs/float-cp-dp}
 
 
 \myparagraph{Flow consistent, coherence-free processing:} We use
