@@ -25,6 +25,7 @@ DEFINE_PERCPU(int, _kstats_packets);
 DEFINE_PERCPU(int, _kstats_batch_histogram[KSTATS_BATCH_HISTOGRAM_SIZE]);
 DEFINE_PERCPU(int, _kstats_backlog_histogram[KSTATS_BACKLOG_HISTOGRAM_SIZE]);
 DEFINE_PERCPU(int, llc_load_misses_fd);
+DEFINE_PERCPU(int, hw_instructions_fd);
 
 static DEFINE_PERCPU(struct timer, _kstats_timer);
 
@@ -139,11 +140,12 @@ static void kstats_print(struct timer *t)
   histogram_to_str(percpu_get(_kstats_backlog_histogram), KSTATS_BACKLOG_HISTOGRAM_SIZE, backlog_histogram, &avg_backlog);
 
   kstats *ks = &(percpu_get(_kstats));
-  log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys, non idle cycles=%lld, LLC load misses=%lld (%d pkts, avg batch=%d [%s], avg backlog=%d [%s])\n",
+  log_info("--- BEGIN KSTATS --- %ld%% idle, %ld%% user, %ld%% sys, non idle cycles=%lld, HW instructions=%lld, LLC load misses=%lld (%d pkts, avg batch=%d [%s], avg backlog=%d [%s])\n",
 	   ks->idle.tot_lat * 100 / total_cycles,
 	   ks->user.tot_lat * 100 / total_cycles,
 	   max(0, (int64_t) (total_cycles - ks->idle.tot_lat - ks->user.tot_lat)) * 100 / total_cycles,
 	   total_cycles - ks->idle.tot_lat,
+	   read_perf_event(percpu_get(hw_instructions_fd)),
 	   read_perf_event(percpu_get(llc_load_misses_fd)),
 	   percpu_get(_kstats_packets),
 	   avg_batch,
@@ -183,10 +185,12 @@ static int init_perf_event(struct perf_event_attr *attr)
 void kstats_init_cpu(void)
 {
   struct perf_event_attr llc_load_misses_attr = {.type = PERF_TYPE_HW_CACHE, .config = (PERF_COUNT_HW_CACHE_LL) | (PERF_COUNT_HW_CACHE_OP_READ << 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16)};
+  struct perf_event_attr hw_instructions_attr = {.type = PERF_TYPE_HARDWARE, .config = PERF_COUNT_HW_INSTRUCTIONS};
 
   timer_init_entry(&percpu_get(_kstats_timer), kstats_print);
   timer_add(&percpu_get(_kstats_timer), KSTATS_INTERVAL);
 
   percpu_get(llc_load_misses_fd) = init_perf_event(&llc_load_misses_attr);
+  percpu_get(hw_instructions_fd) = init_perf_event(&hw_instructions_attr);
 }
 
