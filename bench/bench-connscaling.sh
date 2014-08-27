@@ -196,7 +196,7 @@ on_exit_linux_stream() {
 
 server_ix_rpc() {
   IX_PARAMS_CORES=$CORES
-  (trap ERR; cd $DIR/../ix; sudo stdbuf -o0 -e0 ./ix `eval echo $IX_PARAMS` /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ../apps/event/pingpong 64 65536 >> ix.log 2>&1) &
+  (trap ERR; cd $DIR/../ix; sudo stdbuf -o0 -e0 ./ix `eval echo $IX_PARAMS` /lib/x86_64-linux-gnu/ld-linux-x86-64.so.2 ../apps/event/pingpong 64 524288 >> ix.log 2>&1) &
 }
 
 server_ix_stream() {
@@ -244,7 +244,7 @@ run_single() {
 }
 
 run() {
-  for i in `awk "BEGIN{for(i=1.4;i<=5.1;i+=0.2)printf \"%d \",10**i}"`; do
+  for i in `awk "BEGIN{for(i=1.4;i<=5.5;i+=0.2)printf \"%d \",10**i}"`; do
     run_single $i
   done
 }

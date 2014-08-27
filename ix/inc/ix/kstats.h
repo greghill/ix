@@ -41,7 +41,7 @@ DECLARE_PERCPU(int, _kstats_batch_histogram[]);
 DECLARE_PERCPU(int, _kstats_backlog_histogram[]);
 
 #define KSTATS_BATCH_HISTOGRAM_SIZE 512
-#define KSTATS_BACKLOG_HISTOGRAM_SIZE 128
+#define KSTATS_BACKLOG_HISTOGRAM_SIZE 256
 
 extern void kstats_enter(kstats_distr *n, kstats_accumulate *saved_accu);
 extern void kstats_leave(kstats_accumulate *saved_accu);
