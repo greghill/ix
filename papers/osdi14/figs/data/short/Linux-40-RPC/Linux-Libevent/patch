@@ -1,13 +1,13 @@
-diff --git a/bench/bench-pingpong.sh b/bench/bench-pingpong.sh
-index be64c22..d26f246 100755
---- a/bench/bench-pingpong.sh
-+++ b/bench/bench-pingpong.sh
-@@ -320,7 +320,7 @@ run_single() {
- }
+diff --git a/ix/inc/ix/ethqueue.h b/ix/inc/ix/ethqueue.h
+index e58f0de..c568494 100644
+--- a/ix/inc/ix/ethqueue.h
++++ b/ix/inc/ix/ethqueue.h
+@@ -14,7 +14,7 @@
+ #define ETH_DEV_RX_QUEUE_SZ     512
+ #define ETH_DEV_TX_QUEUE_SZ     1024
+ #define ETH_RX_MAX_DEPTH	32768
+-#define ETH_RX_MAX_BATCH	128
++#define ETH_RX_MAX_BATCH	64
  
- run() {
--  for i in {6..25}; do
-+  for i in {6..17}; do
-     run_single $[2**$i]
-   done
- }
+ 
+ /*
