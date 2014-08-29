@@ -75,19 +75,18 @@ latency and bandwidth of a single-flow~\cite{snell1996netpipe}.  In
 all cases, the two servers use the same system (Linux, mTCP, or \ix).
 
 
-Fig.~\ref{fig:pingpong} shows the goodput achieved for different
-message sizes.  Two \ix servers achieve goodput of 5Gbps (half of the
-maximum) with messages as small as 20KB. In contrast, Linux requires
-384KB messages to achieve 5Gbps, while mTCP requires messages larger
-than 500KB. The goodput difference between the three systems is most
-dramatic for small messages. Using 64B messages, the one-way unloaded
-latency is \data{6.9}{5.7}\microsecond between two servers running \ix,
-\data{21}{24}\microsecond if they are running Linux, and \data{95}{127-XXX}\microsecond if they
-are running mTCP.  The differences in system architecture explain the
-dramatic gap. \ix has a dataplane model that polls queues and
-processes packets to completion. Linux has an interrupt model, which
-wakes up the blocked process. mTCP uses aggressive batching to offset
-the cost of context switching~\cite{jeong2014mtcp}, \edb{at the expense of low latency.}
+\edb{NEW:}Fig.~\ref{fig:pingpong} shows the goodput achieved for different
+message sizes.  Two \ix servers have a one-way latency of
+5.7\microsecond (using 64B messages) and achieve goodput of 5Gbps
+(half of the maximum) with messages as small as 20KB. In contrast, two
+Linux servers have a one-way latency of 24\microsecond and require
+385KB messages to achieve 5Gpbs.  The differences in system
+architecture explain the difference: \ix has a dataplane model that
+polls queues and processes packets to completion whereas Linux has an
+interrupt model, which wakes up the blocked process.  
+As for mTCP, its use of aggressive batching to offset the cost of
+context switching~\cite{jeong2014mtcp} comes at the expense of low
+latency. mTCP underperforms Linux in this particular test.
 
 
 
@@ -105,8 +104,10 @@ listening on a single port, send a request of size $s$ and wait for an
 echo of a message of the same size.  As with NetPIPE, while accepting
 the message, the server holds off its echo response until the message
 has been entirely received.  Each client performs this synchronous
-remote procedure call $n$ times, and then closes the connection using a
-reset (\texttt{TCP RST}).  \dm{This begs the question of what happens
+remote procedure call $n$ times. As in ~\cite{jeong2014mtcp}, clients then close 
+then closes the connection using a
+reset (\texttt{TCP RST}) to avoid exhausting ephemeral ports in clients.\edb{TO VERFIY EXPERIMENTALLY TO ADDRESS DM's COMMENT}
+\dm{This begs the question of what happens
   with FIN, since that is more realistic\@.  Is the point that \ix has
 an unfair advantage?}
 

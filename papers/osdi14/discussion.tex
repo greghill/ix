@@ -22,10 +22,14 @@ in tuning the implementation of \ix for multi-core scalability,
 eliminating constructs that introduce synchronization or coherence
 traffic.
 
+
+\myparagraph{Sublteties of adaptive batching:} \edb{TODO}
+
+
 \myparagraph{Limitations of current prototype:} The current prototype
 supports any stateless offload NIC with multiple queues and RSS
-support. The NICs we currently use support RSS group of 16 queues,
-which is inadequate given current multi-core trends. Nevertheless, the
+support. \edb{REDO\sout{The NICs we currently use support RSS group of 16 queues,
+which is inadequate given current multi-core trends}}. Nevertheless, the
 trend in NICs seems to be towards support for larger number of
 queues~\cite{radhakrishnan2014senic}. We also plan to explore using Intel's Flow
 Director~\cite{intel:82599} to provide connection
