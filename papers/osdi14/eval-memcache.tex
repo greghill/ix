@@ -33,14 +33,13 @@ keys ($<$20B), 2B values, and 99\% GET requests. In USR, almost all
 traffic involves minimum-sized TCP packets. Each request is issued
 separately (no \texttt{multiget} operations).
 
-\dm{Paragraph needs editing.  Also, why not report 99\% or 99.9\%?}
-\adam{Are our linux graphs too noisy to do 99th? IX looks fine at
-  99th...}  For all experiments, we report 95th percentile latency as
-a function of the achieved throughput as this is the relevant metric
+
+For all experiments, we report average and \data{95}{99}th percentile latency as
+a function of the achieved throughput as the latter is is the relevant metric
 for datacenter applications~\cite{DBLP:journals/cacm/DeanB13}. This
 graph provides insights into the full range of system behaviors. Most
 commercial \texttt{memcached} deployments use such a
-latency-throughput graph to provision each server so that the 95th
+latency-throughput graph to provision each server so that the 95th \edb{or 99th}
 percentile latency does not exceed 200\microsecond to 500\microsecond.
 We carefully tune the Linux baseline setup according to the guidelines
 in \cite{DBLP:conf/eurosys/LeverichK14}. Specifically, we pin memcached threads,
@@ -48,7 +47,7 @@ configure interrupt-distribution based on thread-affinity, and tune
 interrupt moderation thresholds. We believe that our baseline Linux
 numbers are as tuned as possible for this hardware using the
 open-source version of \texttt{memcached-1.4.18}. For our benchmark,
-we use 6 client machines and a total of 772 connections to the
+we use \data{6}{18} client machines and a total of \data{772}{229 - CHECK} connections to the
 memcached server.  We report the results for the server configuration
 that provides the best performance: 8 cores with Linux, but only 6
 with \ix.
@@ -56,9 +55,9 @@ with \ix.
 Porting \texttt{memcached} to IX primarily consisted of adapting it to
 use our event library. In most cases, the port was straightforward,
 replacing Linux and \texttt{libevent} function calls with their
-equivalent versions in our API.
+equivalent versions in our API. \edb{We also replaced {\tt pthread} locks with simple spin-locks.}
 We did yet not attempt to tune the internal scalability of {\it
-  memcached}~\cite{DBLP:conf/nsdi/FanAK13} or to support zero-copy IO operations.
+  memcached}~\cite{DBLP:conf/nsdi/FanAK13} or to support zero-copy IO operations.  
 
 
 \input{tbl-mutilate}
@@ -67,15 +66,15 @@ Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
 two \texttt{memcached} workloads for Linux and \ix, while
 Table~\ref{tbl:mutilate} reports the unloaded latencies and maximum
 query throughput that meets a service-level agreement, both measured
-at the 95th percentile.  \ix noticeably reduces the unloaded
+at the \data{95}{99}th percentile.  \ix noticeably reduces the unloaded
 latencies.  Note that we use Linux clients for these experiments;
 running \ix on clients should further reduce latency.
 
 For both workloads, the distribution of CPU time shifts from being
-$>80\%$ in the kernel with Linux to $<30\%$ with \ix.  Since the
-application is unmodified, Amdahl's law predicts a speedup of 3x.  \ix
-actually increases the throughput of memcached by 2.0 and 2.7 for
-\texttt{ETC} and \texttt{USR}, respectively.  The difference is due to
+$>80\%$ in the kernel with Linux to \data{$<30\%$}{$<10\%$} with \ix, and the
+throughput increases by \data{2.0}{3.5} and \data{2.7}{4.9} for
+\texttt{ETC} and \texttt{USR}, respectively.
+The difference is due to
 the increased lock contention within the application itself, in
 particular for \texttt{ETC}, which has a higher write frequency.
 
