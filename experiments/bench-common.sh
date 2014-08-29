@@ -121,7 +121,7 @@ setup_and_run() {
   elif [ $SERVER_SPEC = 'IX-10' ]; then
     PREP=prep_ix
     OUTDIR='IX-10'
-    QPS_SWEEP_MAX=1500000
+    QPS_SWEEP_MAX=3500000
     QPS_SWEEP_NUM_POINTS=30
     MEMCACHED_EXEC=memcached
     MEMCACHED_BUILD_PATH=../apps/memcached-1.4.18-ix
