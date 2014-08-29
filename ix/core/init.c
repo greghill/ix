@@ -3,6 +3,7 @@
  */
 
 #include <pthread.h>
+#include <unistd.h>
 
 #include <ix/stddef.h>
 #include <ix/log.h>
@@ -243,6 +244,7 @@ int init_do_spawn(void *arg)
 }
 
 static pthread_barrier_t start_barrier;
+static volatile int started_cpus;
 
 void *start_cpu(void *arg)
 {
@@ -254,6 +256,8 @@ void *start_cpu(void *arg)
 		log_err("init: failed to initialize CPU %d\n", cpu);
 		exit(ret);
 	}
+
+	started_cpus++;
 
 	pthread_barrier_wait(&start_barrier);
 	wait_for_spawn();
@@ -281,18 +285,20 @@ static int init_hw(void)
 		pthread_barrier_init(&start_barrier, NULL, cfg_cpu_nr);
 	}
 
+	ret = init_create_cpu(cfg_cpu[0]);
+	if (ret) {
+		log_err("init: failed to initialize CPU 0\n");
+		return ret;
+	}
+
 	for (i = 1; i < cfg_cpu_nr; i++) {
 		ret = pthread_create(&tid, NULL, start_cpu, &cfg_cpu[i]);
 		if (ret) {
 			log_err("init: unable to create pthread\n");
 			return -EAGAIN;
 		}
-	}
-
-	ret = init_create_cpu(cfg_cpu[0]);
-	if (ret) {
-		log_err("init: failed to initialize CPU 0\n");
-		return ret;
+		while (started_cpus != i)
+			usleep(100);
 	}
 
 	if (cfg_cpu_nr > 1) {
