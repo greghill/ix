@@ -28,6 +28,6 @@ set xtics ( "0" 0, "250" 250000, "500" 500000, "750" 750000, "1000" 1000000, "12
 set ytics (0, 250, 500, 750, 1000)
 set arrow from 0,500 to 2150000,500 nohead lw 1
 set label 'SLA' at 2160000,500
-plot for [i=1:words(infile)] word(infile,i) using 11:7 title gen_title1(i) linestyle i, \
+plot for [i=1:words(infile)] word(infile,i) using 11:2 title gen_title1(i) linestyle i, \
      for [i=1:words(infile)] word(infile,i) using 11:10 title gen_title3(i) linestyle i+2
 

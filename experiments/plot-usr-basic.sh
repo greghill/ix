@@ -22,14 +22,14 @@ shift
 SHORT_FILES="$@"
 
 for i in "$@"; do
-  SHORT_TITLES_50TH="$SHORT_TITLES_50TH ${i}_50th"
+  SHORT_TITLES_AVE="$SHORT_TITLES_AVE ${i}_average"
   SHORT_TITLES_99TH="$SHORT_TITLES_99TH ${i}_99th"
 done
 
 if [ -z "$SHORT_FILES" ]; then
   SHORT_FILES="$SHORT_FILES `nth 1 Linux-10`"
   SHORT_FILES="$SHORT_FILES `nth 1 IX-10`"
-  SHORT_TITLES_50TH="Linux-50th IX-50th"
+  SHORT_TITLES_AVE="Linux-Avergage IX-Average"
   SHORT_TITLES_99TH="Linux-99th IX-99th"
 fi
 
@@ -43,7 +43,7 @@ else
   OUTDIR=figures
 fi
 
-gnuplot -e format='"'"$FORMAT"'"' -e title1='"'"$SHORT_TITLES_50TH"'"' -e title3='"'"$SHORT_TITLES_99TH"'"' -e infile='"'"$SHORT_FILES"'"' -e outfile='"'"$OUTDIR/memcached-usr-basic.$FORMAT"'"'       plot-etc-usr-basic.gnuplot
+gnuplot -e format='"'"$FORMAT"'"' -e title1='"'"$SHORT_TITLES_AVE"'"' -e title3='"'"$SHORT_TITLES_99TH"'"' -e infile='"'"$SHORT_FILES"'"' -e outfile='"'"$OUTDIR/memcached-usr-basic.$FORMAT"'"'       plot-etc-usr-basic.gnuplot
 if [ $FORMAT = 'eps' ]; then
-  gnuplot -e title1='"'"$SHORT_TITLES_50TH"'"' -e title3='"'"$SHORT_TITLES_99TH"'"' -e outfile='"'"$OUTDIR/memcached-key.eps"'"' plot-etc-usr-basic-key.gnuplot
+  gnuplot -e title1='"'"$SHORT_TITLES_AVE"'"' -e title3='"'"$SHORT_TITLES_99TH"'"' -e outfile='"'"$OUTDIR/memcached-key.eps"'"' plot-etc-usr-basic-key.gnuplot
 fi
