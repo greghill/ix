@@ -1,8 +1,19 @@
-\begin{figure}
+\begin{figure*}
 %\hspace*{-0.25in}\centering\includegraphics{figs/queues-cores.eps}
 %\centering\includegraphics{figs/pipeline}
-\centering\includegraphics{figs/pipeline-2}
-\caption{The IX pipeline. \dm{Make clear how this corresponds to
+\subfloat[Switches and NICs split traffic into flow-consistent groups]{
+\label{fig:rss}\includegraphics{figs/rss}}
+\hspace*{1em}
+\subfloat[Interleaving of protocol processing and application execution]{
+\label{fig:dataplane}\includegraphics{figs/pipeline-2}}
+
+\caption{The IX dataplane}
+\label{fig:queues-cores}
+\end{figure*}
+
+
+\begin{comment}
+\dm{Make clear how this corresponds to
     figure 1---i.e., that the dotted line separates ring 3 from VMX
     non-root ring0.  Also, this diagram makes it look like there are
     big queues, contradicting the process to completion idea.  Maybe
@@ -12,6 +23,5 @@
     straight from 5 (really 6 should be depicted0 back to 1, or do you
     invoke a scheduler or check if you need to relinquish the core at
     that point?}}
-\label{fig:queues-cores}
-\end{figure}
+\end{comment}
 
