@@ -45,7 +45,7 @@ E5-2650 @ 2.6 Ghz.  Each client has a single 82599EB 10GbE NIC
 connecting to the switch.  The server is a Xeon E5-2665 @ 2.4 Ghz with
 256 GB of DRAM and five Intel x520 NIC ports.  Each client or server
 socket has 8 cores and 16 hyperthreads.  The server is connected
-to the switch both via a single 10GbE interface and a 4x10GbE bond configured as a L2+L3 hash.  The former is used for all of our \emph{10GbE} experiments, and the latter for our \emph{4x10GbE} experiments. 
+to the switch both via a single 10GbE interface and a 4x10GbE bond configured as a \data{L2+L3}{L3+L4} hash.  The former is used for all of our \emph{10GbE} experiments, and the latter for our \emph{4x10GbE} experiments. 
 
 Our baseline configuration in each
 machine is an Ubuntu LTS 14.0.4 distribution running the 3.16.1 (most-recent) Linux kernel.

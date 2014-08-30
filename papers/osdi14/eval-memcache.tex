@@ -47,7 +47,7 @@ configure interrupt-distribution based on thread-affinity, and tune
 interrupt moderation thresholds. We believe that our baseline Linux
 numbers are as tuned as possible for this hardware using the
 open-source version of \texttt{memcached-1.4.18}. For our benchmark,
-we use \data{6}{18} client machines and a total of \data{772}{229 - CHECK} connections to the
+we use \data{6}{16} client machines \edb{to generate load} and a total of \data{772}{368} connections to the
 memcached server.  We report the results for the server configuration
 that provides the best performance: 8 cores with Linux, but only 6
 with \ix.
@@ -72,7 +72,7 @@ running \ix on clients should further reduce latency.
 
 For both workloads, the distribution of CPU time shifts from being
 $>80\%$ in the kernel with Linux to \data{$<30\%$}{$<10\%$} with \ix, and the
-throughput increases by \data{2.0}{3.5} and \data{2.7}{4.9} for
+throughput increases by \data{2.0}{3.4} and \data{2.7}{4.5} for
 \texttt{ETC} and \texttt{USR}, respectively.
 The difference is due to
 the increased lock contention within the application itself, in
