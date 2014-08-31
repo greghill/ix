@@ -39,7 +39,7 @@ following key design principles:
   be able to explain how each approach helps with the
   requirements. This is critical}
 
-\myparagraph{Separation and protection of control and data plane:} 
+\myparagraph{Separation and protection of control and data plane:}
 Our design separates the control function of the kernel, responsible
 for resource configuration, provisioning, scheduling, and monitoring,
 from the dataplane, which runs the networking stack and application
@@ -47,9 +47,8 @@ logic.  Like a conventional OS, the control plane multiplexes and
 schedules resources among dataplanes, but in a coarse-grained manner
 in space and time: entire cores are dedicated to dataplanes,
 memory is allocated at large page granularity, and
-network device queues are partitioned among dataplanes.
-Moreover, the control plane plays a coordination role in elatistically
-adjusting the allocation of these resources between dataplanes.
+NIC queues are assigned to dataplane cores. The control plane is also responsible
+for elastically adjusting the allocation of these resources between dataplanes.
 
 The separation of control and data plane allows us to consider radically
 different I/O APIs and implementations in the dataplane, while
@@ -63,8 +62,10 @@ safely and efficiently expose privileged hardware features directly to
 dataplanes. As a result, dataplanes have capabilities similar to
 virtualization guest OSes; they can manage
 their own address translations (on top of the address space provided by
-the control plane) and can prevent application logic from corrupting
-the network stack through use of privilege ring hardware.
+the control plane) and can protect the network stack from misbehaving
+application logic through use of privilege ring hardware. Moreover,
+dataplanes are given direct passthrough access to NIC queues through
+memory mapped I/O.
 
 \christos{we should bring up HW virtualization here, likely as a
   independent part of the approach or merged with the one above. It is
@@ -75,34 +76,38 @@ the network stack through use of privilege ring hardware.
 \myparagraph{Run to completion with adaptive batching:} Our dataplane
 runs to completion all pipeline stages needed to receive and transmit a
 packet, interleaving protocol processing (kernel mode) and application
-logic (user mode) at fixed transition points. Hence, there is no need for intermediate
-buffering between pipeline stages or between the application logic and
-the TCP/IP stack. Run to completion is beneficial for both throughput
-and latency because it improves d-cache behavior (each processing stage
-is likely to reuse many of the same cache lines).
-
+logic (user mode) at well defined transition points. Hence, there is no
+need for intermediate buffering between pipeline stages or between
+application logic and the TCP/IP stack.
 Our use of run to completion is inspired by work on receive livelock
 ~\cite{receive-livelock}, which uses a similar approach
-to guaruntee forward progress during periods of overwhelming recieve congestion.
-Our execution model allows us to go a step further and apply run to completion
-at all times. Thus, we are able to use polling and avoid interrupt overhead
-in the common case. However, we still rely on interrupts as a fallback to regain control,
-for example, if the application becomes unresponsive.
+to guaruntee forward progress during periods of recieve congestion.
+We go a step further by applying run to completion
+during all load conditions. Thus, we are able to use polling and avoid interrupt
+overhead in the common case. However, we still rely on interrupts as a
+mechanism to regain control, for example, if the application is slow to respond.
+Run to completion improves both message throughput
+and latency because each processing phase tends to access many of the
+same cache lines, leading to better data cache locality.
 
-We also make extensive use of batching. Batching can increase throughput because it
-improves instruction locality, prefetching effectiveness and branch prediction accuracy.
-When applied correctly, batching can also
-decrease latency because these same efficiencies can reduce head-of-line blocking.
-Batching has been shown to improve performance when applied at the system call
-boundary~\cite{DBLP:conf/osdi/HanMCR12, DBLP:conf/osdi/SoaresS10}. Similarly,
-mTCP~\cite{jeong2014mtcp}, a user-level network stack, applies batching
-at the API level and at the hardware queue level.
-We improves upon previous batching systems in two ways.
-Firstly, we batch at each processing stage in our pipeline. Secondly, we
-minimize the impact on latency and maximize efficiency by using batching
-\emph{adaptively} as follows: (i) we never wait to batch requests and batching
+Our dataplane also makes extensive use of batching.
+In previous systems batching has been applied at the system call
+boundary~\cite{DBLP:conf/osdi/HanMCR12, DBLP:conf/osdi/SoaresS10} and
+at the API and hardware queue level\cite{jeong2014mtcp}.
+We improve upon these efforts in two ways. Firstly, we apply
+batching in every processing stage in our pipeline, including but not limited to
+system calls and queues. Secondly, we use batching \emph{adaptively} as follows:
+(i) we never wait to batch requests and batching
 only occurs in the presence of congestion; (ii) we set an upper bound on
-the number of batched packets to avoid exceeding the size of the data cache.
+the number of batched packets. Using batching only during congestion allows
+us to minimize the impact on latency, while bounding the batch size prevents
+the live set from exceeding cache capacities and helps to prevent
+transmit queue starvation. Batching improves the message throughput of our
+dataplane because it amortizes system call transition overheads (although
+these costs are relatively small on modern hardware) and increases
+instructions per cycle through improved instruction cache locality, prefetching
+effectiveness, and branch prediction accuracy. When applied adaptively, batching
+also decreasing latency because these same efficiencies reduce head-of-line blocking.
 
 The combination of bounded batch sizes and run to completion means that
 queues for incoming packets can build up only at the NIC edge, before
