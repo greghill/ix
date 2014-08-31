@@ -64,6 +64,22 @@ applications~\cite{provos2003libevent}. For example,
 Web-scale applications pose unique challenges to system
 software and their networking stacks:
 
+\myparagraph{Protection:} Because multiple
+services share infrastructure, even in private
+datacenters~\cite{DBLP:journals/cacm/DeanB13,Hindman:2011:MPF,Schwarzkopf:2013:OFS},
+there is need for isolated network stacks. For most deployments
+the use of kernel-based or hypervisor-based networking largely
+addresses the problem.  However, security tradeoffs emerge when
+networking is lifted into the user-space and application bugs can
+corrupt the networking stack. For example, an attacker could transmit
+raw packets, a capability that normally requires root privileges,
+to exploit weaknesses in network protocols~\cite{Bellovin04}
+ and impact other services.
+Moreover, many important security features, such as the ability to firewall
+applications, enforce policies such as access control lists
+(ACLs), and meter network traffic, are not possible to support
+without a trusted network stack.
+
 
 \myparagraph{High packet rates:} The requests and, often times, the
 replies between services in web-scale applications are quite small. In
@@ -137,16 +153,6 @@ datacenter (e.g., background
 analytics)~\cite{DBLP:conf/asplos/DelimitrouK14,Hindman:2011:MPF,DBLP:conf/eurosys/LeverichK14}
 or placed into low power modes in order to achieve energy
 proportionality~\cite{DBLP:journals/computer/BarrosoH07, DBLP:conf/isca/LoCGBK14}.
-
-\myparagraph{Protection:} \christos{Move this earlier} Finally, as multiple foreground and
-background services share multi-core servers even in private
-datacenters~\cite{DBLP:journals/cacm/DeanB13,Hindman:2011:MPF,Schwarzkopf:2013:OFS},
-there is need for isolated network stacks. For single-tenant
-deployments where all services are administered by the same
-organization, the use of kernel-based networking largely addresses the
-problem.  However, security tradeoffs emerge when networking is lifted
-into the user-space and application bugs can corrupt the networking
-stack and impact other services.
 
 
 \subsection{Alternative Approaches}
