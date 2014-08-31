@@ -39,7 +39,7 @@ following key design principles:
   be able to explain how each approach helps with the
   requirements. This is critical}
 
-\myparagraph{Separation and protection of control and data plane:} 
+\myparagraph{Separation and protection of control and data plane:}
 Our design separates the control function of the kernel, responsible
 for resource configuration, provisioning, scheduling, and monitoring,
 from the dataplane, which runs the networking stack and application
@@ -47,9 +47,8 @@ logic.  Like a conventional OS, the control plane multiplexes and
 schedules resources among dataplanes, but in a coarse-grained manner
 in space and time: entire cores are dedicated to dataplanes,
 memory is allocated at large page granularity, and
-network device queues are partitioned among dataplanes.
-Moreover, the control plane plays a coordination role in elatistically
-adjusting the allocation of these resources between dataplanes.
+NIC queues are assigned to dataplane cores. The control plane is also responsible
+for elastically adjusting the allocation of these resources between dataplanes.
 
 The separation of control and data plane allows us to consider radically
 different I/O APIs and implementations in the dataplane, while
@@ -63,8 +62,10 @@ safely and efficiently expose privileged hardware features directly to
 dataplanes. As a result, dataplanes have capabilities similar to
 virtualization guest OSes; they can manage
 their own address translations (on top of the address space provided by
-the control plane) and can prevent application logic from corrupting
-the network stack through use of privilege ring hardware.
+the control plane) and can protect the network stack from misbehaving
+application logic through use of privilege ring hardware. Moreover,
+dataplanes are given direct passthrough access to NIC queues through
+memory mapped I/O.
 
 \christos{we should bring up HW virtualization here, likely as a
   independent part of the approach or merged with the one above. It is
