@@ -2,35 +2,25 @@
 
 \begin{abstract}
 
-  Web-scale applications are placing aggressive demands on the TCP/IP
-  stack implementation in modern systems, such as high packet rates
-  for small messages, microsecond-scale tail latency, support for
-  hundreds of thousands of connections, and elastic use of system
-  resources. The conventional wisdom is that such requirements are
-  best addressed outside the operating system, in a user-level
-  implementation of the networking stack.
+  The conventional wisdom is that aggressive networking requirements,
+  such as high packet rates for small messages and microsecond-scale
+  tail latency, are best addressed outside the kernel, in a user-level
+  networking stack.  We present \ix, a {\it dataplane operating
+    system} that provides high I/O performance, while maintaining the
+  key advantages of existing kernels, strong protection and
+  flexibility in resource sharing between applications. \ix uses
+  hardware virtualization to separate management and scheduling
+  functions of the kernel (control plane) from network processing
+  (dataplane). The dataplane architecture builds upon a native,
+  zero-copy API and optimizes for both bandwidth and latency by
+  dedicating hardware threads and networking queues to dataplane
+  instances, processing bounded batches of packets to completion, and
+  by eliminating coherence traffic and multi-core synchronization. We
+  demonstrate that \ix outperforms Linux and state-of-the-art,
+  user-space network stacks significantly in both throughput and
+  end-to-end latency. Moreover, \ix improves by up to
+  \data{2.7x}{XXXx} the throughput of widely deployed, key-value store
+  at a given latency bound.
 
-  We present \ix, a {\it dataplane operating system} specifically
-  designed for web-scale applications. \ix brings lessons from high
-  performance middleboxes such as firewalls and load-balancers to the
-  design of general systems and applications.  It separates management
-  and scheduling functions of the kernel (control plane) from network
-  processing (dataplane).  \ix optimizes for both bandwidth and
-  latency by dedicating hardware threads and networking queues to
-  dataplane instances, processing bounded batches of packets to
-  completion, and by eliminating coherence traffic and multi-core
-  synchronization. \ix provides a native, zero-copy API that
-  explicitly exposes flow control to applications. However, \ix uses
-  hardware virtualization to offer the same protection model as
-  commodity operating systems.
-
-
-  We demonstrate that \ix outperforms Linux and mTCP, a
-  state-of-the-art user-space networking stack, by up to \data{14x}{XXXx} and \data{2.5x}{XXX}
-  respectively for throughput. The unloaded uni-directional latency for two \ix
-  servers is \data{6.9}{XXX}\microsecond, while Linux and mTCP lead to latencies
-  of \data{21}{XXX}\microsecond and \data{95}{XXX}\microsecond respectively. Moreover, \ix
-  efficiently supports a hundred thousand connections and improves the
-  throughput of a massively deployed, key-value store by up to \data{2.7x}{XXXx}.
 
 \end{abstract}

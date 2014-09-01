@@ -2,144 +2,127 @@
 \section{Introduction}
 \label{sec:intro}
 
-\christos{We should stress IX's stregnts. Apart from separation of
-  CP-DP, we should mention a) we show how to architect high perf I/O
-  stacks (TCP and beyond), b) strong security model, c) compatibility
-  with Linux}
+% \christos{We should stress IX's stregnts. Apart from separation of
+%   CP-DP, we should mention a) we show how to architect high perf I/O
+%   stacks (TCP and beyond), b) strong security model, c) compatibility
+%   with Linux}
 
 Web-scale applications such as search, social networking, and
 e-commerce platforms, are redefining the requirements on system
 software. A single application can consist of hundreds of software
-services, deployed on thousands of servers. For example, Amazon
-accesses 150 distinct services to render each page requested by
-users~\cite{DBLP:conf/sosp/DeCandiaHJKLPSVV07}. Such applications need
-TCP/IP networking stacks that go well beyond the classical
-requirements of high streaming performance and moderate connection
-scalability. The new requirements include high packet rates for short
-messages~\cite{Atikoglu:2012:WAL}, microsecond-level responses to
-remote requests with tight tail latency
-guarantees~\cite{DBLP:journals/cacm/DeanB13}, and support for hundreds
-of thousands of connections with high connection
-churn~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}. It is also desirable to be elastic
-in resource usage, allowing other applications to use any available
+services, deployed on thousands of servers, raising the need for
+networking stacks that provide more than high streaming performance.
+The new requirements include high packet rates for short messages,
+microsecond-level responses to remote requests with tight tail latency
+guarantees, and support for high connection counts and
+churn~\cite{Atikoglu:2012:WAL,DBLP:journals/cacm/DeanB13,DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}.
+It is also important to have a strong protection model and be elastic
+in resource usage, allowing other applications to use any idling
 resources in a shared
-cluster~\cite{DBLP:journals/computer/BarrosoH07,DBLP:conf/eurosys/LeverichK14}.
+cluster. %~\cite{DBLP:journals/computer/BarrosoH07}.
 
-The conventional wisdom is that there is a fundamental mismatch
-between the requirements of web-scale workloads and existing
-implementations of TCP/IP in commodity operating
-systems. Consequently, many proposed solutions bypass the OS and
+The conventional wisdom is that there is a basic mismatch between
+these requirements and existing networking stacks in commodity
+operating systems. Consequently, some systems bypass the kernel and
 implement the networking stack in
-user-space~\cite{jeong2014mtcp,DBLP:conf/cloud/KapoorPTVV12,sandstorm,openonload,DBLP:conf/sigcomm/ThekkathNML93}. Some
-systems go one step further by also replacing TCP/IP with RDMA in
-order to offload protocol processing to Infiniband
-adapters~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11,
-  mitchell:rdma, DBLP:conf/sosp/OngaroRSOR11}.  \christos{ people also
-  use many lightly loaded servers to get low latency} While kernel
-bypass eliminates context switch overheads, on its own it does not
-eliminate the difficult tradeoffs between high packet rates and low
-latency or the challenges of managing large connections
-counts. Moreover, user-level networking suffers from lack of
-protection. Application bugs and crashes can corrupt the networking
-stack and impact other workloads.
+user-space~\cite{DBLP:conf/sigcomm/ThekkathNML93,openonload,DBLP:conf/cloud/KapoorPTVV12,jeong2014mtcp,sandstorm}.
+Other systems go a step further by also replacing TCP/IP with RDMA in
+order to offload network processing to Infiniband
+adapters~\cite{DBLP:conf/icpp/JoseSLZHWIOWSP11,dragojevic14farm,mitchell:rdma,DBLP:conf/sosp/OngaroRSOR11}.
+While kernel bypass eliminates context switch overheads, on its own it
+does not eliminate the difficult tradeoffs between high packet rates
+and low latency (see \S \ref{sec:?}). Moreover, user-level networking
+suffers from lack of protection. Application bugs and crashes can
+corrupt the networking stack and impact other workloads.  Kernel
+bypass and offloading also complicate resource sharing. Most systems
+that use them run a single application per server even at periods of
+low load.
 
 
-\dm{Again, this makes it sound narrow.  Phrase in a more fundamental
-  way.  Point is that currently people must achieve a delicate $n$-way
-  balance between throughput, latency, protection/robustness,
-  complexity, number of machines/power consumption, etc.  \ix shows it
-  doesn't have to be this way; we can have our cake and eat it, too,
-  if we architect better systems around improved APIs.} 
+% \christos{ people also
+%   use many lightly loaded servers to get low latency}
+% \dm{Again, this makes it sound narrow.  Phrase in a more fundamental
+%   way.  Point is that currently people must achieve a delicate $n$-way
+%   balance between throughput, latency, protection/robustness,
+%   complexity, number of machines/power consumption, etc.  \ix shows it
+%   doesn't have to be this way; we can have our cake and eat it, too,
+%   if we architect better systems around improved APIs.} 
 
-We propose \ix, an operating system designed specifically to meet the
-requirements of event-driven, web-scale applications.  Its
-architecture builds upon the lessons from high performance
-middleboxes, such as firewalls, load-balancers, and software
-routers~\cite{routebricks,click}. \ix
-separates the control plane, which is responsible for basic kernel
-functionality such as provisioning and scheduling, from the dataplanes
-which run the networking stack and application logic. However, \ix
-uses hardware
-virtualization~\cite{DBLP:journals/computer/UhligNRSMABKLS05} to
-isolate the dataplanes from the applications they run and offer the
-same protection model as commodity operating systems. In our
-implementation, the control plane runs on a full Linux kernel and the
-dataplanes use Dune to run \ix as protected, library-based operating
-systems on dedicated hardware
-threads~\cite{dune}.
+We propose \ix, an operating system designed to break the $4$-way
+tradeoff between high throughput, low latency, strong protection, and
+efficiency. Its architecture builds upon the lessons from high
+performance middleboxes, such as firewalls, load-balancers, and
+software routers~\cite{routebricks,click}. \ix separates the control
+plane, which is responsible for system configuration and coarse-grain
+resource provisioning between applications, from the dataplanes which
+run the networking stack and application logic. \ix uses hardware
+virtualization% ~\cite{DBLP:journals/computer/UhligNRSMABKLS05}
+to
+provide three-way protection between the control plane, the networking
+stack, and the application. In our implementation, the control plane
+is the full Linux kernel and the dataplanes run as protected,
+library-based operating systems on dedicated hardware threads.
 
-
-\ix provides a native, zero-copy API that explicitly exposes network
-flow-control to applications.  This API enables dataplanes to optimize
-for both bandwidth and latency by processing a bounded batch of
-packets to completion.  Each dataplane executes all the pipeline
-stages for TCP/IP processing for the batch in kernel mode, followed by
-the associated application processing in user mode. This approach
+The \ix dataplane allows for networking stacks that optimize for both
+bandwidth and latency. It is designed around a native, zero-copy API
+that supports processing of bounded batches of packets to
+completion. Each dataplane executes all the pipeline stages for
+network processing for a batch in kernel mode, followed by the
+associated application processing in user mode. This approach
 amortizes API overheads and improves both instruction and data
-locality.  \ix is also optimized for synchronization and coherence
-free execution on multi-core systems. It uses multi-queue network
-adapters (NICs) and receive-side scaling (RSS)~\cite{url:rss} to
-implement flow-consistent hashing of incoming traffic to distinct
-hardware queues. Each dataplane instance exclusively controls a set of
-these queues and runs the networking stack and a single application,
-such as a web server or a distributed caching server. Moreover, the \ix
-API and companion user-level library meet the commutativity
-rule~\cite{DBLP:conf/sosp/ClementsKZMK13}, eliminating multi-core
-synchronization in the common case operation. The \ix user-level
-library includes an interface nearly identical to the popular
-\texttt{libevent} library~\cite{provos2003libevent}, providing
-compatibility between \ix and a wide range of existing applications.
+locality. We set the batch size adaptively based on load. The \ix
+dataplane also optimizes for multi-core scalability.  The network
+adapters (NICs) perform flow-consistent hashing of incoming traffic to
+distinct queues. Each dataplane instance exclusively controls a set of
+these queues and runs the networking stack and a single application
+without the need for synchronization or coherence traffic in the
+common case operation. The \ix API departs from the POSIX API in order
+to meet the commutativity rule~\cite{DBLP:conf/sosp/ClementsKZMK13}.
+However, the \ix user-level library includes an event-based API nearly
+identical to the popular \texttt{libevent}
+library~\cite{provos2003libevent}, providing compatibility with a wide
+range of existing applications.
 
-\dm{The above paragraph does a reasonable job of describing what's
-  new.  But it might be worth another paragraph addressing why now
-  Basically there's a fundamental question of granularity here.  E.g.,
-  page sizes have been 4--8K since machines had less than a Megabyte
-  of DRAM\@.  Schedulers have been designed under the premise of more
-  applications than CPUs.  Network APIs were designed when packet
-  inter-arrival times were many times the system call/interrupt
-  latency.}
-
-\dm{Another point to add is that the breadth of OS APIs has made it
-  virtually impossible to deploy clean-slate operating systems,
-  despite possibly huge performance gains from radically different IO
-  architectures.  Fortunately, the performance-critical IO functions
-  are a small subset of the garbage can of system calls required for
-  setup, initialization, and configuration.  Hence, a big contribution
-  is showing how we can completely rearchitect the IO path while
-  retaining a high degree of source code compatibility and remaining
-  compatible with existing system configuration and management tool.}
-
-
-We compare \ix against Linux \data{3.11.10}{3.16} and mTCP, a state-of-the-art
-user-level TCP stack~\cite{jeong2014mtcp}.  \ix outperforms Linux and
-mTCP by up to \data{14x}{XXX} and \data{2.5x}{XXX} respectively for throughput. \ix even
-scales to 4x10GbE configuration using a single multi-core socket.  The
-unloaded uni-directional latency for two IX servers is
+We compare \ix with a TCP/IP dataplane against Linux
+\data{3.11.10}{3.16} and mTCP, a state-of-the-art user-level TCP/IP
+stack~\cite{jeong2014mtcp}.  \ix outperforms Linux and mTCP by up to
+\data{14x}{XXX} and \data{2.5x}{XXX} respectively for throughput. \ix
+even scales to 4x10GbE configuration using a single multi-core socket.
+The unloaded uni-directional latency for two IX servers is
 \data{6.9}{XXX}\microsecond, while Linux and mTCP lead to latencies of
 \data{21}{XXX}\microsecond and \data{95}{95}\microsecond respectively.
-Our evaluation with memcached, a massively deployed key-value store,
-shows that \ix improves upon Linux by up to \data{2.7}{XXX}x in terms of
-throughput at a given 95th percentile latency bound, as it can reduce
-kernel mode processing from $>80\%$ with Linux to $<33\%$ with \ix.
+Our evaluation with memcached, a widely deployed key-value store,
+shows that \ix improves upon Linux by up to \data{2.7}{XXX}x in terms
+of throughput at a given 99th percentile latency bound, as it can
+reduce network processing from $>80\%$ with Linux to $<33\%$ with \ix.
 
 \ix demonstrates that, by revisiting the networking APIs and taking
 advantage of modern NICs and multi-core chips, we can design systems
 that achieve high throughput \underline{and} low latency
-\underline{and} high connection counts \underline{and} robust
-protection. It also shows that, by separating the small subset of
-performance-critical I/O functions from the rest of the kernel, we can
-design systems with radically different I/O architectures and achieve
-large performance gains, while retaining compatibility with the huge
-set of APIs and services provided by a modern OS like Linux.
+\underline{and} robust protection \underline{and} efficiency. It also
+shows that, by separating the small subset of performance-critical I/O
+functions from the rest of the kernel, we can architect radically
+different I/O systems and achieve large performance gains, while
+retaining compatibility with the huge set of APIs and services
+provided by a modern OS like Linux.
+
+The rest of the paper is organized as follows. \S \ref{sec:motivation}
+motivates the need for a new OS architecture. \S\ref{sec:design} and
+\S\ref{sec:impl} present the design principles and implementation of
+\ix. \S\ref{sec:eval} presents the quantitative
+evaluation.\S\ref{sec:disc} and \S\ref{sec:related} discuss related
+and future work.
 
 
-
-The rest of the paper is 
-organized as follows. \S \ref{sec:motivation} motivates the need
-for a new OS architecture for web-scale applications. \S\ref{sec:design} and \S\ref{sec:impl} present the design principles and
-implementation of \ix. \S\ref{sec:eval} presents the
-quantitative evaluation.\S\ref{sec:disc} and \S\ref{sec:related} discuss future and related work.
-
+% \dm{Another point to add is that the breadth of OS APIs has made it
+%   virtually impossible to deploy clean-slate operating systems,
+%   despite possibly huge performance gains from radically different IO
+%   architectures.  Fortunately, the performance-critical IO functions
+%   are a small subset of the garbage can of system calls required for
+%   setup, initialization, and configuration.  Hence, a big contribution
+%   is showing how we can completely rearchitect the IO path while
+%   retaining a high degree of source code compatibility and remaining
+%   compatible with existing system configuration and management tool.}
 
 
 
