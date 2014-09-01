@@ -32,9 +32,9 @@ and low latency (see \S\ref{sec:eval:netpipe}). Moreover, user-level networking
 suffers from lack of protection. Application bugs and crashes can
 corrupt the networking stack and impact other workloads.
 Other systems go a step further by also replacing TCP/IP with RDMA in
-order to offload network processing to Infiniband
+order to offload network processing to \edb{specialized\sout{Infiniband}}
 adapters~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,DBLP:conf/sosp/OngaroRSOR11}.
-\edb{Unfortunately, RDMA requires specialized adapters that must be present at both ends of the connection.
+\edb{Unfortunately, such adapters that must be present at both ends of the connection.
 \sout{Kernel bypass and offloading also complicate resource sharing. Most systems
 that use them run a single application per server even at periods of
 low load.}}
@@ -97,7 +97,7 @@ The unloaded uni-directional latency for two IX servers is
 Our evaluation with memcached, a widely deployed key-value store,
 shows that \ix improves upon Linux by up to \data{2.7}{4.5}x in terms
 of throughput at a given 99th percentile latency bound, as it can
-reduce network processing from $>80\%$ with Linux to \data{$<33\%$}{$<10\%$} with \ix.
+reduce \edb{kernel time, due essentially to} network processing, from $>80\%$ with Linux to \data{$<33\%$}{$<10\%$} with \ix.
 
 \ix demonstrates that, by revisiting the networking APIs and taking
 advantage of modern NICs and multi-core chips, we can design systems
@@ -113,8 +113,8 @@ The rest of the paper is organized as follows. \S\ref{sec:motivation}
 motivates the need for a new OS architecture. \S\ref{sec:design} and
 \S\ref{sec:impl} present the design principles and implementation of
 \ix. \S\ref{sec:eval} presents the quantitative
-evaluation.\S\ref{sec:disc} and \S\ref{sec:related} discuss related
-and future work.
+evaluation.\S\ref{sec:disc} and \S\ref{sec:related} discuss \edb{open issues and related work.\sout{related
+and future work.}}
 
 
 % \dm{Another point to add is that the breadth of OS APIs has made it
