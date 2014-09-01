@@ -57,22 +57,21 @@ threads.
 The \ix dataplane allows for networking stacks that optimize for both
 bandwidth and latency. It is designed around a native, zero-copy API
 that supports processing of bounded batches of packets to
-completion. Each dataplane executes all the pipeline stages for
-network processing for a batch in kernel mode, followed by the
-associated application processing in user mode. This approach
-amortizes API overheads and improves both instruction and data
-locality. We set the batch size adaptively based on load. The \ix
-dataplane also optimizes for multi-core scalability.  The network
-adapters (NICs) perform flow-consistent hashing of incoming traffic to
-distinct queues. Each dataplane instance exclusively controls a set of
-these queues and runs the networking stack and a single application
-without the need for synchronization or coherence traffic in the
-common case operation. The \ix API departs from the POSIX API in order
-to meet the commutativity rule~\cite{DBLP:conf/sosp/ClementsKZMK13}.
-However, the \ix user-level library includes an event-based API nearly
-identical to the popular \texttt{libevent}
-library~\cite{provos2003libevent}, providing compatibility with a wide
-range of existing applications.
+completion. Each dataplane executes all the stages for network
+processing for a batch in kernel mode, followed by the associated
+application processing in user mode. This approach amortizes API
+overheads and improves both instruction and data locality. We set the
+batch size adaptively based on load. The \ix dataplane also optimizes
+for multi-core scalability.  The network adapters (NICs) perform
+flow-consistent hashing of incoming traffic to distinct queues. Each
+dataplane instance exclusively controls a set of these queues and runs
+the networking stack and a single application without the need for
+synchronization or coherence traffic in the common case operation. The
+\ix API departs from the POSIX API in order to meet the commutativity
+rule~\cite{DBLP:conf/sosp/ClementsKZMK13}.  However, the \ix
+user-level library includes an event-based API nearly identical to the
+popular \texttt{libevent} library~\cite{provos2003libevent}, providing
+compatibility with a wide range of existing applications.
 
 We compare \ix with a TCP/IP dataplane against Linux
 \data{3.11.10}{3.16} and mTCP, a state-of-the-art user-level TCP/IP
