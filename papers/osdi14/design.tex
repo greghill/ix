@@ -1,9 +1,9 @@
 \section{\ix Design Approach}
 \label{sec:design}
 
-The first two requirements of \S\ref{sec:motivation:challenges} --
+The first two requirements in \S\ref{sec:motivation:challenges} --
 microsecond latency and high packet rates -- are not unique to
-web-scale applications.  These requirements have been addressed in the
+web-scale applications. These requirements have been addressed in the
 design of middleboxes such as firewalls, load-balancers, and software
 routers~\cite{routebricks,click}, by integrating the networking stack
 and the application into a single \emph{dataplane}. The two remaining
@@ -11,15 +11,15 @@ requirements -- protection and resource efficiency -- are not
 addressed in middleboxes because they are single-purpose systems, not
 exposed directly to users.
 
-Dataplanes differ from traditional OS designs in two fundamental
+Dataplanes differ from traditional OS designs in two basic
 ways. First, they are designed to \emph{run each packet to
   completion}. All network protocol and application processing for a
 packet is done before moving on to the next packet.  In contrast, a
 commodity OS decouples protocol processing from the application itself
 in order to provide scheduling and flow control flexibility.  For
-example, a commodity OS relies on device and soft interrupts to
-context switch from applications to protocol processing. Similarly,
-the kernel's stack will generate a TCP \texttt{ACK} and slide its
+example, the kernel relies on device and soft interrupts to context
+switch from applications to protocol processing. Similarly, the
+kernel's network stack will generate TCP \texttt{ACKs} and slide its
 receive window even when the application is not consuming data, up to
 an extent. Second, dataplanes optimize for \emph{synchronization-free
   operation} in order to scale well on many cores. Network flows are
@@ -27,40 +27,40 @@ distributed into distinct queues via receive-side scaling
 (RSS)~\cite{url:rss} and the common case packet processing requires no
 synchronization or coherence traffic between cores.
 
-\ix extends the dataplane architecture to efficiently support
-untrusted applications and satisfy simultaneously all requirements in
+\ix extends the dataplane architecture to support untrusted
+applications and satisfy all requirements in
 \S\ref{sec:motivation:challenges}. Its design is based on the
-following key principles: 
+following key principles:
 
-\christos{this list must be aligned with the list in 2.2. Ie we should
-  be able to explain how each approach helps with the
-  requirements. This is critical}
+\christos{this list must be aligned with 2.2. Ie we should explain how
+  each approach helps with the requirements. This is critical}
 
-\myparagraph{Separation and protection of control and data plane:} Our
-design separates the control function of the kernel, responsible for
-resource configuration, provisioning, scheduling, and monitoring, from
-the dataplane, which runs the networking stack and application logic.
+\myparagraph{Separation and protection of control and data plane:} \ix
+separates the control function of the kernel, responsible for resource
+configuration, provisioning, scheduling, and monitoring, from the
+dataplane, which runs the networking stack and application logic.
 Like a conventional OS, the control plane multiplexes and schedules
 resources among dataplanes, but in a coarse-grained manner in space
 and time. Entire cores are dedicated to dataplanes, memory is
 allocated at large page granularity, and NIC queues are assigned to
 dataplane cores. The control plane is also responsible for elastically
-adjusting the allocation of these resources between dataplanes.
+adjusting the allocation of resources between dataplanes.
 
 The separation of control and data plane allows us to consider
 radically different I/O APIs and implementations in the dataplane,
 while permitting other OS functionality, such as file system support,
 to be passed through to the control plane for compatibilility.
-Similar to the Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, each data
-plane runs a single application in a single address space. However, we
-use modern virtualization hardware~\cite{dune} to provide three-way
-isolation between the control plane, the dataplane, and untrusted user
-code. Dataplanes have capabilities similar to guest OSes in
-virtualized systems.  They can manage their own address translations,
-on top of the address space provided by the control plane, and can
-protect the network stack from untrusted application logic through use
-of privilege ring hardware. Moreover, dataplanes are given direct
-passthrough access to NIC queues through memory mapped I/O.
+Similar to the Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, each
+dataplane runs a single application in a single address
+space. However, we use modern virtualization hardware~\cite{dune} to
+provide three-way isolation between the control plane, the dataplane,
+and untrusted user code. Dataplanes have capabilities similar to guest
+OSes in virtualized systems. They manage their own address
+translations, on top of the address space provided by the control
+plane, and can protect the networking stack from untrusted application
+logic through the use of privilege rings. Moreover, dataplanes are
+given direct passthrough access to NIC queues through memory mapped
+I/O.
 
 % \christos{we should bring up HW virtualization here, likely as a
 %   independent part of the approach or merged with the one above. It is
@@ -68,21 +68,20 @@ passthrough access to NIC queues through memory mapped I/O.
 %   seperation must be linked to elasticity too}
 
 
-\myparagraph{Run to completion with adaptive batching:} Our dataplane
-design runs to completion all pipeline stages needed to receive and
-transmit a packet, interleaving protocol processing (kernel mode) and
-application logic (user mode) at well defined transition
-points. Hence, there is no need for intermediate buffering between
-pipeline stages or between application logic and the TCP/IP stack.
-Unlike previous work that applied a similar approach to eliminate
-receive livelocks on congestion periods~\cite{receive-livelock}, \ix
-applies run to completion during all load conditions. Thus, we are
-able to use polling and avoid interrupt overhead in the common
-case. However, we still rely on interrupts as a mechanism to regain
-control, for example, if a dataplane is slow to respond.  Run to
-completion improves both message throughput and latency because each
-processing phase tends to access many of the same cache lines, leading
-to better data cache locality.
+\myparagraph{Run to completion with adaptive batching:} \ix dataplanes
+runs to completion all stages needed to receive and transmit a packet,
+interleaving protocol processing (kernel mode) and application logic
+(user mode) at well defined transition points. Hence, there is no need
+for intermediate buffering between protocol stages or between
+application logic and the TCP/IP stack.  Unlike previous work that
+applied a similar approach to eliminate receive livelocks during
+congestion periods~\cite{receive-livelock}, \ix uses run to completion
+during all load conditions. Thus, we are able to use polling and avoid
+interrupt overhead in the common case. We still rely on interrupts as
+a mechanism to regain control, for example, if a dataplane is slow to
+respond.  Run to completion improves both message throughput and
+latency because each successive stages tends to access many of the
+same data, leading to better data cache locality.
 
 The \ix dataplane also makes extensive use of batching.  Previous
 systems applied batching at the system call
