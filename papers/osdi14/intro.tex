@@ -34,10 +34,8 @@ crashes can corrupt the networking stack and impact other workloads.
 Other systems go a step further by also replacing TCP/IP with RDMA in
 order to offload network processing to specialized
 adapters~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,DBLP:conf/sosp/OngaroRSOR11}.
-\edb{Unfortunately, such adapters that must be present at both ends of
-  the connection.  \sout{Kernel bypass and offloading also complicate
-    resource sharing. Most systems that use them run a single
-    application per server even at periods of low load.}}
+Unfortunately, such adapters that must be present at both ends of the connection. 
+
 
 We propose \ix, an operating system designed to break the $4$-way
 tradeoff between high throughput, low latency, strong protection, and
