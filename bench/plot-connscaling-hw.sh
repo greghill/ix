@@ -8,7 +8,7 @@ data=../papers/osdi14/figs/data/connscaling/IX-40-RPC/Linux-Libevent/hw
 tmp2=`mktemp`
 egrep 'BEGIN|starting' ../ix/ix.log | \
   sed -e 's/.*starting.*/--/' \
-      -e 's/.* \([0-9]*\)% idle, \([0-9]*\)% user, \([0-9]*\)% sys, non idle cycles=\([0-9]*\), HW instructions=\([0-9]*\), LLC load misses=\([0-9]*\) (\([0-9]*\) pkts, avg batch=\([0-9]*\) \[\], avg backlog=\([0-9]*\).*/\1\t\2\t\3\t\4\t\5\t\6\t\7\t\8\t\9/' \
+      -e 's/.* \([0-9]*\)% idle, \([0-9]*\)% user, \([0-9]*\)% sys, non idle cycles=\([0-9]*\), HW instructions=\([0-9]*\), LLC load misses=\([0-9]*\) (\([0-9]*\) pkts, avg batch=\([0-9]*\) \[.*\], avg backlog=\([0-9]*\).*/\1\t\2\t\3\t\4\t\5\t\6\t\7\t\8\t\9/' \
       -e '$a--' | \
   awk '/--/{
     if (line==0)

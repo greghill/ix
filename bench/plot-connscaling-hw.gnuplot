@@ -1,5 +1,5 @@
 if (format eq 'eps') {
-  set terminal postscript eps enhanced solid size 3.1,2.1 font 'Times'
+  set terminal postscript eps enhanced solid size 3.4,2.1 font 'Times'
 } else {
   set terminal pngcairo size 1024,1024 lw 1 font 'Times'
 }
@@ -13,13 +13,12 @@ set border 11
 set tics out nomirror
 set key top right
 set xrange [*:300000]
-set yrange [0:180]
-set y2range [0:12]
+set yrange [0:12]
+set y2range [0:80]
 set y2tics
 set logscale x
 set xlabel 'Connection Count (log scale)'
-set ylabel '#/Packet'
-set y2label '# Packets (x 10^{3})'
-plot infile using 1:($5/10**3) axes x1y2 title 'Non-idle cycles / Packet' linestyle 1, \
-     ''     using 1:7 title 'LLC load misses / Packet' linestyle 2, \
-     ''     using 1:9 title 'Average batch size (# Packets)' linestyle 3
+set ylabel 'cycles per msg (x 10^{3})'
+plot infile using 1:($5/10**3) title 'cycles per msg' linestyle 1, \
+     ''     using 1:7 axes x1y2 title 'L3 misses per msg' linestyle 2, \
+     ''     using 1:9 axes x1y2 title 'avg. batch size' linestyle 3
