@@ -35,7 +35,7 @@ latency.
 \myparagraph{High packet rates:} The requests and, often times, the
 replies between the various services that comprise a web-scale
 application are quite small. In Facebook's \texttt{memcached} service,
-for example, the vast majority of requests use keys shorter than 50
+for example, the vast majority of requests uses keys shorter than 50
 bytes and involves values shorter than 500
 bytes~\cite{Atikoglu:2012:WAL}. As a result, each service node must
 ideally scale to extremely high packet rates, measured in millions of
@@ -51,7 +51,7 @@ The high packet rate must be sustainable under a large number of
 concurrent connections and high connection
 churn~\cite{theC10Mproblem}. If the system software cannot handle
 large connection counts, there can be significant implications for
-applications.  \christos{Check} The large connection count between
+applications.  The large connection count between
 application and \texttt{memcached} servers at Facebook made it
 impractical to use TCP sockets between these two tiers, resulting in
 deployments that use UDP datagrams for \texttt{get} operations and an
@@ -80,8 +80,10 @@ efficiency~\cite{DBLP:journals/computer/BarrosoH07}. Existing
 operating systems can support such resource usage
 policies~\cite{DBLP:conf/eurosys/LeverichK14,DBLP:conf/isca/LoCGBK14}.
 
-\subsection{The Harware -- Software Mismatch}
+\subsection{The Hardware -- Software Mismatch}
 \label{sec:motivation:web}
+
+\edb{Use Hardware-Kernel mistmatch instead?}
 
 
 The wealth of hardware resources in modern servers should allow for
@@ -107,21 +109,24 @@ distance within a datacenter.
 %   inter-arrival times were many times the system call/interrupt
 %   latency.}
 
-Unfortunately, existing system software has been designed under very
+Unfortunately, \edb{commodity operating systems have\sout{existing system software has}} been designed under very
 different hardware assumptions. Kernel schedulers, networking APIs,
 and network stacks have been designed under the assumptions of
 multiple applications sharing a single processing core and packet
 inter-arrival times many times higher than the latency of interrupts
-and system calls.  Interrupt coalescing used to reduce processing
+and system calls. 
+\edb{As a result, such operating systems trade-off both latency and throughput in favor of fine-grain resource scheduling.}
+Interrupt coalescing used to reduce processing
 overheads, queuing latency due to device driver processing intervals,
-and protocol processing of incoming packets without immediately
-scheduling the receiving application frequently add several hundred
-\microsecond of latency to remote requests (see measurements in
-\S\ref{sec:eval}). The overheads of buffering and synchronization
-needed to support flexible scheduling of applications to cores leads,
+and \edb{the use of intermediate buffering and CPU scheduling delays \sout{protocol processing of incoming packets without immediately
+scheduling the receiving application}} frequently add \edb{up to} several hundred
+\microsecond of latency to remote requests. \edb{NOT BACKED UP\sout{see measurements in
+\S\ref{sec:eval}).}} The overheads of buffering and synchronization
+needed to support flexible scheduling of applications to cores leads
+\edb{increases CPU and memory system overheads, which limits throughput.\sout{
 as well as the limited locality achieved on instruction and data
-caches, lead to low packet rates \christos{add related refs}. As most
-packets are small, common NIC hardware optimizations, such as TCP
+caches, lead to low packet rates}} \christos{add related refs}.  As
+\edb{RPCs between tiers of web-scale application often consist of small packets\sout{packets are small}}~\cite{Atikoglu:2012:WAL}, common NIC hardware optimizations, such as TCP
 segmentation and receive side coalescing, have a marginal impact on
 packet rate.
 
@@ -177,15 +182,15 @@ packet rate.
   requirements get better and which worse for each alternative}
 
 Since the network stacks within commodity kernels cannot take
-advantage of the abudance of hardware resources, a number of
-alternative approaches have been suggested. Each alternative address a
+advantage of the abundance of hardware resources, a number of
+alternative approaches have been suggested. Each alternative addresses a
 subset, but not all, of the requirements for web-scale applications.
 
 \myparagraph{User-space networking stacks:} Systems such as
 OpenOnload~\cite{openonload}, mTCP~\cite{jeong2014mtcp} or
 Sandstorm~\cite{sandstorm} run the entire networking stack in
 user-space in order to eliminate kernel crossing overheads and
-optimize packet processing without incuring the complexity of kernel
+optimize packet processing without incurring the complexity of kernel
 modifications. However, there are still tradeoffs between packet rate
 and latency. For instance, mTCP uses dedicated threads for the TCP
 stack, which communicate at relatively coarse grain with application

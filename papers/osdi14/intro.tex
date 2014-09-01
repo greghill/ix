@@ -25,18 +25,20 @@ The conventional wisdom is that there is a basic mismatch between
 these requirements and existing networking stacks in commodity
 operating systems. Consequently, some systems bypass the kernel and
 implement the networking stack in
-user-space~\cite{DBLP:conf/sigcomm/ThekkathNML93,openonload,DBLP:conf/cloud/KapoorPTVV12,jeong2014mtcp,sandstorm}.
-Other systems go a step further by also replacing TCP/IP with RDMA in
-order to offload network processing to Infiniband
-adapters~\cite{DBLP:conf/icpp/JoseSLZHWIOWSP11,dragojevic14farm,mitchell:rdma,DBLP:conf/sosp/OngaroRSOR11}.
+user-space~\cite{jeong2014mtcp,DBLP:conf/cloud/KapoorPTVV12,sandstorm,openonload,DBLP:conf/sigcomm/ThekkathNML93}.
 While kernel bypass eliminates context switch overheads, on its own it
 does not eliminate the difficult tradeoffs between high packet rates
-and low latency (see \S \ref{sec:?}). Moreover, user-level networking
+and low latency (see \S\ref{sec:eval:netpipe}). Moreover, user-level networking
 suffers from lack of protection. Application bugs and crashes can
-corrupt the networking stack and impact other workloads.  Kernel
-bypass and offloading also complicate resource sharing. Most systems
+corrupt the networking stack and impact other workloads.
+Other systems go a step further by also replacing TCP/IP with RDMA in
+order to offload network processing to Infiniband
+adapters~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,DBLP:conf/sosp/OngaroRSOR11}.
+\edb{Unfortunately, RDMA requires specialized adapters that must be present at both ends of the connection.
+\sout{Kernel bypass and offloading also complicate resource sharing. Most systems
 that use them run a single application per server even at periods of
-low load.
+low load.}}
+
 
 
 % \christos{ people also
@@ -89,12 +91,13 @@ stack~\cite{jeong2014mtcp}.  \ix outperforms Linux and mTCP by up to
 \data{14x}{XXX} and \data{2.5x}{XXX} respectively for throughput. \ix
 even scales to 4x10GbE configuration using a single multi-core socket.
 The unloaded uni-directional latency for two IX servers is
-\data{6.9}{XXX}\microsecond, while Linux and mTCP lead to latencies of
-\data{21}{XXX}\microsecond and \data{95}{95}\microsecond respectively.
+\data{6.9}{5.7}\microsecond, \edb{which is 4x better than between standard Linux kernels and an order of magnitude better than mTCP, as both trade-off latency for throughput.
+\sout{while Linux and mTCP lead to latencies of
+\data{21}{XXX}\microsecond and \data{95}{XXX}\microsecond respectively.}}
 Our evaluation with memcached, a widely deployed key-value store,
-shows that \ix improves upon Linux by up to \data{2.7}{XXX}x in terms
+shows that \ix improves upon Linux by up to \data{2.7}{4.5}x in terms
 of throughput at a given 99th percentile latency bound, as it can
-reduce network processing from $>80\%$ with Linux to $<33\%$ with \ix.
+reduce network processing from $>80\%$ with Linux to \data{$<33\%$}{$<10\%$} with \ix.
 
 \ix demonstrates that, by revisiting the networking APIs and taking
 advantage of modern NICs and multi-core chips, we can design systems
@@ -106,7 +109,7 @@ different I/O systems and achieve large performance gains, while
 retaining compatibility with the huge set of APIs and services
 provided by a modern OS like Linux.
 
-The rest of the paper is organized as follows. \S \ref{sec:motivation}
+The rest of the paper is organized as follows. \S\ref{sec:motivation}
 motivates the need for a new OS architecture. \S\ref{sec:design} and
 \S\ref{sec:impl} present the design principles and implementation of
 \ix. \S\ref{sec:eval} presents the quantitative
