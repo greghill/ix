@@ -23,8 +23,8 @@ kernel's network stack will generate TCP \texttt{ACKs} and slide its
 receive window even when the application is not consuming data, up to
 an extent. Second, dataplanes optimize for \emph{synchronization-free
   operation} in order to scale well on many cores. Network flows are
-distributed into distinct queues via receive-side scaling
-(RSS)~\cite{url:rss} and the common case packet processing requires no
+distributed into distinct queues via \edb{flow-consistent hashing such as \sout{receive-side scaling}}
+RSS~\cite{url:rss} and the common case packet processing requires no
 synchronization or coherence traffic between cores.
 
 \ix extends the dataplane architecture to support untrusted
@@ -144,10 +144,12 @@ applications.
 
 \myparagraph{Flow consistent, synchronization-free processing:} We use
 multi-queue NICs with RSS support to provide flow-consistent hashing
-of incoming traffic to distinct hardware queues. Each queue is
+of incoming traffic to distinct hardware queues. \edb{Each hardware thread serves a single receive and transmit  queue per NIC\sout{Each queue is
 assigned to a single dataplane and is served by a single hardware
-thread, eliminating the need for synchronization and coherence traffic
-between cores in the networking stack. Similarly, memory management is
+thread}}, eliminating the need for synchronization and coherence traffic
+between cores in the networking stack. 
+\edb{The control plane establishes the mapping of RSS flow groups to queues to balance the traffic among the hardware threads.}
+Similarly, memory management is
 organized in distinct pools for each hardware thread. The absence of a
 POSIX sockeet API eliminates the issue of the shared file descriptor
 namespace in multithreaded
