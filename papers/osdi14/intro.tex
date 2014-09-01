@@ -28,42 +28,31 @@ implement the networking stack in
 user-space~\cite{jeong2014mtcp,DBLP:conf/cloud/KapoorPTVV12,sandstorm,openonload,DBLP:conf/sigcomm/ThekkathNML93}.
 While kernel bypass eliminates context switch overheads, on its own it
 does not eliminate the difficult tradeoffs between high packet rates
-and low latency (see \S\ref{sec:eval:netpipe}). Moreover, user-level networking
-suffers from lack of protection. Application bugs and crashes can
-corrupt the networking stack and impact other workloads.
+and low latency (see \S\ref{sec:eval:netpipe}). Moreover, user-level
+networking suffers from lack of protection. Application bugs and
+crashes can corrupt the networking stack and impact other workloads.
 Other systems go a step further by also replacing TCP/IP with RDMA in
-order to offload network processing to \edb{specialized\sout{Infiniband}}
+order to offload network processing to specialized
 adapters~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,DBLP:conf/sosp/OngaroRSOR11}.
-\edb{Unfortunately, such adapters that must be present at both ends of the connection.
-\sout{Kernel bypass and offloading also complicate resource sharing. Most systems
-that use them run a single application per server even at periods of
-low load.}}
-
-
-
-% \christos{ people also
-%   use many lightly loaded servers to get low latency}
-% \dm{Again, this makes it sound narrow.  Phrase in a more fundamental
-%   way.  Point is that currently people must achieve a delicate $n$-way
-%   balance between throughput, latency, protection/robustness,
-%   complexity, number of machines/power consumption, etc.  \ix shows it
-%   doesn't have to be this way; we can have our cake and eat it, too,
-%   if we architect better systems around improved APIs.} 
+\edb{Unfortunately, such adapters that must be present at both ends of
+  the connection.  \sout{Kernel bypass and offloading also complicate
+    resource sharing. Most systems that use them run a single
+    application per server even at periods of low load.}}
 
 We propose \ix, an operating system designed to break the $4$-way
 tradeoff between high throughput, low latency, strong protection, and
-efficiency. Its architecture builds upon the lessons from high
-performance middleboxes, such as firewalls, load-balancers, and
+resource efficiency. Its architecture builds upon the lessons from
+high performance middleboxes, such as firewalls, load-balancers, and
 software routers~\cite{routebricks,click}. \ix separates the control
 plane, which is responsible for system configuration and coarse-grain
 resource provisioning between applications, from the dataplanes which
 run the networking stack and application logic. \ix uses hardware
-virtualization% ~\cite{DBLP:journals/computer/UhligNRSMABKLS05}
-to
-provide three-way protection between the control plane, the networking
-stack, and the application. In our implementation, the control plane
-is the full Linux kernel and the dataplanes run as protected,
-library-based operating systems on dedicated hardware threads.
+virtualization %~\cite{DBLP:journals/computer/UhligNRSMABKLS05}
+to provide three-way protection between the control plane, the
+networking stack, and the application. In our implementation, the
+control plane is the full Linux kernel and the dataplanes run as
+protected, library-based operating systems on dedicated hardware
+threads.
 
 The \ix dataplane allows for networking stacks that optimize for both
 bandwidth and latency. It is designed around a native, zero-copy API
@@ -91,43 +80,31 @@ stack~\cite{jeong2014mtcp}.  \ix outperforms Linux and mTCP by up to
 \data{14x}{XXX} and \data{2.5x}{XXX} respectively for throughput. \ix
 even scales to 4x10GbE configuration using a single multi-core socket.
 The unloaded uni-directional latency for two IX servers is
-\data{6.9}{5.7}\microsecond, \edb{which is 4x better than between standard Linux kernels and an order of magnitude better than mTCP, as both trade-off latency for throughput.
-\sout{while Linux and mTCP lead to latencies of
-\data{21}{XXX}\microsecond and \data{95}{XXX}\microsecond respectively.}}
-Our evaluation with memcached, a widely deployed key-value store,
-shows that \ix improves upon Linux by up to \data{2.7}{4.5}x in terms
-of throughput at a given 99th percentile latency bound, as it can
-reduce \edb{kernel time, due essentially to} network processing, from $>80\%$ with Linux to \data{$<33\%$}{$<10\%$} with \ix.
+\data{6.9}{5.7}\microsecond, which is 4x better than between standard
+Linux kernels and an order of magnitude better than mTCP, as both
+trade-off latency for throughput.  Our evaluation with memcached, a
+widely deployed key-value store, shows that \ix improves upon Linux by
+up to \data{2.7}{4.5}x in terms of throughput at a given 99th
+percentile latency bound, as it can reduce \edb{kernel time, due
+  essentially to} network processing, from $>80\%$ with Linux to
+\data{$<33\%$}{$<10\%$} with \ix.
 
 \ix demonstrates that, by revisiting the networking APIs and taking
 advantage of modern NICs and multi-core chips, we can design systems
 that achieve high throughput \underline{and} low latency
-\underline{and} robust protection \underline{and} efficiency. It also
-shows that, by separating the small subset of performance-critical I/O
-functions from the rest of the kernel, we can architect radically
-different I/O systems and achieve large performance gains, while
-retaining compatibility with the huge set of APIs and services
-provided by a modern OS like Linux.
+\underline{and} robust protection \underline{and} resource
+efficiency. It also shows that, by separating the small subset of
+performance-critical I/O functions from the rest of the kernel, we can
+architect radically different I/O systems and achieve large
+performance gains, while retaining compatibility with the huge set of
+APIs and services provided by a modern OS like Linux.
 
 The rest of the paper is organized as follows. \S\ref{sec:motivation}
 motivates the need for a new OS architecture. \S\ref{sec:design} and
 \S\ref{sec:impl} present the design principles and implementation of
-\ix. \S\ref{sec:eval} presents the quantitative
-evaluation.\S\ref{sec:disc} and \S\ref{sec:related} discuss \edb{open issues and related work.\sout{related
-and future work.}}
-
-
-% \dm{Another point to add is that the breadth of OS APIs has made it
-%   virtually impossible to deploy clean-slate operating systems,
-%   despite possibly huge performance gains from radically different IO
-%   architectures.  Fortunately, the performance-critical IO functions
-%   are a small subset of the garbage can of system calls required for
-%   setup, initialization, and configuration.  Hence, a big contribution
-%   is showing how we can completely rearchitect the IO path while
-%   retaining a high degree of source code compatibility and remaining
-%   compatible with existing system configuration and management tool.}
-
-
+\ix.  \S\ref{sec:eval} presents the quantitative
+evaluation. \S\ref{sec:disc} and \S\ref{sec:related} discuss open
+issues and related work.
 
 
 
