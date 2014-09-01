@@ -5,7 +5,6 @@
 Our work focuses on improving operating systems for applications with
 aggressive networking requirements running on multi-core servers.
 
-
 \subsection{Application Requirements}
 \label{sec:motivation:challenges}
 
@@ -67,7 +66,6 @@ the problem. A trusted network stack can firewall applications,
 enforce access control lists (ACLs), implement limiters and other
 policies based on bandwith metering
 
-
 \myparagraph{Resource efficiency:} The load of web-scale applications
 varies significantly due to diurnal patterns and spikes in user
 traffic. Ideally, each service node will use the fewest resources
@@ -80,11 +78,8 @@ efficiency~\cite{DBLP:journals/computer/BarrosoH07}. Existing
 operating systems can support such resource usage
 policies~\cite{DBLP:conf/eurosys/LeverichK14,DBLP:conf/isca/LoCGBK14}.
 
-\subsection{The Hardware -- Software Mismatch}
+\subsection{The Hardware -- OS Mismatch}
 \label{sec:motivation:web}
-
-\edb{Use Hardware-Kernel mistmatch instead?}
-
 
 The wealth of hardware resources in modern servers should allow for
 low latency and high packet rates for web-scale applications.  A
@@ -101,34 +96,24 @@ one to five switch crossings with cut-through latencies of a few
 hundred ns each, and propagation delays of 500ns for 100 meters
 distance within a datacenter.
 
-% \dm{But it might be worth another paragraph addressing why now
-%   Basically there's a fundamental question of granularity here.  E.g.,
-%   page sizes have been 4--8K since machines had less than a Megabyte
-%   of DRAM\@.  Schedulers have been designed under the premise of more
-%   applications than CPUs.  Network APIs were designed when packet
-%   inter-arrival times were many times the system call/interrupt
-%   latency.}
 
-Unfortunately, \edb{commodity operating systems have\sout{existing system software has}} been designed under very
-different hardware assumptions. Kernel schedulers, networking APIs,
-and network stacks have been designed under the assumptions of
+Unfortunately, commodity operating systems have been designed under
+very different hardware assumptions. Kernel schedulers, networking
+APIs, and network stacks have been designed under the assumptions of
 multiple applications sharing a single processing core and packet
 inter-arrival times many times higher than the latency of interrupts
-and system calls. 
-\edb{As a result, such operating systems trade-off both latency and throughput in favor of fine-grain resource scheduling.}
-Interrupt coalescing used to reduce processing
-overheads, queuing latency due to device driver processing intervals,
-and \edb{the use of intermediate buffering and CPU scheduling delays \sout{protocol processing of incoming packets without immediately
-scheduling the receiving application}} frequently add \edb{up to} several hundred
-\microsecond of latency to remote requests. \edb{NOT BACKED UP\sout{see measurements in
-\S\ref{sec:eval}).}} The overheads of buffering and synchronization
-needed to support flexible scheduling of applications to cores leads
-\edb{increases CPU and memory system overheads, which limits throughput.\sout{
-as well as the limited locality achieved on instruction and data
-caches, lead to low packet rates}} \christos{add related refs}.  As
-\edb{RPCs between tiers of web-scale application often consist of small packets\sout{packets are small}}~\cite{Atikoglu:2012:WAL}, common NIC hardware optimizations, such as TCP
-segmentation and receive side coalescing, have a marginal impact on
-packet rate.
+and system calls.  As a result, such operating systems trade off both
+latency and throughput in favor of fine-grain resource scheduling.
+Interrupt coalescing used to reduce processing overheads, queuing
+latency due to device driver processing intervals, and the use of
+intermediate buffering and CPU scheduling delays frequently add up to
+several hundred \microsecond of latency to remote requests.  The
+overheads of buffering and synchronization needed to support flexible,
+fine-grain scheduling of applications to cores increases CPU and
+memory system overheads, which limits throughput.  As requests between
+service tiers of web-scale application often consist of small packets,
+common NIC hardware optimizations, such as TCP segmentation and
+receive side coalescing, have a marginal impact on packet rate.
 
 
 % Modern web-scale applications include interactive services such as
@@ -178,13 +163,13 @@ packet rate.
 \subsection{Alternative Approaches}
 \label{sec:motivation:current}
 
-\christos{we need another pass below to state more clearly which
-  requirements get better and which worse for each alternative}
+\christos{need another pass below to state more clearly which
+  reqs get better and which worse for each alternative}
 
 Since the network stacks within commodity kernels cannot take
 advantage of the abundance of hardware resources, a number of
-alternative approaches have been suggested. Each alternative addresses a
-subset, but not all, of the requirements for web-scale applications.
+alternative approaches have been suggested. Each alternative addresses
+a subset, but not all, of the requirements for web-scale applications.
 
 \myparagraph{User-space networking stacks:} Systems such as
 OpenOnload~\cite{openonload}, mTCP~\cite{jeong2014mtcp} or
@@ -202,16 +187,17 @@ when networking is lifted into the user-space and application bugs can
 corrupt the networking stack. For example, an attacker may be able
 transmit raw packets, a capability that normally requires root
 privileges, to exploit weaknesses in network protocols and impact
-other services~\cite{DBLP:conf/acsac/Bellovin04}. It is difficult to enforce any
-security or metering policies beyond what is directly supported by the
-NIC hardware.
+other services~\cite{DBLP:conf/acsac/Bellovin04}. It is difficult to
+enforce any security or metering policies beyond what is directly
+supported by the NIC hardware.
 
 \myparagraph{Alternatives to TCP:} In addition to kernel bypass, some
 low-latency object stores rely on RDMA to offload protocol processing
 on dedicated Infiniband host channel
 adapters~\cite{DBLP:conf/icpp/JoseSLZHWIOWSP11,DBLP:conf/sosp/OngaroRSOR11,mitchell:rdma,dragojevic14farm}.
-Using commodity Ethernet networking, Facebook's memcached deployment
-uses UDP to avoid connection scalability
+\christos{state what's wrong with this?} Using commodity Ethernet
+networking, Facebook's memcached deployment uses UDP to avoid
+connection scalability
 limitations~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}. Even though
 UDP is running in the kernel, reliable communication and congestion
 management are entrusted to applications.
@@ -232,6 +218,7 @@ completely eliminate synchronization between cores, as the lack of
 commutativity in the POSIX socket API implies that cross-core
 communication is needed when connections are accepted or
 closed~\cite{DBLP:conf/sosp/ClementsKZMK13}. When microsecond
-latencies are irrelevant, as with Internet-facing messaging services,
+latencies are
+irrelevant %, as with Internet-facing messaging services,
 properly tuned stacks can support millions of concurrent
 connections~\cite{whatsapp-2mil}.
