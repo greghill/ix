@@ -68,7 +68,7 @@ two thread types within the shared, user-level address space: (i)
 initiate and consume network I/O and (ii) \emph{background threads}.
 Both elastic and background threads can issue arbitrary POSIX system
 calls that are intermediated and validated for security by the
-dataplane before being forwarded to the Linux kernel.  Elastic threads
+dataplane before being forwarded to the Linux kernel. Elastic threads
 are expected to \emph{not} issue blocking calls because of the adverse
 impact on network behavior and performance. Similarly, each elastic
 thread makes exclusive use of a core or hyperthread allocated to the
