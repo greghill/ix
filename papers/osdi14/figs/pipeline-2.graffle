@@ -49,6 +49,98 @@
 	<key>GraphicsList</key>
 	<array>
 		<dict>
+			<key>Class</key>
+			<string>LineGraphic</string>
+			<key>FontInfo</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>w</key>
+					<string>0</string>
+				</dict>
+				<key>Font</key>
+				<string>Helvetica</string>
+				<key>Size</key>
+				<real>12</real>
+			</dict>
+			<key>ID</key>
+			<integer>2186</integer>
+			<key>Points</key>
+			<array>
+				<string>{162.70095290802081, 41.021688553248602}</string>
+				<string>{152.4373956472603, 52.9048671967033}</string>
+			</array>
+			<key>Style</key>
+			<dict>
+				<key>stroke</key>
+				<dict>
+					<key>Color</key>
+					<dict>
+						<key>b</key>
+						<string>0.494118</string>
+						<key>g</key>
+						<string>0.494118</string>
+						<key>r</key>
+						<string>0.494118</string>
+					</dict>
+					<key>HeadArrow</key>
+					<string>FilledArrow</string>
+					<key>Legacy</key>
+					<true/>
+					<key>TailArrow</key>
+					<string>0</string>
+					<key>Width</key>
+					<real>0.25</real>
+				</dict>
+			</dict>
+		</dict>
+		<dict>
+			<key>Class</key>
+			<string>LineGraphic</string>
+			<key>FontInfo</key>
+			<dict>
+				<key>Color</key>
+				<dict>
+					<key>w</key>
+					<string>0</string>
+				</dict>
+				<key>Font</key>
+				<string>Helvetica</string>
+				<key>Size</key>
+				<real>12</real>
+			</dict>
+			<key>ID</key>
+			<integer>2184</integer>
+			<key>Points</key>
+			<array>
+				<string>{54, 41.021688553248602}</string>
+				<string>{64.263557260760521, 52.9048671967033}</string>
+			</array>
+			<key>Style</key>
+			<dict>
+				<key>stroke</key>
+				<dict>
+					<key>Color</key>
+					<dict>
+						<key>b</key>
+						<string>0.494118</string>
+						<key>g</key>
+						<string>0.494118</string>
+						<key>r</key>
+						<string>0.494118</string>
+					</dict>
+					<key>HeadArrow</key>
+					<string>FilledArrow</string>
+					<key>Legacy</key>
+					<true/>
+					<key>TailArrow</key>
+					<string>0</string>
+					<key>Width</key>
+					<real>0.25</real>
+				</dict>
+			</dict>
+		</dict>
+		<dict>
 			<key>Bounds</key>
 			<string>{{-7.1733758601694149, 21}, {31, 20}}</string>
 			<key>Class</key>
@@ -1446,7 +1538,7 @@
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{143.91723974816563, 17.3125}, {44, 32}}</string>
+			<string>{{154.4373956472603, 16.3125}, {40, 30}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -1463,7 +1555,7 @@
 				<key>Font</key>
 				<string>Helvetica</string>
 				<key>Size</key>
-				<real>9</real>
+				<real>8</real>
 			</dict>
 			<key>ID</key>
 			<integer>1692</integer>
@@ -1496,7 +1588,7 @@
 \deftab720
 \pard\pardeftab720\qc
 
-\f0\i\fs18 \cf0 Batched\
+\f0\i\fs16 \cf0 Batched\
 Syscalls}</string>
 			</dict>
 			<key>Wrap</key>
@@ -2287,7 +2379,7 @@ Syscalls}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{21.117228471104063, 14.5}, {54, 32}}</string>
+			<string>{{23.617228471104063, 15.5}, {49, 30}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -2304,7 +2396,7 @@ Syscalls}</string>
 				<key>Font</key>
 				<string>Helvetica</string>
 				<key>Size</key>
-				<real>9</real>
+				<real>8</real>
 			</dict>
 			<key>ID</key>
 			<integer>1540</integer>
@@ -2321,6 +2413,8 @@ Syscalls}</string>
 				<dict>
 					<key>Draws</key>
 					<string>NO</string>
+					<key>ShadowVector</key>
+					<string>{0, 0}</string>
 				</dict>
 				<key>stroke</key>
 				<dict>
@@ -2337,7 +2431,7 @@ Syscalls}</string>
 \deftab720
 \pard\pardeftab720\qc
 
-\f0\i\fs18 \cf0 Event\
+\f0\i\fs16 \cf0 Event\
 Conditions}</string>
 			</dict>
 			<key>Wrap</key>
@@ -2979,7 +3073,7 @@ Conditions}</string>
 	<key>MasterSheets</key>
 	<array/>
 	<key>ModificationDate</key>
-	<string>2014-09-02 10:05:26 +0000</string>
+	<string>2014-09-02 19:25:28 +0000</string>
 	<key>Modifier</key>
 	<string>Ed Bugnion</string>
 	<key>NotesVisible</key>
@@ -3017,6 +3111,16 @@ Conditions}</string>
 			<string>coded</string>
 			<string>BAtzdHJlYW10eXBlZIHoA4QBQISEhAhOU051bWJlcgCEhAdOU1ZhbHVlAISECE5TT2JqZWN0AIWEASqEhAFxlwCG</string>
 		</array>
+		<key>NSPrinter</key>
+		<array>
+			<string>coded</string>
+			<string>BAtzdHJlYW10eXBlZIHoA4QBQISEhAlOU1ByaW50ZXIAhIQITlNPYmplY3QAhZKEhIQITlNTdHJpbmcBlIQBKwRCQ04zhoY=</string>
+		</array>
+		<key>NSPrinterName</key>
+		<array>
+			<string>string</string>
+			<string>BCN3</string>
+		</array>
 		<key>NSRightMargin</key>
 		<array>
 			<string>float</string>
@@ -3051,13 +3155,13 @@ Conditions}</string>
 	<key>WindowInfo</key>
 	<dict>
 		<key>BottomSlabHeight</key>
-		<real>505</real>
+		<real>483</real>
 		<key>CurrentSheet</key>
 		<integer>0</integer>
 		<key>Expanded_Canvases</key>
 		<array/>
 		<key>Frame</key>
-		<string>{{2107, 29}, {873, 849}}</string>
+		<string>{{0, 51}, {1440, 827}}</string>
 		<key>ShowInfo</key>
 		<true/>
 		<key>ShowRuler</key>
@@ -3067,7 +3171,7 @@ Conditions}</string>
 		<key>SidebarWidth</key>
 		<integer>0</integer>
 		<key>VisibleRegion</key>
-		<string>{{-4, -86}, {278.5, 353.5}}</string>
+		<string>{{-138, -81}, {562, 342.5}}</string>
 		<key>Zoom</key>
 		<real>2</real>
 		<key>ZoomValues</key>
