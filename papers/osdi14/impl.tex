@@ -7,68 +7,60 @@
 \christos{We should stress that the same pattern/architecture can be
   used to implement any high performance stack, not just TCP/IP}
 
-The current \ix prototype uses the VT-x virtualization features
-available on all x86-64
-servers~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. However, it
-can be ported to any architecture with virtualization support, such as
-ARM, SPARC, and Power. 
-\edb{The prototype leverages the RSS and multi-queue features of
-  Intel's \texttt{ixgbe} NIC via Intel's DPDK toolkit~\cite{intel:dpdk}, but is
-  designed to easily support additional drivers.}
-
-\edb{NEW}Fig.~\ref{fig:ix} presents the \ix architecture, including the
-separation of control and dataplane (\S\ref{sec:impl:overview}), and
-the interleaving of protocol processing and application within the
-dataplane (\S\ref{sec:impl:api}).
-
 
 \subsection{Overview}
 \label{sec:impl:overview}
 
-
-Fig.~\ref{fig:cp-dp} illustrates the control plane, a number of dataplanes,
-and applications. The hardware environment is a multi-core server with
-one or more multi-queue NICs with RSS support.
+Fig.~\ref{fig:cp-dp} presents the \ix architecture, focusing on the
+separation between the control plane and the multiple dataplanes.  The
+hardware environment is a multi-core server with one or more
+multi-queue NICs with RSS support. The current \ix implementation uses
+the VT-x virtualization features available on all x86-64
+systems~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. However, it
+can be ported to any architecture with virtualization support, such as
+ARM, SPARC, and Power.  \edb{The prototype leverages the RSS and
+  multi-queue features of Intel's \texttt{ixgbe} NIC via Intel's DPDK
+  toolkit~\cite{intel:dpdk}, but is designed to easily support
+  additional drivers.} \christos{Too detailed, we should push later}
 
 The \ix control plane consists of the full Linux kernel and
-\texttt{IXCP}, a user-level program \edb{CONFIRM}. The Linux kernel initializes PCIe
-devices, such as the NICs, and provides the basic mechanisms for
-resource allocation to the dataplanes, including cores, memory, and
-network queues. Equally important, Linux provides system calls and
-services that are necessary for compatibility with a wide range of
-applications, such as file system and signal support. \texttt{IXCP}
-monitors resource usage and dataplane performance and implements
-resource allocation policies. The development of efficient allocation
-policies involves understanding difficult tradeoffs between dataplane
-performance, energy proportionality, and resource sharing between
-co-located applications as their load varies over
-time~\cite{DBLP:conf/eurosys/LeverichK14}. We leave the design of such
-policies to future work and focus this paper on the \ix dataplane
-architecture.
+\texttt{IXCP}, a user-level program \edb{CONFIRM}. The Linux kernel
+initializes PCIe devices, such as the NICs, and provides the basic
+mechanisms for resource allocation to the dataplanes, including cores,
+memory, and network queues. Equally important, Linux provides system
+calls and services that are necessary for compatibility with a wide
+range of applications, such as file system and signal
+support. \texttt{IXCP} monitors resource usage and dataplane
+performance and implements resource allocation policies. The
+development of efficient allocation policies involves understanding
+difficult tradeoffs between dataplane performance, energy
+proportionality, and resource sharing between co-located applications
+as their load varies over time. We leave the design of such policies
+to future work and focus primarily on the \ix dataplane architecture.
 
 We run the Linux kernel in VMX root ring 0, the mode typically used to
 run hypervisors in virtualized
 systems~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. We use the
-Dune system within Linux to enable dataplanes to run as app-specific
-OSes in the VMX non-root ring 0, the mode typically used to run guest
-kernels in virtualized systems~\cite{dune}.
-Finally, applications run VMX non-root ring 3. This approach provides
-dataplanes with direct access to hardware features, such as page
-tables and exceptions, and provides full protection between the
-control plane, dataplanes, and untrusted user code. Moreover,
-dataplanes have direct passthrough access to  NICs.
+Dune module within Linux to enable dataplanes to run as
+application-specific OSes in the VMX non-root ring 0, the mode
+typically used to run guest kernels in virtualized
+systems~\cite{dune}.  Applications run VMX non-root ring 3, as usual.
+This approach provides dataplanes with direct access to hardware
+features, such as page tables and exceptions, and passthrough access
+to NICs. Moreover, it provides full, three-way protection between the
+control plane, dataplanes, and untrusted application code.
 
-
-Each \ix dataplane supports a single, multithreaded
-application. For instance, Fig.~\ref{fig:cp-dp} shows one dataplane
-for a multi-threaded \texttt{memcached} server and another dataplane
-for a multi-threaded \texttt{nginx} server. The control plane allocates
-resources to each dataplane in a coarse-grained manner. Core allocation
-is controlled through real-time priorities and \texttt{cpusets};
-memory is allocated in large pages; each NIC hardware queue is
-assigned to a single dataplane. This approach avoids the overheads and
-unpredictability of fine-grained time multiplexing of resources between
-demanding applications~\cite{DBLP:conf/eurosys/LeverichK14}.
+Each \ix dataplane supports a single, multithreaded application. For
+instance, Fig.~\ref{fig:cp-dp} shows one dataplane for a
+multi-threaded \texttt{memcache} server and another dataplane for a
+multi-threaded \texttt{http} server. The control plane allocates
+resources to each dataplane in a coarse-grained manner. Core
+allocation is controlled through real-time priorities and
+\texttt{cpusets}; memory is allocated in large pages; each NIC
+hardware queue is assigned to a single dataplane. This approach avoids
+the overheads and unpredictability of fine-grained time multiplexing
+of resources between demanding
+applications~\cite{DBLP:conf/eurosys/LeverichK14}.
 
 The \ix dataplane operates as a single address-space OS and supports
 two thread types within the shared, user-level address space: (i)
@@ -76,20 +68,20 @@ two thread types within the shared, user-level address space: (i)
 initiate and consume network I/O and (ii) \emph{background threads}.
 Both elastic and background threads can issue arbitrary POSIX system
 calls that are intermediated and validated for security by the
-dataplane before being forwarded to the Linux kernel.  Elastic
-threads are expected to \emph{not} issue blocking calls because of the
-adverse impact on network behavior and performance. Similarly, each
-elastic thread makes exclusive use of a core or hyperthread allocated
-to the dataplane in order to achieve high performance with predictable
+dataplane before being forwarded to the Linux kernel.  Elastic threads
+are expected to \emph{not} issue blocking calls because of the adverse
+impact on network behavior and performance. Similarly, each elastic
+thread makes exclusive use of a core or hyperthread allocated to the
+dataplane in order to achieve high performance with predictable
 latency. In contrast, multiple background threads may timeshare an
-allocated hyperthread. For example, if an application were
-allocated four hyperthreads, it could use all of them as elastic
-threads to serve external requests or it could temporarily transition
-to three elastic threads and use one background thread to execute
-tasks such as garbage collection. When the control plane revokes or
-allocates an additional hyperthread using a protocol similar to the
-one used in Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, the dataplane
-must adjust its number of elastic threads.
+allocated hyperthread. For example, if an application were allocated
+four hyperthreads, it could use all of them as elastic threads to
+serve external requests or it could temporarily transition to three
+elastic threads and use one background thread to execute tasks such as
+garbage collection. When the control plane revokes or allocates an
+additional hyperthread using a protocol similar to the one used in
+Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, the dataplane must adjust
+its number of elastic threads.
 
 \christos{We should stress that queues are a central concept in our
   work.  we should add some discussion about elasticity/load balancing
