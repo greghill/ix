@@ -100,7 +100,7 @@ setup_and_run() {
     PREP=prep_linux
     OUTDIR='Linux-10'
     QPS_SWEEP_MAX=2500000
-    QPS_SWEEP_NUM_POINTS=100
+    QPS_SWEEP_NUM_POINTS=50
     MEMCACHED_EXEC='memcached'
     MEMCACHED_BUILD_PATH='../apps/memcached-1.4.18'
     MEMCACHED_BUILD_TARGET=''
@@ -122,7 +122,7 @@ setup_and_run() {
     PREP=prep_ix
     OUTDIR='IX-10'
     QPS_SWEEP_MAX=2500000
-    QPS_SWEEP_NUM_POINTS=100
+    QPS_SWEEP_NUM_POINTS=50
     MEMCACHED_EXEC=memcached
     MEMCACHED_BUILD_PATH=../apps/memcached-1.4.18-ix
     MEMCACHED_BUILD_TARGET=''
