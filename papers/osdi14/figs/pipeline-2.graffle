@@ -144,6 +144,8 @@
 			</dict>
 			<key>Text</key>
 			<dict>
+				<key>Pad</key>
+				<integer>1</integer>
 				<key>Text</key>
 				<string>{\rtf1\ansi\ansicpg1252\cocoartf1265\cocoasubrtf210
 {\fonttbl\f0\fswiss\fcharset0 Helvetica;}
@@ -274,14 +276,14 @@
 				<key>ID</key>
 				<integer>1899</integer>
 				<key>Position</key>
-				<real>0.53985442542177076</real>
+				<real>0.53985440731048584</real>
 			</dict>
 			<key>ID</key>
 			<integer>1900</integer>
 			<key>Points</key>
 			<array>
-				<string>{161.74744922955355, 119.85641497673268}</string>
-				<string>{177.00339447737591, 113.63646830996242}</string>
+				<string>{161.74744914319396, 119.85641484314556}</string>
+				<string>{177.00339417972424, 113.63646807012927}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -383,8 +385,8 @@
 			<integer>1898</integer>
 			<key>Points</key>
 			<array>
-				<string>{72.240830406636832, 125.75}</string>
-				<string>{82.43320633899188, 112.38603485934829}</string>
+				<string>{71.131455406636832, 125.75}</string>
+				<string>{81.970807117720639, 112.38373080422316}</string>
 			</array>
 			<key>Style</key>
 			<dict>
@@ -2161,7 +2163,7 @@ Conditions}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{160.1411464707229, 121.20443235405031}, {14.767376605155306, 15.537532416679127}}</string>
+			<string>{{160.3125, 125.4375}, {14.767376605155306, 15.537532416679127}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -2206,6 +2208,8 @@ Conditions}</string>
 			</dict>
 			<key>Text</key>
 			<dict>
+				<key>Pad</key>
+				<integer>1</integer>
 				<key>Text</key>
 				<string>{\rtf1\ansi\ansicpg1252\cocoartf1265\cocoasubrtf210
 {\fonttbl\f0\fswiss\fcharset0 Helvetica;}
@@ -2264,6 +2268,8 @@ Conditions}</string>
 			</dict>
 			<key>Text</key>
 			<dict>
+				<key>Pad</key>
+				<integer>1</integer>
 				<key>Text</key>
 				<string>{\rtf1\ansi\ansicpg1252\cocoartf1265\cocoasubrtf210
 {\fonttbl\f0\fswiss\fcharset0 Helvetica;}
@@ -2277,7 +2283,7 @@ Conditions}</string>
 		</dict>
 		<dict>
 			<key>Bounds</key>
-			<string>{{92.240830406636832, 106.00732519397492}, {14.767376605155306, 15.537532416679127}}</string>
+			<string>{{102.13565126025827, 106.87079661997033}, {14.767376605155306, 15.537532416679127}}</string>
 			<key>Class</key>
 			<string>ShapedGraphic</string>
 			<key>FitText</key>
@@ -2322,6 +2328,8 @@ Conditions}</string>
 			</dict>
 			<key>Text</key>
 			<dict>
+				<key>Pad</key>
+				<integer>1</integer>
 				<key>Text</key>
 				<string>{\rtf1\ansi\ansicpg1252\cocoartf1265\cocoasubrtf210
 {\fonttbl\f0\fswiss\fcharset0 Helvetica;}
@@ -2380,6 +2388,8 @@ Conditions}</string>
 			</dict>
 			<key>Text</key>
 			<dict>
+				<key>Pad</key>
+				<integer>1</integer>
 				<key>Text</key>
 				<string>{\rtf1\ansi\ansicpg1252\cocoartf1265\cocoasubrtf210
 {\fonttbl\f0\fswiss\fcharset0 Helvetica;}
@@ -3013,9 +3023,9 @@ Conditions}</string>
 	<key>MasterSheets</key>
 	<array/>
 	<key>ModificationDate</key>
-	<string>2014-08-30 20:16:24 +0000</string>
+	<string>2014-09-02 03:39:36 +0000</string>
 	<key>Modifier</key>
-	<string>Ed Bugnion</string>
+	<string>Christos Kozyrakis</string>
 	<key>NotesVisible</key>
 	<string>NO</string>
 	<key>Orientation</key>
@@ -3044,7 +3054,7 @@ Conditions}</string>
 		<key>NSPaperSize</key>
 		<array>
 			<string>size</string>
-			<string>{611.99997901916504, 792}</string>
+			<string>{612, 792}</string>
 		</array>
 		<key>NSPrintReverseOrientation</key>
 		<array>
@@ -3091,7 +3101,7 @@ Conditions}</string>
 		<key>Expanded_Canvases</key>
 		<array/>
 		<key>Frame</key>
-		<string>{{0, 53}, {1440, 825}}</string>
+		<string>{{40, 37}, {1400, 825}}</string>
 		<key>ShowInfo</key>
 		<true/>
 		<key>ShowRuler</key>
@@ -3101,7 +3111,7 @@ Conditions}</string>
 		<key>SidebarWidth</key>
 		<integer>0</integer>
 		<key>VisibleRegion</key>
-		<string>{{-28, 0}, {281, 170.75}}</string>
+		<string>{{-23, 0}, {271, 170.75}}</string>
 		<key>Zoom</key>
 		<real>4</real>
 		<key>ZoomValues</key>
