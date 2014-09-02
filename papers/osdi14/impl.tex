@@ -18,8 +18,8 @@ ARM, SPARC, and Power.
 
 Fig.~\ref{fig:cp-dp} presents the \ix architecture, including the
 control plane, a number of dataplanes, and applications. The hardware
-environment includes one or more multi-queue NICs with RSS support and
-a multi-core server.
+environment is a multi-core server with one or more multi-queue NICs
+with RSS support.
 
 The \ix control plane consists of the full Linux kernel and
 \texttt{IXCP}, a user-level program. The Linux kernel initializes PCIe
@@ -33,8 +33,8 @@ resource allocation policies. The development of efficient allocation
 policies involves understanding difficult tradeoffs between dataplane
 performance, energy proportionality, and resource sharing between
 co-located applications as their load varies over
-time~\cite{DBLP:conf/eurosys/LeverichK14}. We leave the design of
-such policies to future work and focus this paper on the \ix dataplane
+time~\cite{DBLP:conf/eurosys/LeverichK14}. We leave the design of such
+policies to future work and focus this paper on the \ix dataplane
 architecture.
 
 We run the Linux kernel in VMX root ring 0, the mode typically used to
