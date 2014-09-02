@@ -22,17 +22,18 @@ environment is a multi-core server with one or more multi-queue NICs
 with RSS support.
 
 The \ix control plane consists of the full Linux kernel and
-\texttt{IXCP}, a user-level program. The Linux kernel initializes PCIe
-devices, such as the NICs, and provides the basic mechanisms for
-resource allocation to the dataplanes, including cores, memory, and
-network queues. Equally important, Linux provides system calls and
-services that are necessary for compatibility with a wide range of
-applications, such as file system and signal support. \texttt{IXCP}
-monitors resource usage and dataplane performance and implements
-resource allocation policies. The development of efficient allocation
-policies involves understanding difficult tradeoffs between dataplane
-performance, energy proportionality, and resource sharing between
-co-located applications as their load varies over
+\texttt{IXCP}, a user-level management program. The Linux kernel
+initializes PCIe devices, such as the NICs, and provides the basic
+mechanisms for resource allocation to the dataplanes, including cores,
+memory, and network queues. Equally important, Linux provides system
+calls and services that are necessary for compatibility with a wide
+range of applications, such as file system and signal
+support. \texttt{IXCP} monitors resource usage and dataplane
+performance and implements resource allocation policies. The
+development of efficient allocation policies involves understanding
+difficult tradeoffs between dataplane performance, energy
+proportionality, and resource sharing between co-located applications
+as their load varies over
 time~\cite{DBLP:conf/eurosys/LeverichK14}. We leave the design of such
 policies to future work and focus this paper on the \ix dataplane
 architecture.
