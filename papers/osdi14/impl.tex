@@ -11,15 +11,24 @@ The current \ix prototype uses the VT-x virtualization features
 available on all x86-64
 servers~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. However, it
 can be ported to any architecture with virtualization support, such as
-ARM, SPARC, and Power.
+ARM, SPARC, and Power. 
+\edb{The prototype leverages the RSS and multi-queue features of
+  Intel's \texttt{ixgbe} NIC via Intel's DPDK toolkit~\cite{intel:dpdk}, but is
+  designed to easily support additional drivers.}
+
+\edb{NEW}Fig.~\ref{fig:ix} presents the \ix architecture, including the
+separation of control and dataplane (\S\ref{sec:impl:overview}), and
+the interleaving of protocol processing and application within the
+dataplane (\S\ref{sec:impl:api}).
+
 
 \subsection{Overview}
 \label{sec:impl:overview}
 
-Fig.~\ref{fig:cp-dp} presents the \ix architecture, including the
-control plane, a number of dataplanes, and applications. The hardware
-environment is a multi-core server with one or more multi-queue NICs
-with RSS support.
+
+Fig.~\ref{fig:cp-dp} illustrates the control plane, a number of dataplanes,
+and applications. The hardware environment is a multi-core server with
+one or more multi-queue NICs with RSS support.
 
 The \ix control plane consists of the full Linux kernel and
 \texttt{IXCP}, a user-level program. The Linux kernel initializes PCIe
