@@ -131,12 +131,12 @@ for the common case where most timers are canceled before they expire. We suppor
 extremely high resolution timeouts (as low as 16 \microsecond), which has been
 shown to improve performing in the presence of TCP incast congestion~\cite{DBLP:conf/sigcomm/VasudevanPSKAGGM09}.
 
-The dataplane \edb{currently} consists of \data{37K}{XXX} SLOC~\cite{url:sloccount}.  We
-leveraged existing codebases in its development: 43\% is derived from
+The dataplane \edb{currently} consists of \data{37K}{38K} SLOC~\cite{url:sloccount}.  We
+leveraged existing codebases in its development: \data{43\%}{42\%} is derived from
 the DPDK variant of the Intel NIC device driver~\cite{intel:dpdk},
-\data{23\%}{XXX} from the lwIP TCP/IP stack~\cite{dunkels2001design}, and \data{16\%}{XXX}
+\data{23\%}{26\%} from the lwIP TCP/IP stack~\cite{dunkels2001design}, and \data{16\%}{16\%}
 from the Dune library.  All three code bases are highly modified for
-\ix. The rest is approximately \data{7K}{XXX} SLOC of new code. We chose lwIP as a
+\ix. The rest is approximately \data{7K}{6K} SLOC of new code. We chose lwIP as a
 starting point for TCP/IP processing because of its modularity and its
 maturity as a RFC-compliant, feature-rich networking stack. We
 implemented RFC-compliant support for UDP, ARP, and ICMP.
