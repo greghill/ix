@@ -4,22 +4,22 @@
 
 \input{tbl-api}
 
-\christos{We should stress that the same pattern can be used to
-  implement any high IO stack, not just TCP/IP}
+\christos{We should stress that the same pattern/architecture can be
+  used to implement any high performance stack, not just TCP/IP}
 
-The current \ix prototype uses the VT-x virtualization features
-available on all x86-64
-servers~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. However, it
-can be ported to any architecture with virtualization support, such as
-ARM, SPARC, and Power.
+We now describe the \ix prototype.  The current implementation uses
+the VT-x features available on all x86-64
+servers~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. However, it can
+be ported to any architecture with virtualization support, such as ARM
+and Power.
 
 \subsection{Overview}
 \label{sec:impl:overview}
 
 Fig.~\ref{fig:cp-dp} presents the \ix architecture, including the
 control plane, a number of dataplanes, and applications. The hardware
-environment is a multi-core server with one or more multi-queue NICs
-with RSS support.
+environment includes one or more multi-queue NICs with RSS support and
+a multi-core server.
 
 The \ix control plane consists of the full Linux kernel and
 \texttt{IXCP}, a user-level program. The Linux kernel initializes PCIe
@@ -33,33 +33,33 @@ resource allocation policies. The development of efficient allocation
 policies involves understanding difficult tradeoffs between dataplane
 performance, energy proportionality, and resource sharing between
 co-located applications as their load varies over
-time~\cite{DBLP:conf/eurosys/LeverichK14}. We leave the design of such
-policies to future work and focus this paper on the \ix dataplane
+time~\cite{DBLP:conf/eurosys/LeverichK14}. We leave the design of
+such policies to future work and focus this paper on the \ix dataplane
 architecture.
 
 We run the Linux kernel in VMX root ring 0, the mode typically used to
-run hypervisors in virtualized systems. We use the Dune system within
-Linux to enable dataplanes to run as app-specific OSes in the VMX
-non-root ring 0, the mode typically used to run guest kernels in
-virtualized systems~\cite{dune}.  Finally, applications run VMX
-non-root ring 3. This approach provides dataplanes with direct access
-to hardware features, such as page tables and exceptions, and provides
-full protection between the control plane, dataplanes, and untrusted
-user code. Moreover, dataplanes have direct passthrough access to
-NICs.
+run hypervisors in virtualized
+systems~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. We use the
+Dune system within Linux to enable dataplanes to run as app-specific
+OSes in the VMX non-root ring 0, the mode typically used to run guest
+kernels in virtualized systems~\cite{dune}.
+Finally, applications run VMX non-root ring 3. This approach provides
+dataplanes with direct access to hardware features, such as page
+tables and exceptions, and provides full protection between the
+control plane, dataplanes, and untrusted user code. Moreover,
+dataplanes have direct passthrough access to  NICs.
 
 
-Each \ix dataplane supports a single, multithreaded application. For
-instance, Fig.~\ref{fig:cp-dp} shows one dataplane for a
-multi-threaded \texttt{memcached} server and another dataplane for a
-multi-threaded \texttt{nginx} server. The control plane allocates
-resources to each dataplane in a coarse-grained manner. Core
-allocation is controlled through real-time priorities and
-\texttt{cpusets}; memory is allocated in large pages; each NIC
-hardware queue is assigned to a single dataplane. This approach avoids
-the overheads and unpredictability of fine-grained time multiplexing
-of resources between demanding
-applications~\cite{DBLP:conf/eurosys/LeverichK14}.
+Each \ix dataplane supports a single, multithreaded
+application. For instance, Fig.~\ref{fig:cp-dp} shows one dataplane
+for a multi-threaded \texttt{memcached} server and another dataplane
+for a multi-threaded \texttt{nginx} server. The control plane allocates
+resources to each dataplane in a coarse-grained manner. Core allocation
+is controlled through real-time priorities and \texttt{cpusets};
+memory is allocated in large pages; each NIC hardware queue is
+assigned to a single dataplane. This approach avoids the overheads and
+unpredictability of fine-grained time multiplexing of resources between
+demanding applications~\cite{DBLP:conf/eurosys/LeverichK14}.
 
 The \ix dataplane operates as a single address-space OS and supports
 two thread types within the shared, user-level address space: (i)
@@ -97,10 +97,10 @@ a single application (similar to a library OS but with memory
 isolation). However, our dataplane is still required to provide
 many common kernel-level services.
 
-For memory management, we trade some memory fragmentation for
-simplicity and efficiency. All hot-path data objects are allocated from
+For memory management, we are willing to accept some memory fragmentation in order
+to reduce complexity and improve efficiency. All hot-path data objects are allocated from
 per-core memory pools. Each memory pool is structured as arrays
-of identically sized objects, managed in page-sized increments. Free objects
+of identically sized objects, provisioned in page-sized increments. Free objects
 are tracked with a simple free list, and allocation routines are
 inlined directly into calling functions. Mbufs (our storage object
 for network packets) are stored as contiguous chunks of bookkeeping
@@ -109,19 +109,18 @@ kilobyte, and are used for both receiving and transmitting packets.
 
 The dataplane also manages its own virtual address translations, supported
 through nested paging. In constrast to contemporary OSes, we use exclusively
-large (2MB) pages. Given the overheads of virtual memory~\cite{DBLP:journals/sigops/HuntL07, DBLP:conf/isca/BasuGCHS13}
-and huge gains in memory capacity since 4KB pages were first introduced, we feel that
-this change is long overdue, but using large pages additionally
-enables us to avoid most nested paging overhead~\cite{dune}. Our dataplane maintains
+large (2MB) pages. We found that large pages are an optimal granularity,
+given the growing abundance of memory resources and the reduction in address
+translation overhead~\cite{DBLP:conf/isca/BasuGCHS13, dune}. Our dataplane maintains
 only a single address space; kernel pages are protected with
 supervisor bits. We deliberately chose not to support swappable memory
-because it would introduce unacceptable performance variability.
+in order to avoid adding unecessary performance variability.
 
-We provide a hierarchical timing wheel~\cite{DBLP:conf/sosp/VargheseL87} faculty
-for managing network timeouts, such as TCP retransmissions. Our system is optimized
+We provide a hierarchical timing wheel~\cite{DBLP:conf/sosp/VargheseL87} subsystem
+for managing network timeouts, such as TCP retransmissions. It is optimized
 for the common case where most timers are canceled before they expire. We support
 extremely high resolution timeouts (as low as 16 \microsecond), which has been
-shown to be very beneficial during TCP incast congestion~\cite{DBLP:conf/sigcomm/VasudevanPSKAGGM09}.
+shown to improve performing in the presence of TCP incast congestion~\cite{DBLP:conf/sigcomm/VasudevanPSKAGGM09}.
 
 The dataplane consists of \adam{These numbers need to be updated} 37K SLOC~\cite{url:sloccount}.  We
 leveraged existing codebases in its development: 43\% is derived from
