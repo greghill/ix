@@ -110,8 +110,8 @@ kilobyte, and are used for both receiving and transmitting packets.
 The dataplane also manages its own virtual address translations, supported
 through nested paging. In constrast to contemporary OSes, we use exclusively
 large (2MB) pages. We found that large pages are an optimal granularity,
-given the growing abundance of memory resources and the reduction in address
-translation overhead~\cite{DBLP:conf/isca/BasuGCHS13, dune}. Our dataplane maintains
+given their potential to reduce address translation overhead~\cite{DBLP:conf/isca/BasuGCHS13, dune}
+and the growing abundance of physical memory resources.. Our dataplane maintains
 only a single address space; kernel pages are protected with
 supervisor bits. We deliberately chose not to support swappable memory
 in order to avoid adding unecessary performance variability.
@@ -182,7 +182,7 @@ kernel runs out of memory) while the second could succeed, resulting in incorrec
 data ordering. While not always required, we found that the
 simple heuristic of issuing at most one system call per TCP connection in a given
 batch greatly simplified error handling. Our \texttt{sendv} system
-call also supports multiple buffers in a single request, so it is
+call also supports multiple buffers, so it is
 usually possible to coalesce several writes into a single request.
 
 We built a user-level library, called \emph{libix}, that abstracts away
