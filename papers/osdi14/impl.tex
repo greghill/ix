@@ -119,17 +119,17 @@ kilobyte, and are used for both receiving and transmitting packets.
 The dataplane also manages its own virtual address translations, supported
 through nested paging. In constrast to contemporary OSes, we use exclusively
 large (2MB) pages. We found that large pages are an optimal granularity,
-given their potential to reduce address translation overhead~\cite{DBLP:conf/isca/BasuGCHS13, dune}
-and the growing abundance of physical memory resources.. Our dataplane maintains
+given their reduced address translation overhead~\cite{DBLP:conf/isca/BasuGCHS13, dune}
+and the relative abundance of physical memory resources. Our dataplane maintains
 only a single address space; kernel pages are protected with
 supervisor bits. We deliberately chose not to support swappable memory
 in order to avoid adding unecessary performance variability.
 
-We provide a hierarchical timing wheel~\cite{DBLP:conf/sosp/VargheseL87} subsystem
+We provide a hierarchical timing wheel~\cite{DBLP:conf/sosp/VargheseL87} implementation
 for managing network timeouts, such as TCP retransmissions. It is optimized
 for the common case where most timers are canceled before they expire. We support
 extremely high resolution timeouts (as low as 16 \microsecond), which has been
-shown to improve performing in the presence of TCP incast congestion~\cite{DBLP:conf/sigcomm/VasudevanPSKAGGM09}.
+shown to improve performance during TCP incast congestion~\cite{DBLP:conf/sigcomm/VasudevanPSKAGGM09}.
 
 The dataplane \edb{currently} consists of \data{37K}{38K} SLOC~\cite{url:sloccount}.  We
 leveraged existing codebases in its development: \data{43\%}{42\%} is derived from
