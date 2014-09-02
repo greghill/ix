@@ -195,9 +195,9 @@ and write operations that are more efficient, at the expense of
 requiring changes to existing applications. 
 
 
-\input{figs/float-pipeline} 
+%\input{figs/float-pipeline} 
 
-Fig.~\ref{fig:queues-cores} illustrates the run-to-completion
+Fig.~\ref{fig:dataplane} illustrates the run-to-completion
 operation of elastic threads in the \ix dataplane. \edb{REDO?}Each elastic thread
 is associated with a specific set of receive queues from one or more
 NICs. Each NIC uses RSS to implement flow-consistent hashing and
