@@ -118,16 +118,16 @@ an unfair advantage?}
 %% mTCP: 3253521
 
 Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} show the results
-for both the 10GbE and the 40GbE configurations.  
-For the 10GbE configuration, the results for Linux and mTCP are consistent with the ones
-published in the mTCP paper~\cite{jeong2014mtcp}.  For all three tests
-(core scaling, message count scaling, message size scaling), \ix
+for both the 10GbE and the 40GbE configurations.  For the 10GbE
+configuration, the results for Linux and mTCP are consistent with the
+ones published in the mTCP paper~\cite{jeong2014mtcp}.  For all three
+tests (core scaling, message count scaling, message size scaling), \ix
 scales more aggressively than mTCP and
 Linux. Fig.~\ref{fig:short10:mcore} shows that \ix needs only 3 cores
 to saturate the 10GbE link whereas mTCP requires 8 core. On
-Fig.~\ref{fig:short10:roundtrips} for 1024 rountrips, \ix delivers 8.8
-million messages per second, an increase of 89\% over mTCP and of 778\%
-over Linux.
+Fig.~\ref{fig:short10:roundtrips} for 1024 rountrips, \ix delivers \george{CHECK}8.8
+million messages per second, which is 1.9x the throughput of mTCP and
+of and \george{CHECK} 8.8x that of over Linux.
 
 Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} also shows that
 \ix can scale efficiently to a 4x10GbE configuration.
