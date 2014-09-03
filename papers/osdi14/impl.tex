@@ -128,8 +128,8 @@ which has been shown to improve performance during TCP incast
 congestion~\cite{DBLP:conf/sigcomm/VasudevanPSKAGGM09}.
 
 The \ix dataplane \edb{currently} consists of \data{37K}{39K}
-SLOC% ~\cite{url:sloccount}
-as it leverages existing codebases: \data{43\%}{41\%} is derived from
+SLOC\edb{ CITE? - need to define SLOC~\cite{url:sloccount}}
+ as it leverages existing codebases: \data{43\%}{41\%} is derived from
 the DPDK variant of the Intel NIC device driver~\cite{intel:dpdk},
 \data{23\%}{26\%} from the lwIP TCP/IP stack~\cite{dunkels2001design},
 and \data{16\%}{15\%} from the Dune library.  All three code bases are
@@ -140,7 +140,7 @@ feature-rich networking stack. We implemented RFC-compliant support
 for UDP, ARP, and ICMP.  Since lwIP was optimized for memory
 efficiency in embedded environments, we had to radically change its
 internal data structures for multi-core scalability and fine-grained
-timer management. We did not yet optimize the lwIP code for
+timer management. \edb{However, we\sout{We}} did not yet optimize the lwIP code for
 performance. Hence, there is room for improvement in the results shown
 in \S\ref{sec:eval}.
 
