@@ -252,7 +252,7 @@ The \ix dataplane is optimized for multi-core scalability as elastic
 threads operate in a synchronization and coherence free manner in the
 common case. This is a stronger requirement than lock-free
 synchronization, which requires expensive atomic instructions even
-when a single thread uses a particular lock in the common
+when a single thread uses a particular data structure in the common
 case~\cite{DBLP:conf/sosp/DavidGT13}.  This is made possible through a
 set of conscious design and implementation tradeoffs.
 
@@ -260,7 +260,7 @@ First, system call implementations can only be synchronization-free if
 the API itself is
 commutative~\cite{DBLP:conf/sosp/ClementsKZMK13}. The \ix API is
 commutative between elastic threads. Each elastic thread has its own
-flow identifier namespace, and an elastic thread can not perform
+flow identifier namespace, and an elastic thread can not directly perform
 operations on flows that it does not own.
 %Events are processed independently on each elastic
 %thread. Handles identify flows but cannot be exchanged between elastic
@@ -291,7 +291,9 @@ server.
 require synchronization on updates.  For example, the ARP table is
 shared by all elastic threads and is protected by RCU
 locks~\cite{mckenney1998read}. Hence, the common case reads are
-coherency-free but the rare updates are not.
+coherency-free but the rare updates are not. We garbage collection
+RCU objects after a quiescent period that ends when every elastic
+has gone through a complete run to completion cycle.
 %
 \dm{Can you add a sentence about what constitutes a quiescent period
   for RCU garbage collection, given that this is a very non-Linux
