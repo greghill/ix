@@ -206,20 +206,20 @@ the expense of requiring changes to existing applications.
 %\input{figs/float-pipeline} 
 
 Fig.~\ref{fig:dataplane} illustrates the run-to-completion operation
-an elastic thread in the \ix dataplane. NIC receive buffers are mapped
-in the server's main memory and the NIC's receive descriptor ring is
-filled with a set of buffer descriptors that allow it to transfer
-incoming packets using DMA\@.  The elastic thread (1) polls the
-receive descriptor ring and potentially posts fresh buffer descriptors
-to the NIC for use with future incoming packets. The elastic thread
-then (2) processes a bounded number of packets through the TCP/IP
-networking stack, thereby generating event conditions. Next, the
-elastic thread (3) passes control to the user-space applications,
-which consumes all event conditions. Assuming that the incoming
-packets include remote requests, the application processes these
-requests and responds with a batch of system calls. Upon return of
-control from user-space, the elastic thread (4) processes all system
-calls, and in particular the ones that direct outgoing TCP/IP
+for an elastic thread in the \ix dataplane. NIC receive buffers are
+mapped in the server's main memory and the NIC's receive descriptor
+ring is filled with a set of buffer descriptors that allow it to
+transfer incoming packets using DMA\@.  The elastic thread (1) polls
+the receive descriptor ring and potentially posts fresh buffer
+descriptors to the NIC for use with future incoming packets. The
+elastic thread then (2) processes a bounded number of packets through
+the TCP/IP networking stack, thereby generating event
+conditions. Next, the elastic thread (3) switches to the user-space
+applications, which consumes all event conditions. Assuming that the
+incoming packets include remote requests, the application processes
+these requests and responds with a batch of system calls. Upon return
+of control from user-space, the elastic thread (4) processes all
+system calls, and in particular the ones that direct outgoing TCP/IP
 traffic. It also (5) runs all kernel timers in order to ensure
 compliant TCP behavior. Finally (6), it places outgoing Ethernet
 frames in the NIC's transmit descriptor ring for transmission and it
@@ -230,7 +230,7 @@ trasmit ring's head position. This potentially generates \texttt{sent}
 event conditions.  The process repeats in a loop until there is no
 network activity. In this case, we enter a quiescent state which
 involves either hyperthread-friendly polling or optionally entering a
-power efficient c-state, at the cost of some additional latency.
+power efficient C-state, at the cost of some additional latency.
 
 
 \subsection{Multi-core Scalability}
@@ -241,17 +241,15 @@ threads operate in a synchronization and coherence free manner in the
 common case. This is a stronger requirement than lock-free
 synchronization, which requires expensive atomic instructions even
 when a single thread uses a particular lock in the common
-case~\cite{DBLP:conf/sosp/DavidGT13}.  This was made possible 
-through a set of conscious design and implementation tradeoffs. 
+case~\cite{DBLP:conf/sosp/DavidGT13}.  This is made possible through a
+set of conscious design and implementation tradeoffs.
 
-
-
-First, the \ix API is commutative. Events are processed independently
-on each elastic thread. Handles identify flows but cannot be exchanged
-between elastic threads. There is no file descriptor namespace.
-According to the commutativity rule, system call implementations can
-only be coherence-free if the API itself is
-commutative~\cite{DBLP:conf/sosp/ClementsKZMK13}.
+First, system call implementations can only be synchronization-free if
+the API itself is
+commutative~\cite{DBLP:conf/sosp/ClementsKZMK13}. The \ix API is
+commutative. Events are processed independently on each elastic
+thread. Handles identify flows but cannot be exchanged between elastic
+threads. There is no file descriptor namespace.
 
 Second, the API implementation is carefully optimized.  Each elastic
 thread manages its own memory pools, hardware queues, event condition
@@ -261,8 +259,7 @@ batched system calls benefits directly from the explicit, cooperative
 control flow transfers between \ix and the application by the elastic
 thread.  Since there is no concurrent execution by producer and
 consumer, event conditions and batched system calls are implemented
-without synchronization primitives based on
-atomics.
+without synchronization primitives based on atomics.
 
 Third, the use of flow-consistent hashing at the NICs ensures that
 each elastic thread operates on a disjoint subset of incoming TCP
@@ -270,70 +267,47 @@ flows. Hence, no synchronization or coherence occurs during the
 processing of incoming requests for a server application. For client
 applications with outbound connections, we need to ensure that the
 reply is assigned to the same elastic thread that made the
-request. Since we cannot reverse the Toeplitz hash used by RSS~\cite{url:rss}, we
-simply probe the ephemeral port range to find a port number that
-would lead to the desired behavior. Note that this implies that two
-elastic threads in a client cannot share a flow to a server.
+request. Since we cannot reverse the Toeplitz hash used by
+RSS~\cite{url:rss}, we simply probe the ephemeral port range to find a
+port number that would lead to the desired behavior. Note that this
+implies that two elastic threads in a client cannot share a flow to a
+server.
 
 
 \ix does have a small number of shared structures, including some that
 require synchronization on updates.  For example, the ARP table is
 shared by all elastic threads and is protected by RCU
-locks~\cite{mckenney1998read}, Hence, the common case reads are
+locks~\cite{mckenney1998read}. Hence, the common case reads are
 coherency-free but the rare updates are not.
 %
 \dm{Can you add a sentence about what constitutes a quiescent period
   for RCU garbage collection, given that this is a very non-Linux
   API?}
 
-
-\ix also requires
-synchronization when the control plane reallocates resources between
-dataplanes.  For instance, when a core is revoked from a dataplane,
-the corresponding incoming queues must be assigned to another elastic
-thread. Such events are rare because resource allocation happens in a
-coarse-grain manner. Finally, the application code may include
-inter-thread communication and synchronization. While using \ix does
-not eliminate the need to develop scalable application code, it
-ensures that there are no scaling bottlenecks in the system and
-protocol processing code. 
+\ix requires synchronization when the control plane reallocates
+resources between dataplanes.  For instance, when a core is revoked
+from a dataplane, the corresponding incoming queues must be assigned
+to another elastic thread. Such events are rare because resource
+allocation happens in a coarse-grain manner. Finally, the application
+code may include inter-thread communication and synchronization. While
+using \ix does not eliminate the need to develop scalable application
+code, it ensures that there are no scaling bottlenecks in the system
+and protocol processing code.
 
 \subsection{Security Model}
 \label{sec:impl:coop}
 
-\christos{We need to clean up this section, make a bigger deal out of
-  this, and explain why this is the right way to architect IO stacks/libOS}
+% \christos{We need to clean up this section, make a bigger deal out of
+%   this, and explain why this is the right way to architect IO
+%   stacks/libOS}
 
 The \ix API and implementation leads to a cooperative flow control
 model between application code and the network-processing stack.  But
-unlike user-level stacks that also expose networking behavior to user
-code, \dm{Can you say something more specific than networking
-  behavior?  Maybe something like ``unrestricted raw network
-  access''?}  the \ix protection model makes few assumptions about
-application behavior. A malicious or misbehaving application can only
-hurt itself. It cannot corrupt the networking stack or affect other
-applications.
-
-The \ix dataplane and the application collaboratively manage
-memory. To enable zero-copy operation, a buffer used for an incoming
-packet is passed read-only to the application, enabling zero-copy
-operation. Applications that hold on to message buffers for extensive
-periods of time must bound their use of this shared resource.  In the
-transmit direction, zero-copy operation implies that the application
-must not modify outgoing data
-until reception is
-acknowledged by the peer.
-
-Since elastic threads in \ix execute both the network stack and
-application code, a long running application can block further network
-processing for a set of queues. This behavior in no way affects other
-applications or dataplanes. We use a timeout interrupt to detect
-elastic threads that spend excessive time in user mode (e.g., in
-excess of 10ms). We mark such applications as non-responsive and
-notify the control
-plane.
-
-Note that all application code in \ix runs in user-mode, while the
+unlike user-level stacks that allow user code to control networking
+behavior, the \ix protection model makes few assumptions about
+application. A malicious or misbehaving application can only hurt
+itself. It cannot corrupt the networking stack or affect other
+applications. All application code in \ix runs in user-mode, while the
 dataplane code is in protected ring 0. Applications cannot access
 dataplane memory, except for read-only message buffers.  No sequence
 of batched system calls or other user-level actions can be used to
@@ -342,15 +316,32 @@ Furthermore, the dataplane can be used to enforce network security
 policies (e.g., iptables or Amazon Security
 Groups~\cite{url:amazon-sg}) or to implement the network
 virtualization functions typically done in a
-hypervisor~\cite{nsdi:nsx}. Our security model is as strong as
-conventional network stacks in commodity OSes and is missing from all
-the recently proposed user-level networking stacks.
+hypervisor~\cite{nsdi:nsx}. The \ix security model is as strong as
+conventional kernel-based networking stacks, a feature that is missing
+from all recently proposed user-level stacks.
 
-Our current implementation does not use an IOMMU due to their
+The \ix dataplane and the application collaboratively manage
+memory. To enable zero-copy operation, a buffer used for an incoming
+packet is passed read-only to the application, enabling zero-copy
+operation. Applications that hold on to message buffers for extensive
+periods of time must bound their use of this shared resource.  In the
+transmit direction, zero-copy operation implies that the application
+must not modify outgoing data until reception is acknowledged by the
+peer.
+
+Since elastic threads in \ix execute both the network stack and
+application code, a long running application can block further network
+processing for a set of queues. This behavior in no way affects other
+applications or dataplanes. We use a timeout interrupt to detect
+elastic threads that spend excessive time in user mode (e.g., in
+excess of 10ms). We mark such applications as non-responsive and
+notify the control plane.
+
+The \ix current implementation does not use an IOMMU due to its
 performance overheads~\cite{iommu:overhead}. The \ix kernel is trusted
 code that has access to descriptor rings with host-physical addresses.
 This decision is not fundamental to our design and does not affect the
-security model provided to applications. 
+security model provided to applications.
 
 
 \dm{This raised a couple of questions for me.  First, is the
@@ -362,7 +353,6 @@ security model provided to applications.
   For example, if I'm implementing an HTTP proxy, can I make small
   modifications to a message buffer I just received and then
   retransmit it?  Or is the point that one would use scatter gather IO
-  for such surgical edits?}
+  for such surgical edits?} \christos{add a comment someplace about
+  checksum in HW}
 
-\christos{adam wants another implementation section or subsection with
-  more code details -- add outline}
