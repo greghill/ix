@@ -259,14 +259,16 @@ set of conscious design and implementation tradeoffs.
 First, system call implementations can only be synchronization-free if
 the API itself is
 commutative~\cite{DBLP:conf/sosp/ClementsKZMK13}. The \ix API is
-commutative. Events are processed independently on each elastic
-thread. Handles identify flows but cannot be exchanged between elastic
-threads. There is no file descriptor namespace.
+commutative between elastic threads. Each elastic thread has its own
+flow identifier namespace and one elastic thread is prohibited
+from accessing flow that belong to another.
+%Events are processed independently on each elastic
+%thread. Handles identify flows but cannot be exchanged between elastic
+%threads. There is no file descriptor namespace.
 
 Second, the API implementation is carefully optimized.  Each elastic
 thread manages its own memory pools, hardware queues, event condition
-array, and batched system call array. No synchronization is required
-to access any of them. The implementation of event conditions and
+array, and batched system call array. The implementation of event conditions and
 batched system calls benefits directly from the explicit, cooperative
 control flow transfers between \ix and the application by the elastic
 thread.  Since there is no concurrent execution by producer and
@@ -284,7 +286,6 @@ RSS~\cite{url:rss}, we simply probe the ephemeral port range to find a
 port number that would lead to the desired behavior. Note that this
 implies that two elastic threads in a client cannot share a flow to a
 server.
-
 
 \ix does have a small number of shared structures, including some that
 require synchronization on updates.  For example, the ARP table is
