@@ -23,8 +23,8 @@ kernel's network stack will generate TCP \texttt{ACKs} and slide its
 receive window even when the application is not consuming data, up to
 an extent. Second, dataplanes optimize for \emph{synchronization-free
   operation} in order to scale well on many cores. Network flows are
-distributed into distinct queues via receive-side scaling
-(RSS)~\cite{url:rss} and the common case packet processing requires no
+distributed into distinct queues via flow-consistent hashing such as
+Recieve Side Scaling (RSS)~\cite{url:rss} and the common case packet processing requires no
 synchronization or coherence traffic between cores.
 
 \ix extends the dataplane architecture to support untrusted
@@ -32,8 +32,8 @@ applications and satisfy all requirements in
 \S\ref{sec:motivation:challenges}. Its design is based on the
 following key principles:
 
-\christos{this list must be aligned with 2.2. Ie we should explain how
-  each approach helps with the requirements. This is critical}
+% \christos{this list must be aligned with 2.2. Ie we should explain how
+%   each approach helps with the requirements. This is critical}
 
 \myparagraph{Separation and protection of control and data plane:} \ix
 separates the control function of the kernel, responsible for resource
@@ -52,10 +52,10 @@ while permitting other OS functionality, such as file system support,
 to be passed through to the control plane for compatibilility.
 Similar to the Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, each
 dataplane runs a single application in a single address
-space. However, we use modern virtualization hardware~\cite{dune} to
-provide three-way isolation between the control plane, the dataplane,
-and untrusted user code. Dataplanes have capabilities similar to guest
-OSes in virtualized systems. They manage their own address
+space. However, we use modern virtualization hardware to provide
+three-way isolation between the control plane, the dataplane, and
+untrusted user code~\cite{dune}. Dataplanes have capabilities similar
+to guest OSes in virtualized systems. They manage their own address
 translations, on top of the address space provided by the control
 plane, and can protect the networking stack from untrusted application
 logic through the use of privilege rings. Moreover, dataplanes are
@@ -80,33 +80,32 @@ during all load conditions. Thus, we are able to use polling and avoid
 interrupt overhead in the common case. We still rely on interrupts as
 a mechanism to regain control, for example, if a dataplane is slow to
 respond.  Run to completion improves both message throughput and
-latency because each successive stages tends to access many of the
-same data, leading to better data cache locality.
+latency because successive stages tend to access many of the same
+data, leading to better data cache locality.
 
 The \ix dataplane also makes extensive use of batching.  Previous
 systems applied batching at the system call
 boundary~\cite{DBLP:conf/osdi/HanMCR12, DBLP:conf/osdi/SoaresS10} and
-at the network API and hardware queue level\cite{jeong2014mtcp}.  We
-apply batching in every processing stage in the network stack,
-including but not limited to system calls and queues. Moreover, we use
-batching \emph{adaptively} as follows: (i) we never wait to batch
-requests and batching only occurs in the presence of congestion; (ii)
-we set an upper bound on the number of batched packets. Using batching
-only during congestion allows us to minimize the impact on latency,
-while bounding the batch size prevents the live set from exceeding
-cache capacities and helps to prevent transmit queue
-starvation. Batching improves the message throughput because it
-amortizes system call transition overheads % (although these costs are
+at the network API and hardware queue level~\cite{jeong2014mtcp}.  We
+apply batching in every stage of the network stack, including but not
+limited to system calls and queues. Moreover, we use batching
+\emph{adaptively} as follows: (i) we never wait to batch requests and
+batching only occurs in the presence of congestion; (ii) we set an
+upper bound on the number of batched packets. Using batching only on
+congestion allows us to minimize the impact on latency, while bounding
+the batch size prevents the live set from exceeding cache capacities
+and avoids transmit queue starvation. Batching improves packet rate
+because it amortizes system call transition
+overheads % (although these costs are
 % relatively small on modern hardware)
-and increases instructions per
-cycle through improved instruction cache locality, prefetching
-effectiveness, and branch prediction accuracy. When applied
-adaptively, batching also decreasing latency because these same
-efficiencies reduce head-of-line blocking.
+and improves instruction cache locality, prefetching effectiveness,
+and branch prediction accuracy. When applied adaptively, batching also
+decreases latency because these same efficiencies reduce head-of-line
+blocking.
 
-The combination of bounded batch sizes and run to completion means
-that queues for incoming packets can build up only at the NIC edge,
-before packet processing starts in the dataplane. 
+The combination of bounded, adaptive batching and run to completion
+means that queues for incoming packets can build up only at the NIC
+edge, before packet processing starts in the dataplane.
 % before packets are processed by the dataplane. \ana{Emphasize that
 % we are not wasting resources on packets that might have to be
 % dropped; drop early at the NIC if can't handle.  Citation for Mogul
@@ -122,42 +121,45 @@ ECN~\cite{ramakrishnan2001addition}), and make policy decisions for
 congestion management (e.g., via
 RED~\cite{DBLP:journals/ton/FloydJ93}).
 
-\input{figs/float-cp-dp}
+%\input{figs/float-cp-dp}
+\input{figs/float-architecture}
 
 \myparagraph{Native, zero-copy API with explicit flow control:} We do
 not expose or emulate the POSIX API for networking.  Instead, the
 dataplane and the application communicate asynchronously with each
 other via messages stored in
-memory~\cite{DBLP:conf/osdi/HanMCR12,DBLP:journals/cacm/Rizzo12}.  The
-API meets the commutativity rule~\cite{DBLP:conf/sosp/ClementsKZMK13}
-and allows for a true zero-copy operation in both directions. The
-dataplane and application cooperatively manage the message buffer
-pool. Incoming packets are mapped read-only into the application,
-which may hold onto message buffers and return them to the dataplane
-at a later point.  The application sends to the dataplane
-scatter/gather lists of memory locations for transmission but, since
-contents are not copied, the application must keep the content
-immutable until the peer acknowledges reception. The dataplane implements
-all flow control mechanisms and may trim transmission requests that
-exceed the available size of the sliding window.  Essentially, the API
-directly, but safely, exposes flow control to applications.
-
+memory.% ~\cite{DBLP:conf/osdi/HanMCR12,DBLP:journals/cacm/Rizzo12}
+The API meets the commutativity rule and allows for a true zero-copy
+operation in both directions, which improves both latency and packet
+rate. The dataplane and application cooperatively manage the message
+buffer pool. Incoming packets are mapped read-only into the
+application, which may hold onto message buffers and return them to
+the dataplane at a later point.  The application sends to the
+dataplane scatter/gather lists of memory locations for transmission
+but, since contents are not copied, the application must keep the
+content immutable until the peer acknowledges reception. The dataplane
+implements all flow control mechanisms and may trim transmission
+requests that exceed the available size of the sliding window.
+Essentially, the API directly, but safely, exposes flow control to
+applications.
 
 \myparagraph{Flow consistent, synchronization-free processing:} We use
 multi-queue NICs with RSS support to provide flow-consistent hashing
-of incoming traffic to distinct hardware queues. Each queue is
-assigned to a single dataplane and is served by a single hardware
-thread, eliminating the need for synchronization and coherence traffic
-between cores in the networking stack. Similarly, memory management is
-organized in distinct pools for each hardware thread. The absence of a
-POSIX sockeet API eliminates the issue of the shared file descriptor
-namespace in multithreaded
+of incoming traffic to distinct hardware queues. Each hardware
+thread serves a single receive and transmit queue per NIC, eliminating
+the need for synchronization and
+coherence traffic between cores in the networking stack.  The control
+plane establishes the mapping of RSS flow groups to queues to balance
+the traffic among the hardware threads.  Similarly, memory management
+is organized in distinct pools for each hardware thread. The absence
+of a POSIX socket API eliminates the issue of the shared file
+descriptor namespace in multithreaded
 applications~\cite{DBLP:conf/sosp/ClementsKZMK13}. Overall, the \ix
 dataplane design scales well with the increasing number of cores in
 modern servers, which improves both packet rate and latency. This
-approach does not restrict the memory model for
-applications. Application logic can take advantage of coherent, shared
-memory to exchange information and synchronize between cores.
+approach does not restrict the memory model for applications, which
+take advantage of coherent, shared memory to exchange information and
+synchronize between cores.
 
 
 

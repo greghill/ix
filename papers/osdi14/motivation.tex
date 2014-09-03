@@ -163,8 +163,8 @@ receive side coalescing, have a marginal impact on packet rate.
 \subsection{Alternative Approaches}
 \label{sec:motivation:current}
 
-\christos{need another pass below to state more clearly which
-  reqs get better and which worse for each alternative}
+%\christos{need another pass below to state more clearly which
+ % reqs get better and which worse for each alternative}
 
 Since the network stacks within commodity kernels cannot take
 advantage of the abundance of hardware resources, a number of
@@ -204,7 +204,7 @@ management are entrusted to applications.
 
 \myparagraph{Alternatives to POSIX API:} MegaPipe replaces the POSIX
 API with lightweight sockets implemented with in-memory command
-rings~\cite{DBLP:conf/osdi/HanMCR12}. This substantially reduces
+rings~\cite{DBLP:conf/osdi/HanMCR12}. This reduces some
 software overheads and increases packet rates, but retains all other
 challenges of using an existing, kernel-based networking stack.
 
@@ -212,13 +212,17 @@ challenges of using an existing, kernel-based networking stack.
 incremental benefits with superior ease of deployment.  Linux
 \texttt{SO\_REUSEPORT} allows multi-threaded applications to accept
 incoming connections in parallel. Affinity-accept reduces overheads by
-considering the affinity of network flows to specific
-cores~\cite{DBLP:conf/eurosys/PesterevSZM12}. These approaches cannot
-completely eliminate synchronization between cores, as the lack of
-commutativity in the POSIX socket API implies that cross-core
-communication is needed when connections are accepted or
-closed~\cite{DBLP:conf/sosp/ClementsKZMK13}. When microsecond
-latencies are
-irrelevant %, as with Internet-facing messaging services,
-properly tuned stacks can support millions of concurrent
+ensuring all processing for a network flow is affinitized to the same
+core~\cite{DBLP:conf/eurosys/PesterevSZM12}. Recent Linux Kernels
+support a busy polling driver mode that trades increased CPU utilization
+for reduced latency, but it is not yet compatible with
+\texttt{epoll}, a requirement for scalable event notification.
+%These approaches cannot
+%completely eliminate synchronization between cores, as the lack of
+%commutativity in the POSIX socket API implies that cross-core
+%communication is needed when connections are accepted or
+%closed~\cite{DBLP:conf/sosp/ClementsKZMK13}. 
+When microsecond latencies are
+irrelevant properly tuned stacks can maintain millions of open
 connections~\cite{whatsapp-2mil}.
+
