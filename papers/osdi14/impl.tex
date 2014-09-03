@@ -177,10 +177,10 @@ raw TCP constraints and apply flow control policy inside the kernel
 
 One hazard of working with batched system calls is that when one
 request depends on the outcome of another request in the batch, it can
-lead to unexpected results. For example, if two separate requests are made to
-write to a TCP connection, then the first could fail (for example if the
-kernel runs out of memory) while the second could succeed, resulting in incorrect
-data ordering. While not always required, we found that the
+lead to unexpected results. For example, when two separate write requests
+are made to the same TCP connection, the first could fail (perhaps the
+kernel ran out of memory) while the second could succeed, resulting in incorrect
+ordering in the socket data stream. While not always required, we found that the
 simple heuristic of issuing at most one system call per TCP connection in a given
 batch greatly simplified error handling. Our \texttt{sendv} system
 call also supports multiple buffers, so it is
@@ -199,13 +199,10 @@ requiring changes to existing applications.
 %\input{figs/float-pipeline} 
 
 Fig.~\ref{fig:dataplane} illustrates the run-to-completion
-operation of elastic threads in the \ix dataplane. \edb{REDO?}Each elastic thread
-is associated with a specific set of receive queues from one or more
-NICs. Each NIC uses RSS to implement flow-consistent hashing and
-distribute incoming packets to queues. The queues are mapped in the
-server's main memory and the NIC is given a set of buffer descriptors
-that allow it to transfer incoming packets to memory using DMA\@.  The
-elastic thread (1) polls the receive queues it is responsible for and
+operation an elastic thread in the \ix dataplane. NIC receive buffers are mapped in the
+server's main memory and the NIC's receive descriptor ring is filled with a set of buffer descriptors
+that allow it to transfer incoming packets using DMA\@.  The
+elastic thread (1) polls the receive descriptor ring and
 potentially posts fresh buffer descriptors to the NIC for use with
 future incoming packets. The elastic thread then (2) processes a bounded
 number of packets through the TCP/IP networking stack, thereby
@@ -216,14 +213,16 @@ requests, the application processes these requests and responds with a
 batch of system calls. Upon return of control from user-space, the
 elastic thread (4) processes all system calls, and in particular the
 ones that direct outgoing TCP/IP traffic. It also (5) runs all kernel
-timers in order to ensure compliant TCP behavior. \edb{Finally (6)}, it places
-outgoing Ethernet frames in the NIC's descriptor rings for
-transmissio and it notifies the NIC to initiate a DMA transfer
-for these frames by updating the transmit ring's tail register.  This
-process repeats in a loop until there is no network activity. In this
-case, we enter a quiescent state which involves either power-efficient
-polling or yielding the hardware thread \george{the verb yield reminds me of a scheduler and i don't know if we want people to think that a dataplane and the control plane are analogous to a thread and the kernel scheduler} to the control plane.
-
+timers in order to ensure compliant TCP behavior. Finally (6), it places
+outgoing Ethernet frames in the NIC's transmit descriptor ring for
+transmission and it notifies the NIC to initiate a DMA transfer
+for these frames by updating the transmit ring's tail register. In
+a separate pass, it also frees any buffers that have finished transmitting, based
+oh the trasmit ring's head position. This potentially generates \texttt{sent} event conditions.
+The process repeats in a loop until there is no network activity. In this
+case, we enter a quiescent state which involves either hyperthread-friendly
+polling or optionally entering a power efficient c-state, at the cost of
+some additional latency.
 
 
 \subsection{Multi-core Scalability}
@@ -236,6 +235,8 @@ synchronization, which requires expensive atomic instructions even
 when a single thread uses a particular lock in the common
 case~\cite{DBLP:conf/sosp/DavidGT13}.  This was made possible 
 through a set of conscious design and implementation tradeoffs. 
+
+
 
 First, the \ix API is commutative. Events are processed independently
 on each elastic thread. Handles identify flows but cannot be exchanged
