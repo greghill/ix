@@ -7,7 +7,7 @@ set output outfile
 
 unset border
 unset tics
-set key box horizontal reverse center top height 0.3 width -5
+set key box horizontal center top height 0.3 width -5
 set yrange [-1:1]
 set size 1.2,.1
 plot NaN with linespoints linestyle 1 title 'Linux (avg)',\

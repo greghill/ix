@@ -40,8 +40,8 @@
   #define  TRIALS             7
   #define  RUNTM              0.25
 #else
-  #define  TRIALS             3
-  #define  RUNTM              0.10
+  #define  TRIALS             100
+  #define  RUNTM              10
 #endif
 
 #define  MEMSIZE            10000000 
