@@ -4,8 +4,8 @@
 
 \input{tbl-api}
 
-\christos{We should stress that the same pattern/architecture can be
-  used to implement any high performance stack, not just TCP/IP}
+% \christos{We should stress that the same pattern/architecture can be
+%   used to implement any high performance stack, not just TCP/IP}
 
 
 \subsection{Overview}
@@ -44,11 +44,11 @@ systems~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. We use the
 Dune module within Linux to enable dataplanes to run as
 application-specific OSes in the VMX non-root ring 0, the mode
 typically used to run guest kernels in virtualized
-systems~\cite{dune}.  Applications run VMX non-root ring 3, as usual.
-This approach provides dataplanes with direct access to hardware
-features, such as page tables and exceptions, and passthrough access
-to NICs. Moreover, it provides full, three-way protection between the
-control plane, dataplanes, and untrusted application code.
+systems~\cite{dune}.  Applications run VMX in non-root ring 3, as
+usual.  This approach provides dataplanes with direct access to
+hardware features, such as page tables and exceptions, and passthrough
+access to NICs. Moreover, it provides full, three-way protection
+between the control plane, dataplanes, and untrusted application code.
 
 Each \ix dataplane supports a single, multithreaded application. For
 instance, Fig.~\ref{fig:cp-dp} shows one dataplane for a
@@ -71,72 +71,78 @@ calls that are intermediated and validated for security by the
 dataplane before being forwarded to the Linux kernel. Elastic threads
 are expected to \emph{not} issue blocking calls because of the adverse
 impact on network behavior and performance. Similarly, each elastic
-thread makes exclusive use of a core or hyperthread allocated to the
-dataplane in order to achieve high performance with predictable
+thread makes exclusive use of a core or hardware thread allocated to
+the dataplane in order to achieve high performance with predictable
 latency. In contrast, multiple background threads may timeshare an
-allocated hyperthread. For example, if an application were allocated
-four hyperthreads, it could use all of them as elastic threads to
-serve external requests or it could temporarily transition to three
-elastic threads and use one background thread to execute tasks such as
-garbage collection. When the control plane revokes or allocates an
-additional hyperthread using a protocol similar to the one used in
-Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, the dataplane must adjust
-its number of elastic threads.
+allocated hardware thread. For example, if an application were
+allocated four hardware threads, it could use all of them as elastic
+threads to serve external requests or it could temporarily transition
+to three elastic threads and use one background thread to execute
+tasks such as garbage collection. When the control plane revokes or
+allocates an additional hardware thread using a protocol similar to
+the one in Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, the dataplane
+adjusts its number of elastic threads.
 
-\christos{We should stress that queues are a central concept in our
-  work.  we should add some discussion about elasticity/load balancing
-  here. Should we discuss how traffic is seperated between queues in
-  this section?}
+% \christos{We should stress that queues are a central concept in our
+%   work.  we should add some discussion about elasticity/load balancing
+%   here. Should we discuss how traffic is seperated between queues in
+%   this section?}
 
-\subsection{The Dataplane Kernel}
+\subsection{The \ix Dataplane}
 \label{sec:impl:dpkernel}
 
-Our dataplane runs in kernel space, as a virtualization guest on
-top of Linux~\cite{dune}. It differs from typical kernels
-in that it is specialized for high performance I/O and runs only
-a single application (similar to a library OS but with memory
-isolation). However, our dataplane is still required to provide
-many common kernel-level services.
+The \ix dataplane runs in kernel space as a virtualization guest on
+top of Linux~\cite{dune}. It differs from typical kernels in that it
+is specialized for high performance I/O and runs only a single
+application, similar to a library OS but with memory
+isolation. However, our dataplane is still required to provide many
+common kernel-level services.
 
-For memory management, we are willing to accept some memory fragmentation in order
-to reduce complexity and improve efficiency. All hot-path data objects are allocated from
-per-core memory pools. Each memory pool is structured as arrays
-of identically sized objects, provisioned in page-sized blocks. Free objects
-are tracked with a simple free list, and allocation routines are
-inlined directly into calling functions. Mbufs (our storage object
-for network packets) are stored as contiguous chunks of bookkeeping
-data and MTU sized buffers, rounded to the nearest
-kilobyte, and are used for both receiving and transmitting packets.
+For memory management, we accept some memory fragmentation in order to
+reduce complexity and improve efficiency. All hot-path data objects
+are allocated from per hardware thread memory pools. Each memory pool
+is structured as arrays of identically sized objects, provisioned in
+page-sized blocks. Free objects are tracked with a simple free list,
+and allocation routines are inlined directly into calling
+functions. Mbufs, the storage object for network packets, are stored
+as contiguous chunks of bookkeeping data and MTU-sized buffers,
+rounded to the nearest kilobyte, are used for both receiving and
+transmitting packets.
 
-The dataplane also manages its own virtual address translations, supported
-through nested paging. In constrast to contemporary OSes, we use exclusively
-large (2MB) pages. We found that large pages are an optimal granularity,
-given their reduced address translation overhead~\cite{DBLP:conf/isca/BasuGCHS13, dune}
-and the relative abundance of physical memory resources. Our dataplane maintains
-only a single address space; kernel pages are protected with
-supervisor bits. We deliberately chose not to support swappable memory
-in order to avoid adding unecessary performance variability.
+The dataplane also manages its own virtual address translations,
+supported through nested paging. In constrast to contemporary OSes, it
+uses exclusively large pages (2Mbytes). We favor large pages due to
+their reduced address translation
+overhead~\cite{DBLP:conf/isca/BasuGCHS13, dune} and the relative
+abundance of physical memory resources in modern servers. The
+dataplane maintains only a single address space; kernel pages are
+protected with supervisor bits. We deliberately chose not to support
+swappable memory in order to avoid unecessary performance variability.
 
-We provide a hierarchical timing wheel~\cite{DBLP:conf/sosp/VargheseL87} implementation
-for managing network timeouts, such as TCP retransmissions. It is optimized
-for the common case where most timers are canceled before they expire. We support
-extremely high resolution timeouts (as low as 16 \microsecond), which has been
-shown to improve performance during TCP incast congestion~\cite{DBLP:conf/sigcomm/VasudevanPSKAGGM09}.
+We provide a hierarchical timing wheel implementation for managing
+network timeouts, such as TCP
+retransmissions~\cite{DBLP:conf/sosp/VargheseL87}. It is optimized for
+the common case where most timers are canceled before they expire. We
+support extremely high resolution timeouts, as low as 16 \microsecond,
+which has been shown to improve performance during TCP incast
+congestion~\cite{DBLP:conf/sigcomm/VasudevanPSKAGGM09}.
 
-The dataplane \edb{currently} consists of \data{37K}{38K} SLOC~\cite{url:sloccount}.  We
-leveraged existing codebases in its development: \data{43\%}{42\%} is derived from
+The \ix dataplane \edb{currently} consists of \data{37K}{38K}
+SLOC% ~\cite{url:sloccount}
+as it leverages existing codebases: \data{43\%}{42\%} is derived from
 the DPDK variant of the Intel NIC device driver~\cite{intel:dpdk},
-\data{23\%}{26\%} from the lwIP TCP/IP stack~\cite{dunkels2001design}, and \data{16\%}{16\%}
-from the Dune library.  All three code bases are highly modified for
-\ix. The rest is approximately \data{7K}{6K} SLOC of new code. We chose lwIP as a
-starting point for TCP/IP processing because of its modularity and its
-maturity as a RFC-compliant, feature-rich networking stack. We
-implemented RFC-compliant support for UDP, ARP, and ICMP.
-Since lwIP was optimized for memory efficiency in embedded
-environments, we had to radically change its internal data structures
-for multi-core scalability and fine-grained timer management. We did not
-yet optimize the lwIP code for performance. Hence, there is room for
-improvement in the results shown in \S\ref{sec:eval}.
+\data{23\%}{26\%} from the lwIP TCP/IP stack~\cite{dunkels2001design},
+and \data{16\%}{16\%} from the Dune library.  All three code bases are
+highly modified for \ix. The rest is approximately \data{7K}{6K} SLOC
+of new code. We chose lwIP as a starting point for TCP/IP processing
+because of its modularity and its maturity as a RFC-compliant,
+feature-rich networking stack. We implemented RFC-compliant support
+for UDP, ARP, and ICMP.  Since lwIP was optimized for memory
+efficiency in embedded environments, we had to radically change its
+internal data structures for multi-core scalability and fine-grained
+timer management. We did not yet optimize the lwIP code for
+performance. Hence, there is room for improvement in the results shown
+in \S\ref{sec:eval}.
 
 \subsection{Dataplane API and Operation}
 \label{sec:impl:api}
@@ -145,84 +151,86 @@ Elastic threads interact with the \ix dataplane through three
 asynchronous, non-blocking mechanisms summarized in
 Table~\ref{tbl:api}: they issue \emph{batched systems calls} to the
 dataplane; they consume \emph{event conditions} generated by the
-dataplane; and they have direct, but safe, access to
-(\emph{mbuf}s) containing incoming payloads.  The latter allows
-for zero-copy access to incoming network traffic.  The application
-can hold on to mbufs until it asks the dataplane to
-release them via the \texttt{recv\_done} batched system call.
+dataplane; and they have direct, but safe, access to (\emph{mbuf}s)
+containing incoming payloads.  The latter allows for zero-copy access
+to incoming network traffic.  The application can hold on to mbufs
+until it asks the dataplane to release them via the
+\texttt{recv\_done} batched system call.
 
 Both batched system calls and event conditions are passed through
 arrays of shared memory, managed by the user and the kernel
-respectively.  We provide an unbatched system call
-(\texttt{run\_io}) that yields control to the kernel and initiates a new run
-to completion cycle. As part of the
-cycle, the kernel overwrites the array of batched system call requests with
-corresponding return codes and populates the array of event conditions.
-The handles defined in Table~\ref{tbl:api} are kernel-level flow identifiers. Each handle is
-associated with a cookie~\cite{DBLP:conf/osdi/HanMCR12}, an opaque value
-provided by the user at connection establishment to enable efficient
-user-level state lookup. %without an additional table lookup.
+respectively.  \ix provides an unbatched system call
+(\texttt{run\_io}) that yields control to the kernel and initiates a
+new run to completion cycle. As part of the cycle, the kernel
+overwrites the array of batched system call requests with
+corresponding return codes and populates the array of event
+conditions.  The handles defined in Table~\ref{tbl:api} are
+kernel-level flow identifiers. Each handle is associated with a
+cookie, an opaque value provided by the user at connection
+establishment to enable efficient user-level state
+lookup~\cite{DBLP:conf/osdi/HanMCR12}. %without an additional table lookup.
 
 \ix differs from POSIX sockets in that it directly exposes flow
-control conditions to the application: the \texttt{sendv} system call
+control conditions to the application. The \texttt{sendv} system call
 does not return the number of bytes buffered. Instead, it returns the
 number of bytes that were accepted and sent by the TCP stack, as
-constrained by correct TCP sliding window operation. Then, when the
-receiver acknowledges the bytes, a \texttt{sent} event
-condition informs the application that it is possible to send more
-data. Thus, send window sizing policy is determined entirely by the
-application.  By contrast, conventional OSes buffer send data beyond
-raw TCP constraints and apply flow control policy inside the kernel
-~\cite{dynamicwindow}.
+constrained by correct TCP sliding window operation. When the receiver
+acknowledges the bytes, a \texttt{sent} event condition informs the
+application that it is possible to send more data. Thus, send window
+sizing policy is determined entirely by the application.  By contrast,
+conventional OSes buffer send data beyond raw TCP constraints and
+apply flow control policy inside the kernel ~\cite{dynamicwindow}.
 
 One hazard of working with batched system calls is that when one
 request depends on the outcome of another request in the batch, it can
-lead to unexpected results. For example, when two separate write requests
-are made to the same TCP connection, the first could fail (perhaps the
-kernel ran out of memory) while the second could succeed, resulting in incorrect
-ordering in the socket data stream. While not always required, we found that the
-simple heuristic of issuing at most one system call per TCP connection in a given
-batch greatly simplified error handling. Our \texttt{sendv} system
-call also supports multiple buffers, so it is
-usually possible to coalesce several writes into a single request.
+lead to unexpected results. For example, when two separate write
+requests are made to the same TCP connection, the first could fail,
+perhaps the kernel ran out of memory, while the second could succeed,
+resulting in incorrect ordering in the socket data stream. While not
+always required, we found that the simple heuristic of issuing at most
+one system call per TCP connection in a given batch greatly simplified
+error handling. The \texttt{sendv} system call also supports multiple
+buffers, so it is usually possible to coalesce several writes into a
+single request.
 
-We built a user-level library, called \emph{libix}, that abstracts away
-the complexity of our low-level API. It provides a compatible programming
-model for legacy applications and significantly simplifies the
-development of new applications. Libix includes a functionally
-compatible interface to \texttt{libevent} and non-blocking POSIX
-socket operations. It also includes new interfaces for zero copy read
-and write operations that are more efficient, at the expense of
-requiring changes to existing applications. 
+We built a user-level library, called \emph{libix}, that abstracts
+away the complexity of our low-level API. It provides a compatible
+programming model for legacy applications and significantly simplifies
+the development of new applications. Libix currently includes a
+functionally compatible interface to \texttt{libevent} and
+non-blocking POSIX socket operations. It also includes new interfaces
+for zero copy read and write operations that are more efficient, at
+the expense of requiring changes to existing applications.
 
 
 %\input{figs/float-pipeline} 
 
-Fig.~\ref{fig:dataplane} illustrates the run-to-completion
-operation an elastic thread in the \ix dataplane. NIC receive buffers are mapped in the
-server's main memory and the NIC's receive descriptor ring is filled with a set of buffer descriptors
-that allow it to transfer incoming packets using DMA\@.  The
-elastic thread (1) polls the receive descriptor ring and
-potentially posts fresh buffer descriptors to the NIC for use with
-future incoming packets. The elastic thread then (2) processes a bounded
-number of packets through the TCP/IP networking stack, thereby
-generating event conditions. Next, the elastic thread (3) passes
-control to the user-space applications, which consumes all event
-conditions. Assuming that the incoming packets include remote
-requests, the application processes these requests and responds with a
-batch of system calls. Upon return of control from user-space, the
-elastic thread (4) processes all system calls, and in particular the
-ones that direct outgoing TCP/IP traffic. It also (5) runs all kernel
-timers in order to ensure compliant TCP behavior. Finally (6), it places
-outgoing Ethernet frames in the NIC's transmit descriptor ring for
-transmission and it notifies the NIC to initiate a DMA transfer
-for these frames by updating the transmit ring's tail register. In
-a separate pass, it also frees any buffers that have finished transmitting, based
-oh the trasmit ring's head position. This potentially generates \texttt{sent} event conditions.
-The process repeats in a loop until there is no network activity. In this
-case, we enter a quiescent state which involves either hyperthread-friendly
-polling or optionally entering a power efficient c-state, at the cost of
-some additional latency.
+Fig.~\ref{fig:dataplane} illustrates the run-to-completion operation
+an elastic thread in the \ix dataplane. NIC receive buffers are mapped
+in the server's main memory and the NIC's receive descriptor ring is
+filled with a set of buffer descriptors that allow it to transfer
+incoming packets using DMA\@.  The elastic thread (1) polls the
+receive descriptor ring and potentially posts fresh buffer descriptors
+to the NIC for use with future incoming packets. The elastic thread
+then (2) processes a bounded number of packets through the TCP/IP
+networking stack, thereby generating event conditions. Next, the
+elastic thread (3) passes control to the user-space applications,
+which consumes all event conditions. Assuming that the incoming
+packets include remote requests, the application processes these
+requests and responds with a batch of system calls. Upon return of
+control from user-space, the elastic thread (4) processes all system
+calls, and in particular the ones that direct outgoing TCP/IP
+traffic. It also (5) runs all kernel timers in order to ensure
+compliant TCP behavior. Finally (6), it places outgoing Ethernet
+frames in the NIC's transmit descriptor ring for transmission and it
+notifies the NIC to initiate a DMA transfer for these frames by
+updating the transmit ring's tail register. In a separate pass, it
+also frees any buffers that have finished transmitting, based oh the
+trasmit ring's head position. This potentially generates \texttt{sent}
+event conditions.  The process repeats in a loop until there is no
+network activity. In this case, we enter a quiescent state which
+involves either hyperthread-friendly polling or optionally entering a
+power efficient c-state, at the cost of some additional latency.
 
 
 \subsection{Multi-core Scalability}
