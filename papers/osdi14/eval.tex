@@ -10,7 +10,7 @@
 We compared \ix to a baseline running the most recent Linux kernel and to
 mTCP~\cite{jeong2014mtcp}. Our evaluation uses both networking
 microbenchmarks and a real-world, massively deployed, event-based
-application.
+application. In all cases, we consider TCP.
 
 \subsection{Experimental Methodology}
 \label{sec:eval:setup}
@@ -37,18 +37,22 @@ application.
 \input{figs/float-short-both}
 
 
-The experimental setup consists of a cluster of 18 clients
+Our experimental setup consists of a cluster of 18 clients
 and one server connected by
 a Quanta/Cumulus 48x10GbE switch with a Broadcom Trident+ ASIC.
 The client machines are a mix of Xeon E5-2637 @ 3.5 Ghz and Xeon
-E5-2650 @ 2.6 Ghz.  Each client has a single 82599EB 10GbE NIC
-connecting to the switch.  The server is a Xeon E5-2665 @ 2.4 Ghz with
-256 GB of DRAM and five Intel x520 NIC ports.  Each client or server
-socket has 8 cores and 16 hyperthreads.  The server is connected
-to the switch both via a single 10GbE interface and a 4x10GbE bond configured as a L3+L4 hash.  The former is used for all of our \emph{10GbE} experiments, and the latter for our \emph{4x10GbE} experiments. 
+E5-2650 @ 2.6 Ghz. The server is a Xeon E5-2665 @ 2.4 Ghz with
+256 GB of DRAM.  Each client and server
+socket has 8 cores and 16 hyperthreads. All machines are configured
+with Intel x520 10GbE NICs (82599EB chipset). We connect clients
+to the switch through a single NIC port, while for the server it depends
+on the experiement. For \emph{10GbE} experiments we use a single
+NIC port, and for \emph{4x10GbE} experiments we use four NIC ports
+bonded by the switch with a L3+L4 hash.
 
 Our baseline configuration in each
-machine is an Ubuntu LTS 14.0.4 distribution running the 3.16.1 (most-recent) Linux kernel.
+machine is an Ubuntu LTS 14.0.4 distribution, modified to run the 3.16.1 Linux kernel, the most
+recent at time of writing.
 When reporting multi-core scalability, we report
 results on a per-core basis. We enable hyperthreading when it improves performance. Except for
 \S\ref{sec:eval:netpipe}, client machines always run Linux. All power
