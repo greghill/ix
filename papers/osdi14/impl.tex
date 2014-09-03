@@ -260,8 +260,8 @@ First, system call implementations can only be synchronization-free if
 the API itself is
 commutative~\cite{DBLP:conf/sosp/ClementsKZMK13}. The \ix API is
 commutative between elastic threads. Each elastic thread has its own
-flow identifier namespace and one elastic thread is prohibited
-from accessing flow that belong to another.
+flow identifier namespace, and an elastic thread can not perform
+operations on flows that it does not own.
 %Events are processed independently on each elastic
 %thread. Handles identify flows but cannot be exchanged between elastic
 %threads. There is no file descriptor namespace.
@@ -299,7 +299,7 @@ coherency-free but the rare updates are not.
 
 \ix requires synchronization when the control plane reallocates
 resources between dataplanes.  For instance, when a core is revoked
-from a dataplane, the corresponding incoming queues must be assigned
+from a dataplane, the corresponding network flows must be assigned
 to another elastic thread. Such events are rare because resource
 allocation happens in a coarse-grain manner. Finally, the application
 code may include inter-thread communication and synchronization. While
