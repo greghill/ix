@@ -125,18 +125,18 @@ published in the mTCP paper~\cite{jeong2014mtcp}.  For all three tests
 scales more aggressively than mTCP and
 Linux. Fig.~\ref{fig:short10:mcore} shows that \ix needs only 3 cores
 to saturate the 10GbE link whereas mTCP requires 8 core. On
-Fig.~\ref{fig:short10:roundtrips} for 1024 rountrips, \ix delivers XXX
-million messages per second, an increase of XXX over mTCP and of XXX
+Fig.~\ref{fig:short10:roundtrips} for 1024 rountrips, \ix delivers 8.8
+million messages per second, an increase of 89\% over mTCP and of 778\%
 over Linux.
 
 Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} also shows that
 \ix can scale efficiently to a 4x10GbE configuration.
 Fig.~\ref{fig:short10:mcore} shows that \ix linearly scales to deliver
-\data{3.9}{XXX}million TCP connections per second on 4x10GbE, with a single multi-core socket.
-Fig.~\ref{fig:short10:roundtrips} shows a speedup of XXX with $n=1$
-and of XXX with $n=1K$ over the 10GbE configuration.  Finally,
+\data{3.9}{3.8}million TCP connections per second on 4x10GbE, with a single multi-core socket.
+Fig.~\ref{fig:short10:roundtrips} shows a speedup of 128\% with $n=1$
+and of 30\% with $n=1K$ over the 10GbE configuration.  Finally,
 Fig.~\ref{fig:short10:size} shows \ix can deliver 8KB messages with a
-goodput of \data{35}{XXX}Gbps, for a wire throughput of \data{38}{XXX}Gpbs (out of
+goodput of \data{35}{34.5}Gbps, for a wire throughput of \data{38}{37.9}Gpbs (out of
 a possible 39.7Gbps).  Overall, \ix makes it practical to scale
 protected TCP/IP processing beyond 10GbE, even with a single socket
 multi-core server.
@@ -166,11 +166,11 @@ is the upper bound we can reach with the available client machines.
 As expected, throughput increases with the degree of concurrency, but
 then decreases for very large connections counts due to the
 increasingly high cost of multiplexing among open connections.  At the
-peak, \ix performs \data{13x}{XXX} better than Linux, consistent with the results
+peak, \ix performs \data{13x}{10x} better than Linux, consistent with the results
 from Fig.~\ref{fig:short10:roundtrips}.  
 
 With 250,000 connections and
-4x10GbE, \ix is able to deliver  \data{53}{XXX}\% of its own peak throughput.
+4x10GbE, \ix is able to deliver  \data{53}{47}\% of its own peak throughput.
 We verified that the drop in throughput is not due to an increase in
 instruction count, but instead can be attributed to the performance of
 the memory subsystem. Indeed,
