@@ -181,17 +181,17 @@ sizing policy is determined entirely by the application.  By contrast,
 conventional OSes buffer send data beyond raw TCP constraints and
 apply flow control policy inside the kernel ~\cite{dynamicwindow}.
 
-One hazard of working with batched system calls is that when one
-request depends on the outcome of another request in the batch, it can
-lead to unexpected results. For example, when two separate write
-requests are made to the same TCP connection, the first could fail,
-perhaps the kernel ran out of memory, while the second could succeed,
-resulting in incorrect ordering in the socket data stream. While not
-always required, we found that the simple heuristic of issuing at most
-one system call per TCP connection in a given batch greatly simplified
-error handling. The \texttt{sendv} system call also supports multiple
-buffers, so it is usually possible to coalesce several writes into a
-single request.
+%One hazard of working with batched system calls is that when one
+%request depends on the outcome of another request in the batch, it can
+%lead to unexpected results. For example, when two separate write
+%requests are made to the same TCP connection, the first could fail,
+%perhaps the kernel ran out of memory, while the second could succeed,
+%resulting in incorrect ordering in the socket data stream. While not
+%always required, we found that the simple heuristic of issuing at most
+%one system call per TCP connection in a given batch greatly simplified
+%error handling. The \texttt{sendv} system call also supports multiple
+%buffers, so it is usually possible to coalesce several writes into a
+%single request.
 
 We built a user-level library, called \emph{libix}, that abstracts
 away the complexity of our low-level API. It provides a compatible
@@ -201,6 +201,18 @@ functionally compatible interface to \texttt{libevent} and
 non-blocking POSIX socket operations. It also includes new interfaces
 for zero copy read and write operations that are more efficient, at
 the expense of requiring changes to existing applications.
+
+Libix automatically coalesces multiple write requests into single
+\texttt{sendv} system during each batching round. This improves
+locality, simplifies error handling, and preserves correct behavior,
+as it ensures that data stream order is maintained even during failures.
+Coalescing also facilitates transmit flow control because
+we can use the transmit vector (the argument to \texttt{sendv})
+to keep track of outgoing data buffers and, if necessary, reissue
+writes when the transmit window has more available space, as notified
+by the \texttt{sent} event condition. Our buffer sizing policy is currently
+very basic; we enforce a maximum pending send byte limit, but
+we plan to make this adjustable in the future.
 
 
 %\input{figs/float-pipeline} 
