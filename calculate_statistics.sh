@@ -65,7 +65,7 @@ echo
 echo evaluation
 echo ----------
 awk '//{if ($3==1024) printf "for 1024 roundtrips, IX delivers %.1f million messages per second\n", $4/10**6}' $short_ix
-paste <(awk '//{if ($3==1024)print $4}' $short_ix) <(awk '//{if ($3==1024)print $4}' $short_mtcp) <(awk '//{if ($3==1024)print $4}' $short_linux) | awk '//{printf "an increase of %d%% over mTCP and of %d%% over Linux\n", 100*($1-$2)/$2, 100*($1-$3)/$3}'
+paste <(awk '//{if ($3==1024)print $4}' $short_ix) <(awk '//{if ($3==1024)print $4}' $short_mtcp) <(awk '//{if ($3==1024)print $4}' $short_linux) | awk '//{printf "which is %.1fx the throughput of mTCP and of and %.1fx that of Linux\n", $1/$2, $1/$3}'
 awk '//{if ($1==16&&$2==64&&$3==1) printf "IX linearly scales to deliver %.1f million TCP connections per second on 4x10GbE\n", $4/10**6}' $short_ix40
 paste $short_ix $short_ix40 | awk '//{if ($1==16&&$2==64&&$3==1) printf "speedup of %d%% with n = 1\n", 100*($13-$4)/$4}'
 paste $short_ix $short_ix40 | awk '//{if ($1==16&&$2==64&&$3==1024) printf "and of %d%% with n = 1K over the 10GbE configuration\n", 100*($13-$4)/$4}'
