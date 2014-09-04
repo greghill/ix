@@ -1,0 +1,51 @@
+
+Camera-ready version.
+
+ALL:
+
+SLOC	Directory	SLOC-by-Language (Sorted)
+16336   ixgbe           ansic=16336
+7467    inc             ansic=7467
+4862    libdune         ansic=4586,asm=276
+4704    net             ansic=4704
+2668    core            ansic=2559,python=109
+1180    sandbox         ansic=1180
+1173    lwip            ansic=1173
+391     vnic            ansic=311,python=80
+27      top_dir         python=27
+20      tests           python=20
+
+Totals grouped by language (dominant language first):
+ansic:        38316 (98.68%)
+asm:            276 (0.71%)
+python:         236 (0.61%)
+
+INC:
+
+
+SLOC	Directory	SLOC-by-Language (Sorted)
+4311    lwip            ansic=4311
+2372    ix              ansic=2372
+653     net             ansic=653
+131     asm             ansic=131
+
+
+libix:
+SLOC	Directory	SLOC-by-Language (Sorted)
+860     libix           ansic=860
+
+
+total = 39452 (ansic + asm)
+
+DPDK = (./ixgbe) 16336 (41%)
+
+LWIP = 1173 (./lwip) + 4311 (./inc/lwip) + 4704 (./net) = 10188 (26%(
+
+Dune = 4862 (./libdune) + 1180 (./sandbox) = 6042  (15%)
+
+New code  = 6026+860 = 6886 LOC
+
+
+
+
+

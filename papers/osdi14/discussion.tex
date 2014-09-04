@@ -22,6 +22,21 @@ in tuning the implementation of \ix for multi-core scalability,
 eliminating constructs that introduce synchronization or coherence
 traffic.
 
+\myparagraph{Using interrupts as a fallback:}
+\edb{ALT. TO NEXT PAR.} 
+The security model of \ix assumes some cooperation from applications,
+specifically to handle events in a quick, non-blocking manner;
+operations with extended execution times are expected to be delegated
+to background threads rather than execute within the context of
+elastic threads.  The \ix dataplane is designed around polling, with
+the provision that interrupts can be configured as fallback
+optimization to refresh receive descriptor rings when the ring is
+nearly full and to refill the transmit queues when it is empty (step
+(1) and (6) Fig~\ref{fig:dataplane}).  Timer interrupts exist
+primarily to detect runaway elastic threads and guarantee resource
+revocation.
+
+
 \myparagraph{Using interrupts as a fallback:} Some applications
 service requests that require extended intervals of
 compute time. We intend for these requests to be delegated
