@@ -51,7 +51,7 @@ NIC port, and for \emph{4x10GbE} experiments we use four NIC ports
 bonded by the switch with a L3+L4 hash.
 
 Our baseline configuration in each
-machine is an Ubuntu LTS 14.0.4 distribution, updated with the 3.16.1 Linux kernel, the most
+machine is an Ubuntu LTS 14.0.4 distribution, updated to the 3.16.1 Linux kernel, the most
 recent at time of writing.
 %When reporting multi-core scalability, we report
 %results on a per-core basis.
@@ -100,7 +100,7 @@ latency, and it underperforms \ix and Linux in this particular test.
 
 
 
-Next, we evaluate \ix's multi-core scalability in handling workloads
+Next, we evaluate \ix's multi-core scalability and ability to handle workloads
 with extreme connection churn by using the same benchmark used to
 evaluate MegaPipe~\cite{DBLP:conf/osdi/HanMCR12} and
 mTCP~\cite{jeong2014mtcp}. Multiple clients connect to a single server
@@ -108,13 +108,14 @@ listening on a single port, send a request of size $s$, and wait for an
 echo of a message of the same size.  As with NetPIPE, while receiving
 the message, the server holds off its echo response until the message
 has been entirely received.  Each client performs this synchronous
-remote procedure call $n$ times. As in ~\cite{jeong2014mtcp}, clients then close 
-then closes the connection using a
-reset (\texttt{TCP RST}) to avoid exhausting ephemeral ports in clients.
+remote procedure call $n$ times before closing the connection.
+As in ~\cite{jeong2014mtcp}, clients close the connection using a
+reset (\texttt{TCP RST}) to avoid exhausting ephemeral ports.
 \dm{This begs the question of what happens
   with FIN, since that is more realistic\@.  Is the point that \ix has
-an unfair advantage?} \adam{maybe the bigger question here is whether
-Linux is using TCP RST?}
+an unfair advantage?} \adam{(1) how do we get linux clients to send
+TCP RST? (2) Does the fact that IX will only close with TCP RST matter
+and why is this?}
 
 
 %%
@@ -124,20 +125,26 @@ Linux is using TCP RST?}
 
 Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} show the results
 for both the 10GbE and the 40GbE configurations.  For the 10GbE
-configuration, the results for Linux and mTCP are consistent with the
-ones published in the mTCP paper~\cite{jeong2014mtcp}.  For all three
+configuration, the results for Linux and mTCP are consistent with those
+published in the mTCP paper~\cite{jeong2014mtcp}.  For all three
 tests (core scaling, message count scaling, message size scaling), \ix
 scales more aggressively than mTCP and
 Linux. Fig.~\ref{fig:short10:mcore} shows that \ix needs only 3 cores
-to saturate the 10GbE link whereas mTCP requires 8 core. On
+to saturate the 10GbE link whereas mTCP requires all 8 cores. On
 Fig.~\ref{fig:short10:roundtrips} for 1024 rountrips, \ix delivers \george{CHECK}8.8
 million messages per second, which is 1.9x the throughput of mTCP and
-of and \george{CHECK} 8.8x that of over Linux.
+of and \george{CHECK} 8.8x that of Linux. For this packet rate we
+have achieved line rate and are limited only by 10GbE bandwidth.
 
-Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} also shows that
-\ix can scale efficiently to a 4x10GbE configuration.
+%% PROOF of line rate:
+% 10 * 10 ^ 9 bits  / (12 interframe gap + 7 preamble + 1 start frame delimiter +
+%		       14 ethernet hdr + 20 IP hdr + 20 TCP hdr + 64 payload + 4 CRC) bytes
+% = 8 802 816.9 requests / second
+
+Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} shows that
+\ix can scale beyond 10GbE to a 4x10GbE configuration while still using a single multicore socket.
 Fig.~\ref{fig:short10:mcore} shows that \ix linearly scales to deliver
-\data{3.9}{3.8}million TCP connections per second on 4x10GbE, with a single multi-core socket.
+\data{3.9}{3.8}million TCP connections per second on 4x10GbE.
 Fig.~\ref{fig:short10:roundtrips} shows a speedup of 128\% with $n=1$
 and of 30\% with $n=1K$ over the 10GbE configuration.  Finally,
 Fig.~\ref{fig:short10:size} shows \ix can deliver 8KB messages with a
@@ -145,7 +152,6 @@ goodput of \data{35}{34.5}Gbps, for a wire throughput of \data{38}{37.9}Gpbs (ou
 a possible 39.7Gbps).  Overall, \ix makes it practical to scale
 protected TCP/IP processing beyond 10GbE, even with a single socket
 multi-core server.
-
 
 \subsection{Connection Scalability}
 
