@@ -37,8 +37,8 @@ buffer underrun. On the transmit side, we could program
 the NIC to fire an interrupt whenever the transmit ring becomes
 empty so that it can be refilled. Such an interrupt would only need
 to be armed when there is additional transmit data pending. A desirable
-property of this approach is their neither interrupt would
-ever trigger as long as elastic threads are sufficiently responsive,
+property of this approach is that neither interrupt would
+be triggered as long as elastic threads are sufficiently responsive,
 but if an elastic thread misbehaves, the \ix dataplane would
 be able to regain control and catch up on network processing.
 
