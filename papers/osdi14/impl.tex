@@ -122,13 +122,13 @@ systems~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. However, it
 could be ported to any architecture with virtualization support, such as
 ARM, SPARC, and Power. It also requires one or more Intel 82599 chipset NICs,
 but it is designed to easily support additional drivers.
-Moreover, the \ix dataplane \edb{currently} consists of \data{37K}{39K}
+Moreover, the \ix dataplane \edb{currently} consists of 39K
 SLOC~\cite{url:sloccount} and leverages some existing codebases:
-\data{43\%}{41\%} is derived from
+41\% is derived from
 the DPDK variant of the Intel NIC device driver~\cite{intel:dpdk},
-\data{23\%}{26\%} from the lwIP TCP/IP stack~\cite{dunkels2001design},
-and \data{16\%}{15\%} from the Dune library.  All three code bases are
-highly modified for \ix. The rest is approximately \data{7K}{7K} SLOC
+26\% from the lwIP TCP/IP stack~\cite{dunkels2001design},
+and 15\% from the Dune library.  All three code bases are
+highly modified for \ix. The rest is approximately 7K SLOC
 of new code. We chose lwIP as a starting point for TCP/IP processing
 because of its modularity and its maturity as a RFC-compliant,
 feature-rich networking stack. We implemented RFC-compliant support

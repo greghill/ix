@@ -34,7 +34,6 @@ cases, we use TCP as the networking protocol.
 %machine with an Intel NIC is used as the server, while the rest are
 %used as clients. The server socket has 6 cores and 12 hyperthreads.
 
-\input{figs/float-short-both}
 
 
 Our experimental setup consists of a cluster of 18 clients
@@ -70,6 +69,7 @@ is the most recent supported kernel version.  We report only 10GbE
 results for mTCP, as it does not support NIC bonding.
 
 
+
 \subsection{Latency and Single-flow Bandwidth}
 \label{sec:eval:netpipe}
 
@@ -91,7 +91,9 @@ which wakes up the blocked process.  mTCP uses aggressive batching to
 offset the cost of context switching~\cite{jeong2014mtcp}, which comes
   at the expense of higher latency than both \ix and Linux in this
   particular test.
+
  
+\input{figs/float-short-both}
 
   \subsection{Throughput and Scalability}
 \label{sec:eval:short}
@@ -118,7 +120,7 @@ using a reset (\texttt{TCP RST}) to avoid exhausting ephemeral ports.
 %% IX:  7074246
 %% mTCP: 3253521
 
-Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} show the message
+Fig.~\ref{fig:shortboth} shows the message
 rate or goodput for both the 10GbE and the 40GbE configurations as we
 vary the number of cores used, the number of roundtrip messages per
 connection, and the message size respectively.  For the 10GbE
@@ -139,17 +141,19 @@ only by 10GbE bandwidth.
 %		       14 ethernet hdr + 20 IP hdr + 20 TCP hdr + 64 payload + 4 CRC) bytes
 % = 8 802 816.9 requests / second
 
-Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} shows that \ix
+Fig.~\ref{fig:shortboth} also shows that \ix
 scales well beyond 10GbE to a 4x10GbE configuration.
 Fig.~\ref{fig:short10:mcore} shows that \ix linearly scales to deliver
-\data{3.9}{3.8}million TCP connections per second on 4x10GbE.
-Fig.~\ref{fig:short10:roundtrips} shows a speedup of 128\% with $n=1$
-and of 30\% with $n=1K$ over 10GbE \ix.  Finally,
+3.8 million TCP connections per second on 4x10GbE.
+Fig.~\ref{fig:short10:roundtrips} shows a speedup of \edb{2.3x\sout{128\%}} with $n=1$
+and of \edb{1.3x\sout{30\%}} with $n=1024$ over 10GbE \ix.  Finally,
 Fig.~\ref{fig:short10:size} shows \ix can deliver 8KB messages with a
-goodput of \data{35}{34.5}Gbps, for a wire throughput of
-\data{38}{37.9}Gpbs, out of a possible 39.7Gbps.  Overall, \ix makes
+goodput of 34.5 Gbps, for a wire throughput of
+37.9 Gpbs, out of a possible 39.7Gbps.  Overall, \ix makes
 it practical to scale protected TCP/IP processing beyond 10GbE, even
 with a single socket multi-core server.
+
+\input{figs/float-connscaling}
 
 \subsection{Connection Scalability}
 
@@ -171,18 +175,19 @@ for a range of total established connections.
 %/p
 %13.15085
 
+\input{figs/float-mutilate}
 
-Fig.~\ref{fig:connscaling} shows up to to \data{100,000}{250,000}
+Fig.~\ref{fig:connscaling} shows up to to 250,000
 connections, which is the upper bound we can reach with the available
 client machines.  As expected, throughput increases with the degree of
 connection concurrency, but then decreases for very large connections
 counts due to the increasingly high cost of multiplexing among open
-connections.  At the peak, \ix performs \data{13x}{10x} better than
+connections.  At the peak, \ix performs 10x better than
 Linux, consistent with the results from
 Fig.~\ref{fig:short10:roundtrips}.
 
 With 250,000 connections and 4x10GbE, \ix is able to deliver
-\data{53}{47}\% of its own peak throughput.  We verified that the drop
+47\% of its own peak throughput.  We verified that the drop
 in throughput is not due to an increase in the instruction count, but
 instead can be attributed to the performance of the memory
 subsystem. Intel's Data Direct I/O technology, an evolution of

@@ -1,9 +1,9 @@
 
+
 \subsection{Memcached Performance}
 \label{sec:eval:memcached}
 
-\input{figs/float-connscaling}
-\input{figs/float-mutilate}
+
 
 Finally, we evaluated the performance benefits of the \ix with
 \texttt{memcached}, a widely deployed, in-memory key-value store built
@@ -17,6 +17,8 @@ application to scale because the common deployments involve high
 connection counts for \texttt{memcached} servers and small-sized
 requests and
 replies~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13,Atikoglu:2012:WAL}
+
+\input{tbl-mutilate}
 
 We use the \texttt{mutilate} load-generator to place a selected load
 on the server in terms of requests per second (RPS) and measure
@@ -60,9 +62,8 @@ equivalent versions in our API. \edb{We also replaced {\tt pthread}
 internal scalability of {\it memcached}~\cite{DBLP:conf/nsdi/FanAK13}
 or to support zero-copy IO operations.
 
-\christos{fix the QPS vs RPS issue: use only one. trim the graph to 500usec}
 
-\input{tbl-mutilate}
+
 
 Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
 two \texttt{memcached} workloads for Linux and \ix, while
@@ -74,7 +75,7 @@ experiments; running \ix on clients should further reduce latency.
 
 At high request rates, the distribution of CPU time shifts from being
 $>80\%$ in the kernel with Linux to $<10\%$ with \ix. This allows \ix
-to increase throughput by \data{2.0}{3.4} and \data{2.7}{4.7} for
+to increase throughput by 3.4 and 4.7 for
 \texttt{ETC} and \texttt{USR} respectively at a 500\microsecond tail
 latency SLA.  The improvement for \texttt{ETC} is lower due to the
 increased lock contention within the application itself, in particular

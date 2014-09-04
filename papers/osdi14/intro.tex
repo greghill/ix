@@ -72,19 +72,19 @@ popular \texttt{libevent} library~\cite{provos2003libevent}, providing
 compatibility with a wide range of existing applications.
 
 We compare \ix with a TCP/IP dataplane against Linux
-\data{3.11.10}{3.16} and mTCP, a state-of-the-art user-level TCP/IP
+3.16.1 and mTCP, a state-of-the-art user-level TCP/IP
 stack~\cite{jeong2014mtcp}.  On a 10GbE experiment using short messages, \ix outperforms Linux and mTCP by up to
-\data{14x}{8.8x} and \data{2.5x}{1.9x} respectively for throughput. \ix
+10x and 1.9x respectively for throughput. \ix
 further scales to 4x10GbE configuration using a single multi-core socket.
 The unloaded uni-directional latency for two IX servers is
-\data{6.9}{5.7}\microsecond, which is 4x better than between standard
+5.7\microsecond, which is 4x better than between standard
 Linux kernels and an order of magnitude better than mTCP, as both
 trade-off latency for throughput.  Our evaluation with memcached, a
 widely deployed key-value store, shows that \ix improves upon Linux by
-up to \data{2.7}{4.7}x in terms of throughput at a given 99th
+up to 4.7x in terms of throughput at a given 99th
 percentile latency bound, as it can reduce kernel time, due
 essentially to network processing, from $>80\%$ with Linux to
-\data{$<33\%$}{$<10\%$} with \ix.
+$<10\%$ with \ix.
 
 \ix demonstrates that, by revisiting the networking APIs and taking
 advantage of modern NICs and multi-core chips, we can design systems
