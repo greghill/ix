@@ -32,7 +32,7 @@ elastic threads.  The \ix dataplane is designed around polling, with
 the provision that interrupts can be configured as fallback
 optimization to refresh receive descriptor rings when the ring is
 nearly full and to refill the transmit queues when it is empty (step
-(1) and (6) Fig~\ref{fig:dataplane}).  Timer interrupts exist
+(1) and (6) in Fig~\ref{fig:dataplane}).  Timer interrupts exist
 primarily to detect runaway elastic threads and guarantee resource
 revocation.
 
