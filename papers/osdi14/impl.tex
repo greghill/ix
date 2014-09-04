@@ -14,16 +14,7 @@
 Fig.~\ref{fig:cp-dp} presents the \ix architecture, focusing on the
 separation between the control plane and the multiple dataplanes.  The
 hardware environment is a multi-core server with one or more
-multi-queue NICs with RSS support. The current \ix implementation uses
-the VT-x virtualization features available on all x86-64
-systems~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. However, it
-can be ported to any architecture with virtualization support, such as
-ARM, SPARC, and Power.  \edb{The prototype leverages the RSS and
-  multi-queue features of Intel's \texttt{ixgbe} NIC via Intel's DPDK
-  toolkit~\cite{intel:dpdk}, but is designed to easily support
-  additional drivers.} \christos{Too detailed, we should push later}
-
-The \ix control plane consists of the full Linux kernel and
+multi-queue NICs with RSS support. The \ix control plane consists of the full Linux kernel and
 \texttt{IXCP}, a user-level program \edb{CONFIRM}. The Linux kernel
 initializes PCIe devices, such as the NICs, and provides the basic
 mechanisms for resource allocation to the dataplanes, including cores,
@@ -91,12 +82,11 @@ adjusts its number of elastic threads.
 \subsection{The \ix Dataplane}
 \label{sec:impl:dpkernel}
 
-The \ix dataplane runs in kernel space as a virtualization guest on
-top of Linux~\cite{dune}. It differs from typical kernels in that it
-is specialized for high performance I/O and runs only a single
+We now discuss the \ix dataplane in more detail. It differs from a typical
+kernel in that it is specialized for high performance I/O and runs only a single
 application, similar to a library OS but with memory
-isolation. However, our dataplane is still required to provide many
-common kernel-level services.
+isolation. However, our dataplane is still provides many
+familiar kernel-level services.
 
 For memory management, we accept some memory fragmentation in order to
 reduce complexity and improve efficiency. All hot-path data objects
@@ -105,9 +95,8 @@ is structured as arrays of identically sized objects, provisioned in
 page-sized blocks. Free objects are tracked with a simple free list,
 and allocation routines are inlined directly into calling
 functions. Mbufs, the storage object for network packets, are stored
-as contiguous chunks of bookkeeping data and MTU-sized buffers,
-rounded to the nearest kilobyte, are used for both receiving and
-transmitting packets.
+as contiguous chunks of bookkeeping data and MTU-sized buffers, and
+are used for both receiving and transmitting packets.
 
 The dataplane also manages its own virtual address translations,
 supported through nested paging. In constrast to contemporary OSes, it
@@ -127,9 +116,15 @@ support extremely high resolution timeouts, as low as 16 \microsecond,
 which has been shown to improve performance during TCP incast
 congestion~\cite{DBLP:conf/sigcomm/VasudevanPSKAGGM09}.
 
-The \ix dataplane \edb{currently} consists of \data{37K}{39K}
-SLOC\edb{ CITE? - need to define SLOC~\cite{url:sloccount}}
- as it leverages existing codebases: \data{43\%}{41\%} is derived from
+Our current \ix dataplane implementation (and Dune) requires
+the VT-x virtualization features available on Intel x86-64
+systems~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. However, it
+could be ported to any architecture with virtualization support, such as
+ARM, SPARC, and Power. It also requires one or more Intel 82599 chipset NICs,
+but it is designed to easily support additional drivers.
+Moreover, the \ix dataplane \edb{currently} consists of \data{37K}{39K}
+SLOC~\cite{url:sloccount}} and leverages some existing codebases:
+\data{43\%}{41\%} is derived from
 the DPDK variant of the Intel NIC device driver~\cite{intel:dpdk},
 \data{23\%}{26\%} from the lwIP TCP/IP stack~\cite{dunkels2001design},
 and \data{16\%}{15\%} from the Dune library.  All three code bases are
@@ -205,7 +200,7 @@ the expense of requiring changes to existing applications.
 Libix automatically coalesces multiple write requests into single
 \texttt{sendv} system during each batching round. This improves
 locality, simplifies error handling, and preserves correct behavior,
-as it ensures that data stream order is maintained even during failures.
+as it ensures that data stream order is maintained even a transmit fails.
 Coalescing also facilitates transmit flow control because
 we can use the transmit vector (the argument to \texttt{sendv})
 to keep track of outgoing data buffers and, if necessary, reissue
@@ -238,7 +233,7 @@ frames in the NIC's transmit descriptor ring for transmission and it
 notifies the NIC to initiate a DMA transfer for these frames by
 updating the transmit ring's tail register. In a separate pass, it
 also frees any buffers that have finished transmitting, based oh the
-trasmit ring's head position. This potentially generates \texttt{sent}
+trasmit ring's head position, potentially generating \texttt{sent}
 event conditions.  The process repeats in a loop until there is no
 network activity. In this case, we enter a quiescent state which
 involves either hyperthread-friendly polling or optionally entering a
@@ -291,9 +286,10 @@ server.
 require synchronization on updates.  For example, the ARP table is
 shared by all elastic threads and is protected by RCU
 locks~\cite{mckenney1998read}. Hence, the common case reads are
-coherency-free but the rare updates are not. We garbage collection
-RCU objects after a quiescent period that ends when every elastic
-has gone through a complete run to completion cycle.
+coherency-free but the rare updates are not.
+RCU objects are garbage collected after a quiescent period where
+we wait for each elastic thread to go through a complete I/O processing
+cycle.
 %
 \dm{Can you add a sentence about what constitutes a quiescent period
   for RCU garbage collection, given that this is a very non-Linux
