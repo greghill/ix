@@ -67,7 +67,7 @@ downloaded and installed mTCP from the public-domain
 release~\cite{url:mtcp}, but had to write the benchmarks ourselves
 using the mTCP API.  To run mTCP, we switch to the 2.6.36 kernel, as
 this is the most recent supported kernel version.  We report only
-10GbE results for mTCP as it does not support device bonds.
+10GbE results for mTCP, as it does not support NIC bonding.
 
 
 \subsection{Latency and Single-flow Bandwidth}
@@ -142,7 +142,7 @@ have achieved line rate and are limited only by 10GbE bandwidth.
 % = 8 802 816.9 requests / second
 
 Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} shows that
-\ix can scale beyond 10GbE to a 4x10GbE configuration while still using a single multicore socket.
+\ix can scale beyond 10GbE to a 4x10GbE configuration.
 Fig.~\ref{fig:short10:mcore} shows that \ix linearly scales to deliver
 \data{3.9}{3.8}million TCP connections per second on 4x10GbE.
 Fig.~\ref{fig:short10:roundtrips} shows a speedup of 128\% with $n=1$
@@ -160,9 +160,10 @@ multi-core server.
 We also evaluate \ix's scalability when handling a large number of
 concurrent connections on the 4x10GbE setup. In this benchmark, the 18 client machine each run
 $n$ threads, with each thread repeatetly performing a 64B remote
-procedure call to the server for all of its open connections.
+procedure call to the server with a variable number of open connections. \adam{Should
+we emphasize that all connections are active not just open?}
 We experimentally set $n=24$ to maximize throughput.  We report
-the maximal throughput in messages per second for varying number of
+the maximal throughput in messages per second for a range of
 total established connections.
 
 %Connection scaling IX/Linux @ 40Gbe 
@@ -184,9 +185,10 @@ With 250,000 connections and
 4x10GbE, \ix is able to deliver  \data{53}{47}\% of its own peak throughput.
 We verified that the drop in throughput is not due to an increase in
 instruction count, but instead can be attributed to the performance of
-the memory subsystem. Indeed,
-Intel's x520 direct cache access
-technology~\cite{DBLP:conf/isca/HuggahalliIT05} eliminates nearly all
+the memory subsystem. Indeed, Intel's direct cache access
+technology~\cite{DBLP:conf/isca/HuggahalliIT05} \adam{Intel renamed this to Data Direct I/O,
+which is indeed what's being used here, do we care? Also is worth mentioning
+that at high poll rates DCA thrashes because it can not upload packet data quickly enough.} eliminates nearly all
 cache misses associated with DMA, resulting in as little as 1.4 L3
 cache misses per message for up to 10,000 concurrent connections.  In
 contrast, the workload averages 25 L3 cache misses per message when
