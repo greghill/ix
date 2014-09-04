@@ -123,7 +123,7 @@ could be ported to any architecture with virtualization support, such as
 ARM, SPARC, and Power. It also requires one or more Intel 82599 chipset NICs,
 but it is designed to easily support additional drivers.
 Moreover, the \ix dataplane \edb{currently} consists of \data{37K}{39K}
-SLOC~\cite{url:sloccount}} and leverages some existing codebases:
+SLOC~\cite{url:sloccount} and leverages some existing codebases:
 \data{43\%}{41\%} is derived from
 the DPDK variant of the Intel NIC device driver~\cite{intel:dpdk},
 \data{23\%}{26\%} from the lwIP TCP/IP stack~\cite{dunkels2001design},
@@ -200,7 +200,7 @@ the expense of requiring changes to existing applications.
 Libix automatically coalesces multiple write requests into single
 \texttt{sendv} system during each batching round. This improves
 locality, simplifies error handling, and preserves correct behavior,
-as it ensures that data stream order is maintained even a transmit fails.
+as it ensures that data stream order is maintained even if a transmit fails.
 Coalescing also facilitates transmit flow control because
 we can use the transmit vector (the argument to \texttt{sendv})
 to keep track of outgoing data buffers and, if necessary, reissue
