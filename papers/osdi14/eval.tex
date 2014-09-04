@@ -185,11 +185,10 @@ With 250,000 connections and
 4x10GbE, \ix is able to deliver  \data{53}{47}\% of its own peak throughput.
 We verified that the drop in throughput is not due to an increase in
 instruction count, but instead can be attributed to the performance of
-the memory subsystem. Indeed, Intel's direct cache access
-technology~\cite{DBLP:conf/isca/HuggahalliIT05} \adam{Intel renamed this to Data Direct I/O,
-which is indeed what's being used here, do we care? Also is worth mentioning
-that at high poll rates DCA thrashes because it can not upload packet data quickly enough.} eliminates nearly all
-cache misses associated with DMA, resulting in as little as 1.4 L3
+the memory subsystem. Indeed, Intel's Data Direct I/O technology, an
+evolution of DCA~\cite{DBLP:conf/isca/HuggahalliIT05}, eliminates nearly all
+cache misses associated with DMA when given enough time between polling intervals,
+resulting in as little as 1.4 L3
 cache misses per message for up to 10,000 concurrent connections.  In
 contrast, the workload averages 25 L3 cache misses per message when
 handling 250,000 concurrent connections.  Clearly, the working set of
