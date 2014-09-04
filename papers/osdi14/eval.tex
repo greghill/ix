@@ -2,27 +2,27 @@
 \section{Evaluation}
 \label{sec:eval}
 
-\christos{todo list: a) study of adaptive batching (fixed with various
-  sizes vs adaptive), b) some breakdown of processing before/after to
-  show how things change with IX, c) fix FIN/RST issue in our
-  microbenchmark}
+% \christos{todo list: a) study of adaptive batching (fixed with various
+%   sizes vs adaptive), b) some breakdown of processing before/after to
+%   show how things change with IX, c) fix FIN/RST issue in our
+%   microbenchmark}
 
-We compared \ix to a baseline running the most recent Linux kernel and to
-mTCP~\cite{jeong2014mtcp}. Our evaluation uses both networking
-microbenchmarks and a real-world, massively deployed, event-based
-application. In all cases, we consider TCP.
+We compared \ix to a baseline running the most recent Linux kernel and
+to mTCP~\cite{jeong2014mtcp}. Our evaluation uses both networking
+microbenchmarks and a widely deployed, event-based application. In all
+cases, we use TCP as the networking protocol.
 
 \subsection{Experimental Methodology}
 \label{sec:eval:setup}
 
 
-%We use two experimental setups because we wish to simultaneously
-%compare with mTCP and scale to bandwidth beyond 10GbE.  Unfortunately,
-%our 4x10GbE setup uses recent hardware not supported by mTCP out of
-%the box\footnote{We were able to port mTCP to the 4x10GbE setup, but
-%  could not reach the expected performance.  We will attempt to unify
-%  the setup by the camera-ready deadline.}.  Linux and \ix run on both
-%setups.
+% We use two experimental setups because we wish to simultaneously
+% compare with mTCP and scale to bandwidth beyond 10GbE.
+% Unfortunately, our 4x10GbE setup uses recent hardware not supported
+% by mTCP out of the box\footnote{We were able to port mTCP to the
+% 4x10GbE setup, but could not reach the expected performance.  We
+% will attempt to unify the setup by the camera-ready deadline.}.
+% Linux and \ix run on both setups.
 
 \input{figs/float-pingpong} 
 
@@ -65,9 +65,9 @@ The Linux client and server implementations of our benchmarks use the
 \texttt{libevent} framework with the \texttt{epoll} system call.  We
 downloaded and installed mTCP from the public-domain
 release~\cite{url:mtcp}, but had to write the benchmarks ourselves
-using the mTCP API.  To run mTCP, we switch to the 2.6.36 kernel, as
-this is the most recent supported kernel version.  We report only
-10GbE results for mTCP, as it does not support NIC bonding.
+using the mTCP API.  We run mTCP with the 2.6.36 Linux kernel, as this
+is the most recent supported kernel version.  We report only 10GbE
+results for mTCP, as it does not support NIC bonding.
 
 
 \subsection{Latency and Single-flow Bandwidth}
@@ -79,43 +79,38 @@ a fixed-size message between two servers and helps calibrate the
 latency and bandwidth of a single flow~\cite{snell1996netpipe}.  In
 all cases, we run the same system (Linux, mTCP, or \ix) on both ends.
 
-\edb{NEW:}Fig.~\ref{fig:pingpong} shows the goodput achieved for different
+Fig.~\ref{fig:pingpong} shows the goodput achieved for different
 message sizes.  Two \ix servers have a one-way latency of
-5.7\microsecond (using 64B messages) and achieve goodput of 5Gbps
-(half of the maximum) with messages as small as 20KB. In contrast, two
-Linux servers have a one-way latency of 24\microsecond and require
-385KB messages to achieve 5Gpbs.  The differences in system
-architecture explain the difference: \ix has a dataplane model that
-polls queues and processes packets to completion whereas Linux has an
-interrupt model, which wakes up the blocked process.  
-As for mTCP, its use of aggressive batching to offset the cost of
-context switching~\cite{jeong2014mtcp} comes at the expense of low
-latency, and it underperforms \ix and Linux in this particular test.
+5.7\microsecond for 64B messages and achieve goodput of 5Gbps, half of
+the maximum, with messages as small as 20KB. In contrast, two Linux
+servers have a one-way latency of 24\microsecond and require 385KB
+messages to achieve 5Gpbs.  The differences in system architecture
+explain the disparity: \ix has a dataplane model that polls queues and
+processes packets to completion whereas Linux has an interrupt model,
+which wakes up the blocked process.  mTCP uses aggressive batching to
+offset the cost of context switching~\cite{jeong2014mtcp}, which comes
+  at the expense of higher latency than both \ix and Linux in this
+  particular test.
+ 
 
-
-
-
-\subsection{Scalability and High Connection Churn}
+  \subsection{Throughput and Scalability}
 \label{sec:eval:short}
 
-
-
-Next, we evaluate \ix's multi-core scalability and ability to handle workloads
-with extreme connection churn by using the same benchmark used to
-evaluate MegaPipe~\cite{DBLP:conf/osdi/HanMCR12} and
+Next, we evaluate \ix's throughput and multi-core scalability using
+the same benchmark used to evaluate
+MegaPipe~\cite{DBLP:conf/osdi/HanMCR12} and
 mTCP~\cite{jeong2014mtcp}. Multiple clients connect to a single server
-listening on a single port, send a request of size $s$, and wait for an
-echo of a message of the same size.  As with NetPIPE, while receiving
-the message, the server holds off its echo response until the message
-has been entirely received.  Each client performs this synchronous
-remote procedure call $n$ times before closing the connection.
-As in ~\cite{jeong2014mtcp}, clients close the connection using a
-reset (\texttt{TCP RST}) to avoid exhausting ephemeral ports.
-\dm{This begs the question of what happens
-  with FIN, since that is more realistic\@.  Is the point that \ix has
-an unfair advantage?} \adam{(1) how do we get linux clients to send
-TCP RST? (2) Does the fact that IX will only close with TCP RST matter
-and why is this?}
+listening on a single port, send a request of size $s$, and wait for
+an echo of a message of the same size.  As with NetPIPE, while
+receiving the message, the server holds off its echo response until
+the message has been entirely received.  Each client performs this
+synchronous remote procedure call $n$ times before closing the
+connection.  As in ~\cite{jeong2014mtcp}, clients close the connection
+using a reset (\texttt{TCP RST}) to avoid exhausting ephemeral ports.
+\dm{This begs the question of what happens with FIN, since that is
+  more realistic\@.  Is the point that \ix has an unfair advantage?}
+\adam{(1) how do we get linux clients to send TCP RST? (2) Does the
+  fact that IX will only close with TCP RST matter and why is this?}
 
 
 %%
@@ -123,35 +118,38 @@ and why is this?}
 %% IX:  7074246
 %% mTCP: 3253521
 
-Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} show the results
-for both the 10GbE and the 40GbE configurations.  For the 10GbE
-configuration, the results for Linux and mTCP are consistent with those
-published in the mTCP paper~\cite{jeong2014mtcp}.  For all three
+Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} show the message
+rate or goodput for both the 10GbE and the 40GbE configurations as we
+vary the number of cores used, the number of messages exchanged per
+connection, and the mesage size respectively.  For the 10GbE
+configuration, the results for Linux and mTCP are consistent with
+those published in the mTCP paper~\cite{jeong2014mtcp}.  For all three
 tests (core scaling, message count scaling, message size scaling), \ix
 scales more aggressively than mTCP and
 Linux. Fig.~\ref{fig:short10:mcore} shows that \ix needs only 3 cores
 to saturate the 10GbE link whereas mTCP requires all 8 cores. On
-Fig.~\ref{fig:short10:roundtrips} for 1024 rountrips, \ix delivers \george{CHECK}8.8
-million messages per second, which is 1.9x the throughput of mTCP and
-of and \george{CHECK} 8.8x that of Linux. For this packet rate we
-have achieved line rate and are limited only by 10GbE bandwidth.
+Fig.~\ref{fig:short10:roundtrips} for 1024 rountrips per connection,
+\ix delivers \george{CHECK}8.8 million messages per second, which is
+1.9x the throughput of mTCP and of and \george{CHECK} 8.8x that of
+Linux. With this packet rate, \ix achieves line rate and is limited
+only by 10GbE bandwidth.
 
 %% PROOF of line rate:
 % 10 * 10 ^ 9 bits  / (12 interframe gap + 7 preamble + 1 start frame delimiter +
 %		       14 ethernet hdr + 20 IP hdr + 20 TCP hdr + 64 payload + 4 CRC) bytes
 % = 8 802 816.9 requests / second
 
-Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} shows that
-\ix can scale beyond 10GbE to a 4x10GbE configuration.
+Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} shows that \ix
+can scale beyond 10GbE to a 4x10GbE configuration.
 Fig.~\ref{fig:short10:mcore} shows that \ix linearly scales to deliver
 \data{3.9}{3.8}million TCP connections per second on 4x10GbE.
 Fig.~\ref{fig:short10:roundtrips} shows a speedup of 128\% with $n=1$
 and of 30\% with $n=1K$ over the 10GbE configuration.  Finally,
 Fig.~\ref{fig:short10:size} shows \ix can deliver 8KB messages with a
-goodput of \data{35}{34.5}Gbps, for a wire throughput of \data{38}{37.9}Gpbs (out of
-a possible 39.7Gbps).  Overall, \ix makes it practical to scale
-protected TCP/IP processing beyond 10GbE, even with a single socket
-multi-core server.
+goodput of \data{35}{34.5}Gbps, for a wire throughput of
+\data{38}{37.9}Gpbs (out of a possible 39.7Gbps).  Overall, \ix makes
+it practical to scale protected TCP/IP processing beyond 10GbE, even
+with a single socket multi-core server.
 
 \subsection{Connection Scalability}
 
