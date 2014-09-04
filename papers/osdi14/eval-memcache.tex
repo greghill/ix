@@ -57,8 +57,7 @@ performance: 8 cores with Linux, but only 6 with \ix.
 Porting \texttt{memcached} to \ix primarily consisted of adapting it
 to use our event library. In most cases, the port was straightforward,
 replacing Linux and \texttt{libevent} function calls with their
-equivalent versions in our API. \edb{We also replaced {\tt pthread}
-  locks with simple spin-locks.}  We did yet not attempt to tune the
+equivalent versions in our API. We did yet not attempt to tune the
 internal scalability of {\it memcached}~\cite{DBLP:conf/nsdi/FanAK13}
 or to support zero-copy IO operations.
 

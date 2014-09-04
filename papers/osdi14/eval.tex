@@ -109,10 +109,10 @@ the message has been entirely received.  Each client performs this
 synchronous remote procedure call $n$ times before closing the
 connection.  As in ~\cite{jeong2014mtcp}, clients close the connection
 using a reset (\texttt{TCP RST}) to avoid exhausting ephemeral ports.
-\dm{This begs the question of what happens with FIN, since that is
-  more realistic\@.  Is the point that \ix has an unfair advantage?}
-\adam{(1) how do we get linux clients to send TCP RST? (2) Does the
-  fact that IX will only close with TCP RST matter and why is this?}
+%\dm{This begs the question of what happens with FIN, since that is
+%  more realistic\@.  Is the point that \ix has an unfair advantage?}
+%\adam{(1) how do we get linux clients to send TCP RST? (2) Does the
+%  fact that IX will only close with TCP RST matter and why is this?}
 
 
 %%
@@ -145,8 +145,8 @@ Fig.~\ref{fig:shortboth} also shows that \ix
 scales well beyond 10GbE to a 4x10GbE configuration.
 Fig.~\ref{fig:short10:mcore} shows that \ix linearly scales to deliver
 3.8 million TCP connections per second on 4x10GbE.
-Fig.~\ref{fig:short10:roundtrips} shows a speedup of \edb{2.3x\sout{128\%}} with $n=1$
-and of \edb{1.3x\sout{30\%}} with $n=1024$ over 10GbE \ix.  Finally,
+Fig.~\ref{fig:short10:roundtrips} shows a speedup of 2.3x with $n=1$
+and of 1.3x with $n=1024$ over 10GbE \ix.  Finally,
 Fig.~\ref{fig:short10:size} shows \ix can deliver 8KB messages with a
 goodput of 34.5 Gbps, for a wire throughput of
 37.9 Gpbs, out of a possible 39.7Gbps.  Overall, \ix makes

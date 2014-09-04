@@ -135,7 +135,7 @@ feature-rich networking stack. We implemented RFC-compliant support
 for UDP, ARP, and ICMP.  Since lwIP was optimized for memory
 efficiency in embedded environments, we had to radically change its
 internal data structures for multi-core scalability and fine-grained
-timer management. \edb{However, we\sout{We}} did not yet optimize the lwIP code for
+timer management. However, we did not yet optimize the lwIP code for
 performance. Hence, there is room for improvement in the results shown
 in \S\ref{sec:eval}.
 
@@ -291,9 +291,9 @@ RCU objects are garbage collected after a quiescent period where
 we wait for each elastic thread to go through a complete I/O processing
 cycle.
 %
-\dm{Can you add a sentence about what constitutes a quiescent period
-  for RCU garbage collection, given that this is a very non-Linux
-  API?}
+%\dm{Can you add a sentence about what constitutes a quiescent period
+%  for RCU garbage collection, given that this is a very non-Linux
+%  API?}
 
 \ix requires synchronization when the control plane reallocates
 resources between dataplanes.  For instance, when a core is revoked
@@ -355,15 +355,15 @@ This decision is not fundamental to our design and does not affect the
 security model provided to applications.
 
 
-\dm{This raised a couple of questions for me.  First, is the
-  immutability of transmit buffers enforced by memory protection, or
-  just by convention.  In other words, can you cause TCP segments to
-  be sent with bad checksums or otherwise shoot yourself in the foot
-  by writing to buffers in the send queue?  Second, why are message
-  buffers read-only (or does this exclude the actual payload part).
-  For example, if I'm implementing an HTTP proxy, can I make small
-  modifications to a message buffer I just received and then
-  retransmit it?  Or is the point that one would use scatter gather IO
-  for such surgical edits?} \christos{add a comment someplace about
-  checksum in HW}
+%\dm{This raised a couple of questions for me.  First, is the
+%  immutability of transmit buffers enforced by memory protection, or
+%  just by convention.  In other words, can you cause TCP segments to
+%  be sent with bad checksums or otherwise shoot yourself in the foot
+%  by writing to buffers in the send queue?  Second, why are message
+%  buffers read-only (or does this exclude the actual payload part).
+%  For example, if I'm implementing an HTTP proxy, can I make small
+%  modifications to a message buffer I just received and then
+%  retransmit it?  Or is the point that one would use scatter gather IO
+%  for such surgical edits?} \christos{add a comment someplace about
+%  checksum in HW}
 

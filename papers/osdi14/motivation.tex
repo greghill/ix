@@ -195,7 +195,8 @@ supported by the NIC hardware.
 low-latency object stores rely on RDMA to offload protocol processing
 on dedicated Infiniband host channel
 adapters~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,DBLP:conf/sosp/OngaroRSOR11}.
-\christos{state what's wrong with this?} Using commodity Ethernet
+\edb{RDMA can reduce latency, but requires that specialized adapters be present at both ends of the connection.}
+Using commodity Ethernet
 networking, Facebook's memcached deployment uses UDP to avoid
 connection scalability
 limitations~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}. Even though
