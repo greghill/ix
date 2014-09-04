@@ -22,8 +22,24 @@ in tuning the implementation of \ix for multi-core scalability,
 eliminating constructs that introduce synchronization or coherence
 traffic.
 
+\myparagraph{Subtleties of adaptive batching:} All experiments of
+\S\ref{sec:eval} were conducted with a maximal batch size of $B=64$
+packets per iteration. In exploring the impact of the batch size, we
+first confirmed the intuition that smaller values of $B$ reduce tail
+latency.  Fig.~\ref{fig:batch} compares the throughout of a CPU-bound
+microbenchmark for different values of B, and shows that batches as
+low as $B=32$ can deliver maximal throughput for this workload.
+However, we ran into unexpected limitation of adaptive batch when
+running \ix at high packet rates, on many cores, and with small
+average batch sizes: the high rate of PCIe writes required to post
+fresh descriptors at every iteration lead to overall degraded
+performance as we added cores to \ix.  To avoid the problem, we simply
+coalesced PCIe writes on the receive path so that we replenished at
+least 32 descriptor entries at a time.  Luckily, we did not have to
+coalesce PCIe writes on the transmit path as that would have impacted latency.
+
+
 \myparagraph{Using interrupts as a fallback:}
-\edb{ALT. TO NEXT PAR.} 
 The security model of \ix assumes some cooperation from applications,
 specifically to handle events in a quick, non-blocking manner;
 operations with extended execution times are expected to be delegated
@@ -37,6 +53,7 @@ primarily to detect runaway elastic threads and guarantee resource
 revocation.
 
 
+\begin{comment}
 \myparagraph{Using interrupts as a fallback:} Some applications
 service requests that require extended intervals of
 compute time. We intend for these requests to be delegated
@@ -56,7 +73,7 @@ property of this approach is that neither interrupt would
 be triggered as long as elastic threads are sufficiently responsive,
 but if an elastic thread misbehaves, the \ix dataplane would
 be able to regain control and catch up on network processing.
-
+\end{comment}
 
 %\myparagraph{Hardware Bottlenecks:} We achieved very high packet
 %rates with \ix, often saturating the bandwidth limit of our 10 GbE NIC.
@@ -65,38 +82,15 @@ be able to regain control and catch up on network processing.
 %\adam{finish this section}
 
 
-\myparagraph{Subtleties of adaptive batching:} All experiments of
-\S\ref{sec:eval} were conducted with a maximal batch size of $B=64$
-packets per iteration. In exploring the impact of the batch size, we
-first confirmed the intuition that smaller values of $B$ reduce tail
-latency.  Fig.~\ref{fig:batch} compares the throughout of a CPU-bound
-microbenchmark for different values of B, and shows that batches as
-low as $B=32$ can deliver maximal throughput for this workload.
-However, we ran into unexpected limitation of adaptive batch when
-running \ix at high packet rates, on many cores, and with small
-average batch sizes: the high rate of PCIe writes required to post
-fresh descriptors at every iteration lead to overall degraded
-performance as we added cores to \ix.  To avoid the problem, we simply
-coalesced PCIe writes on the receive path so that we replenished at
-least 32 descriptor entries at a time.  Luckily, we did not have to
-coalesce PCIe writes on the transmit path as that would have impacted latency.
 
 
-
-\myparagraph{Limitations of current prototype:} The current prototype
-supports any stateless offload NIC with multiple queues and RSS
-support. \edb{REDO\sout{The NICs we currently use support RSS group of 16 queues,
-which is inadequate given current multi-core trends}}. Nevertheless, the
-trend in NICs seems to be towards support for larger number of
-queues~\cite{radhakrishnan2014senic}. We also plan to explore using Intel's Flow
-Director~\cite{intel:82599} to provide connection
-affinity~\cite{DBLP:conf/eurosys/PesterevSZM12} as an alternative to
-our current flow hashing implementation. Our current implementation
-does not exploit IOMMUs or VT-d. Instead, it uses Dune to map
-descriptor rings directly into \ix memory as a form of
+\myparagraph{Limitations of current prototype:} Our current
+implementation does not exploit IOMMUs or VT-d. Instead, it uses Dune
+to map descriptor rings directly into \ix memory as a form of
 paravirtualization~\cite{DBLP:conf/sosp/BarhamDFHHHN03}.  Although
 this choice puts some level of trust into \ix, the applications remain
-securely isolated.
+securely isolated.  Also, our implementation of timer interrupts,
+required to ensure full TCP compliance, is incomplete.
 
 \myparagraph{Future work:} This paper focused on the \ix dataplane
 design. \ix is designed and implemented to support the dynamic
@@ -105,7 +99,6 @@ proportional and resource efficient computing. So far we have tested
 only static configurations. In future work, we will design a dynamic
 runtime that rebalances hardware queues between available elastic
 threads in a manner that maintains throughput and latency constraints.
-%
 We will also explore the synergies between \ix and networking
 protocols designed to support microsecond-level latencies and reduced
 buffering characteristics of \ix deployments such as
@@ -116,3 +109,8 @@ MegaPipe~\cite{DBLP:conf/osdi/HanMCR12}, cooperative
 threading~\cite{DBLP:conf/sosp/BehrenCZNB03}, and rule-based
 models~\cite{DBLP:conf/hotos/StutsmanO13}.
 
+%The current prototype
+%supports any stateless offload NIC with multiple queues and RSS
+%support.  \ix load balances RSS flow groups onto queues, but we plan
+%to explore using Intel's Flow Director~\cite{intel:82599} for outbound
+%connections rather than reversing the Toeplitz hash.
