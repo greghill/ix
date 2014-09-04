@@ -41,20 +41,6 @@ least 32 descriptor entries at a time.  Luckily, we did not have to
 coalesce PCIe writes on the transmit path as that would have impacted latency.
 
 
-\myparagraph{Using interrupts as a fallback:}
-The security model of \ix assumes some cooperation from applications,
-specifically to handle events in a quick, non-blocking manner;
-operations with extended execution times are expected to be delegated
-to background threads rather than execute within the context of
-elastic threads.  The \ix dataplane is designed around polling, with
-the provision that interrupts can be configured as fallback
-optimization to refresh receive descriptor rings when the ring is
-nearly full and to refill the transmit queues when it is empty (step
-(1) and (6) in Fig~\ref{fig:dataplane}).  Timer interrupts exist
-primarily to detect runaway elastic threads and guarantee resource
-revocation.
-
-
 \begin{comment}
 \myparagraph{Using interrupts as a fallback:} Some applications
 service requests that require extended intervals of
@@ -83,16 +69,27 @@ be able to regain control and catch up on network processing.
 %We discovered that minimizes register writes was an effective optimization.
 %\adam{finish this section}
 
-
-
-
 \myparagraph{Limitations of current prototype:} Our current
-implementation does not exploit IOMMUs or VT-d. Instead, it uses Dune
-to map descriptor rings directly into \ix memory as a form of
-paravirtualization~\cite{DBLP:conf/sosp/BarhamDFHHHN03}.  Although
+implementation does not yet exploit IOMMUs or VT-d. \adam{new:}Instead, it maps
+descriptor rings directly into \ix memory, using the Linux
+pagemap interface to determine physical addresses.  Although
 this choice puts some level of trust into \ix, the applications remain
-securely isolated.  Also, our implementation of timer interrupts,
-required to ensure full TCP compliance, is incomplete.
+securely isolated. In the future we plan on using IOMMU support to
+further isolate \ix dataplanes, and we anticipate overhead will be
+low because of our use of large pages.
+
+\adam{new:}We also intend to add support for interrupts in
+\ix dataplanes. The executation model of \ix assumes some cooperation from applications.
+Specifically they should handle events in a quick, non-blocking manner;
+operations with extended execution times are expected to be delegated
+to background threads rather than execute within the context of
+elastic threads.  The \ix dataplane is designed around polling, with
+the provision that interrupts can be configured as fallback
+optimization to refresh receive descriptor rings when the ring is
+nearly full and to refill the transmit queues when it is empty (steps
+(1) and (6) in Fig~\ref{fig:dataplane}). Occasional timer interrupts
+are also required to ensure full TCP compliance in the event an elastic
+thread blocks for an extended period.
 
 \myparagraph{Future work:} This paper focused on the \ix dataplane
 design. \ix is designed and implemented to support the dynamic
