@@ -51,10 +51,11 @@ NIC port, and for \emph{4x10GbE} experiments we use four NIC ports
 bonded by the switch with a L3+L4 hash.
 
 Our baseline configuration in each
-machine is an Ubuntu LTS 14.0.4 distribution, modified to run the 3.16.1 Linux kernel, the most
+machine is an Ubuntu LTS 14.0.4 distribution, updated with the 3.16.1 Linux kernel, the most
 recent at time of writing.
-When reporting multi-core scalability, we report
-results on a per-core basis. We enable hyperthreading when it improves performance. Except for
+%When reporting multi-core scalability, we report
+%results on a per-core basis.
+We enable hyperthreading when it improves performance. Except for
 \S\ref{sec:eval:netpipe}, client machines always run Linux. All power
 management features are disabled for all systems in all
 experiments. Jumbo frames are never enabled.
@@ -75,9 +76,8 @@ this is the most recent supported kernel version.  We report only
 We first evaluated the latency of \ix using NetPIPE, a popular
 ping-pong benchmark, using our 10GbE setup.  NetPIPE simply exchanges
 a fixed-size message between two servers and helps calibrate the
-latency and bandwidth of a single-flow~\cite{snell1996netpipe}.  In
-all cases, the two servers use the same system (Linux, mTCP, or \ix).
-
+latency and bandwidth of a single flow~\cite{snell1996netpipe}.  In
+all cases, we run the same system (Linux, mTCP, or \ix) on both ends.
 
 \edb{NEW:}Fig.~\ref{fig:pingpong} shows the goodput achieved for different
 message sizes.  Two \ix servers have a one-way latency of
@@ -90,7 +90,7 @@ polls queues and processes packets to completion whereas Linux has an
 interrupt model, which wakes up the blocked process.  
 As for mTCP, its use of aggressive batching to offset the cost of
 context switching~\cite{jeong2014mtcp} comes at the expense of low
-latency. mTCP underperforms Linux in this particular test.
+latency, and it underperforms \ix and Linux in this particular test.
 
 
 
@@ -104,8 +104,8 @@ Next, we evaluate \ix's multi-core scalability in handling workloads
 with extreme connection churn by using the same benchmark used to
 evaluate MegaPipe~\cite{DBLP:conf/osdi/HanMCR12} and
 mTCP~\cite{jeong2014mtcp}. Multiple clients connect to a single server
-listening on a single port, send a request of size $s$ and wait for an
-echo of a message of the same size.  As with NetPIPE, while accepting
+listening on a single port, send a request of size $s$, and wait for an
+echo of a message of the same size.  As with NetPIPE, while receiving
 the message, the server holds off its echo response until the message
 has been entirely received.  Each client performs this synchronous
 remote procedure call $n$ times. As in ~\cite{jeong2014mtcp}, clients then close 
@@ -113,7 +113,8 @@ then closes the connection using a
 reset (\texttt{TCP RST}) to avoid exhausting ephemeral ports in clients.
 \dm{This begs the question of what happens
   with FIN, since that is more realistic\@.  Is the point that \ix has
-an unfair advantage?}
+an unfair advantage?} \adam{maybe the bigger question here is whether
+Linux is using TCP RST?}
 
 
 %%
