@@ -57,7 +57,9 @@ recent at time of writing.
 We enable hyperthreading when it improves performance. Except for
 \S\ref{sec:eval:netpipe}, client machines always run Linux. All power
 management features are disabled for all systems in all
-experiments. Jumbo frames are never enabled.
+experiments. Jumbo frames are never enabled. All Linux workloads
+are pinned to hardware threads, to avoid scheduling jitter, and
+background tasks are disabled.
 
 
 The Linux client and server implementations of our benchmarks use the
