@@ -32,7 +32,7 @@ represents deployment with most GET requests in Facebook, has short
 keys ($<$20B), 2B values, and 99\% GET requests. In USR, almost all
 traffic involves minimum-sized TCP packets. Each request is issued
 separately (no \texttt{multiget} operations). However, clients
-pipeline requests by up to a maximum of four oustanding requests per
+pipeline requests by up to a maximum of four outstanding requests per
 connection. We use 16 client machines to generate load for a total of
 \george{CHECK:}368 connections to the memcached server.
 

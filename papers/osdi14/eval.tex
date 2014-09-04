@@ -46,7 +46,7 @@ E5-2650 @ 2.6 Ghz. The server is a Xeon E5-2665 @ 2.4 Ghz with
 socket has 8 cores and 16 hyperthreads. All machines are configured
 with Intel x520 10GbE NICs (82599EB chipset). We connect clients
 to the switch through a single NIC port, while for the server it depends
-on the experiement. For \emph{10GbE} experiments we use a single
+on the experiment. For \emph{10GbE} experiments we use a single
 NIC port, and for \emph{4x10GbE} experiments we use four NIC ports
 bonded by the switch with a L3+L4 hash.
 
@@ -121,7 +121,7 @@ using a reset (\texttt{TCP RST}) to avoid exhausting ephemeral ports.
 Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} show the message
 rate or goodput for both the 10GbE and the 40GbE configurations as we
 vary the number of cores used, the number of roundtrip messages per
-connection, and the mesage size respectively.  For the 10GbE
+connection, and the message size respectively.  For the 10GbE
 configuration, the results for Linux and mTCP are consistent with
 those published in the mTCP paper~\cite{jeong2014mtcp}.  For all three
 tests (core scaling, message count scaling, message size scaling), \ix
@@ -157,7 +157,7 @@ with a single socket multi-core server.
 
 We also evaluate \ix's scalability when handling a large number of
 concurrent connections on the 4x10GbE setup. Each of the 18 client
-machines runs $n$ threads, with each thread repeatetly performing a
+machines runs $n$ threads, with each thread repeatedly performing a
 64B remote procedure call to the server with a variable number of
 active connections. % \adam{Should we emphasize that all connections are
 % active not just open?}

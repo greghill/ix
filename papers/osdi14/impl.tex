@@ -35,9 +35,9 @@ systems~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. We use the
 Dune module within Linux to enable dataplanes to run as
 application-specific OSes in the VMX non-root ring 0, the mode
 typically used to run guest kernels in virtualized
-systems~\cite{dune}.  Applications run VMX in non-root ring 3, as
+systems~\cite{dune}.  Applications run in VMX non-root ring 3, as
 usual.  This approach provides dataplanes with direct access to
-hardware features, such as page tables and exceptions, and passthrough
+hardware features, such as page tables and exceptions, and pass-through
 access to NICs. Moreover, it provides full, three-way protection
 between the control plane, dataplanes, and untrusted application code.
 
@@ -99,14 +99,14 @@ as contiguous chunks of bookkeeping data and MTU-sized buffers, and
 are used for both receiving and transmitting packets.
 
 The dataplane also manages its own virtual address translations,
-supported through nested paging. In constrast to contemporary OSes, it
+supported through nested paging. In contrast to contemporary OSes, it
 uses exclusively large pages (2MB). We favor large pages due to
 their reduced address translation
 overhead~\cite{DBLP:conf/isca/BasuGCHS13, dune} and the relative
 abundance of physical memory resources in modern servers. The
 dataplane maintains only a single address space; kernel pages are
 protected with supervisor bits. We deliberately chose not to support
-swappable memory in order to avoid unecessary performance variability.
+swappable memory in order to avoid unnecessary performance variability.
 
 We provide a hierarchical timing wheel implementation for managing
 network timeouts, such as TCP
@@ -188,7 +188,7 @@ apply flow control policy inside the kernel ~\cite{dynamicwindow}.
 %buffers, so it is usually possible to coalesce several writes into a
 %single request.
 
-We built a user-level library, called \emph{libix}, that abstracts
+We built a user-level library, called \emph{libix}, which abstracts
 away the complexity of our low-level API. It provides a compatible
 programming model for legacy applications and significantly simplifies
 the development of new applications. Libix currently includes a
@@ -233,7 +233,7 @@ frames in the NIC's transmit descriptor ring for transmission and it
 notifies the NIC to initiate a DMA transfer for these frames by
 updating the transmit ring's tail register. In a separate pass, it
 also frees any buffers that have finished transmitting, based oh the
-trasmit ring's head position, potentially generating \texttt{sent}
+transmit ring's head position, potentially generating \texttt{sent}
 event conditions.  The process repeats in a loop until there is no
 network activity. In this case, we enter a quiescent state which
 involves either hyperthread-friendly polling or optionally entering a
@@ -255,7 +255,7 @@ First, system call implementations can only be synchronization-free if
 the API itself is
 commutative~\cite{DBLP:conf/sosp/ClementsKZMK13}. The \ix API is
 commutative between elastic threads. Each elastic thread has its own
-flow identifier namespace, and an elastic thread can not directly perform
+flow identifier namespace, and an elastic thread cannot directly perform
 operations on flows that it does not own.
 %Events are processed independently on each elastic
 %thread. Handles identify flows but cannot be exchanged between elastic
