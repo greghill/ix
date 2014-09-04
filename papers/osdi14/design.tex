@@ -49,7 +49,7 @@ adjusting the allocation of resources between dataplanes.
 The separation of control and data plane allows us to consider
 radically different I/O APIs and implementations in the dataplane,
 while permitting other OS functionality, such as file system support,
-to be passed through to the control plane for compatibilility.
+to be passed through to the control plane for compatibility.
 Similar to the Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, each
 dataplane runs a single application in a single address
 space. However, we use modern virtualization hardware to provide
@@ -59,7 +59,7 @@ to guest OSes in virtualized systems. They manage their own address
 translations, on top of the address space provided by the control
 plane, and can protect the networking stack from untrusted application
 logic through the use of privilege rings. Moreover, dataplanes are
-given direct passthrough access to NIC queues through memory mapped
+given direct pass-through access to NIC queues through memory mapped
 I/O.
 
 % \christos{we should bring up HW virtualization here, likely as a

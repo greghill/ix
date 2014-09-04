@@ -46,7 +46,7 @@ E5-2650 @ 2.6 Ghz. The server is a Xeon E5-2665 @ 2.4 Ghz with
 socket has 8 cores and 16 hyperthreads. All machines are configured
 with Intel x520 10GbE NICs (82599EB chipset). We connect clients
 to the switch through a single NIC port, while for the server it depends
-on the experiement. For \emph{10GbE} experiments we use a single
+on the experiment. For \emph{10GbE} experiments we use a single
 NIC port, and for \emph{4x10GbE} experiments we use four NIC ports
 bonded by the switch with a L3+L4 hash.
 
@@ -120,8 +120,8 @@ using a reset (\texttt{TCP RST}) to avoid exhausting ephemeral ports.
 
 Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} show the message
 rate or goodput for both the 10GbE and the 40GbE configurations as we
-vary the number of cores used, the number of messages exchanged per
-connection, and the mesage size respectively.  For the 10GbE
+vary the number of cores used, the number of roundtrip messages per
+connection, and the message size respectively.  For the 10GbE
 configuration, the results for Linux and mTCP are consistent with
 those published in the mTCP paper~\cite{jeong2014mtcp}.  For all three
 tests (core scaling, message count scaling, message size scaling), \ix
@@ -140,14 +140,14 @@ only by 10GbE bandwidth.
 % = 8 802 816.9 requests / second
 
 Figs.~\ref{fig:short10:mcore}-\ref{fig:short10:size} shows that \ix
-can scale beyond 10GbE to a 4x10GbE configuration.
+scales well beyond 10GbE to a 4x10GbE configuration.
 Fig.~\ref{fig:short10:mcore} shows that \ix linearly scales to deliver
 \data{3.9}{3.8}million TCP connections per second on 4x10GbE.
 Fig.~\ref{fig:short10:roundtrips} shows a speedup of 128\% with $n=1$
-and of 30\% with $n=1K$ over the 10GbE configuration.  Finally,
+and of 30\% with $n=1K$ over 10GbE \ix.  Finally,
 Fig.~\ref{fig:short10:size} shows \ix can deliver 8KB messages with a
 goodput of \data{35}{34.5}Gbps, for a wire throughput of
-\data{38}{37.9}Gpbs (out of a possible 39.7Gbps).  Overall, \ix makes
+\data{38}{37.9}Gpbs, out of a possible 39.7Gbps.  Overall, \ix makes
 it practical to scale protected TCP/IP processing beyond 10GbE, even
 with a single socket multi-core server.
 
@@ -156,13 +156,14 @@ with a single socket multi-core server.
 \label{sec:eval:scale}
 
 We also evaluate \ix's scalability when handling a large number of
-concurrent connections on the 4x10GbE setup. In this benchmark, the 18 client machine each run
-$n$ threads, with each thread repeatetly performing a 64B remote
-procedure call to the server with a variable number of open connections. \adam{Should
-we emphasize that all connections are active not just open?}
-We experimentally set $n=24$ to maximize throughput.  We report
-the maximal throughput in messages per second for a range of
-total established connections.
+concurrent connections on the 4x10GbE setup. Each of the 18 client
+machines runs $n$ threads, with each thread repeatedly performing a
+64B remote procedure call to the server with a variable number of
+active connections. % \adam{Should we emphasize that all connections are
+% active not just open?}
+We experimentally set $n=24$ to maximize
+throughput.  We report the maximal throughput in messages per second
+for a range of total established connections.
 
 %Connection scaling IX/Linux @ 40Gbe 
 %12036405.031689
@@ -171,30 +172,31 @@ total established connections.
 %13.15085
 
 
-Fig.~\ref{fig:connscaling} shows up to to \data{100,000}{250,000} connections, which
-is the upper bound we can reach with the available client machines.
-As expected, throughput increases with the degree of concurrency, but
-then decreases for very large connections counts due to the
-increasingly high cost of multiplexing among open connections.  At the
-peak, \ix performs \data{13x}{10x} better than Linux, consistent with the results
-from Fig.~\ref{fig:short10:roundtrips}.  
+Fig.~\ref{fig:connscaling} shows up to to \data{100,000}{250,000}
+connections, which is the upper bound we can reach with the available
+client machines.  As expected, throughput increases with the degree of
+connection concurrency, but then decreases for very large connections
+counts due to the increasingly high cost of multiplexing among open
+connections.  At the peak, \ix performs \data{13x}{10x} better than
+Linux, consistent with the results from
+Fig.~\ref{fig:short10:roundtrips}.
 
-With 250,000 connections and
-4x10GbE, \ix is able to deliver  \data{53}{47}\% of its own peak throughput.
-We verified that the drop in throughput is not due to an increase in
-instruction count, but instead can be attributed to the performance of
-the memory subsystem. Indeed, Intel's Data Direct I/O technology, an
-evolution of DCA~\cite{DBLP:conf/isca/HuggahalliIT05}, eliminates nearly all
-cache misses associated with DMA when given enough time between polling intervals,
-resulting in as little as 1.4 L3
-cache misses per message for up to 10,000 concurrent connections.  In
-contrast, the workload averages 25 L3 cache misses per message when
-handling 250,000 concurrent connections.  Clearly, the working set of
-this workload, which is dominated by the TCP connection state, cannot
+With 250,000 connections and 4x10GbE, \ix is able to deliver
+\data{53}{47}\% of its own peak throughput.  We verified that the drop
+in throughput is not due to an increase in the instruction count, but
+instead can be attributed to the performance of the memory
+subsystem. Intel's Data Direct I/O technology, an evolution of
+DCA~\cite{DBLP:conf/isca/HuggahalliIT05}, eliminates nearly all cache
+misses associated with DMA transfers when given enough time between
+polling intervals, resulting in as little as 1.4 L3 cache misses per
+message for up to 10,000 concurrent connections.  In contrast, the
+workload averages 25 L3 cache misses per message when handling 250,000
+concurrent connections.  At high connection counts, the working set of
+this workload is dominated by the TCP connection state and does not
 fit into the processor's L3 cache.  Nevertheless, we believe that
 further optimizations in the size and access pattern of lwIP's TCP/IP
-protocol control block structures could substantially reduce the
-impact of the memory subsystem.
+protocol control block structures can substantially reduce this
+handicap.
   
 
 

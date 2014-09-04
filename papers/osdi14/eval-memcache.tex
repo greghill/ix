@@ -5,17 +5,17 @@
 \input{figs/float-connscaling}
 \input{figs/float-mutilate}
 
-Finally, we evaluated the performance benefits of the \ix protected
-dataplane design with \texttt{memcached}, a massively deployed,
-in-memory key-value store built on top of the \texttt{libevent}
-framework~\cite{url:memcached}. It is frequently used as a
-high-throughput, low-latency caching tier in front of persistent
-database servers. \texttt{memcached} is a network-bound application,
-with threads spending over 80\% of execution time in kernel mode for
-network processing~\cite{DBLP:conf/eurosys/LeverichK14}. It is a difficult
-application to scale, in particular because the common deployments
-involve high connection counts for \texttt{memcached} servers and
-small-sized requests and
+Finally, we evaluated the performance benefits of the \ix with
+\texttt{memcached}, a widely deployed, in-memory key-value store built
+on top of the \texttt{libevent} framework~\cite{url:memcached}. It is
+frequently used as a high-throughput, low-latency caching tier in
+front of persistent database servers. \texttt{memcached} is a
+network-bound application, with threads spending over 80\% of
+execution time in kernel mode for network
+processing~\cite{DBLP:conf/eurosys/LeverichK14}. It is a difficult
+application to scale because the common deployments involve high
+connection counts for \texttt{memcached} servers and small-sized
+requests and
 replies~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13,Atikoglu:2012:WAL}
 
 We use the \texttt{mutilate} load-generator to place a selected load
@@ -31,54 +31,56 @@ keys, 1B-1KB values, and 75\% GET requests; and the USR workload that
 represents deployment with most GET requests in Facebook, has short
 keys ($<$20B), 2B values, and 99\% GET requests. In USR, almost all
 traffic involves minimum-sized TCP packets. Each request is issued
-separately (no \texttt{multiget} operations), \adam{new:} but we do pipeline
-operations a small amount (bound to a maximum of four oustanding
-requests per connection).
+separately (no \texttt{multiget} operations). However, clients
+pipeline requests by up to a maximum of four outstanding requests per
+connection. We use 16 client machines to generate load for a total of
+\george{CHECK:}368 connections to the memcached server.
 
-
-For all experiments, we report average and \data{95}{99}th percentile latency as
-a function of the achieved throughput as the latter is is the relevant metric
-for datacenter applications~\cite{DBLP:journals/cacm/DeanB13}. This
-graph provides insights into the full range of system behaviors. Most
-commercial \texttt{memcached} deployments use such a
-latency-throughput graph to provision each server so that the 95th \edb{or 99th}
-percentile latency does not exceed 200\microsecond to 500\microsecond.
+To provide insights into the full range of system behaviors, we report
+average and 99th percentile latency as a function of the achieved
+throughput. The 99th-ile latency captures tail latency issues and is
+the most relevant metric for datacenter
+applications~\cite{DBLP:journals/cacm/DeanB13}. Most commercial
+\texttt{memcached} deployments provision each server so that the
+99th-ile latency does not exceed 200\microsecond to 500\microsecond.
 We carefully tune the Linux baseline setup according to the guidelines
-in \cite{DBLP:conf/eurosys/LeverichK14}. Specifically, we pin memcached threads,
+in \cite{DBLP:conf/eurosys/LeverichK14}: we pin memcached threads,
 configure interrupt-distribution based on thread-affinity, and tune
 interrupt moderation thresholds. We believe that our baseline Linux
 numbers are as tuned as possible for this hardware using the
-open-source version of \texttt{memcached-1.4.18}. For our benchmark,
-we use \data{6}{16} client machines \edb{to generate load} and a total of \data{772}{368} connections to the
-memcached server.  We report the results for the server configuration
-that provides the best performance: 8 cores with Linux, but only 6
-with \ix.
+open-source version of \texttt{memcached-1.4.18}. We report the
+results for the server configuration that provides the best
+performance: 8 cores with Linux, but only 6 with \ix.
 
-Porting \texttt{memcached} to IX primarily consisted of adapting it to
-use our event library. In most cases, the port was straightforward,
+Porting \texttt{memcached} to \ix primarily consisted of adapting it
+to use our event library. In most cases, the port was straightforward,
 replacing Linux and \texttt{libevent} function calls with their
-equivalent versions in our API. \edb{We also replaced {\tt pthread} locks with simple spin-locks.}
-We did yet not attempt to tune the internal scalability of {\it
-  memcached}~\cite{DBLP:conf/nsdi/FanAK13} or to support zero-copy IO operations.  
+equivalent versions in our API. \edb{We also replaced {\tt pthread}
+  locks with simple spin-locks.}  We did yet not attempt to tune the
+internal scalability of {\it memcached}~\cite{DBLP:conf/nsdi/FanAK13}
+or to support zero-copy IO operations.
 
+\christos{fix the QPS vs RPS issue: use only one. trim the graph to 500usec}
 
 \input{tbl-mutilate}
 
 Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
 two \texttt{memcached} workloads for Linux and \ix, while
-Table~\ref{tbl:mutilate} reports the unloaded latencies and maximum
-query throughput that meets a service-level agreement, both measured
-at the \data{95}{99}th percentile.  \ix noticeably reduces the unloaded
-latencies.  Note that we use Linux clients for these experiments;
-running \ix on clients should further reduce latency.
+Table~\ref{tbl:mutilate} reports the unloaded, roundtrip latencies and
+maximum request rate that meets a service-level agreement, both
+measured at the 99th percentile.  \ix noticeably reduces the unloaded
+latencies to roughly half.  Note that we use Linux clients for these
+experiments; running \ix on clients should further reduce latency.
 
-For both workloads, the distribution of CPU time shifts from being
-$>80\%$ in the kernel with Linux to \data{$<30\%$}{$<10\%$} with \ix, and the
-throughput increases by \data{2.0}{3.4} and \data{2.7}{4.7} for
-\texttt{ETC} and \texttt{USR}, respectively.
-The difference is due to
-the increased lock contention within the application itself, in
-particular for \texttt{ETC}, which has a higher write frequency.
+At high request rates, the distribution of CPU time shifts from being
+$>80\%$ in the kernel with Linux to $<10\%$ with \ix. This allows \ix
+to increase throughput by \data{2.0}{3.4} and \data{2.7}{4.7} for
+\texttt{ETC} and \texttt{USR} respectively at a 500\microsecond tail
+latency SLA.  The improvement for \texttt{ETC} is lower due to the
+increased lock contention within the application itself, in particular
+for \texttt{ETC}, which has a higher write frequency.  Lock contention
+within application code is also the reason that \ix cannot provide
+throughput improvements with more than 6 cores.
 
 
 %\input{eval-mtier}

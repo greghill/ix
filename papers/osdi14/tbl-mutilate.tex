@@ -8,14 +8,14 @@
 %37.7  44.5   1620K  -->  2.74519  --> 2.7x
 
 
-\begin{table}[b]
-\vspace{-1em}
+\begin{table}[t]
+%\vspace{-1em}
 \begin{center}
 \begin{small}
 \begin{tabular}{|l|c|c|c|}
 \hline
-%Config &  \multicolumn{2}{|c|}{Unloaded latency} &  QPS for SLA:\\
-Config &  Minimum latency &  QPS for SLA:\\
+%Configuration &  \multicolumn{2}{|c|}{Unloaded latency} &  QPS for SLA:\\
+Configuration &  Minimum latency &  RPS for SLA:\\
 &  @99th pct &  $<500$\microsecond@99th pct\\
 \hline
 ETC-Linux & 97\microsecond & 550K\\
@@ -26,7 +26,7 @@ USR-IX    & 41\microsecond & 2125K\\
 
 \hline
 \end{tabular}
-\caption{Unloaded latency and maximum QPS for a given service-level agreement for \texttt{ETC} and \texttt{USR}.}
+\caption{Unloaded latency and maximum RPS for a given service-level agreement for \texttt{ETC} and \texttt{USR}.}
 %\vspace*{-2em}
 \label{tbl:mutilate}
 \end{small}
