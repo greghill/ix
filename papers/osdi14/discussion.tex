@@ -22,6 +22,33 @@ in tuning the implementation of \ix for multi-core scalability,
 eliminating constructs that introduce synchronization or coherence
 traffic.
 
+\myparagraph{Using interrupts as a fallback:} Some applications
+service requests that require extended intervals of
+compute time. We intend for these requests to be delegated
+to background threads rather than elastic threads in order
+to ensure that elastic threads remain responsive.
+However, \ix could also be modified to better tolorate
+unanticipated delays during application processing in elastic threads.
+One option would be to use interrupts as a fallback mode. On the receive side, we
+could program the NIC to fire an interrupt whenever the
+recieve descriptor ring is almost full. The dataplane could
+then move packets from the receive ring to a structure in software, averting
+buffer underrun. On the transmit side, we could program
+the NIC to fire an interrupt whenever the transmit ring becomes
+empty so that it can be refilled. Such an interrupt would only need
+to be armed when there is additional transmit data pending. A desirable
+property of this approach is their neither interrupt would
+ever trigger as long as elastic threads are sufficiently responsive,
+but if an elastic thread misbehaves, the \ix dataplane would
+be able to regain control and catch up on network processing.
+
+
+\myparagraph{Hardware Bottlenecks:} We achieved very high packet
+rates with \ix, often saturating the bandwidth limit of our 10 GbE NIC.
+One unexpected performance bottleneck was the NIC and its DMA engine.
+We discovered that minimizes register writes was an effective optimization.
+\adam{finish this section}
+
 
 \myparagraph{Sublteties of adaptive batching:} \edb{TODO}
 
