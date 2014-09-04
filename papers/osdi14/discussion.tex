@@ -99,11 +99,11 @@ only static configurations. In future work, we will design a dynamic
 runtime that rebalances hardware queues between available elastic
 threads in a manner that maintains throughput and latency constraints.
 We will also explore the synergies between \ix and networking
-protocols designed to support microsecond-level latencies and reduced
+protocols (TCP-based or otherwise) designed to support microsecond-level latencies and reduced
 buffering characteristics of \ix deployments such as
 DCTCP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10} and
-ECN~\cite{ramakrishnan2001addition}. Finally, we will investigate \ix
-implementations of alternative APIs, such as
+ECN~\cite{ramakrishnan2001addition}. Finally, we will investigate \adam{new:}
+adding library support for alternative APIs on top of our low-level interface, such as
 MegaPipe~\cite{DBLP:conf/osdi/HanMCR12}, cooperative
 threading~\cite{DBLP:conf/sosp/BehrenCZNB03}, and rule-based
 models~\cite{DBLP:conf/hotos/StutsmanO13}.
