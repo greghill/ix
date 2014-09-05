@@ -137,11 +137,12 @@ application, which may hold onto message buffers and return them to
 the dataplane at a later point.  The application sends to the
 dataplane scatter/gather lists of memory locations for transmission
 but, since contents are not copied, the application must keep the
-content immutable until the peer acknowledges reception. The dataplane
-implements all flow control mechanisms and may trim transmission
-requests that exceed the available size of the sliding window.
-Essentially, the API directly, but safely, exposes flow control to
-applications.
+content immutable until the peer acknowledges reception. \adam{new:}The
+data plane enforces flow control correctness and may trim transmission
+requests that exceed the available size of the sliding window, but
+the application controls transmit buffering.
+%Essentially, the API directly, but safely, exposes flow control to
+%applications.
 
 \myparagraph{Flow consistent, synchronization-free processing:} We use
 multi-queue NICs with RSS support to provide flow-consistent hashing
@@ -158,9 +159,6 @@ applications~\cite{DBLP:conf/sosp/ClementsKZMK13}. Overall, the \ix
 dataplane design scales well with the increasing number of cores in
 modern servers, which improves both packet rate and latency. This
 approach does not restrict the memory model for applications, which
-take advantage of coherent, shared memory to exchange information and
+can take advantage of coherent, shared memory to exchange information and
 synchronize between cores.
-
-
-
 
