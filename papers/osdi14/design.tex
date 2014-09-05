@@ -23,8 +23,8 @@ kernel's network stack will generate TCP \texttt{ACKs} and slide its
 receive window even when the application is not consuming data, up to
 an extent. Second, dataplanes optimize for \emph{synchronization-free
   operation} in order to scale well on many cores. Network flows are
-distributed into distinct queues via flow-consistent hashing such as
-Recieve Side Scaling (RSS)~\cite{url:rss} and the common case packet processing requires no
+distributed into distinct queues via flow-consistent hashing, such as
+Recieve Side Scaling (RSS)~\cite{url:rss}, and common case packet processing requires no
 synchronization or coherence traffic between cores.
 
 \ix extends the dataplane architecture to support untrusted
@@ -73,7 +73,7 @@ runs to completion all stages needed to receive and transmit a packet,
 interleaving protocol processing (kernel mode) and application logic
 (user mode) at well defined transition points. Hence, there is no need
 for intermediate buffering between protocol stages or between
-application logic and the TCP/IP stack.  Unlike previous work that
+application logic and the networking stack.  Unlike previous work, that
 applied a similar approach to eliminate receive livelocks during
 congestion periods~\cite{receive-livelock}, \ix uses run to completion
 during all load conditions. Thus, we are able to use polling and avoid
