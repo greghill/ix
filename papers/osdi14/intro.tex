@@ -8,9 +8,9 @@
 %   with Linux}
 
 Web-scale applications such as search, social networking, and
-e-commerce platforms, are redefining the requirements on system
+e-commerce platforms, are redefining the requirements on systems
 software. A single application can consist of hundreds of software
-services, deployed on thousands of servers, raising the need for
+services, deployed on thousands of servers, creating a need for
 networking stacks that provide more than high streaming performance.
 The new requirements include high packet rates for short messages,
 microsecond-level responses to remote requests with tight tail latency
@@ -43,7 +43,7 @@ resource efficiency. Its architecture builds upon the lessons from
 high performance middleboxes, such as firewalls, load-balancers, and
 software routers~\cite{routebricks,click}. \ix separates the control
 plane, which is responsible for system configuration and coarse-grain
-resource provisioning between applications, from the dataplanes which
+resource provisioning between applications, from the dataplanes, which
 run the networking stack and application logic. \ix uses hardware
 virtualization %~\cite{DBLP:journals/computer/UhligNRSMABKLS05}
 to provide three-way protection between the control plane, the
@@ -65,7 +65,7 @@ flow-consistent hashing of incoming traffic to distinct queues. Each
 dataplane instance exclusively controls a set of these queues and runs
 the networking stack and a single application without the need for
 synchronization or coherence traffic in the common case operation. The
-\ix API departs from the POSIX API in order to meet the commutativity
+\ix API departs from the POSIX API, and its design is guided by the commutativity
 rule~\cite{DBLP:conf/sosp/ClementsKZMK13}.  However, the \ix
 user-level library includes an event-based API nearly identical to the
 popular \texttt{libevent} library~\cite{provos2003libevent}, providing
