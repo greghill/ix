@@ -1,19 +1,19 @@
 
 \section{Conclusion}
 
-We have described \ix, a dataplane operating system that leverages
-hardware virtualization to separate the control plane, the \ix
-dataplane instances that implement in-kernel network processing, and
-the event-driven applications running on top of it.  \ix provides a
-native, zero-copy API that explicitly exposes flow control to
-applications. The \ix dataplane optimizes for both bandwidth and
-latency by processing bounded batches of packets to completion and by
-eliminating coherence traffic and synchronization on multi-core
-systems. On microbenchmarks, \ix noticeably outperforms both Linux and
+We described \ix, a dataplane operating system that leverages hardware
+virtualization to separate and isolate the Linux control plane, the
+\ix dataplane instances that implement in-kernel network processing,
+and the network-bound applications running on top of it.  The \ix
+dataplane provides a native, zero-copy API that explicitly exposes
+flow control to applications. The dataplane architecture optimizes for
+both bandwidth and latency by processing bounded batches of packets to
+completion and by eliminating synchronization on multi-core
+servers. On microbenchmarks, \ix noticeably outperforms both Linux and
 mTCP in terms of both latency and throughput, scales to hundreds of
 active concurrent connections, and can saturate 4x10GbE configurations
-using a single socket.  Finally, we show that
-porting \texttt{memcached} to \ix removes kernel bottlenecks and
-improves throughput by up to 4.7x.
+using a single processor socket.  Finally, we show that porting
+\texttt{memcached} to \ix removes kernel bottlenecks and improves
+throughput by up to 4.7x.
 
 
