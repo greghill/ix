@@ -5,12 +5,13 @@
 \hline
 \multicolumn{3}{|c|}{{\bf System Calls (batched)}} \\
 \hline
+{\bf Type} & {\bf Parameters} & {\bf Description} \\
 connect &             cookie, dst\_IP, dst\_port		& Opens a connection\\
 accept &              handle, cookie				& Accepts a connection\\
 sendv &               handle, scatter\_gather\_array		& Transmits a scatter-gather array of data\\
 recv\_done &          handle, bytes\_acked			& Advances the receive window and frees memory buffers\\
 close &               handle					& Closes or rejects a connection\\
-\hline  \hline
+\hline \multicolumn{3}{c}{}\\ \hline
 \multicolumn{3}{|c|}{{\bf Event Conditions}} \\
 \hline
 {\bf Type} &           {\bf Parameters}  &
