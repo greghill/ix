@@ -116,7 +116,7 @@ Linux. Fig.~\ref{fig:short10:mcore} shows that \ix needs only 3 cores
 to saturate the 10GbE link whereas mTCP requires all 8 cores. On
 Fig.~\ref{fig:short10:roundtrips} for 1024 roundtrips per connection,
 \ix delivers 8.8 million messages per second, which is
-1.9x the throughput of mTCP and of and 8.8x that of
+1.9x the throughput of mTCP and of and 8.8$\times$ that of
 Linux. With this packet rate, \ix achieves line rate and is limited
 only by 10GbE bandwidth.
 
@@ -129,8 +129,8 @@ Fig.~\ref{fig:shortboth} also shows that \ix
 scales well beyond 10GbE to a 4x10GbE configuration.
 Fig.~\ref{fig:short10:mcore} shows that \ix linearly scales to deliver
 3.8 million TCP connections per second on 4x10GbE.
-Fig.~\ref{fig:short10:roundtrips} shows a speedup of 2.3x with $n=1$
-and of 1.3x with $n=1024$ over 10GbE \ix.  Finally,
+Fig.~\ref{fig:short10:roundtrips} shows a speedup of 2.3$\times$ with $n=1$
+and of 1.3$\times$ with $n=1024$ over 10GbE \ix.  Finally,
 Fig.~\ref{fig:short10:size} shows \ix can deliver 8KB messages with a
 goodput of 34.5 Gbps, for a wire throughput of
 37.9 Gpbs, out of a possible 39.7Gbps.  Overall, \ix makes
@@ -166,7 +166,7 @@ connections, which is the upper bound we can reach with the available
 client machines.  As expected, throughput increases with the degree of
 connection concurrency, but then decreases for very large connections
 counts due to the increasingly high cost of multiplexing among open
-connections.  At the peak, \ix performs 10x better than
+connections.  At the peak, \ix performs 10$\times$ better than
 Linux, consistent with the results from
 Fig.~\ref{fig:short10:roundtrips}.
 
