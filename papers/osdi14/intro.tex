@@ -55,8 +55,8 @@ threads.
 The \ix dataplane allows for networking stacks that optimize for both
 bandwidth and latency. It is designed around a native, zero-copy API
 that supports processing of bounded batches of packets to
-completion. Each dataplane executes all the stages for network
-processing for a batch in kernel mode, followed by the associated
+completion. Each dataplane executes all the network processing stages
+for a batch of packets in kernel mode, followed by the associated
 application processing in user mode. This approach amortizes API
 overheads and improves both instruction and data locality. We set the
 batch size adaptively based on load. The \ix dataplane also optimizes
@@ -75,7 +75,7 @@ We compare \ix with a TCP/IP dataplane against Linux
 3.16.1 and mTCP, a state-of-the-art user-level TCP/IP
 stack~\cite{jeong2014mtcp}.  On a 10GbE experiment using short messages, \ix outperforms Linux and mTCP by up to
 10$\times$ and 1.9$\times$ respectively for throughput. \ix
-further scales to 4x10GbE configuration using a single multi-core socket.
+further scales to a 4x10GbE configuration using a single multi-core socket.
 The unloaded uni-directional latency for two IX servers is
 5.7\microsecond, which is 4$\times$ better than between standard
 Linux kernels and an order of magnitude better than mTCP, as both

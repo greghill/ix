@@ -34,8 +34,8 @@ latency.
 \myparagraph{High packet rates:} The requests and, often times, the
 replies between the various services that comprise a web-scale
 application are quite small. In Facebook's \texttt{memcached} service,
-for example, the vast majority of requests uses keys shorter than 50
-bytes and involves values shorter than 500
+for example, the vast majority of requests use keys shorter than 50
+bytes and involve values shorter than 500
 bytes~\cite{Atikoglu:2012:WAL}. As a result, each service node must
 ideally scale to extremely high packet rates, measured in millions of
 packets per second. 
@@ -94,7 +94,7 @@ sized packets.  We should also achieve 10-20\microsecond round-trip
 latencies given 3\microsecond latency across a pair of 10 GbE NICs,
 one to five switch crossings with cut-through latencies of a few
 hundred ns each, and propagation delays of 500ns for 100 meters
-distance within a datacenter.
+of distance within a datacenter.
 
 
 Unfortunately, commodity operating systems have been designed under
@@ -104,7 +104,7 @@ multiple applications sharing a single processing core and packet
 inter-arrival times being many times higher than the latency of interrupts
 and system calls.  As a result, such operating systems trade off both
 latency and throughput in favor of fine-grain resource scheduling.
-Interrupt coalescing used to reduce processing overheads, queuing
+Interrupt coalescing (used to reduce processing overheads), queuing
 latency due to device driver processing intervals, and the use of
 intermediate buffering and CPU scheduling delays frequently add up to
 several hundred \microsecond of latency to remote requests.  The
