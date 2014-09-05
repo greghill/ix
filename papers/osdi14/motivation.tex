@@ -57,14 +57,14 @@ deployments that use UDP datagrams for \texttt{get} operations and an
 aggregation proxy for \texttt{put}
 operations~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}.
 
-\myparagraph{Protection:} Since multiple services commonly share the
+\myparagraph{Protection:} Since multiple services commonly share
 servers in both public and private
 datacenters~\cite{DBLP:journals/cacm/DeanB13,Hindman:2011:MPF,Schwarzkopf:2013:OFS},
 there is need for isolation between applications. The use of
 kernel-based or hypervisor-based networking stacks largely addresses
 the problem. A trusted network stack can firewall applications,
-enforce access control lists (ACLs), implement limiters and other
-policies based on bandwith metering
+enforce access control lists (ACLs), and implement limiters and other
+policies based on bandwith metering.
 
 \myparagraph{Resource efficiency:} The load of web-scale applications
 varies significantly due to diurnal patterns and spikes in user
@@ -89,7 +89,7 @@ PCIe devices. Solid-state drives and PCIe-based Flash storage are also
 increasingly popular. For networking, 10 GbE NICs and switches are
 widely deployed in datacenters, with 40 GbE and 100 GbE technologies
 right around the corner. The combination of tens of hardware threads
-and 10 GbE NICs should allow for rates of 20M packets/sec with minimum
+and 10 GbE NICs should allow for rates of 15M packets/sec with minimum
 sized packets.  We should also achieve 10-20\microsecond round-trip
 latencies given 3\microsecond latency across a pair of 10 GbE NICs,
 one to five switch crossings with cut-through latencies of a few
@@ -101,7 +101,7 @@ Unfortunately, commodity operating systems have been designed under
 very different hardware assumptions. Kernel schedulers, networking
 APIs, and network stacks have been designed under the assumptions of
 multiple applications sharing a single processing core and packet
-inter-arrival times many times higher than the latency of interrupts
+inter-arrival times being many times higher than the latency of interrupts
 and system calls.  As a result, such operating systems trade off both
 latency and throughput in favor of fine-grain resource scheduling.
 Interrupt coalescing used to reduce processing overheads, queuing
@@ -169,10 +169,10 @@ receive side coalescing, have a marginal impact on packet rate.
 Since the network stacks within commodity kernels cannot take
 advantage of the abundance of hardware resources, a number of
 alternative approaches have been suggested. Each alternative addresses
-a subset, but not all, of the requirements for web-scale applications.
+a subset, but not all, of the requirements for datacenter applications.
 
 \myparagraph{User-space networking stacks:} Systems such as
-OpenOnload~\cite{openonload}, mTCP~\cite{jeong2014mtcp} or
+OpenOnload~\cite{openonload}, mTCP~\cite{jeong2014mtcp}, and
 Sandstorm~\cite{sandstorm} run the entire networking stack in
 user-space in order to eliminate kernel crossing overheads and
 optimize packet processing without incurring the complexity of kernel
@@ -195,7 +195,7 @@ supported by the NIC hardware.
 low-latency object stores rely on RDMA to offload protocol processing
 on dedicated Infiniband host channel
 adapters~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,DBLP:conf/sosp/OngaroRSOR11}.
-\edb{RDMA can reduce latency, but requires that specialized adapters be present at both ends of the connection.}
+RDMA can reduce latency, but requires that specialized adapters be present at both ends of the connection.
 Using commodity Ethernet
 networking, Facebook's memcached deployment uses UDP to avoid
 connection scalability
