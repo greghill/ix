@@ -88,7 +88,7 @@ def update_dblp():
                 key = c[5:]
                 print "DBLP article miss",c,"|",key
                 nr_misses = nr_misses + 1
-                os.system("curl http://dblp.uni-trier.de/rec/bibtex/"+key+ ".xml >.bibcloud/tmp.xml")
+                os.system("curl http://dblp.uni-trier.de/rec/xml/"+key+ ".xml >.bibcloud/tmp.xml")
                 if os.path.getsize(".bibcloud/tmp.xml") >0:
                     #special case -- no existing XML tree
                     if num_children == 0:
