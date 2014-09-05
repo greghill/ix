@@ -26,40 +26,39 @@ synchronization or coherence traffic.
 \S\ref{sec:eval} were conducted with a maximal batch size of $B=64$
 packets per iteration. In exploring the impact of the batch size, we
 first confirmed the intuition that smaller values of $B$ reduce tail
-latency.  Fig.~\ref{fig:batch} compares the throughout of a CPU-bound
-microbenchmark for different values of B, and shows that batches as
-low as $B=32$ can deliver maximal throughput for this workload.
-However, we ran into unexpected limitation of adaptive batch when
-running \ix at high packet rates, on many cores, and with small
-average batch sizes: the high rate of PCIe writes required to post
-fresh descriptors at every iteration lead to overall degraded
-performance as we added cores to \ix.  To avoid the problem, we simply
-coalesced PCIe writes on the receive path so that we replenished at
-least 32 descriptor entries at a time.  Luckily, we did not have to
-coalesce PCIe writes on the transmit path as that would have impacted
-latency.
+latency.  Fig.~\ref{fig:batch} compares the throughout of the
+CPU-bound benchmarked used in Fig.~\ref{fig:short10:roundtrips}. The
+expirement shows that batches as low as $B=32$ can deliver maximal
+throughput for this workload.  However, we ran into unexpected
+limitation of adaptive batch when running \ix at high packet rates
+with small average batch sizes. The high rate of PCIe writes required
+to post fresh descriptors at every iteration, which led to performance
+degradation as we scaled the number of cores used by \ix.  To avoid
+the problem, we simply coalesced PCIe writes on the receive path so
+that we replenished at least 32 descriptor entries at a time.
+Luckily, we did not have to coalesce PCIe writes on the transmit path
+as that would have impacted latency.
 
 
 \begin{comment}
-\myparagraph{Using interrupts as a fallback:} Some applications
-service requests that require extended intervals of
-compute time. We intend for these requests to be delegated
-to background threads rather than elastic threads in order
-to ensure that elastic threads remain responsive.
-However, \ix could also be modified to better tolorate
-unanticipated delays during application processing in elastic threads.
-One option would be to use interrupts as a fallback mode. On the receive side, we
-could program the NIC to fire an interrupt whenever the
-recieve descriptor ring is almost full. The dataplane could
-then move packets from the receive ring to a structure in software, averting
-buffer underrun. On the transmit side, we could program
-the NIC to fire an interrupt whenever the transmit ring becomes
-empty so that it can be refilled. Such an interrupt would only need
-to be armed when there is additional transmit data pending. A desirable
-property of this approach is that neither interrupt would
-be triggered as long as elastic threads are sufficiently responsive,
-but if an elastic thread misbehaves, the \ix dataplane would
-be able to regain control and catch up on network processing.
+  \myparagraph{Using interrupts as a fallback:} Some applications
+  service requests that require extended intervals of compute time. We
+  intend for these requests to be delegated to from elastic threads to
+  background threads in order to ensure that elastic threads remain
+  responsive.  However, \ix can also be modified to better tolorate
+  unanticipated delays during application processing in elastic
+  threads.  One option would be to use interrupts as a fallback
+  mode. On the receive side, the NIC would fire an interrupt whenever
+  the recieve descriptor ring is almost full. The dataplane could then
+  move packets from the receive ring to a software structure, averting
+  buffer underrun. On the transmit side, NIC would fire an interrupt
+  whenever the transmit ring becomes empty so that it can be
+  refilled. Such an interrupt would only need to be armed when there
+  is additional transmit data pending. A desirable property of this
+  approach is that neither interrupt would be triggered as long as
+  elastic threads are sufficiently responsive, but if an elastic
+  thread misbehaves, the \ix dataplane would be able to regain control
+  and catch up on network processing.
 \end{comment}
 
 %\myparagraph{Hardware Bottlenecks:} We achieved very high packet
@@ -69,40 +68,45 @@ be able to regain control and catch up on network processing.
 %\adam{finish this section}
 
 \myparagraph{Limitations of current prototype:} Our current
-implementation does not yet exploit IOMMUs or VT-d. \adam{new:}Instead, it maps
-descriptor rings directly into \ix memory, using the Linux
-pagemap interface to determine physical addresses.  Although
-this choice puts some level of trust into \ix, the applications remain
+implementation does not yet exploit IOMMUs or VT-d. Instead, it maps
+descriptor rings directly into \ix memory, using the Linux pagemap
+interface to determine physical addresses.  Although this choice puts
+some level of trust into the \ix dataplane, application code remains
 securely isolated. In the future we plan on using IOMMU support to
-further isolate \ix dataplanes, and we anticipate overhead will be
-low because of our use of large pages.
+further isolate \ix dataplanes. We anticipate overhead will be low
+because of our use of large pages.
 
-\adam{new:}We also intend to add support for interrupts in
-\ix dataplanes. The executation model of \ix assumes some cooperation from applications.
-Specifically they should handle events in a quick, non-blocking manner;
-operations with extended execution times are expected to be delegated
-to background threads rather than execute within the context of
-elastic threads.  The \ix dataplane is designed around polling, with
-the provision that interrupts can be configured as fallback
-optimization to refresh receive descriptor rings when the ring is
-nearly full and to refill the transmit queues when it is empty (steps
-(1) and (6) in Fig~\ref{fig:dataplane}). Occasional timer interrupts
-are also required to ensure full TCP compliance in the event an elastic
-thread blocks for an extended period.
+We also intend to add support for interrupts in \ix dataplanes. The
+executation model of the \ix dataplane assumes some cooperation from
+application code running in elastic threads.  Specifically it should
+handle events in a quick, non-blocking manner; operations with
+extended execution times are expected to be delegated to background
+threads rather than execute within the context of elastic threads.
+The \ix dataplane is designed around polling, with the provision that
+interrupts can be configured as fallback optimization to refresh
+receive descriptor rings when the ring is nearly full and to refill
+the transmit queues when it is empty (steps (1) and (6) in
+Fig~\ref{fig:dataplane}). Occasional timer interrupts are also
+required to ensure full TCP compliance in the event an elastic thread
+blocks for an extended period.
 
-\myparagraph{Future work:} This paper focused on the \ix dataplane
-design. \ix is designed and implemented to support the dynamic
-addition and removal of elastic threads in order to achieve energy
-proportional and resource efficient computing. So far we have tested
-only static configurations. In future work, we will design a dynamic
-runtime that rebalances hardware queues between available elastic
-threads in a manner that maintains throughput and latency constraints.
-We will also explore the synergies between \ix and networking
-protocols (TCP-based or otherwise) designed to support microsecond-level latencies and reduced
-buffering characteristics of \ix deployments such as
+\myparagraph{Future work:} This paper focused primiarly on the \ix
+dataplane architecture. \ix is designed and implemented to support the
+dynamic addition and removal of elastic threads in order to achieve
+energy proportional and resource efficient computing. So far we have
+tested only static configurations. In future work, we will explore a
+dynamic runtime that rebalances hardware queues between available
+elastic threads in a manner that maintains throughput and latency
+constraints.  We will also explore the synergies between \ix and
+networking protocols designed to support microsecond-level latencies
+and the reduced buffering characteristics of \ix deployments, such as
 DCTCP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10} and
-ECN~\cite{ramakrishnan2001addition}. Finally, we will investigate \adam{new:}
-adding library support for alternative APIs on top of our low-level interface, such as
+ECN~\cite{ramakrishnan2001addition}. Note that the \ix dataplane is
+not specific to TCP/IP. The same design principles can benefit
+alternative, potentially application specific, network protocols, as
+well as high-performance protocols for non-volatile memory
+access. Finally, we will investigate library support for alternative
+APIs on top of our low-level interface, such as
 MegaPipe~\cite{DBLP:conf/osdi/HanMCR12}, cooperative
 threading~\cite{DBLP:conf/sosp/BehrenCZNB03}, and rule-based
 models~\cite{DBLP:conf/hotos/StutsmanO13}.
