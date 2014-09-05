@@ -28,7 +28,7 @@ packets per iteration. In exploring the impact of the batch size, we
 first confirmed the intuition that smaller values of $B$ reduce tail
 latency.  Fig.~\ref{fig:batch} compares the throughout of the
 CPU-bound benchmarked used in Fig.~\ref{fig:short10:roundtrips}. The
-expirement shows that batches as low as $B=32$ can deliver maximal
+experiment shows that batches as low as $B=32$ can deliver maximal
 throughput for this workload.  However, we ran into unexpected
 limitation of adaptive batch when running \ix at high packet rates
 with small average batch sizes. The high rate of PCIe writes required
@@ -45,7 +45,7 @@ as that would have impacted latency.
   service requests that require extended intervals of compute time. We
   intend for these requests to be delegated to from elastic threads to
   background threads in order to ensure that elastic threads remain
-  responsive.  However, \ix can also be modified to better tolorate
+  responsive.  However, \ix can also be modified to better tolerate
   unanticipated delays during application processing in elastic
   threads.  One option would be to use interrupts as a fallback
   mode. On the receive side, the NIC would fire an interrupt whenever
@@ -90,7 +90,7 @@ Fig~\ref{fig:dataplane}). Occasional timer interrupts are also
 required to ensure full TCP compliance in the event an elastic thread
 blocks for an extended period.
 
-\myparagraph{Future work:} This paper focused primiarly on the \ix
+\myparagraph{Future work:} This paper focused primarily on the \ix
 dataplane architecture. \ix is designed and implemented to support the
 dynamic addition and removal of elastic threads in order to achieve
 energy proportional and resource efficient computing. So far we have
