@@ -71,7 +71,7 @@ I/O.
 \myparagraph{Run to completion with adaptive batching:} \ix dataplanes
 runs to completion all stages needed to receive and transmit a packet,
 interleaving protocol processing (kernel mode) and application logic
-(user mode) at well defined transition points. Hence, there is no need
+(user mode) at well-defined transition points. Hence, there is no need
 for intermediate buffering between protocol stages or between
 application logic and the networking stack.  Unlike previous work, that
 applied a similar approach to eliminate receive livelocks during
@@ -128,7 +128,7 @@ RED~\cite{DBLP:journals/ton/FloydJ93}).
 not expose or emulate the POSIX API for networking.  Instead, the
 dataplane and the application communicate asynchronously with each
 other via messages stored in
-memory.% ~\cite{DBLP:conf/osdi/HanMCR12,DBLP:journals/cacm/Rizzo12}
+memory. % ~\cite{DBLP:conf/osdi/HanMCR12,DBLP:journals/cacm/Rizzo12}
 The API meets the commutativity rule and allows for a true zero-copy
 operation in both directions, which improves both latency and packet
 rate. The dataplane and application cooperatively manage the message
