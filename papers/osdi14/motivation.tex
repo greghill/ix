@@ -34,8 +34,8 @@ latency.
 \myparagraph{High packet rates:} The requests and, often times, the
 replies between the various services that comprise a web-scale
 application are quite small. In Facebook's \texttt{memcached} service,
-for example, the vast majority of requests use keys shorter than 50
-bytes and involve values shorter than 500
+for example, the vast majority of requests uses keys shorter than 50
+bytes and involve valuess shorter than 500
 bytes~\cite{Atikoglu:2012:WAL}. As a result, each service node must
 ideally scale to extremely high packet rates, measured in millions of
 packets per second. 
@@ -64,7 +64,7 @@ there is need for isolation between applications. The use of
 kernel-based or hypervisor-based networking stacks largely addresses
 the problem. A trusted network stack can firewall applications,
 enforce access control lists (ACLs), and implement limiters and other
-policies based on bandwith metering.
+policies based on bandwidth metering.
 
 \myparagraph{Resource efficiency:} The load of web-scale applications
 varies significantly due to diurnal patterns and spikes in user

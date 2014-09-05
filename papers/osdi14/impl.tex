@@ -340,7 +340,7 @@ packet is passed read-only to the application, using virtual memory protection.
 Applications are encouraged (but not required) to limit the time they hold message buffers,
 both to improve locality and to reduce fragmentation because of the fixed
 size of message buffers.  In the
-transmit direction, zero-copy operation rquires that the application
+transmit direction, zero-copy operation requires that the application
 must not modify outgoing data until reception is acknowledged by the
 peer, but if the application violates this requirement, it will
 only result in incorrect data payload.

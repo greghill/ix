@@ -24,7 +24,7 @@ receive window even when the application is not consuming data, up to
 an extent. Second, dataplanes optimize for \emph{synchronization-free
   operation} in order to scale well on many cores. Network flows are
 distributed into distinct queues via flow-consistent hashing, such as
-Recieve Side Scaling (RSS)~\cite{url:rss}, and common case packet processing requires no
+Receive Side Scaling (RSS)~\cite{url:rss}, and common case packet processing requires no
 synchronization or coherence traffic between cores.
 
 \ix extends the dataplane architecture to support untrusted

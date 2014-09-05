@@ -55,7 +55,7 @@ threads.
 The \ix dataplane allows for networking stacks that optimize for both
 bandwidth and latency. It is designed around a native, zero-copy API
 that supports processing of bounded batches of packets to
-completion. Each dataplane executes all the network processing stages
+completion. Each dataplane executes all network processing stages
 for a batch of packets in kernel mode, followed by the associated
 application processing in user mode. This approach amortizes API
 overheads and improves both instruction and data locality. We set the
