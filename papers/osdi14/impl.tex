@@ -315,31 +315,35 @@ and protocol processing code.
 
 The \ix API and implementation has a cooperative flow control
 model between application code and the network-processing stack.
-Unlike user-level stacks that allow user code to control networking
-behavior, the \ix protection model makes few assumptions about
+Unlike user-level stacks, where the application is trusted for correct
+networking behavior, the \ix protection model makes few assumptions about the
 application. A malicious or misbehaving application can only hurt
 itself. It cannot corrupt the networking stack or affect other
-applications. All application code in \ix runs in user-mode, while the
-dataplane code is in protected ring 0. Applications cannot access
+applications. All application code in \ix runs in user-mode, while
+dataplane code runs in protected ring 0. Applications cannot access
 dataplane memory, except for read-only message buffers.  No sequence
 of batched system calls or other user-level actions can be used to
 violate correct adherence to TCP and other network specifications.
-Furthermore, the dataplane can be used to enforce network security
-policies (e.g., iptables or Amazon Security
-Groups~\cite{url:amazon-sg}) or to implement the network
-virtualization functions typically done in a
-hypervisor~\cite{nsdi:nsx}. The \ix security model is as strong as
+Furthermore, the dataplane could be used to enforce network security
+policies, such as firewalling and access control lists.
+%(e.g., iptables or Amazon Security
+%Groups~\cite{url:amazon-sg}) or to implement the
+%virtualization functions typically done in a
+%hypervisor~\cite{nsdi:nsx}.
+The \ix security model is as strong as
 conventional kernel-based networking stacks, a feature that is missing
 from all recently proposed user-level stacks.
 
 The \ix dataplane and the application collaboratively manage
 memory. To enable zero-copy operation, a buffer used for an incoming
-packet is passed read-only to the application, enabling zero-copy
-operation. Applications that hold on to message buffers for extensive
-periods of time must bound their use of this shared resource.  In the
-transmit direction, zero-copy operation implies that the application
+packet is passed read-only to the application, using virtual memory protection.
+Applications are encouraged (but not required) to limit the time they hold message buffers,
+both to improve locality and to reduce fragmentation because of the fixed
+size of message buffers.  In the
+transmit direction, zero-copy operation rquires that the application
 must not modify outgoing data until reception is acknowledged by the
-peer.
+peer, but if the application violates this requirement, it will
+only result in incorrect data payload.
 
 Since elastic threads in \ix execute both the network stack and
 application code, a long running application can block further network
@@ -349,10 +353,9 @@ elastic threads that spend excessive time in user mode (e.g., in
 excess of 10ms). We mark such applications as non-responsive and
 notify the control plane.
 
-The \ix current implementation does not use an IOMMU due to its
-performance overheads~\cite{iommu:overhead}. The \ix kernel is trusted
+The \ix current prototype does not yet use an IOMMU. The \ix kernel is trusted
 code that has access to descriptor rings with host-physical addresses.
-This decision is not fundamental to our design and does not affect the
+This limitation is not fundamental to our design, as does not affect the
 security model provided to applications.
 
 
