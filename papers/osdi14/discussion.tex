@@ -3,28 +3,26 @@
 \label{sec:disc}
 
 
-\myparagraph{What makes \ix faster:} The results in \S\ref{sec:eval}
+\myparagraph{What makes \ix fast:} The results in \S\ref{sec:eval}
 show that a networking stack can be implemented in a protected OS
 kernel and still deliver wire-rate performance for most benchmarks.
 The tight coupling of the dataplane architecture, using only a minimal
 amount of batching to amortize transition costs, causes application
 logic to be scheduled at the right time, which is essential for
 latency-sensitive workloads.  Therefore, the benefits of \ix go beyond
-just minimizing kernel overheads. Similar to
-Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, the lack of intermediate
-buffers pushes all abstractions outside of the OS kernel, allowing for
-efficient, application-specific implementations.  In particular, the
-zero-copy approach helps even when the user-level libraries add a
-level of copying, as it is the case for compatibility interfaces in
-our event library.  The extra copy occurs much closer to the actual
-use, thereby increasing cache locality.  Finally, we took great care
-in tuning the implementation of \ix for multi-core scalability,
-eliminating constructs that introduce synchronization or coherence
-traffic.
+just minimizing kernel overheads. The lack of intermediate buffers
+allows for efficient, application-specific implementations of I/O
+abstractions such as our event library. The zero-copy approach helps
+even when the user-level libraries add a level of copying, as it is
+the case for the \texttt{libevent} compatible interfaces in our event
+library.  The extra copy occurs much closer to the actual use, thereby
+increasing cache locality.  Finally, we carefully tuned \ix for
+multi-core scalability, eliminating constructs that introduce
+synchronization or coherence traffic.
 
 \input{figs/float-batch}
 
-\myparagraph{Subtleties of adaptive batching:} All experiments of
+\myparagraph{Subtleties of adaptive batching:} All experiments in
 \S\ref{sec:eval} were conducted with a maximal batch size of $B=64$
 packets per iteration. In exploring the impact of the batch size, we
 first confirmed the intuition that smaller values of $B$ reduce tail
@@ -38,7 +36,8 @@ fresh descriptors at every iteration lead to overall degraded
 performance as we added cores to \ix.  To avoid the problem, we simply
 coalesced PCIe writes on the receive path so that we replenished at
 least 32 descriptor entries at a time.  Luckily, we did not have to
-coalesce PCIe writes on the transmit path as that would have impacted latency.
+coalesce PCIe writes on the transmit path as that would have impacted
+latency.
 
 
 \begin{comment}

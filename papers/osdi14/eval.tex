@@ -15,45 +15,25 @@ cases, we use TCP as the networking protocol.
 \subsection{Experimental Methodology}
 \label{sec:eval:setup}
 
-
-% We use two experimental setups because we wish to simultaneously
-% compare with mTCP and scale to bandwidth beyond 10GbE.
-% Unfortunately, our 4x10GbE setup uses recent hardware not supported
-% by mTCP out of the box\footnote{We were able to port mTCP to the
-% 4x10GbE setup, but could not reach the expected performance.  We
-% will attempt to unify the setup by the camera-ready deadline.}.
-% Linux and \ix run on both setups.
-
 \input{figs/float-pingpong} 
 
-%Stanford cluster
-%\myparagraph{10GbE setup:} This setup
-%consists of a cluster of 28 Xeon E5-2630 @ 2.3 Ghz machines with Intel
-%82599EB 10GbE and Solarflare SFC9000 10GbE NICs, configured with 64 GB
-%of RAM each. They are connected with an Arista 7050S-64 switch. One
-%machine with an Intel NIC is used as the server, while the rest are
-%used as clients. The server socket has 6 cores and 12 hyperthreads.
-
-
-
-Our experimental setup consists of a cluster of 18 clients
-and one server connected by
-a Quanta/Cumulus 48x10GbE switch with a Broadcom Trident+ ASIC.
-The client machines are a mix of Xeon E5-2637 @ 3.5 Ghz and Xeon
-E5-2650 @ 2.6 Ghz. The server is a Xeon E5-2665 @ 2.4 Ghz with
-256 GB of DRAM.  Each client and server
-socket has 8 cores and 16 hyperthreads. All machines are configured
-with Intel x520 10GbE NICs (82599EB chipset). We connect clients
-to the switch through a single NIC port, while for the server it depends
-on the experiment. For \emph{10GbE} experiments we use a single
-NIC port, and for \emph{4x10GbE} experiments we use four NIC ports
-bonded by the switch with a L3+L4 hash.
+Our experimental setup consists of a cluster of 18 clients and one
+server connected by a Quanta/Cumulus 48x10GbE switch with a Broadcom
+Trident+ ASIC.  The client machines are a mix of Xeon E5-2637 @ 3.5
+Ghz and Xeon E5-2650 @ 2.6 Ghz. The server is a Xeon E5-2665 @ 2.4 Ghz
+with 256 GB of DRAM.  Each client and server socket has 8 cores and 16
+hyperthreads. All machines are configured with Intel x520 10GbE NICs
+(82599EB chipset). We connect clients to the switch through a single
+NIC port, while for the server it depends on the experiment. For
+\emph{10GbE} experiments we use a single NIC port, and for
+\emph{4x10GbE} experiments we use four NIC ports bonded by the switch
+with a L3+L4 hash.
 
 Our baseline configuration in each
 machine is an Ubuntu LTS 14.0.4 distribution, updated to the 3.16.1 Linux kernel, the most
 recent at time of writing.
-%When reporting multi-core scalability, we report
-%results on a per-core basis.
+% When reporting multi-core scalability, we report results on a
+% per-core basis.
 We enable hyperthreading when it improves performance. Except for
 \S\ref{sec:eval:netpipe}, client machines always run Linux. All power
 management features are disabled for all systems in all
@@ -68,7 +48,9 @@ downloaded and installed mTCP from the public-domain
 release~\cite{url:mtcp}, but had to write the benchmarks ourselves
 using the mTCP API.  We run mTCP with the 2.6.36 Linux kernel, as this
 is the most recent supported kernel version.  We report only 10GbE
-results for mTCP, as it does not support NIC bonding.
+results for mTCP, as it does not support NIC bonding. For \ix, we
+bound the maximum batch size to $B=64$ packets per iteration (see
+\S\ref{sec:disc}).
 
 
 
