@@ -178,15 +178,15 @@ user-space in order to eliminate kernel crossing overheads and
 optimize packet processing without incurring the complexity of kernel
 modifications. However, there are still tradeoffs between packet rate
 and latency. For instance, mTCP uses dedicated threads for the TCP
-stack, which communicate at relatively coarse grain with application
+stack, which communicate at relatively coarse granularity with application
 threads. This amortizes switching overheads at the expense of higher
 latency (see \S\ref{sec:eval}). It also complicates resource sharing
 as the network stack must use a large number of hardware threads
-regardless of actual load. More important, security tradeoffs emerge
+regardless of the actual load. More importantly, security tradeoffs emerge
 when networking is lifted into the user-space and application bugs can
 corrupt the networking stack. For example, an attacker may be able
-transmit raw packets, a capability that normally requires root
-privileges, to exploit weaknesses in network protocols and impact
+transmit raw packets (a capability that normally requires root
+privileges) to exploit weaknesses in network protocols and impact
 other services~\cite{DBLP:conf/acsac/Bellovin04}. It is difficult to
 enforce any security or metering policies beyond what is directly
 supported by the NIC hardware.
@@ -224,6 +224,6 @@ for reduced latency, but it is not yet compatible with
 %communication is needed when connections are accepted or
 %closed~\cite{DBLP:conf/sosp/ClementsKZMK13}. 
 When microsecond latencies are
-irrelevant properly tuned stacks can maintain millions of open
+irrelevant, properly tuned stacks can maintain millions of open
 connections~\cite{whatsapp-2mil}.
 
