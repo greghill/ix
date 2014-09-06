@@ -81,8 +81,22 @@
 % #2 --> value in camera ready
 \newcommand{\data}[2]{{\color{Red}\fbox{{\sout{#1}}}\fbox{#2}}}
 
+
+\usepackage{fancyhdr}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0.2pt}
+\lhead{} 
+\chead{} 
+\rhead{} 
+%\lfoot{{\em \small Appears in Proc. 11th USENIX Symposium on Operating Systems Design and Implementation (OSDI), 2014}} 
+\lfoot{{\em \small DRAFT of \today: OSDI 2014 paper \# 136}} 
+\cfoot{}
+\rfoot{} 
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{document}
+
 
 %%%%%% TITLE OPTIONS
 %\title{\bf Title}
@@ -118,7 +132,13 @@
 
 \date{}
 \maketitle
-\thispagestyle{empty}
+
+
+\pagestyle{empty}
+
+%%%% FOR THE PRE-PREPRINT, SELECT ``fancy''.  Otherwise ``empty''
+%\thispagestyle{empty}
+\thispagestyle{fancy}
 
 \input{abstract}
 \input{intro}
@@ -134,13 +154,6 @@
 
 \bibliography{../common/abbrev,dblp,../common/gscholar,../common/misc}
 \bibliographystyle{abbrv} 
-
-%\ifcomments
-%\input{dangling}
-%\fi
-
-%\input{internal-notes} % really old stuff
-
 
 
 \end{document}
