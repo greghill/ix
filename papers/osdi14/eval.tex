@@ -25,8 +25,8 @@ with 256 GB of DRAM.  Each client and server socket has 8 cores and 16
 hyperthreads. All machines are configured with Intel x520 10GbE NICs
 (82599EB chipset). We connect clients to the switch through a single
 NIC port, while for the server it depends on the experiment. For
-\emph{10GbE} experiments we use a single NIC port, and for
-\emph{4x10GbE} experiments we use four NIC ports bonded by the switch
+\emph{10GbE} experiments, we use a single NIC port, and for
+\emph{4x10GbE} experiments, we use four NIC ports bonded by the switch
 with a L3+L4 hash.
 
 Our baseline configuration in each
@@ -38,7 +38,7 @@ We enable hyperthreading when it improves performance. Except for
 \S\ref{sec:eval:netpipe}, client machines always run Linux. All power
 management features are disabled for all systems in all
 experiments. Jumbo frames are never enabled. All Linux workloads
-are pinned to hardware threads, to avoid scheduling jitter, and
+are pinned to hardware threads to avoid scheduling jitter, and
 background tasks are disabled.
 
 
@@ -116,7 +116,7 @@ Linux. Fig.~\ref{fig:short10:mcore} shows that \ix needs only 3 cores
 to saturate the 10GbE link whereas mTCP requires all 8 cores. On
 Fig.~\ref{fig:short10:roundtrips} for 1024 roundtrips per connection,
 \ix delivers 8.8 million messages per second, which is
-1.9x the throughput of mTCP and of and 8.8$\times$ that of
+1.9$\times$ the throughput of mTCP and of and 8.8$\times$ that of
 Linux. With this packet rate, \ix achieves line rate and is limited
 only by 10GbE bandwidth.
 
