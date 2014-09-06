@@ -8,16 +8,19 @@ aggressive networking requirements running on multi-core servers.
 \subsection{Application Requirements}
 \label{sec:motivation:challenges}
 
+\edb{ALT TITLE:  Challenges of Datacenter Applications}
+
+
 % \christos{We need to make sure that the requirements in 2.2 and
 %   approach in 3 are aligned. Currently, they don't match that well}
 
-Large-scale, distributed applications pose unique challenges to system
+Large-scale, \edb{datacenter\sout{distributed}} applications pose unique challenges to system
 software and their networking stacks:
 
 \myparagraph{Micro-second tail latency:} To enable rich interactions
 between a large number of services without impacting the overall
 latency experienced by the user, it is essential to reduce the latency
-for each service request to a few tens of
+for \edb{some\sout{each}} service request to a few tens of
 \microsecond~\cite{luiz-isscc,DBLP:conf/hotos/RumbleOSRO11}.  Since
 each user request often involves hundreds of servers, we must also
 consider the long tail of the latency distributions of RPC requests
@@ -32,11 +35,11 @@ latency.
 % in end-to-end application gains.
 
 \myparagraph{High packet rates:} The requests and, often times, the
-replies between the various services that comprise a web-scale
+replies between the various services that comprise a \edb{datacenter\sout{web-scale}}
 application are quite small. In Facebook's \texttt{memcached} service,
 for example, the vast majority of requests uses keys shorter than 50
 bytes and involve valuess shorter than 500
-bytes~\cite{Atikoglu:2012:WAL}. As a result, each service node must
+bytes~\cite{Atikoglu:2012:WAL}. \edb{Because \texttt{memcache} is so fast\sout{As a result}}, each service node must
 ideally scale to extremely high packet rates, measured in millions of
 packets per second. 
 
@@ -83,7 +86,7 @@ policies~\cite{DBLP:conf/eurosys/LeverichK14,DBLP:conf/isca/LoCGBK14}.
 
 The wealth of hardware resources in modern servers should allow for
 low latency and high packet rates for web-scale applications.  A
-typical server includes one or two processor sockets, each with ten or
+typical server includes one or two processor sockets, each with \edb{eight\sout{ten}} or
 more multithreaded cores and multiple, high-speed channels to DRAM and
 PCIe devices. Solid-state drives and PCIe-based Flash storage are also
 increasingly popular. For networking, 10 GbE NICs and switches are
@@ -105,8 +108,8 @@ inter-arrival times being many times higher than the latency of interrupts
 and system calls.  As a result, such operating systems trade off both
 latency and throughput in favor of fine-grain resource scheduling.
 Interrupt coalescing (used to reduce processing overheads), queuing
-latency due to device driver processing intervals, and the use of
-intermediate buffering and CPU scheduling delays frequently add up to
+latency due to device driver processing intervals, \edb{\sout{and}} the use of
+intermediate buffering,\edb{system call overheads,} and CPU scheduling delays frequently add up to
 several hundred \microsecond of latency to remote requests.  The
 overheads of buffering and synchronization needed to support flexible,
 fine-grain scheduling of applications to cores increases CPU and
@@ -179,7 +182,7 @@ optimize packet processing without incurring the complexity of kernel
 modifications. However, there are still tradeoffs between packet rate
 and latency. For instance, mTCP uses dedicated threads for the TCP
 stack, which communicate at relatively coarse granularity with application
-threads. This amortizes switching overheads at the expense of higher
+threads. This \edb{aggressive batching} amortizes switching overheads at the expense of higher
 latency (see \S\ref{sec:eval}). It also complicates resource sharing
 as the network stack must use a large number of hardware threads
 regardless of the actual load. More importantly, security tradeoffs emerge
@@ -217,7 +220,7 @@ ensuring all processing for a network flow is affinitized to the same
 core~\cite{DBLP:conf/eurosys/PesterevSZM12}. Recent Linux Kernels
 support a busy polling driver mode that trades increased CPU utilization
 for reduced latency, but it is not yet compatible with
-\texttt{epoll}, a requirement for scalable event notification.
+\texttt{epoll}, a requirement for scalable event notification\edb{CITATION XXX}.
 %These approaches cannot
 %completely eliminate synchronization between cores, as the lack of
 %commutativity in the POSIX socket API implies that cross-core

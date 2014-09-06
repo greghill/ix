@@ -16,7 +16,7 @@ processing~\cite{DBLP:conf/eurosys/LeverichK14}. It is a difficult
 application to scale because the common deployments involve high
 connection counts for \texttt{memcached} servers and small-sized
 requests and
-replies~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13,Atikoglu:2012:WAL}
+replies~\cite{Atikoglu:2012:WAL,DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}.
 
 \input{tbl-mutilate}
 
@@ -73,7 +73,7 @@ latencies to roughly half.  Note that we use Linux clients for these
 experiments; running \ix on clients should further reduce latency.
 
 At high request rates, the distribution of CPU time shifts from being
-$>80\%$ in the kernel with Linux to $<10\%$ with \ix. This allows \ix
+$<80\%$ in the \edb{Linux} kernel \edb{\sout{with Linux}} to $<10\%$ \edb{in the \ix dataplane kernel\sout{with \ix}}. This allows \ix
 to increase throughput by 3.4$\times$ and 4.7$\times$ for
 \texttt{ETC} and \texttt{USR} respectively at a 500\microsecond tail
 latency SLA.  The improvement for \texttt{ETC} is lower due to the

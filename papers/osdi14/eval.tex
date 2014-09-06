@@ -178,7 +178,7 @@ subsystem. Intel's Data Direct I/O technology, an evolution of
 DCA~\cite{DBLP:conf/isca/HuggahalliIT05}, eliminates nearly all cache
 misses associated with DMA transfers when given enough time between
 polling intervals, resulting in as little as 1.4 L3 cache misses per
-message for up to 10,000 concurrent connections.  In contrast, the
+message for up to 10,000 concurrent connections\edb{, at a scale where all of \ix's data structures fit easily in the L3 cache}.  In contrast, the
 workload averages 25 L3 cache misses per message when handling 250,000
 concurrent connections.  At high connection counts, the working set of
 this workload is dominated by the TCP connection state and does not

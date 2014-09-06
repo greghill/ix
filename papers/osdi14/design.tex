@@ -13,8 +13,8 @@ exposed directly to users.
 
 Dataplanes differ from traditional OS designs in two basic
 ways. First, they are designed to \emph{run each packet to
-  completion}. All network protocol and application processing for a
-packet is done before moving on to the next packet.  In contrast, a
+  completion} \edb{CITATION XXX}. All network protocol and application processing for a
+packet is done before moving on to the next packet.  \edb{In that model, the application is directly integrated into the networking stack without any memory protection.}  In contrast, a
 commodity OS decouples protocol processing from the application itself
 in order to provide scheduling and flow control flexibility.  For
 example, the kernel relies on device and soft interrupts to context
@@ -47,9 +47,11 @@ dataplane cores. The control plane is also responsible for elastically
 adjusting the allocation of resources between dataplanes.
 
 The separation of control and data plane allows us to consider
-radically different I/O APIs and implementations in the dataplane,
+radically different \edb{APIs between (i) the control and data plane and (iI) the application and the data plane. \sout{I/O APIs}}.  
+\edb{The design also allows the control plane to handle OS functionality required for compatibility to applications, such as file system support, on behalf of dataplane applications.
+\sout{and implementations in the dataplane,
 while permitting other OS functionality, such as file system support,
-to be passed through to the control plane for compatibility.
+to be passed through to the control plane for compatibility.}}
 Similar to the Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, each
 dataplane runs a single application in a single address
 space. However, we use modern virtualization hardware to provide
@@ -77,7 +79,7 @@ application logic and the networking stack.  Unlike previous work, that
 applied a similar approach to eliminate receive livelocks during
 congestion periods~\cite{receive-livelock}, \ix uses run to completion
 during all load conditions. Thus, we are able to use polling and avoid
-interrupt overhead in the common case. We still rely on interrupts as
+interrupt overhead in the common case \edb{by dedicating cores to the dataplane}. We still rely on interrupts as
 a mechanism to regain control, for example, if a dataplane is slow to
 respond.  Run to completion improves both message throughput and
 latency because successive stages tend to access many of the same
