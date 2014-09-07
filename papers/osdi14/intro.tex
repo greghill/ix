@@ -8,7 +8,7 @@
 %   with Linux}
 
 Datacenter\sout applications such as search, social networking, and
-e-commerce platforms \sout{and other web-scale applications}  are redefining the requirements for systems
+e-commerce platforms are redefining the requirements for systems
 software. A single application can consist of hundreds of software
 services, deployed on thousands of servers, creating a need for
 networking stacks that provide more than high streaming performance.
@@ -35,7 +35,7 @@ Other systems go a step further by also replacing TCP/IP with RDMA in
 order to offload network processing to specialized
 adapters~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,DBLP:conf/sosp/OngaroRSOR11}.
 However, such adapters must be present at both ends of the connection
-\adam{and can only be used within the datacenter.}
+and can only be used within the datacenter.
 
 
 We propose \ix, an operating system designed to break the $4$-way
@@ -46,13 +46,9 @@ software routers~\cite{routebricks,click}. \ix separates the control
 plane, which is responsible for system configuration and coarse-grain
 resource provisioning between applications, from the dataplanes, which
 run the networking stack and application logic.
-\adam{\ix leverages virtualization hardware to run the dataplane kernel and
+\ix leverages virtualization hardware to run the dataplane kernel and
 the application at distinct protection levels and to isolate
-the control plane from the dataplane.}
-%\ix uses hardware
-%virtualization %~\cite{DBLP:journals/computer/UhligNRSMABKLS05}
-%to provide three-way protection between the control plane, the
-%networking stack, and the application.
+the control plane from the dataplane.
 In our implementation, the
 control plane is the full Linux kernel and the dataplanes run as
 protected, library-based operating systems on dedicated hardware
@@ -62,7 +58,7 @@ The \ix dataplane allows for networking stacks that optimize for both
 bandwidth and latency. It is designed around a native, zero-copy API
 that supports processing of bounded batches of packets to
 completion. Each dataplane executes all network processing stages
-for a batch of packets in \adam{the dataplane kernel}, followed by the associated application processing in user mode. This approach amortizes API
+for a batch of packets in the dataplane kernel, followed by the associated application processing in user mode. This approach amortizes API
 overheads and improves both instruction and data locality. We set the
 batch size adaptively based on load. The \ix dataplane also optimizes
 for multi-core scalability.  The network adapters (NICs) perform
@@ -72,7 +68,7 @@ the networking stack and a single application without the need for
 synchronization or coherence traffic in the common case operation. The
 \ix API departs from the POSIX API, and its design is guided by the commutativity
 rule~\cite{DBLP:conf/sosp/ClementsKZMK13}.  However, the \texttt{libix}
-user-level library includes an event-based API \adam{similar} to the
+user-level library includes an event-based API similar to the
 popular \texttt{libevent} library~\cite{provos2003libevent}, providing
 compatibility with a wide range of existing applications.
 
