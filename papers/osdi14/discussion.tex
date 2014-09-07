@@ -22,22 +22,34 @@ synchronization or coherence traffic.
 
 \input{figs/float-batch}
 
-\myparagraph{Subtleties of adaptive batching:} All experiments in
-\S\ref{sec:eval} were conducted with a maximal batch size of $B=64$
-packets per iteration. In exploring the impact of the batch size \edb{ ---which impacts behavior when the workload is CPU-bound ---}, we
-first confirmed the intuition that smaller values of $B$ reduce tail
-latency. \edb{Similarly, adaptive batching improves on fixed-sized batching when the workload is not CPU-bound}.  \edb{Finally, we performed sensitivity analysis on the impact of the bound $B$ on throughput, as shown in }Fig.~\ref{fig:batch}, which compares the throughout of the
-CPU-bound benchmarked used in Fig.~\ref{fig:short10:roundtrips}. The
-experiment shows that batches as low as $B=32$ can deliver maximal
-throughput for this workload.  However, we ran into an unexpected
-limitation of adaptive batch when running \ix at high packet rates
-with small average batch sizes; The high rate of PCIe writes required
-to post fresh descriptors at every iteration led to performance
-degradation as we scaled the number of cores used by \ix.  To avoid
-this problem, we simply coalesced PCIe writes on the receive path so
-that we replenished at least 32 descriptor entries at a time.
-Luckily, we did not have to coalesce PCIe writes on the transmit path,
-as that would have impacted latency.
+\myparagraph{Subtleties of adaptive batching:} 
+\edb{NEW PAR:}
+Batching is commonly understood to trade off better throughput at high
+loads for higher latency at low loads.  Our use of adaptive, bounded
+batching actually improves on both metrics: In exploring the impact of
+the batch size bound ---which impacts behavior when the workload is
+CPU-bound ---, we first confirmed the intuition that larger batch
+sizes improve throughput, but only to a point. Fig.~\ref{fig:batch},
+which compares the throughout of the CPU-bound benchmarked used in
+Fig.~\ref{fig:short10:roundtrips}.  The experiment shows that batches
+as low as $B=32$ can deliver maximal throughput for this
+workload. (All experiments in \S\ref{sec:eval} were conducted with a
+maximal batch size of $B=64$ packets per iteration.)  Because the
+algorithm is adaptive, $B$ does not impact latency when the workload
+is not saturated and the actual batch sizes are small; we confirmed
+this experimentally at the 99th percentile latency for
+\texttt{memcache}.
+
+However, we ran into an unexpected limitation of adaptive batching
+when running \ix at high packet rates with small average batch sizes,
+i.e. when the workload is not saturated or the dataplane is
+over-provisioned: the high rate of PCIe writes required to post fresh
+descriptors at every iteration led to performance degradation as we
+scaled the number of cores used by \ix.  To avoid this problem, we
+simply coalesced PCIe writes on the receive path so that we
+replenished at least 32 descriptor entries at a time.  Luckily, we did
+not have to coalesce PCIe writes on the transmit path, as that would
+have impacted latency.
 
 
 \begin{comment}
@@ -75,8 +87,7 @@ some level of trust into the \ix dataplane, application code remains
 securely isolated. In the future we plan on using IOMMU support to
 further isolate \ix dataplanes. We anticipate overhead will be low
 because of our use of large pages.
-
-\edb{ADD SENTENCE ON SR-IOV.  Discuss whether this is trivial or not, and whether the RSS limitatiosn associated with SR-IOV impact the design XXX}
+\edb{Also, our prototype currently does not take advantage of the NIC's SR-IOV capabilities but instead allocates entire physical devices to dataplane.} 
 
 We also intend to add support for interrupts in \ix dataplanes. The
 execution model of the \ix dataplane assumes some cooperation from
