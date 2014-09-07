@@ -23,8 +23,6 @@ synchronization or coherence traffic.
 
 
 \myparagraph{Subtleties of adaptive batching:} 
-\input{figs/float-batch}
-
 Batching is commonly understood to trade off better throughput at high
 loads for higher latency at low loads.  Our use of adaptive, bounded
 batching actually improves on both metrics. In exploring the impact of
@@ -40,6 +38,8 @@ algorithm is adaptive, $B$ does not impact latency when the dataplane
 is not saturated; we confirmed
 this experimentally at the 99th percentile latency for
 \texttt{memcache}.
+
+\input{figs/float-batch}
 
 However, we ran into an unexpected hardware limitation
 when running \ix at high packet rates with small average batch sizes 

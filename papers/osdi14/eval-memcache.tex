@@ -3,7 +3,7 @@
 \subsection{Memcached Performance}
 \label{sec:eval:memcached}
 
-\input{tbl-mutilate}
+
 
 
 Finally, we evaluated the performance benefits of \ix with
@@ -55,6 +55,8 @@ numbers are as tuned as possible for this hardware using the
 open-source version of \texttt{memcached-1.4.18}. We report the
 results for the server configuration that provides the best
 performance: 8 cores with Linux, but only 6 with \ix.
+
+\input{tbl-mutilate}
 
 Porting \texttt{memcached} to \ix primarily consisted of adapting it
 to use our event library. In most cases, the port was straightforward,

@@ -15,7 +15,7 @@ cases, we use TCP as the networking protocol.
 \subsection{Experimental Methodology}
 \label{sec:eval:setup}
 
-\input{figs/float-pingpong} 
+
 
 Our experimental setup consists of a cluster of 24 clients and one
 server connected by a Quanta/Cumulus 48x10GbE switch with a Broadcom
@@ -41,6 +41,7 @@ experiments. Jumbo frames are never enabled. All Linux workloads
 are pinned to hardware threads to avoid scheduling jitter, and
 background tasks are disabled.
 
+\input{figs/float-pingpong} 
 
 The Linux client and server implementations of our benchmarks use the
 \texttt{libevent} framework with the \texttt{epoll} system call.  We
