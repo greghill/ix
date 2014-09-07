@@ -72,7 +72,8 @@ latencies to roughly half.  Note that we use Linux clients for these
 experiments; running \ix on clients should further reduce latency.
 
 At high request rates, the distribution of CPU time shifts from being
-$<80\%$ in the \edb{Linux} kernel \edb{\sout{with Linux}} to $<10\%$ \edb{in the \ix dataplane kernel\sout{with \ix}}. This allows \ix
+$<80\%$ in the Linux kernel to $<10\%$ in the \ix dataplane kernel.
+This allows \ix
 to increase throughput by \data{3.4}{3.0}$\times$ and \data{4.7}{4.1}$\times$ for
 \texttt{ETC} and \texttt{USR} respectively at a 500\microsecond tail
 latency SLA.  The improvement for \texttt{ETC} is lower due to the
