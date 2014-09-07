@@ -15,7 +15,6 @@ exposed directly to users.
 ways. First, they are designed to \emph{run each packet to
   completion}.  All network protocol and application processing for a
 packet is done before moving on to the next packet.  \edb{Also, middlebox dataplanes typically intermingle the application within the networking stack without any isolation.}  
-
 In contrast, a
 commodity OS decouples protocol processing from the application itself
 in order to provide scheduling and flow control flexibility.  For
@@ -23,10 +22,11 @@ example, the kernel relies on device and soft interrupts to context
 switch from applications to protocol processing. Similarly, the
 kernel's network stack will generate TCP \texttt{ACKs} and slide its
 receive window even when the application is not consuming data, up to
-an extent. Second, dataplanes optimize for \emph{synchronization-free
+an extent. 
+
+Second, middlebox dataplanes optimize for \emph{synchronization-free
   operation} in order to scale well on many cores. Network flows are
-distributed into distinct queues via flow-consistent hashing, such as
-Receive Side Scaling (RSS)~\cite{url:rss}, and common case packet processing requires no
+distributed into distinct queues via flow-consistent hashing and common case packet processing requires no
 synchronization or coherence traffic between cores.
 
 \ix extends the dataplane architecture to support untrusted
@@ -149,7 +149,7 @@ the application controls transmit buffering.
 %applications.
 
 \myparagraph{Flow consistent, synchronization-free processing:} We use
-multi-queue NICs with RSS support to provide flow-consistent hashing
+multi-queue NICs with \edb{Receive Side Scaling (RSS~\cite{url:rss})} support to provide flow-consistent hashing
 of incoming traffic to distinct hardware queues. Each hardware
 thread serves a single receive and transmit queue per NIC, eliminating
 the need for synchronization and
