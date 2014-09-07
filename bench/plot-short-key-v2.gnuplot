@@ -15,4 +15,4 @@ plot NaN with linespoints linestyle 1 title 'Linux 10Gbps',\
      NaN with linespoints linestyle 2 title 'Linux 40Gbps',\
      NaN with linespoints linestyle 4 title 'IX 10Gbps',\
      NaN with linespoints linestyle 5 title 'IX 40Gbps',\
-     NaN with linespoints linestyle 3 title 'mTCP'
+     NaN with linespoints linestyle 3 title 'mTCP 10Gbps'
