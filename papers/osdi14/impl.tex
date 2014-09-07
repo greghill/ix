@@ -53,7 +53,7 @@ the overheads and unpredictability of fine-grained time multiplexing
 of resources between demanding
 applications~\cite{DBLP:conf/eurosys/LeverichK14}.
 
-\adam{Each \ix dataplane} operates as a single address-space OS and supports
+Each \ix dataplane operates as a single address-space OS and supports
 two thread types within a shared, user-level address space: (i)
 \emph{elastic threads} which interact with the \ix dataplane to
 initiate and consume network I/O and (ii) \emph{background threads}.
@@ -113,7 +113,7 @@ We provide a hierarchical timing wheel implementation for managing
 network timeouts, such as TCP
 retransmissions~\cite{DBLP:conf/sosp/VargheseL87}. It is optimized for
 the common case where most timers are canceled before they expire. We
-support extremely high resolution timeouts, as low as 16 \microsecond,
+support extremely high-resolution timeouts, as low as 16 \microsecond,
 which has been shown to improve performance during TCP incast
 congestion~\cite{DBLP:conf/sigcomm/VasudevanPSKAGGM09}.
 
@@ -173,8 +173,7 @@ does not return the number of bytes buffered. Instead, it returns the
 number of bytes that were accepted and sent by the TCP stack, as
 constrained by correct TCP sliding window operation. When the receiver
 acknowledges the bytes, a \texttt{sent} event condition informs the
-application that it is possible to send more data. Thus, send window
-sizing policy is determined entirely by the application.  By contrast,
+application that it is possible to send more data. Thus, send window-sizing policy is determined entirely by the application.  By contrast,
 conventional OSes buffer send data beyond raw TCP constraints and
 apply flow control policy inside the kernel.
 
@@ -194,7 +193,7 @@ We built a user-level library, called \emph{libix}, which abstracts
 away the complexity of our low-level API. It provides a compatible
 programming model for legacy applications and significantly simplifies
 the development of new applications. Libix currently includes a
-\adam{very similar} interface to \texttt{libevent} and
+very similar interface to \texttt{libevent} and
 non-blocking POSIX socket operations. It also includes new interfaces
 for zero copy read and write operations that are more efficient, at
 the expense of requiring changes to existing applications.
