@@ -85,7 +85,7 @@ offset the cost of context switching~\cite{jeong2014mtcp}, which comes
 Next, we evaluate \ix's throughput and multi-core scalability using
 the same benchmark used to evaluate
 MegaPipe~\cite{DBLP:conf/osdi/HanMCR12} and
-mTCP~\cite{jeong2014mtcp}. \edb{\sout{Multiple}{18}} clients connect to a single server
+mTCP~\cite{jeong2014mtcp}. {18} clients connect to a single server
 listening on a single port, send a request of size $s$, and wait for
 an echo of a message of the same size.  As with NetPIPE, while
 receiving the message, the server holds off its echo response until
@@ -144,7 +144,7 @@ with a single socket multi-core server.
 \label{sec:eval:scale}
 
 We also evaluate \ix's scalability when handling a large number of
-concurrent connections on the 4x10GbE setup. \edb{\sout{Each of the}} 18 client
+concurrent connections on the 4x10GbE setup. 18 client
 machines runs $n$ threads, with each thread repeatedly performing a
 64B remote procedure call to the server with a variable number of
 active connections. % \adam{Should we emphasize that all connections are
@@ -178,7 +178,7 @@ subsystem. Intel's Data Direct I/O technology, an evolution of
 DCA~\cite{DBLP:conf/isca/HuggahalliIT05}, eliminates nearly all cache
 misses associated with DMA transfers when given enough time between
 polling intervals, resulting in as little as 1.4 L3 cache misses per
-message for up to 10,000 concurrent connections\edb{, at a scale where all of \ix's data structures fit easily in the L3 cache}.  In contrast, the
+message for up to 10,000 concurrent connections, a scale where all of \ix's data structures fit easily in the L3 cache.  In contrast, the
 workload averages 25 L3 cache misses per message when handling 250,000
 concurrent connections.  At high connection counts, the working set of
 this workload is dominated by the TCP connection state and does not
