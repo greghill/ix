@@ -1,4 +1,4 @@
-set terminal postscript eps enhanced solid size 3.1,2.1 font 'Times'
+set terminal postscript eps enhanced solid size 3.1,1.5 font 'Times'
 set style data linespoints
 set output '../papers/osdi14/figs/batch.eps'
 set grid y
