@@ -104,6 +104,8 @@ using a reset (\texttt{TCP RST}) to avoid exhausting ephemeral ports.
 %% IX:  7074246
 %% mTCP: 3253521
 
+\input{figs/float-connscaling}
+
 Fig.~\ref{fig:shortboth} shows the message
 rate or goodput for both the 10GbE and the 40GbE configurations as we
 vary the number of cores used, the number of roundtrip messages per
@@ -125,6 +127,9 @@ only by 10GbE bandwidth.
 %		       14 ethernet hdr + 20 IP hdr + 20 TCP hdr + 64 payload + 4 CRC) bytes
 % = 8 802 816.9 requests / second
 
+\input{figs/float-mutilate}
+
+
 Fig.~\ref{fig:shortboth} also shows that \ix
 scales well beyond 10GbE to a 4x10GbE configuration.
 Fig.~\ref{fig:short10:mcore} shows that \ix linearly scales to deliver
@@ -137,11 +142,12 @@ goodput of 34.5 Gbps, for a wire throughput of
 it practical to scale protected TCP/IP processing beyond 10GbE, even
 with a single socket multi-core server.
 
-\input{figs/float-connscaling}
+
 
 \subsection{Connection Scalability}
-
 \label{sec:eval:scale}
+
+
 
 We also evaluate \ix's scalability when handling a large number of
 concurrent connections on the 4x10GbE setup. 18 client
@@ -159,7 +165,7 @@ for a range of total established connections.
 %/p
 %13.15085
 
-\input{figs/float-mutilate}
+
 
 Fig.~\ref{fig:connscaling} shows up to 250,000
 connections, which is the upper bound we can reach with the available

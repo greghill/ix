@@ -192,7 +192,7 @@ apply flow control policy inside the kernel.
 %buffers, so it is usually possible to coalesce several writes into a
 %single request.
 
-We built a user-level library, called \emph{libix}, which abstracts
+We built a user-level library, called \texttt{libix}, which abstracts
 away the complexity of our low-level API. It provides a compatible
 programming model for legacy applications and significantly simplifies
 the development of new applications. Libix currently includes a
@@ -225,11 +225,11 @@ the receive descriptor ring and potentially posts fresh buffer
 descriptors to the NIC for use with future incoming packets. The
 elastic thread then (2) processes a bounded number of packets through
 the TCP/IP networking stack, thereby generating event
-conditions. Next, the elastic thread (3) switches to the user-space
+conditions. Next, the thread (3) switches to the user-space
 applications, which consumes all event conditions. Assuming that the
 incoming packets include remote requests, the application processes
 these requests and responds with a batch of system calls. Upon return
-of control from user-space, the elastic thread (4) processes all batched
+of control from user-space, the thread (4) processes all batched
 system calls, and in particular the ones that direct outgoing TCP/IP
 traffic. The thread also (5) runs all kernel timers in order to ensure
 compliant TCP behavior. Finally (6), it places outgoing Ethernet

@@ -20,9 +20,10 @@ increasing cache locality.  Finally, we carefully tuned \ix for
 multi-core scalability, eliminating constructs that introduce
 synchronization or coherence traffic.
 
-\input{figs/float-batch}
+
 
 \myparagraph{Subtleties of adaptive batching:} 
+\input{figs/float-batch}
 
 Batching is commonly understood to trade off better throughput at high
 loads for higher latency at low loads.  Our use of adaptive, bounded
