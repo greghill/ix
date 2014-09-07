@@ -26,24 +26,24 @@ synchronization or coherence traffic.
 \edb{NEW PAR:}
 Batching is commonly understood to trade off better throughput at high
 loads for higher latency at low loads.  Our use of adaptive, bounded
-batching actually improves on both metrics: In exploring the impact of
-the batch size bound ---which impacts behavior when the workload is
-CPU-bound ---, we first confirmed the intuition that larger batch
-sizes improve throughput, but only to a point. Fig.~\ref{fig:batch},
-which compares the throughout of the CPU-bound benchmarked used in
+batching actually improves on both metrics. In exploring the impact of
+the batch size bound --- which impacts behavior when the workload is
+CPU-bound --- we first confirmed the intuition that larger batch
+sizes improve throughput, but only to a point. Fig.~\ref{fig:batch}
+compares the throughput of the CPU-bound benchmark used in
 Fig.~\ref{fig:short10:roundtrips}.  The experiment shows that batches
 as low as $B=32$ can deliver maximal throughput for this
 workload. (All experiments in \S\ref{sec:eval} were conducted with a
 maximal batch size of $B=64$ packets per iteration.)  Because the
-algorithm is adaptive, $B$ does not impact latency when the workload
-is not saturated and the actual batch sizes are small; we confirmed
+algorithm is adaptive, $B$ does not impact latency when the \adam{dataplane}
+is not saturated\adam{\sout{and the actual batch sizes are small}}; we confirmed
 this experimentally at the 99th percentile latency for
 \texttt{memcache}.
 
-However, we ran into an unexpected limitation of adaptive batching
-when running \ix at high packet rates with small average batch sizes,
-i.e. when the workload is not saturated or the dataplane is
-over-provisioned: the high rate of PCIe writes required to post fresh
+However, we ran into an unexpected \adam{hardware} limitation\adam{\sout{ of adaptive batching}}
+when running \ix at high packet rates with small average batch sizes(
+i.e. when the \adam{dataplane is not saturated}) \adam{\sout{or the dataplane is
+over-provisioned}}: the high rate of PCIe writes required to post fresh
 descriptors at every iteration led to performance degradation as we
 scaled the number of cores used by \ix.  To avoid this problem, we
 simply coalesced PCIe writes on the receive path so that we
