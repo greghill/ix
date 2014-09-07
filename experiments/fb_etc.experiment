@@ -13,10 +13,10 @@ AGENTS:osdi14_basic
 -C 4
 
 # 4 connections per agent thread
--c 1
+-c 4
 
 # Add pipelining for adequate load generation
--d 2
+-d 4
 
 # 60 seconds per test, 10 second warmup
 -t 60
