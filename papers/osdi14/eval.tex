@@ -17,7 +17,7 @@ cases, we use TCP as the networking protocol.
 
 \input{figs/float-pingpong} 
 
-Our experimental setup consists of a cluster of \data{18}{24} clients and one
+Our experimental setup consists of a cluster of 24 clients and one
 server connected by a Quanta/Cumulus 48x10GbE switch with a Broadcom
 Trident+ ASIC.  The client machines are a mix of Xeon E5-2637 @ 3.5
 Ghz and Xeon E5-2650 @ 2.6 Ghz. The server is a Xeon E5-2665 @ 2.4 Ghz
@@ -85,7 +85,7 @@ offset the cost of context switching~\cite{jeong2014mtcp}, which comes
 Next, we evaluate \ix's throughput and multi-core scalability using
 the same benchmark used to evaluate
 MegaPipe~\cite{DBLP:conf/osdi/HanMCR12} and
-mTCP~\cite{jeong2014mtcp}. \data{Multiple}{18} clients connect to a single server
+mTCP~\cite{jeong2014mtcp}. \edb{\sout{Multiple}{18}} clients connect to a single server
 listening on a single port, send a request of size $s$, and wait for
 an echo of a message of the same size.  As with NetPIPE, while
 receiving the message, the server holds off its echo response until
