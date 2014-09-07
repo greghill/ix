@@ -152,7 +152,7 @@ the application controls transmit buffering.
 %applications.
 
 \myparagraph{Flow consistent, synchronization-free processing:} We use
-multi-queue NICs with \edb{Receive Side Scaling (RSS~\cite{url:rss})} support to provide flow-consistent hashing
+multi-queue NICs with \edb{receive side scaling (RSS~\cite{url:rss})} support to provide flow-consistent hashing
 of incoming traffic to distinct hardware queues. Each hardware
 thread serves a single receive and transmit queue per NIC, eliminating
 the need for synchronization and
