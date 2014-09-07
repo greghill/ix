@@ -5,22 +5,21 @@
 Our work focuses on improving operating systems for applications with
 aggressive networking requirements running on multi-core servers.
 
-\subsection{Application Requirements}
+\subsection{Challenges for Datacenter Applications}
 \label{sec:motivation:challenges}
-
-\edb{ALT TITLE:  Challenges of Datacenter Applications}
+\adam{title changed}
 
 
 % \christos{We need to make sure that the requirements in 2.2 and
 %   approach in 3 are aligned. Currently, they don't match that well}
 
-Large-scale, \edb{datacenter\sout{distributed}} applications pose unique challenges to system
+Large-scale, datacenter applications pose unique challenges to system
 software and their networking stacks:
 
 \myparagraph{Micro-second tail latency:} To enable rich interactions
 between a large number of services without impacting the overall
 latency experienced by the user, it is essential to reduce the latency
-for \edb{some\sout{each}} service request to a few tens of
+for some service request to a few tens of
 \microsecond~\cite{luiz-isscc,DBLP:conf/hotos/RumbleOSRO11}.  Since
 each user request often involves hundreds of servers, we must also
 consider the long tail of the latency distributions of RPC requests
@@ -35,7 +34,7 @@ latency.
 % in end-to-end application gains.
 
 \myparagraph{High packet rates:} The requests and, often times, the
-replies between the various services that comprise a \edb{datacenter\sout{web-scale}}
+replies between the various services that comprise a datacenter
 application are quite small. In Facebook's \texttt{memcached} service,
 for example, the vast majority of requests uses keys shorter than 50
 bytes and involve valuess shorter than 500
@@ -86,7 +85,7 @@ policies~\cite{DBLP:conf/eurosys/LeverichK14,DBLP:conf/isca/LoCGBK14}.
 
 The wealth of hardware resources in modern servers should allow for
 low latency and high packet rates for web-scale applications.  A
-typical server includes one or two processor sockets, each with \edb{eight\sout{ten}} or
+typical server includes one or two processor sockets, each with eight or
 more multithreaded cores and multiple, high-speed channels to DRAM and
 PCIe devices. Solid-state drives and PCIe-based Flash storage are also
 increasingly popular. For networking, 10 GbE NICs and switches are
@@ -101,15 +100,15 @@ of distance within a datacenter.
 
 
 Unfortunately, commodity operating systems have been designed under
-very different hardware assumptions. Kernel schedulers, networking
+very different hardware assumptions. Kernel schedulers, networkingc
 APIs, and network stacks have been designed under the assumptions of
 multiple applications sharing a single processing core and packet
 inter-arrival times being many times higher than the latency of interrupts
 and system calls.  As a result, such operating systems trade off both
 latency and throughput in favor of fine-grain resource scheduling.
 Interrupt coalescing (used to reduce processing overheads), queuing
-latency due to device driver processing intervals, \edb{\sout{and}} the use of
-intermediate buffering,\edb{system call overheads,} and CPU scheduling delays frequently add up to
+latency due to device driver processing intervals, the use of
+intermediate buffering, and CPU scheduling delays frequently add up to
 several hundred \microsecond of latency to remote requests.  The
 overheads of buffering and synchronization needed to support flexible,
 fine-grain scheduling of applications to cores increases CPU and
@@ -182,7 +181,7 @@ optimize packet processing without incurring the complexity of kernel
 modifications. However, there are still tradeoffs between packet rate
 and latency. For instance, mTCP uses dedicated threads for the TCP
 stack, which communicate at relatively coarse granularity with application
-threads. This \edb{aggressive batching} amortizes switching overheads at the expense of higher
+threads. This aggressive batching amortizes switching overheads at the expense of higher
 latency (see \S\ref{sec:eval}). It also complicates resource sharing
 as the network stack must use a large number of hardware threads
 regardless of the actual load. More importantly, security tradeoffs emerge
