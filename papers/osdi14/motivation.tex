@@ -7,7 +7,6 @@ aggressive networking requirements running on multi-core servers.
 
 \subsection{Challenges for Datacenter Applications}
 \label{sec:motivation:challenges}
-\adam{title changed}
 
 
 % \christos{We need to make sure that the requirements in 2.2 and
@@ -16,7 +15,7 @@ aggressive networking requirements running on multi-core servers.
 Large-scale, datacenter applications pose unique challenges to system
 software and their networking stacks:
 
-\myparagraph{Micro-second tail latency:} To enable rich interactions
+\myparagraph{Microsecond tail latency:} To enable rich interactions
 between a large number of services without impacting the overall
 latency experienced by the user, it is essential to reduce the latency
 for some service request to a few tens of
@@ -37,10 +36,8 @@ latency.
 replies between the various services that comprise a datacenter
 application are quite small. In Facebook's \texttt{memcached} service,
 for example, the vast majority of requests uses keys shorter than 50
-bytes and involve valuess shorter than 500
-bytes~\cite{Atikoglu:2012:WAL}. \edb{Because \texttt{memcache} is so fast\sout{As a result}}, each service node must
-ideally scale to extremely high packet rates, measured in millions of
-packets per second. 
+bytes and involves values shorter than 500
+bytes~\cite{Atikoglu:2012:WAL}, and each node can scale to serve millions of requests per second~\cite{DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}.
 
 % Executive call: downgrade a little the discussion about connections
 % \christos{How do we explain IX's higher number of connections?
@@ -48,7 +45,7 @@ packets per second.
 % explained. Based on how we explain it later we should edit this,
 % potentially moving it further down the list or merging it with the
 % high throughput}
-The high packet rate must be sustainable under a large number of
+The high packet rate must also be sustainable under a large number of
 concurrent connections and high connection
 churn~\cite{theC10Mproblem}. If the system software cannot handle
 large connection counts, there can be significant implications for
@@ -100,7 +97,7 @@ of distance within a datacenter.
 
 
 Unfortunately, commodity operating systems have been designed under
-very different hardware assumptions. Kernel schedulers, networkingc
+very different hardware assumptions. Kernel schedulers, networking
 APIs, and network stacks have been designed under the assumptions of
 multiple applications sharing a single processing core and packet
 inter-arrival times being many times higher than the latency of interrupts
