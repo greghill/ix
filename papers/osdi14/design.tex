@@ -11,10 +11,12 @@ requirements --- protection and resource efficiency --- are not
 addressed in middleboxes because they are single-purpose systems, not
 exposed directly to users.
 
-Dataplanes differ from traditional OS designs in two basic
+\edb{Middlebox} dataplanes differ from traditional OS designs in two basic
 ways. First, they are designed to \emph{run each packet to
-  completion} \edb{CITATION XXX}. All network protocol and application processing for a
-packet is done before moving on to the next packet.  \edb{In that model, the application is directly integrated into the networking stack without any memory protection.}  In contrast, a
+  completion}.  All network protocol and application processing for a
+packet is done before moving on to the next packet.  \edb{Also, middlebox dataplanes typically intermingle the application within the networking stack without any isolation.}  
+
+In contrast, a
 commodity OS decouples protocol processing from the application itself
 in order to provide scheduling and flow control flexibility.  For
 example, the kernel relies on device and soft interrupts to context

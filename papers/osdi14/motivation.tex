@@ -215,8 +215,8 @@ incoming connections in parallel. Affinity-accept reduces overheads by
 ensuring all processing for a network flow is affinitized to the same
 core~\cite{DBLP:conf/eurosys/PesterevSZM12}. Recent Linux Kernels
 support a busy polling driver mode that trades increased CPU utilization
-for reduced latency, but it is not yet compatible with
-\texttt{epoll}, a requirement for scalable event notification\edb{CITATION XXX}.
+for reduced latency\edb{~\cite{intel-busypoll}}, but it is not yet compatible with
+\texttt{epoll}.
 %These approaches cannot
 %completely eliminate synchronization between cores, as the lack of
 %commutativity in the POSIX socket API implies that cross-core
