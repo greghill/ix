@@ -24,10 +24,13 @@ kernel's network stack will generate TCP \texttt{ACKs} and slide its
 receive window even when the application is not consuming data, up to
 an extent. 
 
-Second, middlebox dataplanes optimize for \emph{synchronization-free
+Second, \edb{middlebox} dataplanes optimize for \emph{synchronization-free
   operation} in order to scale well on many cores. Network flows are
 distributed into distinct queues via flow-consistent hashing and common case packet processing requires no
-synchronization or coherence traffic between cores.
+synchronization or coherence traffic between cores.  
+\edb{In contrast, the standard POSIX networking API fails to meet the
+  commutativity rule and operations that create or delete flows
+  require some synchronization.}
 
 \ix extends the dataplane architecture to support untrusted
 applications and satisfy all requirements in
