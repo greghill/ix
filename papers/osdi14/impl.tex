@@ -2,7 +2,7 @@
 \section{\ix Implementation}
 \label{sec:impl}
 
-\input{tbl-api}
+
 
 % \christos{We should stress that the same pattern/architecture can be
 %   used to implement any high performance stack, not just TCP/IP}
@@ -80,6 +80,7 @@ adjusts its number of elastic threads.
 %   here. Should we discuss how traffic is seperated between queues in
 %   this section?}
 
+\input{tbl-api}
 \subsection{The \ix Dataplane}
 \label{sec:impl:dpkernel}
 
@@ -138,8 +139,10 @@ for UDP, ARP, and ICMP.  Since lwIP was optimized for memory
 efficiency in embedded environments, we had to radically change its
 internal data structures for multi-core scalability and fine-grained
 timer management. However, we did not yet optimize the lwIP code for
-performance. Hence, there is room for improvement in the results shown
-in \S\ref{sec:eval}.
+performance. Hence, the results of \S\ref{sec:eval} have room for improvement.
+
+%Hence, there is room for improvement in the results shown
+%in \S\ref{sec:eval}.
 
 \subsection{Dataplane API and Operation}
 \label{sec:impl:api}
