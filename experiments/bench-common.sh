@@ -99,12 +99,12 @@ setup_and_run() {
   if [ $SERVER_SPEC = 'Linux-10' ]; then
     PREP=prep_linux
     OUTDIR='Linux-10'
-    QPS_SWEEP_MAX=2500000
-    QPS_SWEEP_NUM_POINTS=50
+    QPS_SWEEP_MAX=1100000
+    QPS_SWEEP_NUM_POINTS=22
     MEMCACHED_EXEC='memcached'
     MEMCACHED_BUILD_PATH='../apps/memcached-1.4.18'
     MEMCACHED_BUILD_TARGET=''
-    MEMCACHED_PARAMS="-t $MEMCACHED_THREADS -m 8192 -c 65535 -T $MEMCACHED_CORES -u `whoami`"
+    MEMCACHED_PARAMS="-t $MEMCACHED_THREADS -m 16384 -c 65535 -T $MEMCACHED_CORES -u `whoami`"
     MEMCACHED_SHOULD_DEPLOY=1
     IX=0
   elif [ $SERVER_SPEC = 'Linux-40' ]; then
@@ -126,7 +126,7 @@ setup_and_run() {
     MEMCACHED_EXEC=memcached
     MEMCACHED_BUILD_PATH=../apps/memcached-1.4.18-ix
     MEMCACHED_BUILD_TARGET=''
-    MEMCACHED_PARAMS='-m 8192'
+    MEMCACHED_PARAMS='-m 16384'
     if [ $CLUSTER_ID = 'EPFL' ]; then
       MEMCACHED_SHOULD_DEPLOY=1
     else
