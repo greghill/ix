@@ -25,7 +25,6 @@ switch from applications to protocol processing. Similarly, the
 kernel's network stack will generate TCP \texttt{ACKs} and slide its
 receive window even when the application is not consuming data, up to
 an extent. 
-
 Second, middlebox dataplanes optimize for \emph{synchronization-free
   operation} in order to scale well on many cores. Network flows are
 distributed into distinct queues via flow-consistent hashing and common case packet processing requires no
@@ -150,7 +149,7 @@ the application controls transmit buffering.
 %applications.
 
 \myparagraph{Flow consistent, synchronization-free processing:} We use
-multi-queue NICs with receive-side scaling (RSS~\cite{url:rss}) support to provide flow-consistent hashing
+multi-queue NICs with receive-side scaling (RSS~\cite{url:rss}) to provide flow-consistent hashing
 of incoming traffic to distinct hardware queues. Each hardware
 thread serves a single receive and transmit queue per NIC, eliminating
 the need for synchronization and
