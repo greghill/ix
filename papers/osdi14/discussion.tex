@@ -87,9 +87,9 @@ some level of trust into the \ix dataplane, application code remains
 securely isolated. In the future we plan on using IOMMU support to
 further isolate \ix dataplanes. We anticipate overhead will be low
 because of our use of large pages.
-\edb{Also, our prototype currently does not take advantage of the NIC's SR-IOV capabilities but instead allocates entire physical devices to dataplane.} 
+Also, our prototype currently does not take advantage of the NIC's SR-IOV capabilities, \adam{which enables safely partitioning a physical NIC into multiple virtual instances in hardware}, but instead allocates entire physical devices to dataplanes.
 
-We also intend to add support for interrupts in \ix dataplanes. The
+Furthermore, We intend to add support for interrupts to \ix dataplanes. The
 execution model of the \ix dataplane assumes some cooperation from
 application code running in elastic threads.  Specifically it should
 handle events in a quick, non-blocking manner; operations with
