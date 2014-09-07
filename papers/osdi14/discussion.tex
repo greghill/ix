@@ -23,7 +23,7 @@ synchronization or coherence traffic.
 \input{figs/float-batch}
 
 \myparagraph{Subtleties of adaptive batching:} 
-\edb{NEW PAR:}
+
 Batching is commonly understood to trade off better throughput at high
 loads for higher latency at low loads.  Our use of adaptive, bounded
 batching actually improves on both metrics. In exploring the impact of
@@ -35,15 +35,15 @@ Fig.~\ref{fig:short10:roundtrips}.  The experiment shows that batches
 as low as $B=32$ can deliver maximal throughput for this
 workload. (All experiments in \S\ref{sec:eval} were conducted with a
 maximal batch size of $B=64$ packets per iteration.)  Because the
-algorithm is adaptive, $B$ does not impact latency when the \adam{dataplane}
-is not saturated\adam{\sout{and the actual batch sizes are small}}; we confirmed
+algorithm is adaptive, $B$ does not impact latency when the dataplane
+is not saturated; we confirmed
 this experimentally at the 99th percentile latency for
 \texttt{memcache}.
 
-However, we ran into an unexpected \adam{hardware} limitation\adam{\sout{ of adaptive batching}}
-when running \ix at high packet rates with small average batch sizes(
-i.e. when the \adam{dataplane is not saturated}) \adam{\sout{or the dataplane is
-over-provisioned}}: the high rate of PCIe writes required to post fresh
+However, we ran into an unexpected hardware limitation
+when running \ix at high packet rates with small average batch sizes 
+(i.e. when the dataplane is not saturated): 
+the high rate of PCIe writes required to post fresh
 descriptors at every iteration led to performance degradation as we
 scaled the number of cores used by \ix.  To avoid this problem, we
 simply coalesced PCIe writes on the receive path so that we
