@@ -195,13 +195,13 @@ apply flow control policy inside the kernel.
 We built a user-level library, called \texttt{libix}, which abstracts
 away the complexity of our low-level API. It provides a compatible
 programming model for legacy applications and significantly simplifies
-the development of new applications. Libix currently includes a
+the development of new applications. \texttt{libix} currently includes a
 very similar interface to \texttt{libevent} and
 non-blocking POSIX socket operations. It also includes new interfaces
 for zero copy read and write operations that are more efficient, at
 the expense of requiring changes to existing applications.
 
-Libix automatically coalesces multiple write requests into single
+\texttt{libix} automatically coalesces multiple write requests into single
 \texttt{sendv} system calls during each batching round. This improves
 locality, simplifies error handling, and ensures correct behavior,
 as it preserves the data stream order even if a transmit fails.
