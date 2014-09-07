@@ -73,11 +73,6 @@ have impacted latency.
   and catch up on network processing.
 \end{comment}
 
-%\myparagraph{Hardware Bottlenecks:} We achieved very high packet
-%rates with \ix, often saturating the bandwidth limit of our 10 GbE NIC.
-%One unexpected performance bottleneck was the NIC and its DMA engine.
-%We discovered that minimizes register writes was an effective optimization.
-%\adam{finish this section}
 
 \myparagraph{Limitations of current prototype:} Our current
 implementation does not yet exploit IOMMUs or VT-d. Instead, it maps
@@ -87,7 +82,7 @@ some level of trust into the \ix dataplane, application code remains
 securely isolated. In the future we plan on using IOMMU support to
 further isolate \ix dataplanes. We anticipate overhead will be low
 because of our use of large pages.
-Also, our prototype currently does not take advantage of the NIC's SR-IOV capabilities, \adam{which enables safely partitioning a physical NIC into multiple virtual instances in hardware}, but instead allocates entire physical devices to dataplanes.
+Also, our prototype currently does not take advantage of the NIC's SR-IOV capabilities, but instead allocates entire physical devices to dataplanes.
 
 Furthermore, We intend to add support for interrupts to \ix dataplanes. The
 execution model of the \ix dataplane assumes some cooperation from
