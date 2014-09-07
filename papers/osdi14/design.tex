@@ -3,7 +3,7 @@
 
 The first two requirements in \S\ref{sec:motivation:challenges} ---
 microsecond latency and high packet rates --- are not unique to
-web-scale applications. These requirements have been addressed in the
+datacenter applications. These requirements have been addressed in the
 design of middleboxes such as firewalls, load-balancers, and software
 routers~\cite{routebricks,click} by integrating the networking stack
 and the application into a single \emph{dataplane}. The two remaining
@@ -11,10 +11,12 @@ requirements --- protection and resource efficiency --- are not
 addressed in middleboxes because they are single-purpose systems, not
 exposed directly to users.
 
-\edb{Middlebox} dataplanes differ from traditional OS designs in two basic
+Middlebox dataplanes differ from traditional OS designs in two basic
 ways. First, they are designed to \emph{run each packet to
   completion}.  All network protocol and application processing for a
-packet is done before moving on to the next packet.  \edb{Also, middlebox dataplanes typically intermingle the application within the networking stack without any isolation.}  
+packet is done before moving on to the next packet\adam{, and typically
+application logic is intermingled with the networking stack
+without any isolation}. 
 In contrast, a
 commodity OS decouples protocol processing from the application itself
 in order to provide scheduling and flow control flexibility.  For
@@ -24,15 +26,13 @@ kernel's network stack will generate TCP \texttt{ACKs} and slide its
 receive window even when the application is not consuming data, up to
 an extent. 
 
-Second, \edb{middlebox} dataplanes optimize for \emph{synchronization-free
+Second, middlebox dataplanes optimize for \emph{synchronization-free
   operation} in order to scale well on many cores. Network flows are
 distributed into distinct queues via flow-consistent hashing and common case packet processing requires no
-synchronization or coherence traffic between cores.  
-\edb{In contrast, the standard POSIX networking API fails to meet the
-  commutativity rule and operations that create or delete flows
-  require some synchronization.}
+synchronization or coherence traffic between cores.
+\adam{By contrast, commodity OSes tend to rely heavily on coherence traffic and are structured to make frequent use of locks and other forms of synchronization.}
 
-\ix extends the dataplane architecture to support untrusted
+\ix extends the dataplane architecture to support untrusted, \adam{general purpose}
 applications and satisfy all requirements in
 \S\ref{sec:motivation:challenges}. Its design is based on the
 following key principles:
@@ -52,11 +52,9 @@ dataplane cores. The control plane is also responsible for elastically
 adjusting the allocation of resources between dataplanes.
 
 The separation of control and data plane allows us to consider
-radically different \edb{APIs between (i) the control and data plane and (iI) the application and the data plane. \sout{I/O APIs}}.  
-\edb{The design also allows the control plane to handle OS functionality required for compatibility to applications, such as file system support, on behalf of dataplane applications.
-\sout{and implementations in the dataplane,
-while permitting other OS functionality, such as file system support,
-to be passed through to the control plane for compatibility.}}
+radically different I/O APIs, while permitting other OS functionality,
+such as file system support, to be passed through to the control plane
+for compatibility.
 Similar to the Exokernel~\cite{DBLP:conf/sosp/EnglerKO95}, each
 dataplane runs a single application in a single address
 space. However, we use modern virtualization hardware to provide
@@ -84,7 +82,7 @@ application logic and the networking stack.  Unlike previous work, that
 applied a similar approach to eliminate receive livelocks during
 congestion periods~\cite{receive-livelock}, \ix uses run to completion
 during all load conditions. Thus, we are able to use polling and avoid
-interrupt overhead in the common case \edb{by dedicating cores to the dataplane}. We still rely on interrupts as
+interrupt overhead in the common case by dedicating cores to the dataplane. We still rely on interrupts as
 a mechanism to regain control, for example, if a dataplane is slow to
 respond.  Run to completion improves both message throughput and
 latency because successive stages tend to access many of the same
@@ -152,7 +150,7 @@ the application controls transmit buffering.
 %applications.
 
 \myparagraph{Flow consistent, synchronization-free processing:} We use
-multi-queue NICs with \edb{receive side scaling (RSS~\cite{url:rss})} support to provide flow-consistent hashing
+multi-queue NICs with receive side scaling (RSS~\cite{url:rss}) support to provide flow-consistent hashing
 of incoming traffic to distinct hardware queues. Each hardware
 thread serves a single receive and transmit queue per NIC, eliminating
 the need for synchronization and
