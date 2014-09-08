@@ -15,6 +15,7 @@ DEFINE_PERCPU(struct eth_tx_queue *, eth_txqs[NETHDEV]);
 /* FIXME: convert to per-flowgroup */
 DEFINE_PERQUEUE(struct eth_tx_queue *, eth_txq);
 
+unsigned int eth_rx_max_batch = 64;
 
 /**
  * eth_process_poll - polls HW for new packets
@@ -81,7 +82,7 @@ int eth_process_recv(void)
 				empty = false;
 			}
 		}
-	} while (!empty && count < ETH_RX_MAX_BATCH);
+	} while (!empty && count < eth_rx_max_batch);
 
 	KSTATS_PACKETS_INC(count);
 	KSTATS_BATCH_INC(count);
@@ -91,7 +92,7 @@ int eth_process_recv(void)
 		struct eth_rx_queue *rxq = percpu_get(eth_rxqs[i]);
 		backlog += rxq->len;
 	}
-	backlog = div_up(backlog, ETH_RX_MAX_BATCH);
+	backlog = div_up(backlog, eth_rx_max_batch);
 	KSTATS_BACKLOG_INC(backlog);
 #endif
 

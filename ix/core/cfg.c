@@ -211,6 +211,9 @@ static void print_usage(void)
 	"-c\n"
 	"\tIndicates which CPU(s) this IX instance should manage. CPUs\n"
 	"\tare provided as a list of numbers (.e.g. -c 1,4,5).\n"
+	"--batch\n"
+	"-b\n"
+	"\tSpecifies maximum batch size of received packets to process. Default: 64.\n"
 	"--quiet\n"
 	"-q\n"
 	"\tLimits logging to critical errors.\n");
@@ -223,11 +226,12 @@ static int parse_arguments(int argc, char *argv[], int *args_parsed)
 	static struct option long_options[] = {
 		{"dev", required_argument, NULL, 'd'},
 		{"cpu", required_argument, NULL, 'c'},
+		{"batch", no_argument, NULL, 'b'},
 		{"quiet", no_argument, NULL, 'q'},
 		{NULL, 0, NULL, 0}
 	};
 
-	static const char *optstring = "d:c:q";
+	static const char *optstring = "d:c:b:q";
 
 	/* FIXME: get packet capture working again */
 
@@ -246,6 +250,9 @@ static int parse_arguments(int argc, char *argv[], int *args_parsed)
 			ret = parse_cpu_list(optarg);
 			if (ret)
 				goto fail;
+			break;
+		case 'b':
+			eth_rx_max_batch = atoi(optarg);
 			break;
 		case 'q':
 			max_loglevel = LOG_WARN;
