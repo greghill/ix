@@ -73,7 +73,7 @@ I/O.
 
 
 \myparagraph{Run to completion with adaptive batching:} \ix dataplanes
-runs to completion all stages needed to receive and transmit a packet,
+run to completion all stages needed to receive and transmit a packet,
 interleaving protocol processing (kernel mode) and application logic
 (user mode) at well-defined transition points. Hence, there is no need
 for intermediate buffering between protocol stages or between
@@ -82,7 +82,7 @@ applied a similar approach to eliminate receive livelocks during
 congestion periods~\cite{receive-livelock}, \ix uses run to completion
 during all load conditions. Thus, we are able to use polling and avoid
 interrupt overhead in the common case by dedicating cores to the dataplane. We still rely on interrupts as
-a mechanism to regain control, for example, if a dataplane is slow to
+a mechanism to regain control, for example, if application logic is slow to
 respond.  Run to completion improves both message throughput and
 latency because successive stages tend to access many of the same
 data, leading to better data cache locality.
@@ -130,11 +130,11 @@ RED~\cite{DBLP:journals/ton/FloydJ93}).
 
 \myparagraph{Native, zero-copy API with explicit flow control:} We do
 not expose or emulate the POSIX API for networking.  Instead, the
-dataplane and the application communicate asynchronously with each
-other via messages stored in
+dataplane kernel and the application communicate at coordinated transition points
+via messages stored in
 memory. % ~\cite{DBLP:conf/osdi/HanMCR12,DBLP:journals/cacm/Rizzo12}
-The API meets the commutativity rule and allows for a true zero-copy
-operation in both directions, which improves both latency and packet
+Our API is designed for true zero-copy
+operation in both directions, improving both latency and packet
 rate. The dataplane and application cooperatively manage the message
 buffer pool. Incoming packets are mapped read-only into the
 application, which may hold onto message buffers and return them to
@@ -142,7 +142,7 @@ the dataplane at a later point.  The application sends to the
 dataplane scatter/gather lists of memory locations for transmission
 but, since contents are not copied, the application must keep the
 content immutable until the peer acknowledges reception. The
-data plane enforces flow control correctness and may trim transmission
+dataplane enforces flow control correctness and may trim transmission
 requests that exceed the available size of the sliding window, but
 the application controls transmit buffering.
 %Essentially, the API directly, but safely, exposes flow control to

@@ -65,7 +65,7 @@ for multi-core scalability.  The network adapters (NICs) perform
 flow-consistent hashing of incoming traffic to distinct queues. Each
 dataplane instance exclusively controls a set of these queues and runs
 the networking stack and a single application without the need for
-synchronization or coherence traffic in the common case operation. The
+synchronization or coherence traffic during common case operation. The
 \ix API departs from the POSIX API, and its design is guided by the commutativity
 rule~\cite{DBLP:conf/sosp/ClementsKZMK13}.  However, the \texttt{libix}
 user-level library includes an event-based API similar to the
@@ -87,7 +87,7 @@ percentile latency bound, as it can reduce kernel time, due
 essentially to network processing, from $>80\%$ with Linux to
 $<10\%$ with \ix.
 
-\ix demonstrates that, by revisiting the networking APIs and taking
+\ix demonstrates that, by revisiting networking APIs and taking
 advantage of modern NICs and multi-core chips, we can design systems
 that achieve high throughput \underline{and} low latency
 \underline{and} robust protection \underline{and} resource
