@@ -43,7 +43,7 @@ else
   OUTDIR=figures
 fi
 
-gnuplot -e format='"'"$FORMAT"'"' -e title1='"'"$SHORT_TITLES_AVE"'"' -e title3='"'"$SHORT_TITLES_99TH"'"' -e infile='"'"$SHORT_FILES"'"' -e outfile='"'"$OUTDIR/memcached-usr-basic.$FORMAT"'"'       plot-etc-usr-basic.gnuplot
+gnuplot -e xlabel='"USR: "' -e format='"'"$FORMAT"'"' -e title1='"'"$SHORT_TITLES_AVE"'"' -e title3='"'"$SHORT_TITLES_99TH"'"' -e infile='"'"$SHORT_FILES"'"' -e outfile='"'"$OUTDIR/memcached-usr-basic.$FORMAT"'"'       plot-etc-usr-basic.gnuplot
 if [ $FORMAT = 'eps' ]; then
-  gnuplot -e title1='"'"$SHORT_TITLES_AVE"'"' -e title3='"'"$SHORT_TITLES_99TH"'"' -e outfile='"'"$OUTDIR/memcached-key.eps"'"' plot-etc-usr-basic-key.gnuplot
+  gnuplot -e xlabel='"USR: "' -e title1='"'"$SHORT_TITLES_AVE"'"' -e title3='"'"$SHORT_TITLES_99TH"'"' -e outfile='"'"$OUTDIR/memcached-key.eps"'"' plot-etc-usr-basic-key.gnuplot
 fi

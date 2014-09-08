@@ -20,7 +20,7 @@ set border 3
 set tics out nomirror
 
 set datafile separator ","
-set xlabel 'Throughput (RPS x 10^{3})'
+set xlabel xlabel . 'Throughput (RPS x 10^{3})'
 set ylabel 'Latency ({/Symbol m}s)'
 set xrange [0:2100000]
 set yrange [0:750]
