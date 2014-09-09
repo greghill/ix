@@ -15,4 +15,4 @@ done
 echo 'Using files:'
 echo $infile|tr ' ' '\n'
 
-gnuplot -e infile='"'"$infile"'"' -e title='"'"$title"'"' plot_batch_mutilate.gnuplot
+gnuplot -e infile='"'"$infile"'"' -e title='"'"$title"'"' plot-batch-mutilate.gnuplot
