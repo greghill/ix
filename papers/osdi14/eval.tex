@@ -62,7 +62,7 @@ We first evaluated the latency of \ix using NetPIPE, a popular
 ping-pong benchmark, using our 10GbE setup.  NetPIPE simply exchanges
 a fixed-size message between two servers and helps calibrate the
 latency and bandwidth of a single flow~\cite{snell1996netpipe}.  In
-all cases, we run the same system (Linux, mTCP, or \ix) on both ends.
+all cases, we run the same system on both ends (Linux, mTCP, or \ix).
 
 Fig.~\ref{fig:pingpong} shows the goodput achieved for different
 message sizes.  Two \ix servers have a one-way latency of
@@ -83,17 +83,17 @@ offset the cost of context switching~\cite{jeong2014mtcp}, which comes
   \subsection{Throughput and Scalability}
 \label{sec:eval:short}
 
-Next, we evaluate \ix's throughput and multi-core scalability using
-the same benchmark used to evaluate
-MegaPipe~\cite{DBLP:conf/osdi/HanMCR12} and
+We evaluate \ix's throughput and multi-core scalability with the same
+benchmark used to evaluate MegaPipe~\cite{DBLP:conf/osdi/HanMCR12} and
 mTCP~\cite{jeong2014mtcp}. {18} clients connect to a single server
-listening on a single port, send a request of size $s$, and wait for
-an echo of a message of the same size.  As with NetPIPE, while
-receiving the message, the server holds off its echo response until
-the message has been entirely received.  Each client performs this
-synchronous remote procedure call $n$ times before closing the
-connection.  As in ~\cite{jeong2014mtcp}, clients close the connection
-using a reset (\texttt{TCP RST}) to avoid exhausting ephemeral ports.
+listening on a single port, send a remote request of size $s$ bytes,
+and wait for an echo of a message of the same size.  Similar to the
+NetPIPE benchmark, while receiving the message, the server holds off
+its echo response until the message has been entirely received.  Each
+client performs this synchronous remote procedure call $n$ times
+before closing the connection.  As in ~\cite{jeong2014mtcp}, clients
+close the connection using a reset (\texttt{TCP RST}) to avoid
+exhausting ephemeral ports.
 %\dm{This begs the question of what happens with FIN, since that is
 %  more realistic\@.  Is the point that \ix has an unfair advantage?}
 %\adam{(1) how do we get linux clients to send TCP RST? (2) Does the

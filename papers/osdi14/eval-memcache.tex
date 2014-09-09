@@ -38,15 +38,15 @@ separately (no \texttt{multiget} operations). However, clients
 are permitted to pipeline up to four requests per connection
 if needed to keep up with their target request rate. We use 23
 client machines to generate load for a total of
-1476 connections to the memcached server.
+1476 connections to the \texttt{memcached} server.
 
 To provide insights into the full range of system behaviors, we report
 average and 99th percentile latency as a function of the achieved
-throughput. The 99th-ile latency captures tail latency issues and is
+throughput. The 99th percentile latency captures tail latency issues and is
 the most relevant metric for datacenter
 applications~\cite{DBLP:journals/cacm/DeanB13}. Most commercial
 \texttt{memcached} deployments provision each server so that the
-99th-ile latency does not exceed 200\microsecond to 500\microsecond.
+99th percentile latency does not exceed 200\microsecond to 500\microsecond.
 We carefully tune the Linux baseline setup according to the guidelines
 in \cite{DBLP:conf/eurosys/LeverichK14}: we pin memcached threads,
 configure interrupt-distribution based on thread-affinity, and tune
@@ -62,7 +62,7 @@ Porting \texttt{memcached} to \ix primarily consisted of adapting it
 to use our event library. In most cases, the port was straightforward,
 replacing Linux and \texttt{libevent} function calls with their
 equivalent versions in our API. We did yet not attempt to tune the
-internal scalability of {\it memcached}~\cite{DBLP:conf/nsdi/FanAK13}
+internal scalability of \texttt{memcached}~\cite{DBLP:conf/nsdi/FanAK13}
 or to support zero-copy IO operations.
 
 
