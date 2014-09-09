@@ -14,10 +14,11 @@ appliances~\cite{DBLP:conf/lisa/SapuntzakisBCZCLR03}, or processes
 with access to privileged instructions~\cite{dune}. Similar to \ix,
 Arrakis uses hardware virtualization to separate the I/O dataplane
 from the control plane~\cite{arrakis-osdi}. \ix differs in that it
-uses the full Linux kernel for the control plane; provides three-way
-isolation between control plane, networking protocol, and application
-code; and proposes a dataplane architecture that optimizes for both
-high throughput and low latency. 
+uses a full Linux OS as the control plane; provides three-way
+isolation between the control plane, networking stack, and application;
+and proposes a dataplane architecture that optimizes for both
+high throughput and low latency. \adam{On the other hand, Arrakis
+uses Barrelfish~\cite{DBLP:conf/sosp/BaumannBDHIPRSS09} as the control plane and includes support for IOMMUs and SR-IOV.}
 
 \myparagraph{Library operating systems:} Exokernels extend the
 end-to-end principle to resource management by implementing system
@@ -70,7 +71,7 @@ cooperative memory management enables zero-copy without page
 remapping. Similar to \ix, TinyOS passes pointers to packet buffers
 between the network stack and the application in a cooperative,
 zero-copy fashion~\cite{tinyosnet}.
-\ix uses this approach to optimize for datacenter
+However, \ix is optimized for datacenter
 workloads, while TinyOS focuses on memory constrained, sensor
 environments.
 
