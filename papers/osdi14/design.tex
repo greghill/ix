@@ -149,20 +149,20 @@ the application controls transmit buffering.
 %applications.
 
 \myparagraph{Flow consistent, synchronization-free processing:} We use
-multi-queue NICs with receive-side scaling (RSS~\cite{url:rss}) to provide flow-consistent hashing
-of incoming traffic to distinct hardware queues. Each hardware
-thread serves a single receive and transmit queue per NIC, eliminating
-the need for synchronization and
-coherence traffic between cores in the networking stack.  The control
-plane establishes the mapping of RSS flow groups to queues to balance
-the traffic among the hardware threads.  Similarly, memory management
-is organized in distinct pools for each hardware thread. The absence
-of a POSIX socket API eliminates the issue of the shared file
-descriptor namespace in multithreaded
+multi-queue NICs with receive-side scaling (RSS~\cite{url:rss}) to
+provide flow-consistent hashing of incoming traffic to distinct
+hardware queues. Each hardware thread (hyperthread) serves a single
+receive and transmit queue per NIC, eliminating the need for
+synchronization and coherence traffic between cores in the networking
+stack.  The control plane establishes the mapping of RSS flow groups
+to queues to balance the traffic among the hardware threads.
+Similarly, memory management is organized in distinct pools for each
+hardware thread. The absence of a POSIX socket API eliminates the
+issue of the shared file descriptor namespace in multithreaded
 applications~\cite{DBLP:conf/sosp/ClementsKZMK13}. Overall, the \ix
 dataplane design scales well with the increasing number of cores in
 modern servers, which improves both packet rate and latency. This
 approach does not restrict the memory model for applications, which
-can take advantage of coherent, shared memory to exchange information and
-synchronize between cores.
+can take advantage of coherent, shared memory to exchange information
+and synchronize between cores.
 
