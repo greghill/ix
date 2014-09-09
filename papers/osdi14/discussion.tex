@@ -58,12 +58,12 @@ this experimentally at the 99th percentile latency for
 %\input{figs/float-batch}
 \input{figs/float-batch-mutilate}
 
-However, we ran into an unexpected hardware limitation
-when running \ix at high packet rates with small average batch sizes 
-(i.e. when the dataplane is not saturated): 
+While tuning \ix performance, we ran into an unexpected hardware limitation
+that was triggerred at high packet rates with small average batch sizes 
+(i.e. before the dataplane was saturated): 
 the high rate of PCIe writes required to post fresh
 descriptors at every iteration led to performance degradation as we
-scaled the number of cores used by \ix.  To avoid this problem, we
+scaled the number of cores.  To avoid this bottleneck, we
 simply coalesced PCIe writes on the receive path so that we
 replenished at least 32 descriptor entries at a time.  Luckily, we did
 not have to coalesce PCIe writes on the transmit path, as that would
