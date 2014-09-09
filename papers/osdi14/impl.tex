@@ -118,28 +118,27 @@ support extremely high-resolution timeouts, as low as 16 \microsecond,
 which has been shown to improve performance during TCP incast
 congestion~\cite{DBLP:conf/sigcomm/VasudevanPSKAGGM09}.
 
-Our current \ix dataplane implementation (and Dune) requires
+Our current \ix dataplane implementation is based on Dune and requires
 the VT-x virtualization features available on Intel x86-64
 systems~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. However, it
-could be ported to any architecture with virtualization support, such as
-ARM, SPARC, and Power. It also requires one or more Intel 82599 chipset NICs,
-but it is designed to easily support additional drivers.
-Moreover, the \ix dataplane currently consists of 39K
-SLOC~\cite{url:sloccount} and leverages some existing codebases:
-41\% is derived from
-the DPDK variant of the Intel NIC device driver~\cite{intel:dpdk},
-26\% from the lwIP TCP/IP stack~\cite{dunkels2001design},
-and 15\% from the Dune library.  We do not make use of the DPDK
-framework, and all three code bases are
-highly modified for \ix. The rest is approximately 7K SLOC
+could be ported to any architecture with virtualization support, such
+as ARM, SPARC, and Power. It also requires one or more Intel 82599
+chipset NICs, but it is designed to easily support additional drivers.
+The \ix dataplane currently consists of 39K SLOC~\cite{url:sloccount}
+and leverages some existing codebases: 41\% is derived from the DPDK
+variant of the Intel NIC device driver~\cite{intel:dpdk}, 26\% from
+the lwIP TCP/IP stack~\cite{dunkels2001design}, and 15\% from the Dune
+library.  We do not make use of the DPDK framework, and all three code
+bases are highly modified for \ix. The rest is approximately 7K SLOC
 of new code. We chose lwIP as a starting point for TCP/IP processing
 because of its modularity and its maturity as a RFC-compliant,
-feature-rich networking stack. We implemented our own RFC-compliant support
-for UDP, ARP, and ICMP.  Since lwIP was optimized for memory
+feature-rich networking stack. We implemented our own RFC-compliant
+support for UDP, ARP, and ICMP.  Since lwIP was optimized for memory
 efficiency in embedded environments, we had to radically change its
 internal data structures for multi-core scalability and fine-grained
 timer management. However, we did not yet optimize the lwIP code for
-performance. Hence, the results of \S\ref{sec:eval} have room for improvement.
+performance. Hence, the results of \S\ref{sec:eval} have room for
+improvement.
 
 %Hence, there is room for improvement in the results shown
 %in \S\ref{sec:eval}.
@@ -327,7 +326,7 @@ dataplane code runs in protected ring 0. Applications cannot access
 dataplane memory, except for read-only message buffers.  No sequence
 of batched system calls or other user-level actions can be used to
 violate correct adherence to TCP and other network specifications.
-Furthermore, the dataplane could be used to enforce network security
+Furthermore, the dataplane can be used to enforce network security
 policies, such as firewalling and access control lists.
 %(e.g., iptables or Amazon Security
 %Groups~\cite{url:amazon-sg}) or to implement the
