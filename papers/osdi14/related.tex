@@ -17,7 +17,9 @@ from the control plane~\cite{arrakis-osdi}. \ix differs in that it
 uses a full Linux OS for the control plane; provides three-way
 isolation between the control plane, networking stack, and application
 ; and proposes a dataplane architecture that optimizes for both
-high throughput and low latency. 
+high throughput and low latency. \adam{On the other hand, Arrakis provides additional
+control plane features, such as IOMMU and SRIOV support, and uses
+Barrelfish as a control plane.}
 
 \myparagraph{Library operating systems:} Exokernels extend the
 end-to-end principle to resource management by implementing system
