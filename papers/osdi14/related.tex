@@ -14,12 +14,11 @@ appliances~\cite{DBLP:conf/lisa/SapuntzakisBCZCLR03}, or processes
 with access to privileged instructions~\cite{dune}. Similar to \ix,
 Arrakis uses hardware virtualization to separate the I/O dataplane
 from the control plane~\cite{arrakis-osdi}. \ix differs in that it
-uses a full Linux OS for the control plane; provides three-way
-isolation between the control plane, networking stack, and application
-; and proposes a dataplane architecture that optimizes for both
-high throughput and low latency. \adam{On the other hand, Arrakis provides additional
-control plane features, such as IOMMU and SRIOV support, and uses
-Barrelfish as a control plane.}
+uses a full Linux OS as the control plane; provides three-way
+isolation between the control plane, networking stack, and application;
+and proposes a dataplane architecture that optimizes for both
+high throughput and low latency. \adam{On the other hand, Arrakis
+uses Barrelfish~\cite{DBLP:conf/sosp/BaumannBDHIPRSS09} as the control plane and includes support for IOMMUs and SR-IOV.}
 
 \myparagraph{Library operating systems:} Exokernels extend the
 end-to-end principle to resource management by implementing system
