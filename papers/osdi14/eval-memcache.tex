@@ -11,7 +11,7 @@ Finally, we evaluated the performance benefits of \ix with
 on top of the \texttt{libevent} framework~\cite{url:memcached}. It is
 frequently used as a high-throughput, low-latency caching tier in
 front of persistent database servers. \texttt{memcached} is a
-network-bound application, with threads spending over 80\% of
+network-bound application, with threads spending over 75\% of
 execution time in kernel mode for network
 processing~\cite{DBLP:conf/eurosys/LeverichK14}. It is a difficult
 application to scale because the common deployments involve high
@@ -75,7 +75,7 @@ latencies to roughly half.  Note that we use Linux clients for these
 experiments; running \ix on clients should further reduce latency.
 
 At high request rates, the distribution of CPU time shifts from being
-$<80\%$ in the Linux kernel to $<10\%$ in the \ix dataplane kernel.
+\twiddle~75\% in the Linux kernel to $<10\%$ in the \ix dataplane kernel.
 This allows \ix
 to increase throughput by 3.0$\times$ and 4.1$\times$ for
 \texttt{ETC} and \texttt{USR} respectively at a 500\microsecond tail
