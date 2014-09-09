@@ -77,7 +77,7 @@ experiments; running \ix on clients should further reduce latency.
 At high request rates, the distribution of CPU time shifts from being
 \twiddle~75\% in the Linux kernel to $<10\%$ in the \ix dataplane kernel.
 This allows \ix
-to increase throughput by 3.0$\times$ and 4.1$\times$ for
+to increase throughput by 3.3$\times$ and 4.3$\times$ for
 \texttt{ETC} and \texttt{USR} respectively at a 500\microsecond tail
 latency SLA.  The improvement for \texttt{ETC} is lower due to the
 increased lock contention within the application itself, in particular
