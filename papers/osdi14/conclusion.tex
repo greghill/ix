@@ -11,9 +11,10 @@ both bandwidth and latency by processing bounded batches of packets to
 completion and by eliminating synchronization on multi-core
 servers. On microbenchmarks, \ix noticeably outperforms both Linux and
 mTCP in terms of both latency and throughput, scales to hundreds of
-active concurrent connections, and can saturate 4x10GbE configurations
-using a single processor socket.  Finally, we show that porting
-\texttt{memcached} to \ix removes kernel bottlenecks and improves
-throughput by up to \usrspeedup, \edb{while reducing tail latency by more than $2\times$}.
+thousands of active concurrent connections, and can saturate 4x10GbE
+configurations using a single processor socket.  Finally, we show that
+porting \texttt{memcached} to \ix removes kernel bottlenecks and
+improves throughput by up to \usrspeedup, while reducing tail latency
+by more than $2\times$.
 
 

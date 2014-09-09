@@ -12,26 +12,27 @@ logic to be scheduled at the right time, which is essential for
 latency-sensitive workloads.  Therefore, the benefits of \ix go beyond
 just minimizing kernel overheads. The lack of intermediate buffers
 allows for efficient, application-specific implementations of I/O
-abstractions such as our event library. The zero-copy approach helps
-even when the user-level libraries add a level of copying, as it is
-the case for the \texttt{libevent} compatible interfaces in our event
-library.  The extra copy occurs much closer to the actual use, thereby
-increasing cache locality.  Finally, we carefully tuned \ix for
-multi-core scalability, eliminating constructs that introduce
-synchronization or coherence traffic.
+abstractions such the \texttt{libix} event library. The zero-copy
+approach helps even when the user-level libraries add a level of
+copying, as it is the case for the \texttt{libevent} compatible
+interfaces in \texttt{libix}.  The extra copy occurs much closer to
+the actual use, thereby increasing cache locality.  Finally, we
+carefully tuned \ix for multi-core scalability, eliminating constructs
+that introduce synchronization or coherence traffic.
 
 
 
 \myparagraph{Subtleties of adaptive batching:} Batching is commonly
 understood to trade off higher latency at low loads for better
-throughput at high loads.  Our use of adaptive, bounded batching
-actually improves on both metrics.  \edb{NEW-PAR:}Fig.~\ref{fig:batch-mutilate}
-compares the latency vs. throughput on the \texttt{USR} workload of
-Fig.~\ref{fig:mutilate} for different batch bounds $B$.  At low load,
-$B$ does not impact tail latency, as adaptive batching does not delay
-processing of pending packets.  At higher load, larger values of $B$
-improve throughput, by 23\% between $B=1$ to $B=32$.  For this
-workload, $B \ge 32$ maximizes througput.
+throughput at high loads.  \ix uses adaptive, bounded batching to
+actually improve on both metrics.  Fig.~\ref{fig:batch-mutilate}
+compares the latency vs. throughput on the \texttt{USR}
+\texttt{memcached} workload of Fig.~\ref{fig:mutilate} for different
+upper bounds $B$ to the batch size.  At low load, $B$ does not impact
+tail latency, as adaptive batching does not delay processing of
+pending packets.  At higher load, larger values of $B$ improve
+throughput, by 23\% between $B=1$ to $B=32$.  For this workload, $B
+\ge 32$ maximizes througput.
 
 
 \begin{comment}
@@ -91,23 +92,24 @@ have impacted latency.
 \end{comment}
 
 
-\myparagraph{Limitations of current prototype:} Our current
+\myparagraph{Limitations of current prototype:} The current \ix
 implementation does not yet exploit IOMMUs or VT-d. Instead, it maps
 descriptor rings directly into \ix memory, using the Linux pagemap
 interface to determine physical addresses.  Although this choice puts
 some level of trust into the \ix dataplane, application code remains
 securely isolated. In the future we plan on using IOMMU support to
 further isolate \ix dataplanes. We anticipate overhead will be low
-because of our use of large pages.
-Also, our prototype currently does not take advantage of the NIC's SR-IOV capabilities, but instead allocates entire physical devices to dataplanes.
+because of our use of large pages.  Also, the \ix prototype currently
+does not take advantage of the NIC's SR-IOV capabilities, but instead
+allocates entire physical devices to dataplanes.
 
-In the future, we plan to add support for interrupts to \ix dataplanes. Our
-execution model assumes some cooperation from
-application code running in elastic threads.  Specifically, applications should
-handle events in a quick, non-blocking manner; operations with
-extended execution times are expected to be delegated to background
-threads rather than execute within the context of elastic threads.
-The \ix dataplane is designed around polling, with the provision that
+We also plan to add support for interrupts to the \ix dataplanes. The
+\ix execution model assumes some cooperation from application code
+running in elastic threads.  Specifically, applications should handle
+events in a quick, non-blocking manner; operations with extended
+execution times are expected to be delegated to background threads
+rather than execute within the context of elastic threads.  The \ix
+dataplane is designed around polling, with the provision that
 interrupts can be configured as fallback optimization to refresh
 receive descriptor rings when the ring is nearly full and to refill
 the transmit queues when it is empty (steps (1) and (6) in
@@ -120,12 +122,13 @@ dataplane architecture. \ix is designed and implemented to support the
 dynamic addition and removal of elastic threads in order to achieve
 energy proportional and resource efficient computing. So far we have
 tested only static configurations. In future work, we will explore
-control plane issues, including a
-dynamic runtime that rebalances hardware queues between available
-elastic threads in a manner that maintains throughput and latency
-constraints.  We will also explore the synergies between \ix and
-networking protocols designed to support microsecond-level latencies
-and the reduced buffering characteristics of \ix deployments, such as
+control plane issues, including a dynamic runtime that rebalances
+hardware queues between available elastic threads in a manner that
+maintains both throughput and latency constraints.
+
+We will also explore the synergies between \ix and networking
+protocols designed to support microsecond-level latencies and the
+reduced buffering characteristics of \ix deployments, such as
 DCTCP~\cite{DBLP:conf/sigcomm/AlizadehGMPPPSS10} and
 ECN~\cite{ramakrishnan2001addition}. Note that the \ix dataplane is
 not specific to TCP/IP. The same design principles can benefit
