@@ -23,8 +23,8 @@ synchronization or coherence traffic.
 
 
 \myparagraph{Subtleties of adaptive batching:} 
-Batching is commonly understood to trade off better throughput at high
-loads for higher latency at low loads.  Our use of adaptive, bounded
+Batching is commonly understood to trade off higher latency at low loads
+for better throughput at high loads.  Our use of adaptive, bounded
 batching actually improves on both metrics. In exploring the impact of
 the batch size bound --- which impacts behavior when the workload is
 CPU-bound --- we first confirmed the intuition that larger batch
@@ -85,9 +85,9 @@ further isolate \ix dataplanes. We anticipate overhead will be low
 because of our use of large pages.
 Also, our prototype currently does not take advantage of the NIC's SR-IOV capabilities, but instead allocates entire physical devices to dataplanes.
 
-Furthermore, we intend to add support for interrupts to \ix dataplanes. The
-execution model of the \ix dataplane assumes some cooperation from
-application code running in elastic threads.  Specifically it should
+In the future, we plan to add support for interrupts to \ix dataplanes. Our
+execution model assumes some cooperation from
+application code running in elastic threads.  Specifically, applications should
 handle events in a quick, non-blocking manner; operations with
 extended execution times are expected to be delegated to background
 threads rather than execute within the context of elastic threads.
