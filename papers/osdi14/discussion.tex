@@ -22,6 +22,19 @@ synchronization or coherence traffic.
 
 
 
+\myparagraph{Subtleties of adaptive batching:} Batching is commonly
+understood to trade off higher latency at low loads for better
+throughput at high loads.  Our use of adaptive, bounded batching
+actually improves on both metrics.  \edb{NEW-PAR:}Fig.~\ref{fig:batch-mutilate}
+compares the latency vs. throughput on the \texttt{USR} workload of
+Fig.~\ref{fig:mutilate} for different batch bounds $B$.  At low load,
+$B$ does not impact tail latency, as adaptive batching does not delay
+processing of pending packets.  At higher load, larger values of $B$
+improve throughput, by 23\% between $B=1$ to $B=32$.  For this
+workload, $B \ge 32$ maximizes througput.
+
+
+\begin{comment}
 \myparagraph{Subtleties of adaptive batching:} 
 Batching is commonly understood to trade off higher latency at low loads
 for better throughput at high loads.  Our use of adaptive, bounded
@@ -38,8 +51,10 @@ algorithm is adaptive, $B$ does not impact latency when the dataplane
 is not saturated; we confirmed
 this experimentally at the 99th percentile latency for
 \texttt{memcache}.
+\end{comment}
 
-\input{figs/float-batch}
+
+%\input{figs/float-batch}
 \input{figs/float-batch-mutilate}
 
 However, we ran into an unexpected hardware limitation
