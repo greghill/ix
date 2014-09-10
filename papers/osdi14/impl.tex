@@ -197,7 +197,7 @@ programming model for legacy applications and significantly simplifies
 the development of new applications. \texttt{libix} currently includes a
 very similar interface to \texttt{libevent} and
 non-blocking POSIX socket operations. It also includes new interfaces
-for zero copy read and write operations that are more efficient, at
+for zero-copy read and write operations that are more efficient, at
 the expense of requiring changes to existing applications.
 
 \texttt{libix} automatically coalesces multiple write requests into single
@@ -354,7 +354,7 @@ elastic threads that spend excessive time in user mode (e.g., in
 excess of 10ms). We mark such applications as non-responsive and
 notify the control plane.
 
-The current \ix prototype does not yet use an IOMMU. As a result, the \ix kernel is trusted
+The current \ix prototype does not yet use an IOMMU. As a result, the \ix dataplane is trusted
 code that has access to descriptor rings with host-physical addresses.
 This limitation does not affect the
 security model provided to applications.

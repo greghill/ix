@@ -77,7 +77,7 @@ run to completion all stages needed to receive and transmit a packet,
 interleaving protocol processing (kernel mode) and application logic
 (user mode) at well-defined transition points. Hence, there is no need
 for intermediate buffering between protocol stages or between
-application logic and the networking stack.  Unlike previous work, that
+application logic and the networking stack.  Unlike previous work that
 applied a similar approach to eliminate receive livelocks during
 congestion periods~\cite{receive-livelock}, \ix uses run to completion
 during all load conditions. Thus, we are able to use polling and avoid
