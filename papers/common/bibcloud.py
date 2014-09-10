@@ -26,6 +26,7 @@ import sys
 import os
 import xml.etree.ElementTree as ET
 import subprocess
+import time
 
 DBLP_article = {}
 DBLP_article_fieldlist = {'title':'double',
@@ -40,6 +41,23 @@ DBLP_article_fieldlist = {'title':'double',
 DBLP_conf_fieldlist = {'title':'double',
                       'year':'id',
                       'pages':'id'}
+
+
+
+NOACKCONFERENCE = {
+    "ACM Conference on Computer and Communications Security" : "ACM Conference on Computer and Communications Security",
+    "USENIX Annual Technical Conference, General Track" :  "USENIX Annual Technical Conference",
+    "USENIX Annual Technical Conference" : "USENIX",
+    "Integrated Network Management" : "Integrated Network Management",
+    "Virtual Machine Research and Technology Symposium": "Virtual Machine Research and Technology Symposium",
+    "Workshop on I/O Virtualization" : "Workshop on I/O Virtualization",
+    "Best of PLDI" : "Best of PLDI",
+    "SIGMOD Conference" : "SIGMOD Conference",
+    "IEEE Symposium on Security and Privacy" : "IEEE Symposium on Security and Privacy",
+    "USENIX Summer" : "USENIX Summer",
+    "USENIX Annual Technical Conference, FREENIX Track" : "USENIX Annual Technical Conference, FREENIX Track"
+}
+
 
 ALIAS = {}
 REVALIAS = {}
@@ -88,17 +106,25 @@ def update_dblp():
                 key = c[5:]
                 print "DBLP article miss",c,"|",key
                 nr_misses = nr_misses + 1
+                time.sleep(3)
+                print "CURL ... curl http://dblp.uni-trier.de/rec/xml/"+key+".xml"
                 os.system("curl http://dblp.uni-trier.de/rec/xml/"+key+ ".xml >.bibcloud/tmp.xml")
                 if os.path.getsize(".bibcloud/tmp.xml") >0:
                     #special case -- no existing XML tree
-                    if num_children == 0:
-                        tree = ET.parse(".bibcloud/tmp.xml")
-                        root = tree.getroot()
-                    else:
-                        newtree = ET.parse(".bibcloud/tmp.xml")
-                        root.insert(num_children,newtree.getroot()[0])
-
-                    num_children = num_children + 1
+                    try:
+                        if num_children == 0:
+                            tree = ET.parse(".bibcloud/tmp.xml")
+                            root = tree.getroot()
+                        else:
+                            newtree = ET.parse(".bibcloud/tmp.xml")
+                            root.insert(num_children,newtree.getroot()[0])
+                        num_children = num_children + 1
+                        print "Updating cache ..."
+                        tree.write(".bibcloud/DBLP.xml")
+                    except:
+                        os.system("mv .bibcloud/tmp.xml .bibcloud/error.xml")
+                        print "ERROR in XML parsing ... see file ./bibcloud/error.xml"
+             
                 else: 
                     print "FETCH of ",key," failed..."
 
@@ -118,7 +144,11 @@ HTML_TO_BIB = {
     u'ü' : "{\\\"u}",
     u"é" : "{\\'e}",
     u"è" : "{\\`e}",
-    u"á" : "{\\'a}"
+    u"á" : "{\\'a}",
+    u"ç" : "\\c{c}",
+    u"Ö" : "{\\\"O}",
+    u"í" : "\\'{\\i}",
+    u"ñ" : "\\~{n}"
 }
  
 
@@ -135,6 +165,15 @@ def html_to_bibtex(h):
         print "HTML conversion ",h," --> ",x
         return x
     
+
+def escape_percent(s):
+    x = s.find("%")
+    if x>=0:
+        s2 = s[:x] + "\%" + escape_percent(s[x+1:])
+        print "ESCAPING%: ",s,s2
+        return s2
+    else:
+        return s
 
 ##### main  #######                                                                                                                                                 
 # process bib file from ARVG
@@ -218,7 +257,7 @@ for cit in citations:
                     if DBLP_article_fieldlist[a.tag] == 'id':
                         F.write("  "+a.tag+" = {"+a.text+"},\n")
                     elif DBLP_article_fieldlist[a.tag] == 'double':
-                        F.write("  "+a.tag+" = {{"+a.text+"}},\n")
+                        F.write("  "+a.tag+" = {{"+escape_percent(a.text)+"}},\n")
                     else:
                         print "BAD code",DBLP_article_fieldlist[a.tag]
                         sys.exit()
@@ -232,21 +271,24 @@ for cit in citations:
                     if DBLP_conf_fieldlist[a.tag] == 'id':
                         F.write("  "+a.tag+" = {"+a.text+"},\n")
                     elif DBLP_conf_fieldlist[a.tag] == 'double':
-                        F.write("  "+a.tag+" = {{"+a.text+"}},\n")
+                        F.write("  "+a.tag+" = {{"+escape_percent(a.text)+"}},\n")
                     else:
                         print "BAD code",DBLP_conf_fieldlist[a.tag]
                         sys.exit()
             year = xml.find('year').text[2:]
             booktitle = xml.find('booktitle').text
-            if booktitle.find(" ")>0: 
-                if booktitle == "USENIX Annual Technical Conference, General Track":
-                    booktitle = "USENIX"
-                elif booktitle == "USENIX Annual Technical Conference":
-                    booktitle = "USENIX"
+            if booktitle.find(" ")>0:
+                if NOACKCONFERENCE.has_key(booktitle):
+                    booktitle = NOACKCONFERENCE[booktitle]
+                    if booktitle.find(" ")>0:
+                        F.write("  booktitle = \""+booktitle+"\",\n")
+                    else:
+                        F.write("  booktitle = "+booktitle+year+",\n")
                 else:
                     print "Unknonw conference",booktitle
                     sys.exit(1)
-            F.write("  booktitle = "+booktitle+year+",\n")
+            else:
+                F.write("  booktitle = "+booktitle+year+",\n")
             
         if c != cit:
              F.write("  bibsource = {DBLP alias: "+c+"}\n")
