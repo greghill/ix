@@ -1,0 +1,13 @@
+%%
+%% TITLE exception file
+%% Used primarily for caplitalization
+%%
+%% format:   title | Title
+%% output is double-braced into a bibtex format
+%%
+
+Capriccio: scalable threads for internet services.|Capriccio: scalable threads for Internet services.
+
+
+
+
