@@ -61,9 +61,11 @@ NOACKCONFERENCE = {
 
 ALIAS = {}
 REVALIAS = {}
+TITLESUB = {}
 
 cachefile = ".bibcloud/DBLP.xml"
 aliasfile = "dblp-alias.txt"
+titlefixfile  = "dblp-title.txt"
 
 
 ##### extraction from bibtex .aux file
@@ -216,6 +218,22 @@ if os.path.isfile(aliasfile):
 else:
     print "no ",aliasfile," file!"
     
+
+if os.path.isfile(titlefixfile):
+    lines = [line.strip() for line in open(titlefixfile)]
+    for l in lines:
+        # remove comments
+        pos = l.find("%")
+        if pos >=0:
+            l = l[:pos]
+
+        x = l.split("|")
+        if len(x)==2:
+            TITLESUB[x[0]] = x[1]
+            print "title substitiution",x[0],x[1]
+
+
+
 update_dblp()
 
 # reload DBLP file
@@ -257,7 +275,10 @@ for cit in citations:
                     if DBLP_article_fieldlist[a.tag] == 'id':
                         F.write("  "+a.tag+" = {"+a.text+"},\n")
                     elif DBLP_article_fieldlist[a.tag] == 'double':
-                        F.write("  "+a.tag+" = {{"+escape_percent(a.text)+"}},\n")
+                        if a.tag == "title" and TITLESUB.has_key(a.text):
+                            F.write("  "+a.tag+" = {{"+escape_percent(TITLESUB[a.text])+"}},\n")
+                        else:
+                            F.write("  "+a.tag+" = {{"+escape_percent(a.text)+"}},\n")
                     else:
                         print "BAD code",DBLP_article_fieldlist[a.tag]
                         sys.exit()
@@ -271,7 +292,10 @@ for cit in citations:
                     if DBLP_conf_fieldlist[a.tag] == 'id':
                         F.write("  "+a.tag+" = {"+a.text+"},\n")
                     elif DBLP_conf_fieldlist[a.tag] == 'double':
-                        F.write("  "+a.tag+" = {{"+escape_percent(a.text)+"}},\n")
+                        if a.tag == "title" and TITLESUB.has_key(a.text):
+                            F.write("  "+a.tag+" = {{"+escape_percent(TITLESUB[a.text])+"}},\n")
+                        else:
+                            F.write("  "+a.tag+" = {{"+escape_percent(a.text)+"}},\n")
                     else:
                         print "BAD code",DBLP_conf_fieldlist[a.tag]
                         sys.exit()
