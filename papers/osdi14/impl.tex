@@ -43,8 +43,8 @@ between the control plane, dataplanes, and untrusted application code.
 
 Each \ix dataplane supports a single, multithreaded application. For
 instance, Fig.~\ref{fig:cp-dp} shows one dataplane for a
-multi-threaded \texttt{memcache} server and another dataplane for a
-multi-threaded \texttt{http} server. The control plane allocates
+multi-threaded \texttt{memcached} server and another dataplane for a
+multi-threaded \texttt{httpd} server. The control plane allocates
 resources to each dataplane in a coarse-grained manner. Core
 allocation is controlled through real-time priorities and
 \texttt{cpusets}; memory is allocated in large pages; each NIC
