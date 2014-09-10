@@ -20,8 +20,8 @@ the actual use, thereby increasing cache locality.  Finally, we
 carefully tuned \ix for multi-core scalability, eliminating constructs
 that introduce synchronization or coherence traffic.
 
-\christos{The \ix dataplane optimizations -- run to compleition,
-  adaptive batching, and zero-copy API -- can also be implemented in a
+The \ix dataplane optimizations --- run to completion,
+  adaptive batching, and a zero-copy API --- can also be implemented in a
   user-level networking stack in order to get similar benefits in
   terms of throughput and latency. While a user-level implementation
   would eliminate protection domain crossings, it would not lead to
@@ -29,7 +29,7 @@ that introduce synchronization or coherence traffic.
   crossings inside VMX non-root mode add only a small amount of extra
   overhead, on the order of a single L3 cache
   miss~\cite{dune}. Moreover, these overheads are quickly amortized at
-  higher packet rates. }
+  higher packet rates.
 
 
 % \adam{Protection domain crossings inside VMX non-root mode add only a
