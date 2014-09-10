@@ -18,13 +18,28 @@ copying, as it is the case for the \texttt{libevent} compatible
 interfaces in \texttt{libix}.  The extra copy occurs much closer to
 the actual use, thereby increasing cache locality.  Finally, we
 carefully tuned \ix for multi-core scalability, eliminating constructs
-that introduce synchronization or coherence traffic. \adam{Protection
-domain crossings inside VMX non-root mode add only a small amount
-of extra overhead, on the order of a single L3 cache miss~\cite{dune}, and
-are quickly amortized at higher packet rates. We
-found that the design elements of our dataplane architecture
-had a more profound impact on performance. Thus, lessons from \ix
-could also apply to networking stacks implemented at user-level.}
+that introduce synchronization or coherence traffic.
+
+\christos{The \ix dataplane optimizations -- run to compleition,
+  adaptive batching, and zero-copy API -- can also be implemented in a
+  user-level networking stack in order to get similar benefits in
+  terms of throughput and latency. While a user-level implementation
+  would eliminate protection domain crossings, it would not lead to
+  significant performance improvements over \ix. Protection domain
+  crossings inside VMX non-root mode add only a small amount of extra
+  overhead, on the order of a single L3 cache
+  miss~\cite{dune}. Moreover, these overheads are quickly amortized at
+  higher packet rates. Hence, we see no benefit in sacrificing
+  protection by switching to a user-level implementation.}
+
+
+% \adam{Protection domain crossings inside VMX non-root mode add only a
+%   small amount of extra overhead, on the order of a single L3 cache
+%   miss~\cite{dune}, and are quickly amortized at higher packet
+%   rates. We found that the design elements of our dataplane
+%   architecture had a more profound impact on performance. Thus,
+%   lessons from \ix could also apply to networking stacks implemented
+%   at user-level.}
 
 
 
