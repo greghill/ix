@@ -6,6 +6,11 @@ set border 3
 set tics out nomirror
 set datafile separator ","
 set key left top
+set style data linespoints
+set style line 1 pointtype 4 linetype 4 pointsize .5
+set style line 2 pointtype 4 linetype 3 pointsize .5
+set style line 3 pointtype 4 linetype 2 pointsize .5
+set style line 4 pointtype 4 linetype 1 pointsize .5
 
 set xlabel 'USR: Throughput (RPS x 10^{3})'
 set ylabel 'Latency ({/Symbol m}s)'
@@ -15,4 +20,4 @@ set xtics ( "0" 0, "250" 250000, "500" 500000, "750" 750000, "1000" 1000000, "12
 set ytics (0, 250, 500, 750, 1000)
 set arrow from 0,500 to 1850000,500 nohead lw 1
 set label 'SLA' at 1860000,500
-plot for [i=1:words(infile)] word(infile,i) using 11:10 title word(title,i)
+plot for [i=1:words(infile)] word(infile,i) using 11:10 title word(title,i) linestyle i

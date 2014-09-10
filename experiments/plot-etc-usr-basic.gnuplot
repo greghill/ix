@@ -1,5 +1,5 @@
 if (format eq 'eps') {
-  set terminal postscript eps enhanced solid size 3.1,2.1 font 'Times'
+  set terminal postscript eps enhanced size 3.1,2.1 font 'Times'
   unset key
   gen_title1(i) = ''
   gen_title3(i) = ''
@@ -10,10 +10,10 @@ if (format eq 'eps') {
   set key left top
 }
 set style data linespoints
-set style line 1 pointtype 4 pointsize .5 linecolor rgbcolor 'red'
-set style line 2 pointtype 4 pointsize .5 linecolor rgbcolor 'black'
-set style line 3 pointtype 6 pointsize .5 linecolor rgbcolor 'red'
-set style line 4 pointtype 6 pointsize .5 linecolor rgbcolor 'black'
+set style line 1 pointtype 6 linetype 4 pointsize .5 linecolor rgbcolor 'red'
+set style line 2 pointtype 4 linetype 4 pointsize .5 linecolor rgbcolor 'black'
+set style line 3 pointtype 6 linetype 1 pointsize .5 linecolor rgbcolor 'red'
+set style line 4 pointtype 4 linetype 1 pointsize .5 linecolor rgbcolor 'black'
 set output outfile
 set grid y
 set border 3

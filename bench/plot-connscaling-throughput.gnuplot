@@ -5,10 +5,10 @@ if (format eq 'eps') {
 }
 gen_title(i) = word(title,i)
 set style data linespoints
-set style line 1 linecolor rgbcolor 'red'
-set style line 2 linecolor rgbcolor 'red'
-set style line 3 linecolor rgbcolor 'black'
-set style line 4 linecolor rgbcolor 'black'
+set style line 1 pointtype 6 linecolor rgbcolor 'red'
+set style line 2 pointtype 7 linecolor rgbcolor 'red'
+set style line 3 pointtype 4 linecolor rgbcolor 'black'
+set style line 4 pointtype 5 linecolor rgbcolor 'black'
 set output outfile
 set grid y
 set border 3
