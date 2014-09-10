@@ -18,8 +18,8 @@ software and their networking stacks:
 \myparagraph{Microsecond tail latency:} To enable rich interactions
 between a large number of services without impacting the overall
 latency experienced by the user, it is essential to reduce the latency
-for some service request to a few tens of
-\microsecond~\cite{luiz-isscc,DBLP:conf/hotos/RumbleOSRO11}.  Since
+for some service requests to a few tens of
+\microsecond~\cite{luiz-isscc,DBLP:conf/hotos/RumbleOSRO11}.  Because
 each user request often involves hundreds of servers, we must also
 consider the long tail of the latency distributions of RPC requests
 across the datacenter~\cite{DBLP:journals/cacm/DeanB13}. Although
@@ -89,7 +89,7 @@ increasingly popular. For networking, 10 GbE NICs and switches are
 widely deployed in datacenters, with 40 GbE and 100 GbE technologies
 right around the corner. The combination of tens of hardware threads
 and 10 GbE NICs should allow for rates of 15M packets/sec with minimum
-sized packets.  We should also achieve 10-20\microsecond round-trip
+sized packets.  We should also achieve 10--20\microsecond round-trip
 latencies given 3\microsecond latency across a pair of 10 GbE NICs,
 one to five switch crossings with cut-through latencies of a few
 hundred ns each, and propagation delays of 500ns for 100 meters
@@ -110,7 +110,7 @@ several hundred \microsecond of latency to remote requests.  The
 overheads of buffering and synchronization needed to support flexible,
 fine-grain scheduling of applications to cores increases CPU and
 memory system overheads, which limits throughput.  As requests between
-service tiers of web-scale application often consist of small packets,
+service tiers of datacenter applications often consist of small packets,
 common NIC hardware optimizations, such as TCP segmentation and
 receive side coalescing, have a marginal impact on packet rate.
 

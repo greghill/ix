@@ -33,7 +33,7 @@ We run the Linux kernel in VMX root ring 0, the mode typically used to
 run hypervisors in virtualized
 systems~\cite{DBLP:journals/computer/UhligNRSMABKLS05}. We use the
 Dune module within Linux to enable dataplanes to run as
-application-specific OSes in the VMX non-root ring 0, the mode
+application-specific OSes in VMX non-root ring 0, the mode
 typically used to run guest kernels in virtualized
 systems~\cite{dune}.  Applications run in VMX non-root ring 3, as
 usual.  This approach provides dataplanes with direct access to
@@ -128,7 +128,7 @@ The \ix dataplane currently consists of 39K SLOC~\cite{url:sloccount}
 and leverages some existing codebases: 41\% is derived from the DPDK
 variant of the Intel NIC device driver~\cite{intel:dpdk}, 26\% from
 the lwIP TCP/IP stack~\cite{dunkels2001design}, and 15\% from the Dune
-library.  We do not make use of the DPDK framework, and all three code
+library.  We did not use the remainder of the DPDK framework, and all three code
 bases are highly modified for \ix. The rest is approximately 7K SLOC
 of new code. We chose lwIP as a starting point for TCP/IP processing
 because of its modularity and its maturity as a RFC-compliant,
@@ -225,7 +225,7 @@ descriptors to the NIC for use with future incoming packets. The
 elastic thread then (2) processes a bounded number of packets through
 the TCP/IP networking stack, thereby generating event
 conditions. Next, the thread (3) switches to the user-space
-applications, which consumes all event conditions. Assuming that the
+application, which consumes all event conditions. Assuming that the
 incoming packets include remote requests, the application processes
 these requests and responds with a batch of system calls. Upon return
 of control from user-space, the thread (4) processes all batched
@@ -235,7 +235,7 @@ compliant TCP behavior. Finally (6), it places outgoing Ethernet
 frames in the NIC's transmit descriptor ring for transmission, and it
 notifies the NIC to initiate a DMA transfer for these frames by
 updating the transmit ring's tail register. In a separate pass, it
-also frees any buffers that have finished transmitting, based oh the
+also frees any buffers that have finished transmitting, based on the
 transmit ring's head position, potentially generating \texttt{sent}
 event conditions.  The process repeats in a loop until there is no
 network activity. In this case, the thread enters a quiescent state which
@@ -250,8 +250,7 @@ The \ix dataplane is optimized for multi-core scalability, as elastic
 threads operate in a synchronization and coherence free manner in the
 common case. This is a stronger requirement than lock-free
 synchronization, which requires expensive atomic instructions even
-when a single thread is the primary user of a particular data structure
-~\cite{DBLP:conf/sosp/DavidGT13}.  This is made possible through a
+when a single thread is the primary consumer of a particular data structure~\cite{DBLP:conf/sosp/DavidGT13}.  This is made possible through a
 set of conscious design and implementation tradeoffs.
 
 First, system call implementations can only be synchronization-free if
@@ -268,13 +267,13 @@ Second, the API implementation is carefully optimized.  Each elastic
 thread manages its own memory pools, hardware queues, event condition
 array, and batched system call array. The implementation of event conditions and
 batched system calls benefits directly from the explicit, cooperative
-control transfers between \ix and the application.% by the elastic thread.
+control transfers between \ix and the application.
 Since there is no concurrent execution by producer and
 consumer, event conditions and batched system calls are implemented
 without synchronization primitives based on atomics.
 
 Third, the use of flow-consistent hashing at the NICs ensures that
-each elastic thread operates on a disjoint subset of incoming TCP
+each elastic thread operates on a disjoint subset of TCP
 flows. Hence, no synchronization or coherence occurs during the
 processing of incoming requests for a server application. For client
 applications with outbound connections, we need to ensure that the
@@ -302,7 +301,7 @@ completion cycle.
 resources between dataplanes.  For instance, when a core is revoked
 from a dataplane, the corresponding network flows must be assigned
 to another elastic thread. Such events are rare because resource
-allocation happens in a coarse-grain manner. Finally, the application
+allocation happens in a coarse-grained manner. Finally, the application
 code may include inter-thread communication and synchronization. While
 using \ix does not eliminate the need to develop scalable application
 code, it ensures that there are no scaling bottlenecks in the system
@@ -349,15 +348,15 @@ only result in incorrect data payload.
 
 Since elastic threads in \ix execute both the network stack and
 application code, a long running application can block further network
-processing for a set of queues. This behavior in no way affects other
+processing for a set of flows. This behavior in no way affects other
 applications or dataplanes. We use a timeout interrupt to detect
 elastic threads that spend excessive time in user mode (e.g., in
 excess of 10ms). We mark such applications as non-responsive and
 notify the control plane.
 
-The current \ix prototype does not yet use an IOMMU. The \ix kernel is trusted
+The current \ix prototype does not yet use an IOMMU. As a result, the \ix kernel is trusted
 code that has access to descriptor rings with host-physical addresses.
-This limitation is not fundamental to our design, as does not affect the
+This limitation does not affect the
 security model provided to applications.
 
 
