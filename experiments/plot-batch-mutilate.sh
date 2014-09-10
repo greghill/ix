@@ -5,8 +5,8 @@ last() {
 }
 dir=../papers/osdi14/figs/data/batch_mutilate
 mkdir -p $dir
-title="B=1 B=2 B=16 B=64"
-for i in _b1 _b2 _b16 ""; do
+title="B=1 B=2 B=8 B=64"
+for i in _b1 _b2 _b8 ""; do
   file=`last $i`
   cp -a $file $dir
   infile="$infile $file"
