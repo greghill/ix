@@ -69,7 +69,7 @@ message sizes.  Two \ix servers have a one-way latency of
 5.7\microsecond for 64B messages and achieve goodput of 5Gbps, half of
 the maximum, with messages as small as 20KB. In contrast, two Linux
 servers have a one-way latency of 24\microsecond and require 385KB
-messages to achieve 5Gpbs.  The differences in system architecture
+messages to achieve 5Gbps.  The differences in system architecture
 explain the disparity: \ix has a dataplane model that polls queues and
 processes packets to completion whereas Linux has an interrupt model,
 which wakes up the blocked process.  mTCP uses aggressive batching to
@@ -139,7 +139,7 @@ Fig.~\ref{fig:short10:roundtrips} shows a speedup of 2.3$\times$ with $n=1$
 and of 1.3$\times$ with $n=1024$ over 10GbE \ix.  Finally,
 Fig.~\ref{fig:short10:size} shows \ix can deliver 8KB messages with a
 goodput of 34.5 Gbps, for a wire throughput of
-37.9 Gpbs, out of a possible 39.7Gbps.  Overall, \ix makes
+37.9 Gbps, out of a possible 39.7Gbps.  Overall, \ix makes
 it practical to scale protected TCP/IP processing beyond 10GbE, even
 with a single socket multi-core server.
 
