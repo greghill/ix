@@ -29,8 +29,8 @@ the desired RPS load, while a separate unloaded client measures
 latency by issuing one request at the time.  We configure
 \texttt{mutilate} to generate load representative of two workloads
 from Facebook~\cite{Atikoglu:2012:WAL}: the ETC workload that
-represents that highest capacity deployment in Facebook, has 20B - 70B
-keys, 1B-1KB values, and 75\% GET requests; and the USR workload that
+represents that highest capacity deployment in Facebook, has 20B--70B
+keys, 1B--1KB values, and 75\% GET requests; and the USR workload that
 represents deployment with most GET requests in Facebook, has short
 keys ($<$20B), 2B values, and 99\% GET requests. In USR, almost all
 traffic involves minimum-sized TCP packets. Each request is issued
@@ -38,7 +38,7 @@ separately (no \texttt{multiget} operations). However, clients
 are permitted to pipeline up to four requests per connection
 if needed to keep up with their target request rate. We use 23
 client machines to generate load for a total of
-1476 connections to the \texttt{memcached} server.
+1,476 connections to the \texttt{memcached} server.
 
 To provide insights into the full range of system behaviors, we report
 average and 99th percentile latency as a function of the achieved
@@ -63,7 +63,7 @@ to use our event library. In most cases, the port was straightforward,
 replacing Linux and \texttt{libevent} function calls with their
 equivalent versions in our API. We did yet not attempt to tune the
 internal scalability of \texttt{memcached}~\cite{DBLP:conf/nsdi/FanAK13}
-or to support zero-copy IO operations.
+or to support zero-copy I/O operations.
 
 
 Fig.~\ref{fig:mutilate} shows the throughput-latency curves for the
