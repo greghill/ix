@@ -99,7 +99,7 @@ have impacted latency.
   unanticipated delays during application processing in elastic
   threads.  One option would be to use interrupts as a fallback
   mode. On the receive side, the NIC would fire an interrupt whenever
-  the recieve descriptor ring is almost full. The dataplane could then
+  the receive descriptor ring is almost full. The dataplane could then
   move packets from the receive ring to a software structure, averting
   buffer underrun. On the transmit side, NIC would fire an interrupt
   whenever the transmit ring becomes empty so that it can be
