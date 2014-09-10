@@ -110,9 +110,9 @@ events in a quick, non-blocking manner; operations with extended
 execution times are expected to be delegated to background threads
 rather than execute within the context of elastic threads.  The \ix
 dataplane is designed around polling, with the provision that
-interrupts can be configured as fallback optimization to refresh
-receive descriptor rings when the ring is nearly full and to refill
-the transmit queues when it is empty (steps (1) and (6) in
+interrupts can be configured as a fallback optimization to refresh
+receive descriptor rings when they are nearly full and to refill
+transmit descriptor rings when they are empty (steps (1) and (6) in
 Fig~\ref{fig:dataplane}). Occasional timer interrupts are also
 required to ensure full TCP compliance in the event an elastic thread
 blocks for an extended period.
@@ -123,7 +123,7 @@ dynamic addition and removal of elastic threads in order to achieve
 energy proportional and resource efficient computing. So far we have
 tested only static configurations. In future work, we will explore
 control plane issues, including a dynamic runtime that rebalances
-hardware queues between available elastic threads in a manner that
+network flows between available elastic threads in a manner that
 maintains both throughput and latency constraints.
 
 We will also explore the synergies between \ix and networking

@@ -10,11 +10,11 @@ the commentary in \S\ref{sec:motivation:current}.
 virtualization naturally separates control and execution functions,
 e.g., to build type-2 hypervisors
 ~\cite{DBLP:journals/tocs/BugnionDRSW12,misc/kivity07kvm}, run virtual
-appliances~\cite{DBLP:conf/lisa/SapuntzakisBCZCLR03}, or processes
+appliances~\cite{DBLP:conf/lisa/SapuntzakisBCZCLR03}, or provide processes
 with access to privileged instructions~\cite{dune}. Similar to \ix,
 Arrakis uses hardware virtualization to separate the I/O dataplane
 from the control plane~\cite{arrakis-osdi}. \ix differs in that it
-uses a full Linux OS as the control plane; provides three-way
+uses a full Linux kernel as the control plane; provides three-way
 isolation between the control plane, networking stack, and
 application; and proposes a dataplane architecture that optimizes for
 both high throughput and low latency. On the other hand, Arrakis uses
@@ -26,9 +26,8 @@ IOMMUs and SR-IOV.
 end-to-end principle to resource management by implementing system
 abstractions via library operating systems linked in with
 applications~\cite{DBLP:conf/sosp/EnglerKO95}.  Library operating
-systems typically run as virtual machines
-~\cite{DBLP:journals/tocs/BugnionDGR97} used, for instance, to deploy
-cloud services ~\cite{DBLP:conf/asplos/MadhavapeddyMRSSGSHC13}. \ix
+systems often run as virtual machines~\cite{DBLP:journals/tocs/BugnionDGR97} used, for instance, to deploy
+cloud services~\cite{DBLP:conf/asplos/MadhavapeddyMRSSGSHC13}. \ix
 limits itself to the implementation of the networking stack, allowing
 applications to implement their own resource management policies,
 e.g. via the \texttt{libevent} compatibility layer.
@@ -68,7 +67,7 @@ for low-latency communication.  Zero-copy reduces data movement
 overheads and simplifies resource
 management~\cite{DBLP:journals/tocs/PaiDZ00}. POSIX OSes have been
 modified to support zero-copy through page remapping and
-copy-on-write~\cite{DBLP:conf/usenix/Chu96}, By contrast, \ix's
+copy-on-write~\cite{DBLP:conf/usenix/Chu96}. By contrast, \ix's
 cooperative memory management enables zero-copy without page
 remapping. Similar to \ix, TinyOS passes pointers to packet buffers
 between the network stack and the application in a cooperative,
