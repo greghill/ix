@@ -18,7 +18,13 @@ copying, as it is the case for the \texttt{libevent} compatible
 interfaces in \texttt{libix}.  The extra copy occurs much closer to
 the actual use, thereby increasing cache locality.  Finally, we
 carefully tuned \ix for multi-core scalability, eliminating constructs
-that introduce synchronization or coherence traffic.
+that introduce synchronization or coherence traffic. \adam{Protection
+domain crossings inside VMX non-root mode add only a small amount
+of extra overhead, on the order of a single L3 cache miss~\cite{dune}, and
+are quickly amortized at higher packet rates. We
+found that the design elements of our dataplane architecture
+had a more profound impact on performance. Thus, lessons from \ix
+could also apply to networking stacks implemented at user-level.}
 
 
 
