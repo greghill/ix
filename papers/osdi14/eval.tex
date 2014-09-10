@@ -109,7 +109,7 @@ exhausting ephemeral ports.
 
 Fig.~\ref{fig:shortboth} shows the message
 rate or goodput for both the 10GbE and the 40GbE configurations as we
-vary the number of cores used, the number of roundtrip messages per
+vary the number of cores used, the number of round-trip messages per
 connection, and the message size respectively.  For the 10GbE
 configuration, the results for Linux and mTCP are consistent with
 those published in the mTCP paper~\cite{jeong2014mtcp}.  For all three
@@ -117,7 +117,7 @@ tests (core scaling, message count scaling, message size scaling), \ix
 scales more aggressively than mTCP and
 Linux. Fig.~\ref{fig:short10:mcore} shows that \ix needs only 3 cores
 to saturate the 10GbE link whereas mTCP requires all 8 cores. On
-Fig.~\ref{fig:short10:roundtrips} for 1024 roundtrips per connection,
+Fig.~\ref{fig:short10:roundtrips} for 1024 round-trips per connection,
 \ix delivers 8.8 million messages per second, which is
 1.9$\times$ the throughput of mTCP and of and 8.8$\times$ that of
 Linux. With this packet rate, \ix achieves line rate and is limited
