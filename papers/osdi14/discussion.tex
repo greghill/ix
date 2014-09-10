@@ -117,7 +117,7 @@ implementation does not yet exploit IOMMUs or VT-d. Instead, it maps
 descriptor rings directly into \ix memory, using the Linux pagemap
 interface to determine physical addresses.  Although this choice puts
 some level of trust into the \ix dataplane, application code remains
-securely isolated. In the future we plan on using IOMMU support to
+securely isolated. In the future, we plan on using IOMMU support to
 further isolate \ix dataplanes. We anticipate overhead will be low
 because of our use of large pages.  Also, the \ix prototype currently
 does not take advantage of the NIC's SR-IOV capabilities, but instead
