@@ -46,9 +46,9 @@ software routers~\cite{routebricks,click}. \ix separates the control
 plane, which is responsible for system configuration and coarse-grain
 resource provisioning between applications, from the dataplanes, which
 run the networking stack and application logic.
-\ix leverages virtualization hardware to run the dataplane kernel and
+\ix leverages Dune and virtualization hardware to run the dataplane kernel and
 the application at distinct protection levels and to isolate
-the control plane from the dataplane.
+the control plane from the dataplane~\cite{dune}.
 In our implementation, the
 control plane is the full Linux kernel and the dataplanes run as
 protected, library-based operating systems on dedicated hardware
