@@ -6,8 +6,25 @@
 %% output is double-braced into a bibtex format
 %%
 
-Capriccio: scalable threads for internet services.|Capriccio: scalable threads for Internet services.
-
-
-
-
+Workload analysis of a large-scale key-value store.|Workload Analysis of a Large-Scale Key-Value Store.
+Quasar: resource-efficient and QoS-aware cluster management.|Quasar: Resource-Efficient and QoS-Aware Cluster Management.
+Unikernels: library operating systems for the cloud.|Unikernels: Library Operating Systems for the Cloud.
+Chronos: predictable low latency for data center applications.|Chronos: Predictable Low Latency for Data Center Applications.
+Reconciling high server utilization and sub-millisecond quality-of-service.|Reconciling High Server Utilization and Sub-Millisecond Quality-of-Service.
+Improving network connection locality on multicore systems.|Improving Network Connection Locality on Multicore Systems.
+Efficient virtual memory for big memory servers.|Efficient Virtual Memory for Big Memory Servers.
+Towards energy proportionality for large-scale latency-critical workloads.|Towards Energy Proportionality for Large-Scale Latency-Critical Workloads.
+Data center TCP (DCTCP).|Data Center TCP (DCTCP).
+Safe and effective fine-grained TCP retransmissions for datacenter communication.|Safe and Effective Fine-Grained TCP Retransmissions for Datacenter Communication.
+The multikernel: a new OS architecture for scalable multicore systems.|The Multikernel: A new OS architecture for scalable multicore systems.
+Capriccio: scalable threads for Internet services.|Capriccio: Scalable Threads for Internet Services.
+The scalable commutativity rule: designing scalable software for multicore processors.|The Scalable Commutativity Rule: Designing Scalable Software for Multicore Processors.
+Everything you always wanted to know about synchronization but were afraid to ask.|Everything You Always Wanted to Know About Synchronization but Were Afraid to Ask.
+Fast crash recovery in RAMCloud.|Fast Crash Recovery in RAMCloud.
+The tail at scale.|The Tail at Scale.
+Revisiting network I/O APIs: the netmap framework.|Revisiting Network I/O APIs: The netmap Framework.
+IO-Lite: a unified I/O buffering and caching system.|IO-Lite: A Unified I/O Buffering and Caching System.
+Random early detection gateways for congestion avoidance.|Random Early Detection Gateways for Congestion Avoidance.
+The click modular router.|The Click Modular Router.
+RouteBricks: exploiting parallelism to scale software routers.|RouteBricks: Exploiting Parallelism to Scale Software Routers.
+Network stack specialization for performance.|Network Stack Specialization for Performance.
