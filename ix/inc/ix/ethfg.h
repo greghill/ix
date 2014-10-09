@@ -59,7 +59,7 @@ static inline void * __perfg_get(void *key)
  * Returns a perqueue variable.
  */
 #define perfg_get(var)                                               \
-        (*((typeof(perfg_##var) *) (__perfg_get(&perfg_##var))))
+        (*((typeof(perfg__##var) *) (__perfg_get(&perfg__##var))))
 
 /**
  * eth_fg_set_current - sets the current flowgroup
