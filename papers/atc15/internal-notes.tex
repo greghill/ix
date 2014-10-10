@@ -1,0 +1,54 @@
+
+\section{Internal Notes}
+
+\subsection{Christos notes}
+
+From email on 14-10-09. There are many issues that can complicate the CP. Here is unordered list:
+
+\begin{itemize}
+
+\item Measuring or inferring latency reliably, especially in the presence of many different request types. 
+\item  limited queues. 128 queues or flow groups may not be enough. My students interning at Google were already using servers with 72 hardware threads. That’s were the flow director may be useful. 
+
+\item  interactions with TurboBoost  (initially we should keep it off)
+\item  it would be great of CP balancing allows us to use the 2nd socket efficiently (initially we should start with a single socket)
+\item rate limiting: what if I want to deploy memcache so that it takes at most N cores. When we use all of them and we get too much queuing, how do we rate limit/drop requests to maintain some SLA? 
+
+\end{itemize}
+
+
+The other important thing to do is to enumerate test scenarios. Here is my list:
+\begin{itemize}
+
+\item energy proportionality: showily scale from 0\% to 100\% load for
+  memcached and show that CP does the best possible thing for SLA and
+  EP
+
+\item energy proportionality: do we few tests of rapid change between load to characterize transition time issues
+\item  sharing: slowly scale from from 0\% to 100\% the load for memcached and show that all other cores can be kept busy with a non interfering benchmark (while 1). The metric is the progress rate of the other benchmark
+
+\item sharing: rapid change to load to characterize reaction time
+
+\item interference: slowly scale from from 0\% to 100\% the load for memcached and show that all other cores can be kept busy with a interfering benchmarks. Initially run the same interfering benchmark on all other cores. The metric is the memcache SLA and the progress rate of the other benchmark. 
+
+\item interference: rapid change to memcached load. 
+\item interference; rapid change to the ether benchmark (e.g., from while 1 to a cache interfering one). 
+\end{itemize}
+
+
+\subsection{Citations with aliases:}
+
+
+\begin{itemize}
+\item Dune: \cite{dune}
+\item megapipe: \cite{megapipe}
+\item Sandstorm: \cite{sandstorm}
+\item Click: \cite{click}
+\item Routebricks: \cite{routebricks}
+\item Aikoglu \cite{Atikoglu:2012:WAL}
+\item Tinyosnet: \cite{tinyosnet}
+\item Quasar: \cite{quasar}
+\item mtcp: \cite{mtcp}
+\item Arrakis: \cite{arrakis-osdi}
+\end{itemize}
+

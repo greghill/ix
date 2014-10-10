@@ -1,0 +1,106 @@
+
+\section{Introduction}
+
+\edb{VERY PRELIMINARY}
+
+
+Datacenter applications such as search, social networking, and
+e-commerce platforms are redefining the requirements for systems
+software. A single application can consist of hundreds of software
+services, deployed on thousands of servers, creating a need for
+networking stacks that provide more than high streaming performance.
+The new requirements include high packet rates for short messages,
+microsecond-level responses to remote requests with tight tail latency
+guarantees, and support for high connection counts and
+churn~\cite{Atikoglu:2012:WAL,DBLP:journals/cacm/DeanB13,DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}.
+
+
+
+The conventional wisdom is that there is a basic mismatch between
+these requirements and existing networking stacks in commodity
+operating systems.  The classic solution involves bypassing the
+commodity operating systems through user-level networking
+stacks~\cite{mtcp,DBLP:conf/cloud/KapoorPTVV12,sandstorm,openonload,DBLP:conf/sigcomm/ThekkathNML93},
+hardware protocol
+offloads~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,DBLP:conf/sosp/OngaroRSOR11},
+or protected dataplane operating systems~\cite{ix-osdi}.  In such
+approaches, the application is sized with enough dedicated CPU
+resources, including cores spinning waiting for I/O, to sustain the
+maximal packet rate requirement of the workload.  Such static,
+configuration-time, sizing of application resources leads to a
+trade-off in terms of energy efficiency and server consolidation, in
+particular during the periods when the workload does not stress the
+resources.  In simple terms, even though throwing Watts at a problem
+can help reduce latency and increase throughput of one specific
+application, it may consume a disproportionate amount of energy
+resources.
+
+
+This paper reconciles the requirements of low-latency, high-throughput
+applications with the infrastructure requirements of
+energy-proportionality and efficient use of the global server
+resources.  We focus on current-generation severs with a large number
+of cores and dynamic-Voltage/frequency-scaling (DVFS) support.  In
+such platforms, the CPU typically accounts for the majority of the
+power draw of the server.  We ask two related questions on the
+energy-efficient use of the CPU:
+
+$\triangleright$ {\bf Energy proportionality:} Can a low-latency
+application meet its service-level agreement across the maximal range
+of throughput possible on the hardware while drawing power that is
+proportional to the throughput ? 
+
+$\triangleright$ {\bf Efficient Consolidation:} Can a low-latency application
+co-exist with a batch workload so that the SLA of the low-latency
+application is guaranteed and the throughput of batch workload per
+Watt of power is maximized.
+
+Our methodology is based on a two-step process.  In the first step, we
+observe the relative end-to-end performance and power draw of the
+workload, for different levels of load imposed on the low-latency
+application.  We repeat the observation for different static
+combinations of CPU count and CPU frequency.  From that data, we
+derive the Pareto-optimal configuration for each possible load level.
+
+In the second step, we introduce a dynamic control mechanism that
+dynamically regulates the allocation of CPU resources with changes in
+load.  When the control mechanism detects an increase in load
+resulting in a backlog, it can either add CPU or increase the
+frequency of CPU.  Conversely, the control mechanism has the option of
+reducing the CPU count of frequency when the resources are no longer
+needed.  The high-level insights of the first step help guide the
+policy decisions of the control plane in this second step.
+
+This paper makes the following contributions:
+
+$\triangleright$ For Intel XXX ``Sandy Bridge'' generation of CPU, we
+observe that a Pareto-optimal dynamic policy will always first add
+additional CPU to the workload, and only subsequently increase the CPU
+frequency of the CPU.
+
+$\triangleright$ We implement a dynamic control plane that can deliver
+energy proportionality and efficient consolidation, while providing low-latency
+with the necessary resources to meet their SLA.  Using only
+server-local metrics of queing wait time, it can adapt in changes in
+load as to always operate at the Pareto-optimal configuration.
+
+$\triangleright$ We implement the necessary rebalancing mechanisms
+into \ix, a protected dataplane operating system aimed at low-latency
+applications~\cite{ix-osdi}.  In particular, we introduce a flow-group
+rebalancing algorithm that respects the coherence-free execution model
+of \ix. 
+
+The rest of this paper is organized as follows.  In
+\S\ref{sec:background}, we provide the necessary background on \ix.
+In \S\ref{sec:pareto}, we derive the Pareto-optimal policy for Intel
+Sandy Bridge CPUs and a class of workloads (the first step in our
+methodology).  In \S\ref{sec:control}, we describe the design and
+implementation of the dynamic control plane.  In
+\S\ref{sec:dataplane}, we describe the design and implementation of
+the necessary dataplane mechanisms for rebalancing.  In
+\S\ref{sec:eval}, we evaluate our solution.  We then discuss related
+work in \S\ref{sec:relate} and conclude in \S\ref{sec:conclusion}.
+
+
+
+

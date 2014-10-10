@@ -27,6 +27,9 @@ import os
 import xml.etree.ElementTree as ET
 import subprocess
 import time
+import locale
+
+    
 
 DBLP_article = {}
 DBLP_article_fieldlist = {'title':'double',
@@ -43,7 +46,7 @@ DBLP_conf_fieldlist = {'title':'double',
                       'pages':'id'}
 
 
-
+# conferences where DBLP does not use an acronym
 NOACKCONFERENCE = {
     "ACM Conference on Computer and Communications Security" : "ACM Conference on Computer and Communications Security",
     "USENIX Annual Technical Conference, General Track" :  "USENIX Annual Technical Conference",
@@ -55,7 +58,9 @@ NOACKCONFERENCE = {
     "SIGMOD Conference" : "SIGMOD Conference",
     "IEEE Symposium on Security and Privacy" : "IEEE Symposium on Security and Privacy",
     "USENIX Summer" : "USENIX Summer",
-    "USENIX Annual Technical Conference, FREENIX Track" : "USENIX Annual Technical Conference, FREENIX Track"
+    "USENIX Annual Technical Conference, FREENIX Track" : "USENIX Annual Technical Conference, FREENIX Track",
+    "Internet Measurement Conference" : "IMC",
+    "Internet Measurement Workshop" : "IMC"
 }
 
 
@@ -160,12 +165,13 @@ def html_to_bibtex(h):
     except:
         x = ""
         for c in h:
+            c2 = c.encode('utf-8')
             if HTML_TO_BIB.has_key(c):
                 x = x + HTML_TO_BIB[c]
             else: 
                 x = x + c
-        print "HTML conversion ",h," --> ",x
-        return x
+        print "HTML conversion ",h.encode('utf-8')," --> ",x.encode('utf-8')
+        return x.encode('utf-8')
     
 
 def escape_percent(s):
@@ -177,8 +183,17 @@ def escape_percent(s):
     else:
         return s
 
+
 ##### main  #######                                                                                                                                                 
 # process bib file from ARVG
+
+
+
+print "ENVIRON", os.environ
+for x in os.environ:
+    print "ENVIRON:",x, os.environ[x]
+
+print locale.localeconv()
 
 if not os.path.exists(".bibcloud"):
     os.mkdir(".bibcloud")
@@ -197,8 +212,8 @@ if (os.path.isfile(bibname)):
     citations.sort()
 
 else:
-    print "File "+bibname+".aux does not exist"
-    exit
+    print "FATAL -- File "+bibname+" does not exist"
+    sys.exit(1)
 
 if os.path.isfile(aliasfile):
     lines = [line.strip() for line in open(aliasfile)]
@@ -208,11 +223,13 @@ if os.path.isfile(aliasfile):
         if pos >=0:
             l = l[:pos]
 
-        x = l.split(" ")
+        x = l.split()
         if len(x)>=2 and x[1].find("DBLP:")>=0:
-            print "found alias ",x[0],x[1]
+            #print "found alias ",x[0],x[1]
             ALIAS[x[0]] = x[1]
-            REVALIAS[x[1]] = x[0] 
+            REVALIAS[x[1]] = x[0]
+        elif len(x)>0:
+            print "Alias parsing - bad line : ",x
 
        
 else:
@@ -309,7 +326,7 @@ for cit in citations:
                     else:
                         F.write("  booktitle = "+booktitle+year+",\n")
                 else:
-                    print "Unknonw conference",booktitle
+                    print "FATAL -- Unknown conference",booktitle
                     sys.exit(1)
             else:
                 F.write("  booktitle = "+booktitle+year+",\n")

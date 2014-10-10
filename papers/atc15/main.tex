@@ -1,0 +1,103 @@
+
+%
+%  USENIX ATC '15 CFP
+%  11 pages + references
+%  single-blind
+%  10 point font, 2-column, ...
+%
+
+
+
+% TEMPLATE for Usenix papers, specifically to meet requirements of
+%  USENIX '05
+% originally a template for producing IEEE-format articles using LaTeX.
+%   written by Matthew Ward, CS Department, Worcester Polytechnic Institute.
+% adapted by David Beazley for his excellent SWIG paper in Proceedings,
+%   Tcl 96
+% turned into a smartass generic template by De Clarke, with thanks to
+%   both the above pioneers
+% use at your own risk.  Complaints to /dev/null.
+% make it two column with no page numbering, default is 10 point
+
+% Munged by Fred Douglis <douglis@research.att.com> 10/97 to separate
+% the .sty file from the LaTeX source template, so that people can
+% more easily include the .sty file into an existing document.  Also
+% changed to more closely follow the style guidelines as represented
+% by the Word sample file. 
+
+% Note that since 2010, USENIX does not require endnotes. If you want
+% foot of page notes, don't include the endnotes package in the 
+% usepackage command, below.
+
+% This version uses the latex2e styles, not the very ancient 2.09 stuff.
+\documentclass[letterpaper,twocolumn,10pt]{article}
+\usepackage{../common/usenix,epsfig,endnotes,verbatim}
+\usepackage{listings}
+\usepackage{url}
+
+
+% added for our purpose
+%\usepackage{authblk}
+\usepackage{xspace}
+\usepackage{url}
+\usepackage{upgreek}
+\usepackage{comment}
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage[normalem]{ulem}
+\usepackage[hidelinks]{hyperref}
+% name of the product in a funky font
+\newcommand{\microsecond}{$\upmu{}$s\xspace}
+\newcommand{\ix}{\textsc{ix}\xspace}
+\newcommand{\twiddle}{$\sim$}
+
+
+\usepackage[usenames,dvipsnames]{xcolor}
+\newcommand{\edb}[1]{\noindent{\color{Plum} {\bf \fbox{EdB}} {\it#1}}}
+\newcommand{\george}[1]{\noindent{\color{Green} {\bf \fbox{George}} {\it#1}}}
+\newcommand{\adamd}[1]{\noindent{\color{Purple} {\bf \fbox{Adam}} {\it#1}}}
+
+
+\begin{document}
+
+%don't want date printed
+%\date{}
+
+%make title bold and 14 pt font (Latex default is non-bold, 16 pt)
+\title{\Large \bf Dynamic Resource Control for Low-latency, High-Throughput Dataplanes}
+
+\author{Exact Author List TBD (single blind process)}
+
+%for single author (just remove % characters)
+%\author{
+%{\rm Your N.\ Here}\\
+%Your Institution
+%\and
+%{\rm Second Name}\\
+%Second Institution
+% copy the following lines to add more authors
+% \and
+% {\rm Name}\\
+%Name Institution
+%} % end author
+
+\maketitle
+
+% Use the following at camera-ready time to suppress page numbers.
+% Comment it out when you first submit the paper for review.
+\thispagestyle{empty}
+
+\input{abstract}
+\input{intro}
+\input{internal-notes}
+\bibliographystyle{plain}%abbrvnat}
+\bibliography{../common/gen-abbrev,dblp,../common/gscholar,../common/misc}
+
+\end{document}
+
+
+
+
+
+
+
