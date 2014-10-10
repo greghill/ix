@@ -137,7 +137,7 @@ tcp_init(void)
 #if LWIP_RANDOMIZE_INITIAL_LOCAL_PORTS && defined(LWIP_RAND)
   tcp_port = TCP_ENSURE_LOCAL_PORT_RANGE(LWIP_RAND());
 #endif /* LWIP_RANDOMIZE_INITIAL_LOCAL_PORTS && defined(LWIP_RAND) */
-  perqueue_get(tcp_pcb_lists)[0] = &perqueue_get(tcp_listen_pcbs.pcbs);
+  perqueue_get(tcp_pcb_lists)[0] = &perqueue_get(tcp_listen_pcbs).pcbs;
   perqueue_get(tcp_pcb_lists)[1] = &perqueue_get(tcp_bound_pcbs);
   perqueue_get(tcp_pcb_lists)[2] = &perqueue_get(tcp_active_pcbs);
   perqueue_get(tcp_pcb_lists)[3] = &perqueue_get(tcp_tw_pcbs);
