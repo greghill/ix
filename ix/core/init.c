@@ -136,13 +136,6 @@ static int network_init_cpu(void)
 	for_each_queue(idx) {
 		perqueue_get(eth_txq) = percpu_get(eth_txqs[idx]);
 		perqueue_get(queue_id) = idx;
-		tcp_init();
-	}
-
-	ret = tcp_api_init();
-	if (ret) {
-		log_err("init: failed to initialize TCP API\n");
-		return ret;
 	}
 
 	unset_current_queue();
@@ -326,6 +319,20 @@ static int init_hw(void)
 		for (j = 0; j < ETH_RSS_RETA_NUM_ENTRIES; j++)
 			rss_reta.reta[j] = (i * ETH_RSS_RETA_NUM_ENTRIES + j) / step;
 		eth->dev_ops->reta_update(eth, &rss_reta);
+
+		for (j = 0; j < eth->data->nb_rx_fgs; j++) {
+			eth_fg_init_cpu(&eth->data->rx_fgs[j]);
+
+			eth_fg_set_current(&eth->data->rx_fgs[j]);
+
+			tcp_init();
+
+			ret = tcp_api_init();
+			if (ret) {
+				log_err("init: failed to initialize TCP API\n");
+				return ret;
+			}
+		}
 	}
 
 	return 0;

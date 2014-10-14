@@ -562,41 +562,38 @@ pcb_fail:
 int tcp_api_init(void)
 {
 	struct tcp_pcb *lpcb;
-	unsigned int queue;
 	int ret;
 
 	/* FIXME: Do a better job of freeing memory on failures */
-	for_each_queue(queue) {
-		lpcb = tcp_new();
-		if (!lpcb)
-			return -ENOMEM;
+	lpcb = tcp_new();
+	if (!lpcb)
+		return -ENOMEM;
 
-		ret = tcp_bind(lpcb, IP_ADDR_ANY, 8000);
-		if (ret != ERR_OK)
-			return -EIO;
+	ret = tcp_bind(lpcb, IP_ADDR_ANY, 8000);
+	if (ret != ERR_OK)
+		return -EIO;
 
-		lpcb = tcp_listen(lpcb);
-		if (!lpcb)
-			return -ENOMEM;
+	lpcb = tcp_listen(lpcb);
+	if (!lpcb)
+		return -ENOMEM;
 
-		perfg_get(listen_pcb) = lpcb;
-		tcp_accept(lpcb, on_accept);
+	perfg_get(listen_pcb) = lpcb;
+	tcp_accept(lpcb, on_accept);
 
-		ret = mempool_create(&perfg_get(pcb_mempool), MAX_PCBS,
-				     sizeof(struct tcpapi_pcb));
-		if (ret)
-			return ret;
+	ret = mempool_create(&perfg_get(pcb_mempool), MAX_PCBS,
+			     sizeof(struct tcpapi_pcb));
+	if (ret)
+		return ret;
 
-		ret = mempool_pagemem_create(&perfg_get(id_mempool),
-					     MAX_PCBS,
-					     sizeof(struct ip_tuple));
-		if (ret)
-			return ret;
+	ret = mempool_pagemem_create(&perfg_get(id_mempool),
+				     MAX_PCBS,
+				     sizeof(struct ip_tuple));
+	if (ret)
+		return ret;
 
-		ret = mempool_pagemem_map_to_user(&perfg_get(id_mempool));
-		if (ret)
-			return ret;
-	}
+	ret = mempool_pagemem_map_to_user(&perfg_get(id_mempool));
+	if (ret)
+		return ret;
 
 	return 0;
 }
