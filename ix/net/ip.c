@@ -97,6 +97,7 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 	struct eth_hdr *ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
 
 	set_current_queue(rx_queue);
+	eth_fg_set_current(&rx_queue->dev->data->rx_fgs[pkt->fg_id]);
 
 	log_debug("ip: got ethernet packet of len %ld, type %x\n",
 		  pkt->len, ntoh16(ethhdr->type));

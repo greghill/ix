@@ -237,6 +237,7 @@ int eth_dev_get_rx_queue(struct rte_eth_dev *dev,
 
 	*rx_queue = dev->data->rx_queues[rx_idx];
 	(*rx_queue)->queue_idx = rx_idx;
+	(*rx_queue)->dev = dev;
 	bitmap_init((*rx_queue)->assigned_fgs, dev->data->nb_rx_fgs, false);
 
 	return 0;

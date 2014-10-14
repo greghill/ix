@@ -35,6 +35,8 @@ struct eth_rx_queue {
 
 	/* a bitmap of flow groups directed to this queue */
 	DEFINE_BITMAP(assigned_fgs, ETH_MAX_NUM_FG);
+
+	struct rte_eth_dev *dev;
 };
 
 /**
