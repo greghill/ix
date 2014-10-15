@@ -53,15 +53,16 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 {
 	struct mempool *p;
 	struct tcpapi_pcb *api;
-	int queue = ((handle >> 48) & 0xffff);
+	int fg = ((handle >> 48) & 0xffff);
 	unsigned long idx = (handle & 0xffffffffffff);
 
-	if (unlikely(queue >= NQUEUE))
+	if (unlikely(fg >= ETH_MAX_TOTAL_FG))
 		return NULL;
 	if (unlikely(idx >= MAX_PCBS))
 		return NULL;
 
-	set_current_queue(percpu_get(eth_rxqs[queue]));
+	eth_fg_set_current(fgs[fg]);
+	set_current_queue(percpu_get(eth_rxqs[perfg_get(dev_idx)]));
 	p = &perfg_get(pcb_mempool);
 
 	api = (struct tcpapi_pcb *) ((uintptr_t) p->buf +
@@ -87,7 +88,7 @@ static inline hid_t tcpapi_to_handle(struct tcpapi_pcb *pcb)
 	struct mempool *p = &perfg_get(pcb_mempool);
 
 	return (((uintptr_t) pcb - (uintptr_t) p->buf) / sizeof(struct tcpapi_pcb)) |
-	       ((uintptr_t) (perqueue_get(queue_id)) << 48);
+	       ((uintptr_t) (perfg_get(fg_id)) << 48);
 }
 
 static void recv_a_pbuf(struct tcpapi_pcb *api, struct pbuf *p)
