@@ -33,6 +33,7 @@
 #define __LWIP_IP_H__
 
 #include <ix/queue.h>
+#include <ix/ethfg.h>
 
 #include "lwip/opt.h"
 
