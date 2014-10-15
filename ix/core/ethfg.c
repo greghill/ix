@@ -12,6 +12,8 @@ extern const char __perfg_end[];
 
 DEFINE_PERCPU(void *, fg_offset);
 
+DEFINE_PERFG(int, dev_idx);
+
 /**
  * eth_fg_init - initializes a flow group globally
  * @fg: the flow group
