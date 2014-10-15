@@ -11,6 +11,9 @@
 
 #define ETH_MAX_NUM_FG	128 
 
+#define NETHDEV	16
+#define ETH_MAX_TOTAL_FG (ETH_MAX_NUM_FG * NETHDEV)
+
 struct eth_rx_queue;
 
 struct eth_fg {
@@ -76,6 +79,8 @@ static inline void eth_fg_set_current(struct eth_fg *fg)
 extern void eth_fg_init(struct eth_fg *fg, unsigned int idx);
 extern int eth_fg_init_cpu(struct eth_fg *fg);
 extern void eth_fg_free(struct eth_fg *fg);
+
+extern struct eth_fg *fgs[ETH_MAX_TOTAL_FG];
 
 DECLARE_PERFG(int, dev_idx);
 

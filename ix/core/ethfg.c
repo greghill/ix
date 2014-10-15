@@ -12,6 +12,8 @@ extern const char __perfg_end[];
 
 DEFINE_PERCPU(void *, fg_offset);
 
+struct eth_fg *fgs[ETH_MAX_TOTAL_FG];
+
 DEFINE_PERFG(int, dev_idx);
 
 DEFINE_PERFG(int, fg_id);

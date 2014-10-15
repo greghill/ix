@@ -326,6 +326,7 @@ static int init_hw(void)
 			eth_fg_init_cpu(&eth->data->rx_fgs[j]);
 
 			eth_fg_set_current(&eth->data->rx_fgs[j]);
+			fgs[fg_id] = &eth->data->rx_fgs[j];
 			perfg_get(fg_id) = fg_id++;
 			perfg_get(dev_idx) = i;
 
