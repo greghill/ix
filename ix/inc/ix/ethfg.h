@@ -78,3 +78,5 @@ extern int eth_fg_init_cpu(struct eth_fg *fg);
 extern void eth_fg_free(struct eth_fg *fg);
 
 DECLARE_PERFG(int, dev_idx);
+
+DECLARE_PERFG(int, fg_id);

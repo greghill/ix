@@ -264,6 +264,7 @@ static int init_hw(void)
 	pthread_t tid;
 	struct rte_eth_rss_reta rss_reta;
 	int j, step;
+	int fg_id;
 
 	for (i = 0; i < cfg_dev_nr; i++) {
 		ret = init_create_ethdev(&cfg_dev[i]);
@@ -304,6 +305,7 @@ static int init_hw(void)
 	if (cfg_dev_nr * ETH_RSS_RETA_NUM_ENTRIES % cfg_cpu_nr != 0)
 		step++;
 
+	fg_id = 0;
 	for (i = 0; i < cfg_dev_nr; i++) {
 		struct rte_eth_dev *eth = eth_dev[i];
 
@@ -324,6 +326,7 @@ static int init_hw(void)
 			eth_fg_init_cpu(&eth->data->rx_fgs[j]);
 
 			eth_fg_set_current(&eth->data->rx_fgs[j]);
+			perfg_get(fg_id) = fg_id++;
 			perfg_get(dev_idx) = i;
 
 			tcp_init();
