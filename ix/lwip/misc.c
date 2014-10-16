@@ -54,7 +54,6 @@ static void tcpip_tcp_timer(struct timer *t)
 			perfg_get(tcpip_tcp_timer_active) = 0;
 		}
 	}
-
 	if (needed)
 		timer_add(&percpu_get(tcp_timer), TCP_TMR_INTERVAL);
 }
@@ -100,7 +99,7 @@ DEFINE_PERCPU(struct mempool, tcp_seg_mempool);
 
 static int init_mempool(struct mempool *m, int nr_elems, size_t elem_len)
 {
-	return mempool_create(m, nr_elems, elem_len);
+	return mempool_create(m, nr_elems, elem_len, MEMPOOL_SANITY_PERCPU,percpu_get(cpu_id));
 }
 
 int memp_init(void)

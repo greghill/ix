@@ -59,6 +59,7 @@
 #endif
 
 #include <string.h>
+#include <assert.h>
 
 /* Define some copy-macros for checksum-on-copy so that the code looks
    nicer by preventing too many ifdef's. */
@@ -169,6 +170,9 @@ tcp_create_segment(struct tcp_pcb *pcb, struct pbuf *p, u8_t flags, u32_t seqno,
     pbuf_free(p);
     return NULL;
   }
+  MEMPOOL_SANITY_LINK(pcb,p);
+  MEMPOOL_SANITY_LINK(pcb,seg);
+
   seg->flags = optflags;
   seg->next = NULL;
   seg->p = p;
@@ -933,6 +937,8 @@ tcp_output(struct tcp_pcb *pcb)
 #if TCP_CWND_DEBUG
   s16_t i = 0;
 #endif /* TCP_CWND_DEBUG */
+
+  MEMPOOL_SANITY_ACCESS(pcb);
 
   /* pcb->state LISTEN not allowed here */
   LWIP_ASSERT("don't call tcp_output for listen-pcbs",

@@ -39,14 +39,14 @@ static void mempool_init_buf(struct mempool *m, int nr_elems, size_t elem_len)
  *
  * Returns 0 if successful, otherwise fail.
  */
-int mempool_create(struct mempool *m, int nr_elems, size_t elem_len)
+int mempool_create(struct mempool *m, int nr_elems, size_t elem_len, int16_t foo, int16_t bar)
 {
 	int nr_pages;
 
 	if (!elem_len || !nr_elems)
 		return -EINVAL;
 
-	elem_len = align_up(elem_len, sizeof(long));
+	elem_len = align_up(elem_len, sizeof(long)) + sizeof(void*);
 	nr_pages = PGN_2MB(nr_elems * elem_len + PGMASK_2MB);
 	nr_elems = nr_pages * PGSIZE_2MB / elem_len;
 	m->nr_pages = nr_pages;

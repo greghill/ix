@@ -111,7 +111,7 @@ static void *stream_main(void *arg)
 	};
 
 	ret = mempool_create(&stream_conn_pool, stream_conn_pool_entries,
-		sizeof(struct stream_conn));
+			     sizeof(struct stream_conn),MEMPOOL_SANITY_GLOBAL,0);
 	if (ret) {
 		printf("unable to create mempool\n");
 		return NULL;

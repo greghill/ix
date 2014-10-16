@@ -32,7 +32,7 @@ int mbuf_init_cpu(void)
 
 	BUILD_ASSERT(sizeof(struct mbuf) <= MBUF_HEADER_LEN);
 
-	ret = mempool_pagemem_create(m, MBUF_CAPACITY, MBUF_LEN);
+	ret = mempool_pagemem_create(m, MBUF_CAPACITY, MBUF_LEN,MEMPOOL_SANITY_PERCPU,percpu_get(cpu_id));
 	if (ret)
 		return ret;
 

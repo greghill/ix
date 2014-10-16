@@ -581,7 +581,7 @@ int ixev_init_thread(void)
 {
 	int ret;
 
-	ret = mempool_create(&ixev_buf_pool, 131072, sizeof(struct ixev_buf));
+	ret = mempool_create(&ixev_buf_pool, 131072, sizeof(struct ixev_buf),MEMPOOL_SANITY_GLOBAL,0);
 	if (ret)
 		return ret;
 

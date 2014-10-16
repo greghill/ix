@@ -118,6 +118,7 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 	}
 
 	unset_current_queue();
+	unset_current_fg();
 }
 
 /* FIXME: change when we integrate better with LWIP */

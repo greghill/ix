@@ -1,5 +1,6 @@
+
 /**
- * @file
+ * @File
  * Transmission Control Protocol for IP
  *
  * This file contains common functions for the TCP implementation, such as functinos
@@ -57,6 +58,7 @@
 #include "lwip/nd6.h"
 
 #include <ix/kstats.h> // IX
+#include <assert.h>
 
 #include <string.h>
 
@@ -168,6 +170,8 @@ tcp_tmr(void)
 
 void tcp_close_with_reset(struct tcp_pcb *pcb)
 {
+
+	MEMPOOL_SANITY_ACCESS(pcb);
 	tcp_rst(pcb->snd_nxt, pcb->rcv_nxt, &pcb->local_ip, &pcb->remote_ip, pcb->local_port, pcb->remote_port, PCB_ISIPV6(pcb));
 	tcp_pcb_purge(pcb);
 	TCP_RMV_ACTIVE(pcb);
@@ -195,6 +199,7 @@ tcp_close_shutdown(struct tcp_pcb *pcb, u8_t rst_on_unacked_data)
 {
   err_t err;
 
+	MEMPOOL_SANITY_ACCESS(pcb);
   if (rst_on_unacked_data && ((pcb->state == ESTABLISHED) || (pcb->state == CLOSE_WAIT))) {
     if ((pcb->refused_data != NULL) || (pcb->rcv_wnd != TCP_WND)) {
       /* Not all data received by application, send RST to tell the remote
@@ -308,6 +313,7 @@ tcp_close_shutdown(struct tcp_pcb *pcb, u8_t rst_on_unacked_data)
 err_t
 tcp_close(struct tcp_pcb *pcb)
 {
+	MEMPOOL_SANITY_ACCESS(pcb);
 #if TCP_DEBUG
   LWIP_DEBUGF(TCP_DEBUG, ("tcp_close: closing in "));
   tcp_debug_print_state(pcb->state);
@@ -336,6 +342,7 @@ tcp_close(struct tcp_pcb *pcb)
 err_t
 tcp_shutdown(struct tcp_pcb *pcb, int shut_rx, int shut_tx)
 {
+	MEMPOOL_SANITY_ACCESS(pcb);
   if (pcb->state == LISTEN) {
     return ERR_CONN;
   }
@@ -385,6 +392,8 @@ tcp_abandon(struct tcp_pcb *pcb, int reset)
   tcp_err_fn errf;
 #endif /* LWIP_CALLBACK_API */
   void *errf_arg;
+
+	MEMPOOL_SANITY_ACCESS(pcb);
 
   /* pcb->state LISTEN not allowed here */
   LWIP_ASSERT("don't call tcp_abort/tcp_abandon for listen-pcbs",
@@ -437,6 +446,7 @@ tcp_abandon(struct tcp_pcb *pcb, int reset)
 void
 tcp_abort(struct tcp_pcb *pcb)
 {
+	MEMPOOL_SANITY_ACCESS(pcb);
   tcp_abandon(pcb, 1);
 }
 
@@ -461,6 +471,7 @@ tcp_bind(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port)
   int max_pcb_list = NUM_TCP_PCB_LISTS;
   struct tcp_pcb *cpcb;
 
+  MEMPOOL_SANITY_ACCESS(pcb);
   LWIP_ERROR("tcp_bind: can only bind in state CLOSED", pcb->state == CLOSED, return ERR_VAL);
 
 #if SO_REUSE
@@ -547,6 +558,7 @@ tcp_listen_with_backlog(struct tcp_pcb *pcb, u8_t backlog)
 {
   struct tcp_pcb_listen *lpcb;
 
+	MEMPOOL_SANITY_ACCESS(pcb);
   LWIP_UNUSED_ARG(backlog);
   LWIP_ERROR("tcp_listen: pcb already connected", pcb->state == CLOSED, return NULL);
 
@@ -668,6 +680,7 @@ tcp_recved(struct tcp_pcb *pcb, u16_t len)
 {
   int wnd_inflation;
 
+	MEMPOOL_SANITY_ACCESS(pcb);
   /* pcb->state LISTEN not allowed here */
   LWIP_ASSERT("don't call tcp_recved for listen-pcbs",
     pcb->state != LISTEN);
@@ -743,6 +756,8 @@ tcp_connect(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port,
   err_t ret;
   u32_t iss;
   u16_t old_local_port;
+
+	MEMPOOL_SANITY_ACCESS(pcb);
 
   LWIP_ERROR("tcp_connect: can only connect from state CLOSED", pcb->state == CLOSED, return ERR_ISCONN);
 
@@ -838,6 +853,8 @@ tcp_connect(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port,
 
 void pcb_remove_called_from_timer(struct tcp_pcb *pcb, int pcb_reset)
 {
+
+	MEMPOOL_SANITY_ACCESS(pcb);
       tcp_pcb_purge(pcb);
       /* Remove PCB from tcp_active_pcbs list. */
       TCP_HASH_RMV(perfg_get(tcp_active_pcbs_tbl), pcb);
@@ -886,6 +903,9 @@ tcp_slowtmr_start:
     LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: no active pcbs\n"));
   }
   while (pcb != NULL) {
+
+	MEMPOOL_SANITY_ACCESS(pcb);
+
     LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: processing active pcb\n"));
     LWIP_ASSERT("tcp_slowtmr: active pcb->state != CLOSED\n", pcb->state != CLOSED);
     LWIP_ASSERT("tcp_slowtmr: active pcb->state != LISTEN\n", pcb->state != LISTEN);
@@ -1048,6 +1068,7 @@ void tcp_send_delayed_ack(struct timer *t)
 {
 	struct tcp_pcb *pcb = container_of(t, struct tcp_pcb, delayed_ack_timer);
 
+	MEMPOOL_SANITY_ACCESS(pcb);
 	KSTATS_VECTOR(timer_tcp_send_delayed_ack);
 	percpu_get(current_perqueue) = pcb->perqueue;
 
@@ -1062,6 +1083,7 @@ void tcp_retransmit_handler(struct timer *t)
 	int pcb_remove;
 	struct tcp_pcb *pcb = container_of(t, struct tcp_pcb, retransmit_timer);
 
+	MEMPOOL_SANITY_ACCESS(pcb);
 	KSTATS_VECTOR(timer_tcp_retransmit);
 	percpu_get(current_perqueue) = pcb->perqueue;
 
@@ -1070,6 +1092,7 @@ void tcp_retransmit_handler(struct timer *t)
 
 	if (pcb->snd_wnd == 0) {
 		pcb->rto = (pcb->sa >> 3) + pcb->sv;
+		TIMER_SANITY(pcb);
 		timer_add(t, pcb->rto * RTO_UNITS);
 		return;
 	}
@@ -1110,6 +1133,7 @@ void tcp_persist_handler(struct timer *t)
 {
 	struct tcp_pcb *pcb = container_of(t, struct tcp_pcb, persist_timer);
 
+	MEMPOOL_SANITY_ACCESS(pcb);
 	KSTATS_VECTOR(timer_tcp_persist);
 	percpu_get(current_perqueue) = pcb->perqueue;
 
@@ -1119,6 +1143,7 @@ void tcp_persist_handler(struct timer *t)
 		pcb->persist_backoff++;
 	}
 	tcp_zero_window_probe(pcb);
+	TIMER_SANITY(pcb);
 	timer_add(t, tcp_persist_backoff[pcb->persist_backoff - 1] * RTO_UNITS);
 }
 
@@ -1167,6 +1192,8 @@ tcp_process_refused_data(struct tcp_pcb *pcb)
 {
 #if TCP_QUEUE_OOSEQ && LWIP_WND_SCALE
   struct pbuf *rest;
+
+	MEMPOOL_SANITY_ACCESS(pcb);
   while (pcb->refused_data != NULL)
 #endif /* TCP_QUEUE_OOSEQ && LWIP_WND_SCALE */
   {
@@ -1383,6 +1410,7 @@ tcp_alloc(u8_t prio)
   u32_t iss;
 
   pcb = (struct tcp_pcb *)memp_malloc(MEMP_TCP_PCB);
+
   if (pcb == NULL) {
     /* Try killing oldest connection in TIME-WAIT. */
     LWIP_DEBUGF(TCP_DEBUG, ("tcp_alloc: killing off oldest TIME-WAIT connection\n"));
@@ -1406,6 +1434,7 @@ tcp_alloc(u8_t prio)
     }
   }
   if (pcb != NULL) {
+    MEMPOOL_SANITY_ACCESS(pcb);
     memset(pcb, 0, sizeof(struct tcp_pcb));
     pcb->prio = prio;
     pcb->snd_buf = TCP_SND_BUF;
@@ -1501,6 +1530,7 @@ tcp_arg(struct tcp_pcb *pcb, void *arg)
 {
   /* This function is allowed to be called for both listen pcbs and
      connection pcbs. */
+  MEMPOOL_SANITY_ACCESS(pcb);
   pcb->callback_arg = arg;
 }
 #if LWIP_CALLBACK_API
@@ -1517,6 +1547,7 @@ tcp_recv(struct tcp_pcb *pcb, tcp_recv_fn recv)
 {
   LWIP_ASSERT("invalid socket state for recv callback", pcb->state != LISTEN);
   pcb->recv = recv;
+  MEMPOOL_SANITY_ACCESS(pcb);
 }
 
 /**
@@ -1530,6 +1561,7 @@ void
 tcp_sent(struct tcp_pcb *pcb, tcp_sent_fn sent)
 {
   LWIP_ASSERT("invalid socket state for sent callback", pcb->state != LISTEN);
+  MEMPOOL_SANITY_ACCESS(pcb);
   pcb->sent = sent;
 }
 
@@ -1545,6 +1577,7 @@ void
 tcp_err(struct tcp_pcb *pcb, tcp_err_fn err)
 {
   LWIP_ASSERT("invalid socket state for err callback", pcb->state != LISTEN);
+  MEMPOOL_SANITY_ACCESS(pcb);
   pcb->errf = err;
 }
 
@@ -1575,6 +1608,7 @@ tcp_accept(struct tcp_pcb *pcb, tcp_accept_fn accept)
 void
 tcp_poll(struct tcp_pcb *pcb, tcp_poll_fn poll, u8_t interval)
 {
+  MEMPOOL_SANITY_ACCESS(pcb);
   LWIP_ASSERT("invalid socket state for poll", pcb->state != LISTEN);
 #if LWIP_CALLBACK_API
   pcb->poll = poll;
@@ -1593,6 +1627,8 @@ tcp_poll(struct tcp_pcb *pcb, tcp_poll_fn poll, u8_t interval)
 void
 tcp_pcb_purge(struct tcp_pcb *pcb)
 {
+  MEMPOOL_SANITY_ACCESS(pcb);
+
   if (pcb->state != CLOSED &&
      pcb->state != TIME_WAIT &&
      pcb->state != LISTEN) {
@@ -1664,6 +1700,7 @@ tcp_pcb_remove(struct tcp_pcb **pcblist, struct tcp_pcb *pcb)
 {
   TCP_RMV(pcblist, pcb);
 
+  MEMPOOL_SANITY_ACCESS(pcb);
   tcp_pcb_purge(pcb);
 
   /* if there is an outstanding delayed ACKs, send it */
