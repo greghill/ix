@@ -59,6 +59,7 @@
 #endif
 
 #include <string.h>
+#include <assert.h>
 
 /* Define some copy-macros for checksum-on-copy so that the code looks
    nicer by preventing too many ifdef's. */

@@ -63,6 +63,7 @@
 #if LWIP_ND6_TCP_REACHABILITY_HINTS
 #include "lwip/nd6.h"
 #endif /* LWIP_ND6_TCP_REACHABILITY_HINTS */
+#include <assert.h>
 
 /* These variables are global to all functions involved in the input
    processing of TCP segments. They are set by the tcp_input()
@@ -942,6 +943,7 @@ tcp_receive(struct tcp_pcb *pcb)
           /* start persist timer */
           pcb->persist_cnt = 0;
           pcb->persist_backoff = 1;
+	  TIMER_SANITY(pcb);
           timer_add(&pcb->persist_timer, tcp_persist_backoff[pcb->persist_backoff - 1] * RTO_UNITS);
         }
       } else {

@@ -54,7 +54,6 @@ static void tcpip_tcp_timer(struct timer *t)
 			perfg_get(tcpip_tcp_timer_active) = 0;
 		}
 	}
-
 	if (needed)
 		timer_add(&percpu_get(tcp_timer), TCP_TMR_INTERVAL);
 }

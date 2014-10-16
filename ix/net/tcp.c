@@ -1,3 +1,4 @@
+
 /**
  * @file
  * Transmission Control Protocol for IP
@@ -57,6 +58,7 @@
 #include "lwip/nd6.h"
 
 #include <ix/kstats.h> // IX
+#include <assert.h>
 
 #include <string.h>
 
@@ -1070,6 +1072,7 @@ void tcp_retransmit_handler(struct timer *t)
 
 	if (pcb->snd_wnd == 0) {
 		pcb->rto = (pcb->sa >> 3) + pcb->sv;
+		TIMER_SANITY(pcb);
 		timer_add(t, pcb->rto * RTO_UNITS);
 		return;
 	}
@@ -1119,6 +1122,7 @@ void tcp_persist_handler(struct timer *t)
 		pcb->persist_backoff++;
 	}
 	tcp_zero_window_probe(pcb);
+	TIMER_SANITY(pcb);
 	timer_add(t, tcp_persist_backoff[pcb->persist_backoff - 1] * RTO_UNITS);
 }
 

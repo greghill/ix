@@ -12,6 +12,16 @@ struct timer {
 	uint64_t expires;
 };
 
+#ifdef ENABLE_KSTATS
+#define TIMER_SANITY(_container) do {\
+	MEMPOOL_SANITY_ACCESS(_container); \
+	MEMPOOL_SANITY_ISPERFG(_container);\
+	} while (0);
+#else
+#define TIMER_SANITY
+#endif
+
+
 #define ONE_SECOND	1000000
 #define ONE_MS		1000
 #define ONE_US		1
@@ -39,6 +49,7 @@ static inline bool timer_pending(struct timer *t)
 
 extern int timer_add(struct timer *t, uint64_t usecs);
 extern void timer_add_for_next_tick(struct timer *t);
+
 
 static inline void __timer_del(struct timer *t)
 {

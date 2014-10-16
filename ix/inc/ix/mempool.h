@@ -35,16 +35,20 @@ struct mempool {
 #define MEMPOOL_SANITY_PERFG     3
 
 #ifdef ENABLE_KSTATS
+
+#define MEMPOOL_SANITY_ISPERFG(_a) assert((_a)->pool->sanity >>16 == MEMPOOL_SANITY_PERFG)
+
+
 #define MEMPOOL_SANITY_ACCESS(_a) do {\
-		if (((_a)->pool->sanity >>16)==MEMPOOL_SANITY_PERCPU) assert((percpu_get(cpu_id))==((_a)->pool->sanity &0xffff)); \
-		if (((_a)->pool->sanity >>16)==MEMPOOL_SANITY_PERQUEUE) assert((perqueue_get(queue_id))==((_a)->pool->sanity &0xffff)); \
-		if (((_a)->pool->sanity >>16)==MEMPOOL_SANITY_PERFG) assert((perfg_get(fg_id))==((_a)->pool->sanity &0xffff)); \
-	} while (0);
+	if (((_a)->pool->sanity >>16)==MEMPOOL_SANITY_PERCPU) assert((percpu_get(cpu_id))==((_a)->pool->sanity &0xffff)); \
+	if (((_a)->pool->sanity >>16)==MEMPOOL_SANITY_PERQUEUE) assert((perqueue_get(queue_id))==((_a)->pool->sanity &0xffff)); \
+	if (((_a)->pool->sanity >>16)==MEMPOOL_SANITY_PERFG) assert((perfg_get(fg_id))==((_a)->pool->sanity &0xffff)); \
+} while (0);
 
 #define MEMPOOL_SANITY_LINK(_a,_b) do {\
-		if ((_b) != NULL) assert((_a)->pool->sanity == (_b)->pool->sanity); \
+	if ((_b) != NULL) assert((_a)->pool->sanity == (_b)->pool->sanity); \
 	MEMPOOL_SANITY_ACCESS(_a);\
-	} while (0);
+} while (0);
 
 #else
 #define MEMPOOL_SANITY_ACCESS(_a)
