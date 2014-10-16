@@ -2,6 +2,7 @@
  * tcp_api.c - plumbing between the TCP and userspace
  */
 
+#include <assert.h>
 #include <ix/stddef.h>
 #include <ix/errno.h>
 #include <ix/syscall.h>
@@ -28,6 +29,7 @@ static DEFINE_PERCPU(uint16_t, local_port);
  * a seperate pcb. Otherwise, we'd be plagued by use-after-free problems.
  */
 struct tcpapi_pcb {
+	struct mempool *pool;
 	unsigned long alive; /* FIXME: this overlaps with mempool_hdr so
 			      * we can tell if this pcb is allocated or not. */
 	struct tcp_pcb *pcb;
@@ -68,6 +70,8 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 	api = (struct tcpapi_pcb *) ((uintptr_t) p->buf +
 				     idx * sizeof(struct tcpapi_pcb));
 
+	MEMPOOL_SANITY_ACCESS(api);
+
 	/* check if the handle is actually allocated */
 	if (unlikely(api->alive > 1))
 		return NULL;
@@ -86,7 +90,7 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 static inline hid_t tcpapi_to_handle(struct tcpapi_pcb *pcb)
 {
 	struct mempool *p = &perfg_get(pcb_mempool);
-
+	
 	return (((uintptr_t) pcb - (uintptr_t) p->buf) / sizeof(struct tcpapi_pcb)) |
 	       ((uintptr_t) (perfg_get(fg_id)) << 48);
 }
@@ -94,6 +98,8 @@ static inline hid_t tcpapi_to_handle(struct tcpapi_pcb *pcb)
 static void recv_a_pbuf(struct tcpapi_pcb *api, struct pbuf *p)
 {
 	struct mbuf *pkt;
+	MEMPOOL_SANITY_LINK(api,p);
+
 	 /* Walk through the full receive chain */
 	do {
 		pkt = p->mbuf;
@@ -398,7 +404,6 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	api = mempool_alloc(&perfg_get(pcb_mempool));
 	if (unlikely(!api))
 		return ERR_MEM;
-
 	id = mempool_alloc(&perfg_get(id_mempool));
 	if (unlikely(!id)) {
 		mempool_free(&perfg_get(pcb_mempool), api);
@@ -582,7 +587,7 @@ int tcp_api_init(void)
 	tcp_accept(lpcb, on_accept);
 
 	ret = mempool_create(&perfg_get(pcb_mempool), MAX_PCBS,
-			     sizeof(struct tcpapi_pcb));
+			     sizeof(struct tcpapi_pcb), MEMPOOL_SANITY_PERFG,perfg_get(fg_id));
 	if (ret)
 		return ret;
 

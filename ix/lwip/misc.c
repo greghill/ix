@@ -100,7 +100,7 @@ DEFINE_PERCPU(struct mempool, tcp_seg_mempool);
 
 static int init_mempool(struct mempool *m, int nr_elems, size_t elem_len)
 {
-	return mempool_create(m, nr_elems, elem_len);
+	return mempool_create(m, nr_elems, elem_len, MEMPOOL_SANITY_PERCPU,percpu_get(cpu_id));
 }
 
 int memp_init(void)

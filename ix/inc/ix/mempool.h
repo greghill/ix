@@ -8,6 +8,7 @@
 #include <ix/mem.h>
 
 struct mempool_hdr {
+	struct mempool     *pool;
 	struct mempool_hdr *next;
 } __packed;
 
@@ -15,12 +16,41 @@ struct mempool {
 	void			*buf;
 	struct mempool_hdr	*head;
 	int			nr_pages;
+	int                     sanity;
 
 #ifdef __KERNEL__
 	void 			*iomap_addr;
 	uintptr_t		iomap_offset;
 #endif
 };
+
+
+/*
+ * mempool sanity macros ensures that pointers between mempool-allocated objects are of identical type
+ */
+
+#define MEMPOOL_SANITY_GLOBAL    0
+#define MEMPOOL_SANITY_PERCPU    1
+#define MEMPOOL_SANITY_PERQUEUE  2
+#define MEMPOOL_SANITY_PERFG     3
+
+#ifdef ENABLE_KSTATS
+#define MEMPOOL_SANITY_ACCESS(_a) do {\
+		if (((_a)->pool->sanity >>16)==MEMPOOL_SANITY_PERCPU) assert((percpu_get(cpu_id))==((_a)->pool->sanity &0xffff)); \
+		if (((_a)->pool->sanity >>16)==MEMPOOL_SANITY_PERQUEUE) assert((perqueue_get(queue_id))==((_a)->pool->sanity &0xffff)); \
+		if (((_a)->pool->sanity >>16)==MEMPOOL_SANITY_PERFG) assert((perfg_get(fg_id))==((_a)->pool->sanity &0xffff)); \
+	} while (0);
+
+#define MEMPOOL_SANITY_LINK(_a,_b) do {\
+		if ((_b) != NULL) assert((_a)->pool->sanity == (_b)->pool->sanity); \
+	MEMPOOL_SANITY_ACCESS(_a);\
+	} while (0);
+
+#else
+#define MEMPOOL_SANITY_ACCESS(_a)
+#define MEMPOOL_SANITY_CHECK(_a,_b)
+#endif
+
 
 
 /**
@@ -33,9 +63,10 @@ static inline void *mempool_alloc(struct mempool *m)
 {
 	struct mempool_hdr *h = m->head;
 
-	if (likely(h))
+	if (likely(h)) {
 		m->head = h->next;
-
+		h->pool = m;
+	}
 	return (void *) h;
 }
 
@@ -54,7 +85,7 @@ static inline void mempool_free(struct mempool *m, void *ptr)
 	m->head = elem;
 }
 
-extern int mempool_create(struct mempool *m, int nr_elems, size_t elem_len);
+extern int mempool_create(struct mempool *m, int nr_elems, size_t elem_len, int16_t sanity_type, int16_t sanity_id);
 extern void mempool_destroy(struct mempool *m);
 
 

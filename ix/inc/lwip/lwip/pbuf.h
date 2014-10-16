@@ -86,6 +86,7 @@ typedef enum {
 #define PBUF_FLAG_TCP_FIN   0x20U
 
 struct pbuf {
+  struct mempool *pool;
   /** next pbuf in singly linked pbuf chain */
   struct pbuf *next;
   struct pbuf *tcp_api_next;

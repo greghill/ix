@@ -363,6 +363,6 @@ static void arp_timer_handler(struct timer *t)
 int arp_init(void)
 {
 	return mempool_create(&arp_mempool, ARP_MAX_ENTRIES,
-			      sizeof(struct arp_entry));
+			      sizeof(struct arp_entry), MEMPOOL_SANITY_GLOBAL,0);
 }
 
