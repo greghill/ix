@@ -119,6 +119,7 @@ tcp_input(struct pbuf *p, struct netif *inp)
   TCP_STATS_INC(tcp.recv);
   snmp_inc_tcpinsegs();
 
+  MEMPOOL_SANITY_ACCESS(p);
   percpu_get(tcphdr) = (struct tcp_hdr *)p->payload;
 
 #if TCP_INPUT_DEBUG
@@ -179,6 +180,7 @@ tcp_input(struct pbuf *p, struct netif *inp)
 
   pcb = perfg_get(tcp_active_pcbs_tbl)[tcp_to_idx(ipX_current_dest_addr(), ipX_current_src_addr(), percpu_get(tcphdr)->dest, percpu_get(tcphdr)->src)];
   for(; pcb != NULL; pcb = pcb->hash_bucket_next) {
+    MEMPOOL_SANITY_LINK(pcb,p);
     LWIP_ASSERT("tcp_input: active pcb->state != CLOSED", pcb->state != CLOSED);
     LWIP_ASSERT("tcp_input: active pcb->state != TIME-WAIT", pcb->state != TIME_WAIT);
     LWIP_ASSERT("tcp_input: active pcb->state != LISTEN", pcb->state != LISTEN);
@@ -197,6 +199,7 @@ tcp_input(struct pbuf *p, struct netif *inp)
     /* If it did not go to an active connection, we check the connections
        in the TIME-WAIT state. */
     for(pcb = perfg_get(tcp_tw_pcbs); pcb != NULL; pcb = pcb->next) {
+	    MEMPOOL_SANITY_LINK(pcb,p);
       LWIP_ASSERT("tcp_input: TIME-WAIT pcb->state == TIME-WAIT", pcb->state == TIME_WAIT);
       if (pcb->remote_port == percpu_get(tcphdr)->src &&
           pcb->local_port == percpu_get(tcphdr)->dest &&

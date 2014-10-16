@@ -280,6 +280,7 @@ PACK_STRUCT_END
 
 /* This structure represents a TCP segment on the unsent, unacked and ooseq queues */
 struct tcp_seg {
+	struct mempool *pool; // IX
   struct tcp_seg *next;    /* used when putting segements on a queue */
   struct pbuf *p;          /* buffer containing data + TCP header */
   u16_t len;               /* the TCP length of this segment */
