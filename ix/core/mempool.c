@@ -91,13 +91,17 @@ mempool_init_buf_with_pages(struct mempool *m, int elems_per_page,
 			    int nr_pages, size_t elem_len)
 {
 	int i, j;
-	struct mempool_hdr *cur, *prev = (struct mempool_hdr *) &m->head;
+	struct mempool_hdr *cur, *prev=NULL;
+
 
 	for (i = 0; i < nr_pages; i++) {
 			cur = (struct mempool_hdr *)
 				((uintptr_t) m->buf + i * PGSIZE_2MB);
 		for (j = 0; j < elems_per_page; j++) {
-			prev->next = cur;
+			if (prev==NULL)
+				m->head = cur;
+			else
+				prev->next = cur;
 			prev = cur;
 			cur = (struct mempool_hdr *)
 				((uintptr_t) cur + elem_len);
