@@ -29,7 +29,6 @@ static DEFINE_PERCPU(uint16_t, local_port);
  * a seperate pcb. Otherwise, we'd be plagued by use-after-free problems.
  */
 struct tcpapi_pcb {
-	struct mempool *pool;
 	unsigned long alive; /* FIXME: this overlaps with mempool_hdr so
 			      * we can tell if this pcb is allocated or not. */
 	struct tcp_pcb *pcb;
@@ -593,7 +592,7 @@ int tcp_api_init(void)
 
 	ret = mempool_pagemem_create(&perfg_get(id_mempool),
 				     MAX_PCBS,
-				     sizeof(struct ip_tuple));
+				     sizeof(struct ip_tuple),MEMPOOL_SANITY_PERFG,perfg_get(fg_id));
 	if (ret)
 		return ret;
 

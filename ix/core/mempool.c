@@ -1,5 +1,5 @@
 /*
- * mempool.c - A fast per-CPU memory pool implementation
+ * Mempool.c - A fast per-CPU memory pool implementation
  *
  * A mempool is a heap that only supports allocations of a
  * single fixed size. Generally, mempools are created up front
@@ -25,16 +25,20 @@
 #include <ix/mempool.h>
 #include <ix/page.h>
 #include <ix/vm.h>
+#include <stdio.h>
+
 
 static void mempool_init_buf(struct mempool *m, int nr_elems, size_t elem_len)
 {
 	int i;
-	uintptr_t pos = (uintptr_t) m->buf;
+	uintptr_t pos = ((uintptr_t) m->buf) + sizeof(void*);
 	uintptr_t next_pos = pos + elem_len;
 
-	m->head = (struct mempool_hdr *)pos;
-
+	m->head = (struct mempool_hdr *)(pos);
+	
 	for (i = 0; i < nr_elems - 1; i++) {
+		struct mempool **hidden = (struct mempool **)pos;
+		hidden[-1] = m;
 		((struct mempool_hdr *)pos)->next =
 			(struct mempool_hdr *)next_pos;
 
@@ -62,9 +66,12 @@ int mempool_create(struct mempool *m, int nr_elems, size_t elem_len, int16_t san
 	if (!elem_len || !nr_elems)
 		return -EINVAL;
 
-	elem_len = align_up(elem_len, sizeof(long));
+	printf("mempool_create 0x%p\n",m);
+	// add space for pool pointer
+	elem_len = align_up(elem_len, sizeof(long)) + sizeof(void *);
 	nr_pages = PGN_2MB(nr_elems * elem_len + PGMASK_2MB);
 	nr_elems = nr_pages * PGSIZE_2MB / elem_len;
+	m->poison = 0x12911776;
 	m->nr_pages = nr_pages;
 	m->sanity = (sanity_type <<16) | sanity_id;
 	m->buf = mem_alloc_pages(nr_pages, PGSIZE_2MB, NULL, MPOL_PREFERRED);
@@ -95,9 +102,13 @@ mempool_init_buf_with_pages(struct mempool *m, int elems_per_page,
 
 
 	for (i = 0; i < nr_pages; i++) {
-			cur = (struct mempool_hdr *)
-				((uintptr_t) m->buf + i * PGSIZE_2MB);
+		cur = (struct mempool_hdr *)
+				((uintptr_t) m->buf + i * PGSIZE_2MB + sizeof(void*));
 		for (j = 0; j < elems_per_page; j++) {
+
+			struct mempool **hidden = (struct mempool **)cur;
+			hidden[-1] = m;
+			
 			if (prev==NULL)
 				m->head = cur;
 			else
@@ -127,17 +138,20 @@ mempool_init_buf_with_pages(struct mempool *m, int elems_per_page,
  *
  * Returns 0 if successful, otherwise fail.
  */
-int mempool_pagemem_create(struct mempool *m, int nr_elems, size_t elem_len)
+int mempool_pagemem_create(struct mempool *m, int nr_elems, size_t elem_len, int16_t sanity_type, int16_t sanity_id)
 {
 	int nr_pages, elems_per_page;
 
 	if (!elem_len || elem_len > PGSIZE_2MB || !nr_elems)
 		return -EINVAL;
 
-	elem_len = align_up(elem_len, sizeof(long));
+	printf("mempool_create 0x%p\n",m);
+	elem_len = align_up(elem_len, sizeof(long)) + sizeof(void*);
 	elems_per_page = PGSIZE_2MB / elem_len;
 	nr_pages = div_up(nr_elems, elems_per_page);
 	m->nr_pages = nr_pages;
+	m->sanity = (sanity_type <<16) | sanity_id;
+      	m->poison = 0x12911776;
 
 	m->buf = page_alloc_contig(nr_pages);
 	if (!m->buf)

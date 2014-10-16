@@ -189,7 +189,6 @@ enum tcp_state {
 
 /* the TCP protocol control block */
 struct tcp_pcb {
-	struct mempool *pool;
 /** common PCB members */
   IP_PCB;
 /** protocol specific PCB members */

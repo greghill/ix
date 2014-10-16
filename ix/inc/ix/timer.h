@@ -18,7 +18,7 @@ struct timer {
 	MEMPOOL_SANITY_ISPERFG(_container);\
 	} while (0);
 #else
-#define TIMER_SANITY
+#define TIMER_SANITY(_container)
 #endif
 
 

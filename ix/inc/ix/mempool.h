@@ -6,13 +6,17 @@
 
 #include <ix/stddef.h>
 #include <ix/mem.h>
+#include <assert.h>
+#include <ix/cpu.h>
+#include <ix/queue.h>
+#include <ix/ethfg.h>
 
 struct mempool_hdr {
-	struct mempool     *pool;
 	struct mempool_hdr *next;
 } __packed;
 
 struct mempool {
+	uint64_t                poison;
 	void			*buf;
 	struct mempool_hdr	*head;
 	int			nr_pages;
@@ -36,23 +40,39 @@ struct mempool {
 
 #ifdef ENABLE_KSTATS
 
-#define MEMPOOL_SANITY_ISPERFG(_a) assert((_a)->pool->sanity >>16 == MEMPOOL_SANITY_PERFG)
 
+#define MEMPOOL_SANITY_OBJECT(_a) do {\
+	struct mempool **hidden = (struct mempool **)_a;\
+	assert(hidden[-1] && hidden[-1]->poison == 0x12911776); \
+	} while (0);
 
-#define MEMPOOL_SANITY_ACCESS(_a) do {\
-	if (((_a)->pool->sanity >>16)==MEMPOOL_SANITY_PERCPU) assert((percpu_get(cpu_id))==((_a)->pool->sanity &0xffff)); \
-	if (((_a)->pool->sanity >>16)==MEMPOOL_SANITY_PERQUEUE) assert((perqueue_get(queue_id))==((_a)->pool->sanity &0xffff)); \
-	if (((_a)->pool->sanity >>16)==MEMPOOL_SANITY_PERFG) assert((perfg_get(fg_id))==((_a)->pool->sanity &0xffff)); \
-} while (0);
+static inline int __mempool_get_sanity(void *a) {
+	struct mempool *p = (struct mempool *)(((uint64_t) a))-sizeof(void*);
+	return p->sanity;
+}
 
-#define MEMPOOL_SANITY_LINK(_a,_b) do {\
-	if ((_b) != NULL) assert((_a)->pool->sanity == (_b)->pool->sanity); \
+#define MEMPOOL_SANITY_ISPERFG(_a) assert(__mempool_get_sanity(_a)>>16 == MEMPOOL_SANITY_PERFG)
+
+#define MEMPOOL_SANITY_ACCESS(_obj)   do { \
+	MEMPOOL_SANITY_OBJECT(_obj);\
+	int sanity = __mempool_get_sanity(_obj); \
+	if ((sanity >>16)==MEMPOOL_SANITY_PERCPU) assert(percpu_get(cpu_id)==(sanity & 0xffff));\
+	if ((sanity >>16)==MEMPOOL_SANITY_PERQUEUE) assert(perqueue_get(queue_id)==(sanity &0xffff));\
+	if ((sanity >>16)==MEMPOOL_SANITY_PERFG) assert(perfg_get(fg_id)==(sanity &0xffff));\
+	} while (0);
+
+#define  MEMPOOL_SANITY_LINK(_a,_b) do {\
 	MEMPOOL_SANITY_ACCESS(_a);\
-} while (0);
+	MEMPOOL_SANITY_ACCESS(_b);\
+	int sa = __mempool_get_sanity(_a);\
+	int sb = __mempool_get_sanity(_b);\
+	assert (sa == sb);\
+	}  while (0);
 
 #else
+#define MEMPOOL_SANITY_ISPERFG(_a)
 #define MEMPOOL_SANITY_ACCESS(_a)
-#define MEMPOOL_SANITY_CHECK(_a,_b)
+#define MEMPOOL_SANITY_LINK(_a,_b)
 #endif
 
 
@@ -69,7 +89,6 @@ static inline void *mempool_alloc(struct mempool *m)
 
 	if (likely(h)) {
 		m->head = h->next;
-		h->pool = m;
 	}
 	return (void *) h;
 }
@@ -108,7 +127,7 @@ static inline void *mempool_pagemem_to_iomap(struct mempool *m, void *ptr)
 }
 
 extern int
-mempool_pagemem_create(struct mempool *m, int nr_elems, size_t elem_len);
+mempool_pagemem_create(struct mempool *m, int nr_elems, size_t elem_len,int16_t sanity_type, int16_t sanity_id);
 extern int mempool_pagemem_map_to_user(struct mempool *m);
 extern void mempool_pagemem_destroy(struct mempool *m);
 
