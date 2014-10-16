@@ -20,16 +20,16 @@ struct ip_globals
 
 void tcp_input(struct pbuf *p, struct netif *inp);
 
-DEFINE_PERQUEUE(struct ip_globals, ip_data);
+DEFINE_PERFG(struct ip_globals, ip_data);
 
 extern void tcp_tmr(void);
-DECLARE_PERQUEUE(struct tcp_pcb *, tcp_active_pcbs);
-DECLARE_PERQUEUE(struct tcp_pcb *, tcp_tw_pcbs);
+DECLARE_PERFG(struct tcp_pcb *, tcp_active_pcbs);
+DECLARE_PERFG(struct tcp_pcb *, tcp_tw_pcbs);
 /* in us */
 #define TCP_TMR_INTERVAL 250000
 
 static DEFINE_PERCPU(struct timer, tcp_timer);
-static DEFINE_PERQUEUE(int, tcpip_tcp_timer_active);
+static DEFINE_PERFG(int, tcpip_tcp_timer_active);
 
 static void tcpip_tcp_timer(struct timer *t)
 {
@@ -38,19 +38,19 @@ static void tcpip_tcp_timer(struct timer *t)
 
 	needed = 0;
 	for_each_queue(queue) {
-		if (!perqueue_get(tcpip_tcp_timer_active))
+		if (!perfg_get(tcpip_tcp_timer_active))
 			continue;
 
 		/* call TCP timer handler */
 		tcp_tmr();
 
 		/* timer still needed? */
-		if (perqueue_get(tcp_active_pcbs) || perqueue_get(tcp_tw_pcbs)) {
+		if (perfg_get(tcp_active_pcbs) || perfg_get(tcp_tw_pcbs)) {
 			/* restart timer */
 			needed = 1;
 		} else {
 			/* disable timer */
-			perqueue_get(tcpip_tcp_timer_active) = 0;
+			perfg_get(tcpip_tcp_timer_active) = 0;
 		}
 	}
 
@@ -61,9 +61,9 @@ static void tcpip_tcp_timer(struct timer *t)
 void tcp_timer_needed(void)
 {
 	/* timer is off but needed again? */
-	if (!perqueue_get(tcpip_tcp_timer_active) && (perqueue_get(tcp_active_pcbs) || perqueue_get(tcp_tw_pcbs))) {
+	if (!perfg_get(tcpip_tcp_timer_active) && (perfg_get(tcp_active_pcbs) || perfg_get(tcp_tw_pcbs))) {
 		/* enable and start timer */
-		perqueue_get(tcpip_tcp_timer_active) = 1;
+		perfg_get(tcpip_tcp_timer_active) = 1;
 		if (!percpu_get(tcp_timer).handler)
 			timer_init_entry(&percpu_get(tcp_timer), &tcpip_tcp_timer);
 
@@ -84,8 +84,8 @@ void tcp_input_tmp(struct mbuf *pkt, struct ip_hdr *iphdr, void *tcphdr)
 	pbuf = pbuf_alloc(PBUF_RAW, ntoh16(iphdr->len) - iphdr->header_len * 4, PBUF_ROM);
 	pbuf->payload = tcphdr;
 	pbuf->mbuf = pkt;
-	perqueue_get(ip_data).current_iphdr_dest.addr = iphdr->dst_addr.addr;
-	perqueue_get(ip_data).current_iphdr_src.addr = iphdr->src_addr.addr;
+	perfg_get(ip_data).current_iphdr_dest.addr = iphdr->dst_addr.addr;
+	perfg_get(ip_data).current_iphdr_src.addr = iphdr->src_addr.addr;
 	tcp_input(pbuf, &netif);
 }
 

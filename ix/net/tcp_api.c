@@ -17,7 +17,7 @@
 
 #define MAX_PCBS	65536
 
-static DEFINE_PERQUEUE(struct tcp_pcb *, listen_pcb);
+static DEFINE_PERFG(struct tcp_pcb *, listen_pcb);
 /* FIXME: this should be probably per queue */
 static DEFINE_PERCPU(uint16_t, local_port);
 /* FIXME: this should be more adaptive to various configurations */
@@ -40,8 +40,8 @@ struct tcpapi_pcb {
 	bool accepted;
 };
 
-static DEFINE_PERQUEUE(struct mempool, pcb_mempool);
-static DEFINE_PERQUEUE(struct mempool, id_mempool);
+static DEFINE_PERFG(struct mempool, pcb_mempool);
+static DEFINE_PERFG(struct mempool, id_mempool);
 
 /**
  * handle_to_tcpapi - converts a handle to a PCB
@@ -62,7 +62,7 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 		return NULL;
 
 	set_current_queue(percpu_get(eth_rxqs[queue]));
-	p = &perqueue_get(pcb_mempool);
+	p = &perfg_get(pcb_mempool);
 
 	api = (struct tcpapi_pcb *) ((uintptr_t) p->buf +
 				     idx * sizeof(struct tcpapi_pcb));
@@ -84,7 +84,7 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
  */
 static inline hid_t tcpapi_to_handle(struct tcpapi_pcb *pcb)
 {
-	struct mempool *p = &perqueue_get(pcb_mempool);
+	struct mempool *p = &perfg_get(pcb_mempool);
 
 	return (((uintptr_t) pcb - (uintptr_t) p->buf) / sizeof(struct tcpapi_pcb)) |
 	       ((uintptr_t) (perqueue_get(queue_id)) << 48);
@@ -126,7 +126,7 @@ long bsys_tcp_accept(hid_t handle, unsigned long cookie)
 	}
 
 	if (api->id) {
-		mempool_free(&perqueue_get(id_mempool), api->id);
+		mempool_free(&perfg_get(id_mempool), api->id);
 		api->id = NULL;
 	}
 
@@ -293,10 +293,10 @@ long bsys_tcp_close(hid_t handle)
 	}
 
 	if (api->id) {
-		mempool_free(&perqueue_get(id_mempool), api->id);
+		mempool_free(&perfg_get(id_mempool), api->id);
 	}
 
-	mempool_free(&perqueue_get(pcb_mempool), api);
+	mempool_free(&perfg_get(pcb_mempool), api);
 	return RET_OK;
 }
 
@@ -394,13 +394,13 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	log_debug("tcpapi: on_accept - arg %p, pcb %p, err %d\n",
 		  arg, pcb, err);
 
-	api = mempool_alloc(&perqueue_get(pcb_mempool));
+	api = mempool_alloc(&perfg_get(pcb_mempool));
 	if (unlikely(!api))
 		return ERR_MEM;
 
-	id = mempool_alloc(&perqueue_get(id_mempool));
+	id = mempool_alloc(&perfg_get(id_mempool));
 	if (unlikely(!id)) {
-		mempool_free(&perqueue_get(pcb_mempool), api);
+		mempool_free(&perfg_get(pcb_mempool), api);
 		return ERR_MEM;
 	}
 
@@ -416,7 +416,7 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	tcp_recv(pcb, on_recv);
 	tcp_err(pcb, on_err);
 	tcp_sent(pcb, on_sent);
-	tcp_accepted(perqueue_get(listen_pcb));
+	tcp_accepted(perfg_get(listen_pcb));
 
 	id->src_ip = 0; /* FIXME: LWIP doesn't provide this information :( */
 	id->dst_ip = cfg_host_addr.addr;
@@ -427,7 +427,7 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	handle = tcpapi_to_handle(api);
 	api->handle = handle;
 	id = (struct ip_tuple *)
-		mempool_pagemem_to_iomap(&perqueue_get(id_mempool), id);
+		mempool_pagemem_to_iomap(&perfg_get(id_mempool), id);
 
 	usys_tcp_knock(handle, id);
 
@@ -518,7 +518,7 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 		goto pcb_fail;
 	tcp_nagle_disable(pcb);
 
-	api = mempool_alloc(&perqueue_get(pcb_mempool));
+	api = mempool_alloc(&perfg_get(pcb_mempool));
 	if (unlikely(!api)) {
 		goto connect_fail;
 	}
@@ -579,21 +579,21 @@ int tcp_api_init(void)
 		if (!lpcb)
 			return -ENOMEM;
 
-		perqueue_get(listen_pcb) = lpcb;
+		perfg_get(listen_pcb) = lpcb;
 		tcp_accept(lpcb, on_accept);
 
-		ret = mempool_create(&perqueue_get(pcb_mempool), MAX_PCBS,
+		ret = mempool_create(&perfg_get(pcb_mempool), MAX_PCBS,
 				     sizeof(struct tcpapi_pcb));
 		if (ret)
 			return ret;
 
-		ret = mempool_pagemem_create(&perqueue_get(id_mempool),
+		ret = mempool_pagemem_create(&perfg_get(id_mempool),
 					     MAX_PCBS,
 					     sizeof(struct ip_tuple));
 		if (ret)
 			return ret;
 
-		ret = mempool_pagemem_map_to_user(&perqueue_get(id_mempool));
+		ret = mempool_pagemem_map_to_user(&perfg_get(id_mempool));
 		if (ret)
 			return ret;
 	}

@@ -134,7 +134,7 @@ struct ip_globals
   /** Destination IP address of current_header */
   ipX_addr_t current_iphdr_dest;
 };
-DECLARE_PERQUEUE(struct ip_globals, ip_data);
+DECLARE_PERFG(struct ip_globals, ip_data);
 
 
 /** Get the interface that received the current packet.
@@ -148,9 +148,9 @@ DECLARE_PERQUEUE(struct ip_globals, ip_data);
 /** Total header length of ip(6)_current_header() (i.e. after this, the UDP/TCP header starts) */
 #define ip_current_header_tot_len() (ip_data.current_ip_header_tot_len)
 /** Source IP address of current_header */
-#define ipX_current_src_addr()   (&perqueue_get(ip_data).current_iphdr_src)
+#define ipX_current_src_addr()   (&perfg_get(ip_data).current_iphdr_src)
 /** Destination IP address of current_header */
-#define ipX_current_dest_addr()  (&perqueue_get(ip_data).current_iphdr_dest)
+#define ipX_current_dest_addr()  (&perfg_get(ip_data).current_iphdr_dest)
 
 #if LWIP_IPV6
 /** Get the IPv6 header of the current packet.
@@ -190,14 +190,14 @@ DECLARE_PERQUEUE(struct ip_globals, ip_data);
 /** Source IP4 address of current_header */
 #define ip_current_src_addr()     (&ip_data.current_iphdr_src)
 /** Destination IP4 address of current_header */
-#define ip_current_dest_addr()    (&perqueue_get(ip_data).current_iphdr_dest)
+#define ip_current_dest_addr()    (&perfg_get(ip_data).current_iphdr_dest)
 
 #endif /* LWIP_IPV6 */
 
 /** Union source address of current_header */
-#define ipX_current_src_addr()    (&perqueue_get(ip_data).current_iphdr_src)
+#define ipX_current_src_addr()    (&perfg_get(ip_data).current_iphdr_src)
 /** Union destination address of current_header */
-#define ipX_current_dest_addr()   (&perqueue_get(ip_data).current_iphdr_dest)
+#define ipX_current_dest_addr()   (&perfg_get(ip_data).current_iphdr_dest)
 
 /** Gets an IP pcb option (SOF_* flags) */
 #define ip_get_option(pcb, opt)   ((pcb)->so_options & (opt))

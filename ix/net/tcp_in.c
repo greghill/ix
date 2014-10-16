@@ -176,7 +176,7 @@ tcp_input(struct pbuf *p, struct netif *inp)
      for an active connection. */
   prev = NULL;
 
-  pcb = perqueue_get(tcp_active_pcbs_tbl)[tcp_to_idx(ipX_current_dest_addr(), ipX_current_src_addr(), percpu_get(tcphdr)->dest, percpu_get(tcphdr)->src)];
+  pcb = perfg_get(tcp_active_pcbs_tbl)[tcp_to_idx(ipX_current_dest_addr(), ipX_current_src_addr(), percpu_get(tcphdr)->dest, percpu_get(tcphdr)->src)];
   for(; pcb != NULL; pcb = pcb->hash_bucket_next) {
     LWIP_ASSERT("tcp_input: active pcb->state != CLOSED", pcb->state != CLOSED);
     LWIP_ASSERT("tcp_input: active pcb->state != TIME-WAIT", pcb->state != TIME_WAIT);
@@ -195,7 +195,7 @@ tcp_input(struct pbuf *p, struct netif *inp)
   if (pcb == NULL) {
     /* If it did not go to an active connection, we check the connections
        in the TIME-WAIT state. */
-    for(pcb = perqueue_get(tcp_tw_pcbs); pcb != NULL; pcb = pcb->next) {
+    for(pcb = perfg_get(tcp_tw_pcbs); pcb != NULL; pcb = pcb->next) {
       LWIP_ASSERT("tcp_input: TIME-WAIT pcb->state == TIME-WAIT", pcb->state == TIME_WAIT);
       if (pcb->remote_port == percpu_get(tcphdr)->src &&
           pcb->local_port == percpu_get(tcphdr)->dest &&
@@ -215,7 +215,7 @@ tcp_input(struct pbuf *p, struct netif *inp)
     /* Finally, if we still did not get a match, we check all PCBs that
        are LISTENing for incoming connections. */
     prev = NULL;
-    for(lpcb = perqueue_get(tcp_listen_pcbs).listen_pcbs; lpcb != NULL; lpcb = lpcb->next) {
+    for(lpcb = perfg_get(tcp_listen_pcbs).listen_pcbs; lpcb != NULL; lpcb = lpcb->next) {
       if (lpcb->local_port == percpu_get(tcphdr)->dest) {
 #if LWIP_IPV6
         if (lpcb->accept_any_ip_version) {
@@ -260,9 +260,9 @@ tcp_input(struct pbuf *p, struct netif *inp)
       if (prev != NULL) {
         ((struct tcp_pcb_listen *)prev)->next = lpcb->next;
               /* our successor is the remainder of the listening list */
-        lpcb->next = perqueue_get(tcp_listen_pcbs).listen_pcbs;
+        lpcb->next = perfg_get(tcp_listen_pcbs).listen_pcbs;
               /* put this listening pcb at the head of the listening list */
-        perqueue_get(tcp_listen_pcbs).listen_pcbs = lpcb;
+        perfg_get(tcp_listen_pcbs).listen_pcbs = lpcb;
       }
 
       LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_input: packed for LISTENing connection.\n"));
@@ -322,8 +322,8 @@ tcp_input(struct pbuf *p, struct netif *inp)
            application that the connection is dead before we
            deallocate the PCB. */
         TCP_EVENT_ERR(pcb->errf, pcb->callback_arg, ERR_RST);
-        TCP_HASH_RMV(perqueue_get(tcp_active_pcbs_tbl), pcb);
-        tcp_pcb_remove(&perqueue_get(tcp_active_pcbs), pcb);
+        TCP_HASH_RMV(perfg_get(tcp_active_pcbs_tbl), pcb);
+        tcp_pcb_remove(&perfg_get(tcp_active_pcbs), pcb);
         memp_free(MEMP_TCP_PCB, pcb);
       } else if (percpu_get(recv_flags) & TF_CLOSED) {
         /* The connection has been closed and we will deallocate the
@@ -334,8 +334,8 @@ tcp_input(struct pbuf *p, struct netif *inp)
              ensure the application doesn't continue using the PCB. */
           TCP_EVENT_ERR(pcb->errf, pcb->callback_arg, ERR_CLSD);
         }
-        TCP_HASH_RMV(perqueue_get(tcp_active_pcbs_tbl), pcb);
-        tcp_pcb_remove(&perqueue_get(tcp_active_pcbs), pcb);
+        TCP_HASH_RMV(perfg_get(tcp_active_pcbs_tbl), pcb);
+        tcp_pcb_remove(&perfg_get(tcp_active_pcbs), pcb);
         memp_free(MEMP_TCP_PCB, pcb);
       } else {
         err = ERR_OK;
@@ -607,7 +607,7 @@ tcp_timewait_input(struct tcp_pcb *pcb)
   } else if (percpu_get(flags) & TCP_FIN) {
     /* - eighth, check the FIN bit: Remain in the TIME-WAIT state.
          Restart the 2 MSL time-wait timeout.*/
-    pcb->tmr = perqueue_get(tcp_ticks);
+    pcb->tmr = perfg_get(tcp_ticks);
   }
 
   if ((percpu_get(tcplen) > 0))  {
@@ -675,7 +675,7 @@ tcp_process(struct tcp_pcb *pcb)
 
   if ((pcb->flags & TF_RXCLOSED) == 0) {
     /* Update the PCB (in)activity timer unless rx is closed (see tcp_shutdown) */
-    pcb->tmr = perqueue_get(tcp_ticks);
+    pcb->tmr = perfg_get(tcp_ticks);
   }
   pcb->keep_cnt_sent = 0;
 
@@ -805,7 +805,7 @@ tcp_process(struct tcp_pcb *pcb)
         tcp_pcb_purge(pcb);
         TCP_RMV_ACTIVE(pcb);
         pcb->state = TIME_WAIT;
-        TCP_REG(&perqueue_get(tcp_tw_pcbs), pcb);
+        TCP_REG(&perfg_get(tcp_tw_pcbs), pcb);
       } else {
         tcp_ack_now(pcb);
         pcb->state = CLOSING;
@@ -822,7 +822,7 @@ tcp_process(struct tcp_pcb *pcb)
       tcp_pcb_purge(pcb);
       TCP_RMV_ACTIVE(pcb);
       pcb->state = TIME_WAIT;
-      TCP_REG(&perqueue_get(tcp_tw_pcbs), pcb);
+      TCP_REG(&perfg_get(tcp_tw_pcbs), pcb);
     }
     break;
   case CLOSING:
@@ -832,7 +832,7 @@ tcp_process(struct tcp_pcb *pcb)
       tcp_pcb_purge(pcb);
       TCP_RMV_ACTIVE(pcb);
       pcb->state = TIME_WAIT;
-      TCP_REG(&perqueue_get(tcp_tw_pcbs), pcb);
+      TCP_REG(&perfg_get(tcp_tw_pcbs), pcb);
     }
     break;
   case LAST_ACK:
@@ -1161,7 +1161,7 @@ tcp_receive(struct tcp_pcb *pcb)
     if (pcb->rttest && TCP_SEQ_LT(pcb->rtseq, percpu_get(ackno))) {
       /* diff between this shouldn't exceed 32K since this are tcp timer ticks
          and a round-trip shouldn't be that long... */
-      m = (s16_t)(perqueue_get(tcp_ticks) - pcb->rttest);
+      m = (s16_t)(perfg_get(tcp_ticks) - pcb->rttest);
 
       LWIP_DEBUGF(TCP_RTO_DEBUG, ("tcp_receive: experienced rtt %"U16_F" ticks (%"U16_F" msec).\n",
                                   m, m * TCP_SLOW_INTERVAL));
