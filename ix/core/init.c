@@ -103,7 +103,7 @@ err:
 
 static DEFINE_SPINLOCK(assign_lock);
 
-static int network_init_cpu(void)
+static int network_init_cpu(int cpu)
 {
 	int ret, idx, i;
 
@@ -126,7 +126,8 @@ static int network_init_cpu(void)
 
 	percpu_get(eth_num_queues) = eth_dev_count;
 
-	ret = memp_init();
+	//ret = memp_init(); intiialized in init_hw
+	ret = 0;
 	if (ret) {
 		log_err("init: failed to initialize lwip memp\n");
 		return ret;
@@ -175,7 +176,7 @@ static int init_create_cpu(unsigned int cpu)
 	timer_init_cpu();
 	kstats_init_cpu();
 
-	ret = network_init_cpu();
+	ret = network_init_cpu(cpu);
 	if (ret) {
 		log_err("init: unable to initialize per-CPU network stack\n");
 		return ret;
@@ -327,8 +328,14 @@ static int init_hw(void)
 
 			eth_fg_set_current(&eth->data->rx_fgs[j]);
 			fgs[fg_id] = &eth->data->rx_fgs[j];
-			perfg_get(fg_id) = fg_id++;
+			perfg_get(fg_id) = fg_id;
 			perfg_get(dev_idx) = i;
+
+			ret = memp_init_fg(fg_id);
+			if (ret) {
+				log_err("init: failed to initialize lwip memp\n");
+				return ret;
+			}
 
 			tcp_init();
 
@@ -337,6 +344,9 @@ static int init_hw(void)
 				log_err("init: failed to initialize TCP API\n");
 				return ret;
 			}
+			fg_id++;
+
+
 		}
 	}
 

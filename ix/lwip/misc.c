@@ -7,6 +7,7 @@
 
 #include <lwip/memp.h>
 #include <lwip/pbuf.h>
+#include <ix/ethfg.h>
 
 static struct netif {
 	char unused[32];
@@ -89,34 +90,35 @@ void tcp_input_tmp(struct mbuf *pkt, struct ip_hdr *iphdr, void *tcphdr)
 	tcp_input(pbuf, &netif);
 }
 
-DEFINE_PERCPU(struct mempool, pbuf_mempool);
-DEFINE_PERCPU(struct mempool, pbuf_with_payload_mempool);
-DEFINE_PERCPU(struct mempool, tcp_pcb_mempool);
-DEFINE_PERCPU(struct mempool, tcp_pcb_listen_mempool);
-DEFINE_PERCPU(struct mempool, tcp_seg_mempool);
+DEFINE_PERFG(struct mempool, pbuf_mempool);
+DEFINE_PERFG(struct mempool, pbuf_with_payload_mempool);
+DEFINE_PERFG(struct mempool, tcp_pcb_mempool);
+DEFINE_PERFG(struct mempool, tcp_pcb_listen_mempool);
+DEFINE_PERFG(struct mempool, tcp_seg_mempool);
 
 #define PBUF_WITH_PAYLOAD_SIZE 4096
 
-static int init_mempool(struct mempool *m, int nr_elems, size_t elem_len)
+static int init_mempool(struct mempool *m, int fg, int nr_elems, size_t elem_len)
 {
-	return mempool_create(m, nr_elems, elem_len, MEMPOOL_SANITY_PERCPU,percpu_get(cpu_id));
+	return mempool_create(m, nr_elems, elem_len, MEMPOOL_SANITY_PERFG,fg);
 }
 
-int memp_init(void)
+int memp_init_fg(int fgid)
 {
-	if (init_mempool(&percpu_get(pbuf_mempool), 65536, memp_sizes[MEMP_PBUF]))
+	printf("memp_init_fg for fgid=%d\n",fgid);
+	if (init_mempool(&perfg_get(pbuf_mempool), fgid, 65536, memp_sizes[MEMP_PBUF]))
 		return 1;
 
-	if (init_mempool(&percpu_get(pbuf_with_payload_mempool), 65536, PBUF_WITH_PAYLOAD_SIZE))
+	if (init_mempool(&perfg_get(pbuf_with_payload_mempool), fgid, 65536, PBUF_WITH_PAYLOAD_SIZE))
 		return 1;
 
-	if (init_mempool(&percpu_get(tcp_pcb_mempool), 65536, memp_sizes[MEMP_TCP_PCB]))
+	if (init_mempool(&perfg_get(tcp_pcb_mempool), fgid, 65536, memp_sizes[MEMP_TCP_PCB]))
 		return 1;
 
-	if (init_mempool(&percpu_get(tcp_pcb_listen_mempool), 65536, memp_sizes[MEMP_TCP_PCB_LISTEN]))
+	if (init_mempool(&perfg_get(tcp_pcb_listen_mempool), fgid, 65536, memp_sizes[MEMP_TCP_PCB_LISTEN]))
 		return 1;
 
-	if (init_mempool(&percpu_get(tcp_seg_mempool), 65536, memp_sizes[MEMP_TCP_SEG]))
+	if (init_mempool(&perfg_get(tcp_seg_mempool), fgid, 65536, memp_sizes[MEMP_TCP_SEG]))
 		return 1;
 
 	return 0;
@@ -126,10 +128,10 @@ void *mem_malloc(size_t size)
 {
 	LWIP_ASSERT("mem_malloc", size <= PBUF_WITH_PAYLOAD_SIZE);
 
-	return mempool_alloc(&percpu_get(pbuf_with_payload_mempool));
+	return mempool_alloc(&perfg_get(pbuf_with_payload_mempool));
 }
 
 void mem_free(void *ptr)
 {
-	mempool_free(&percpu_get(pbuf_with_payload_mempool), ptr);
+	mempool_free(&perfg_get(pbuf_with_payload_mempool), ptr);
 }
