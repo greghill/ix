@@ -111,7 +111,7 @@ static inline void *mempool_alloc(struct mempool *m)
 static inline void mempool_free(struct mempool *m, void *ptr)
 {
 	struct mempool_hdr *elem = (struct mempool_hdr *) ptr;
-
+	MEMPOOL_SANITY_ACCESS(ptr);
 	elem->next = m->head;
 	m->head = elem;
 }

@@ -17,7 +17,7 @@ struct timer {
 	MEMPOOL_SANITY_ACCESS(_container); \
 	} while (0);
 
-	//MEMPOOL_SANITY_ISPERFG(_container);	\  XXX MUST BE ABLE TO ENABLE THIS.  FIXME
+	//MEMPOOL_SANITY_ISPERFG(_container);	\  XXX MUST BE ABLE TO ENABLE THIS.  FIXME EdB
 
 #else
 #define TIMER_SANITY(_container)

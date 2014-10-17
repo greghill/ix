@@ -471,6 +471,7 @@ tcp_bind(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port)
   int max_pcb_list = NUM_TCP_PCB_LISTS;
   struct tcp_pcb *cpcb;
 
+  MEMPOOL_SANITY_ACCESS(pcb);
   LWIP_ERROR("tcp_bind: can only bind in state CLOSED", pcb->state == CLOSED, return ERR_VAL);
 
 #if SO_REUSE
@@ -1576,6 +1577,7 @@ void
 tcp_err(struct tcp_pcb *pcb, tcp_err_fn err)
 {
   LWIP_ASSERT("invalid socket state for err callback", pcb->state != LISTEN);
+  MEMPOOL_SANITY_ACCESS(pcb);
   pcb->errf = err;
 }
 
