@@ -17,24 +17,25 @@ typedef enum {
 extern const u16_t memp_sizes[MEMP_MAX];
 
 int  memp_init(void);
+int  memp_init_fg(int fg);
 
-DECLARE_PERCPU(struct mempool, pbuf_mempool);
-DECLARE_PERCPU(struct mempool, pbuf_with_payload_mempool);
-DECLARE_PERCPU(struct mempool, tcp_pcb_mempool);
-DECLARE_PERCPU(struct mempool, tcp_pcb_listen_mempool);
-DECLARE_PERCPU(struct mempool, tcp_seg_mempool);
+DECLARE_PERFG(struct mempool, pbuf_mempool);
+DECLARE_PERFG(struct mempool, pbuf_with_payload_mempool);
+DECLARE_PERFG(struct mempool, tcp_pcb_mempool);
+DECLARE_PERFG(struct mempool, tcp_pcb_listen_mempool);
+DECLARE_PERFG(struct mempool, tcp_seg_mempool);
 
 static inline void *memp_malloc(memp_t type)
 {
 	switch (type) {
 	case MEMP_PBUF:
-		return mempool_alloc(&percpu_get(pbuf_mempool));
+		return mempool_alloc(&perfg_get(pbuf_mempool));
 	case MEMP_TCP_PCB:
-		return mempool_alloc(&percpu_get(tcp_pcb_mempool));
+		return mempool_alloc(&perfg_get(tcp_pcb_mempool));
 	case MEMP_TCP_PCB_LISTEN:
-		return mempool_alloc(&percpu_get(tcp_pcb_listen_mempool));
+		return mempool_alloc(&perfg_get(tcp_pcb_listen_mempool));
 	case MEMP_TCP_SEG:
-		return mempool_alloc(&percpu_get(tcp_seg_mempool));
+		return mempool_alloc(&perfg_get(tcp_seg_mempool));
 	case MEMP_SYS_TIMEOUT:
 	case MEMP_PBUF_POOL:
 	case MEMP_MAX:
@@ -48,16 +49,16 @@ static inline void memp_free(memp_t type, void *mem)
 {
 	switch (type) {
 	case MEMP_PBUF:
-		mempool_free(&percpu_get(pbuf_mempool), mem);
+		mempool_free(&perfg_get(pbuf_mempool), mem);
 		return;
 	case MEMP_TCP_PCB:
-		mempool_free(&percpu_get(tcp_pcb_mempool), mem);
+		mempool_free(&perfg_get(tcp_pcb_mempool), mem);
 		return;
 	case MEMP_TCP_PCB_LISTEN:
-		mempool_free(&percpu_get(tcp_pcb_listen_mempool), mem);
+		mempool_free(&perfg_get(tcp_pcb_listen_mempool), mem);
 		return;
 	case MEMP_TCP_SEG:
-		mempool_free(&percpu_get(tcp_seg_mempool), mem);
+		mempool_free(&perfg_get(tcp_seg_mempool), mem);
 		return;
 	case MEMP_SYS_TIMEOUT:
 	case MEMP_PBUF_POOL:

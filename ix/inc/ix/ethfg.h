@@ -81,6 +81,7 @@ static inline void unset_current_fg(void)
 	//percpu_get(fg_offset) = NULL;  FIXME EdB THIS BREAKS ASSERTIONS
 }
 
+
 extern void eth_fg_init(struct eth_fg *fg, unsigned int idx);
 extern int eth_fg_init_cpu(struct eth_fg *fg);
 extern void eth_fg_free(struct eth_fg *fg);
