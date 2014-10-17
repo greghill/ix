@@ -105,7 +105,6 @@ static int init_mempool(struct mempool *m, int fg, int nr_elems, size_t elem_len
 
 int memp_init_fg(int fgid)
 {
-	printf("memp_init_fg for fgid=%d\n",fgid);
 	if (init_mempool(&perfg_get(pbuf_mempool), fgid, 65536, memp_sizes[MEMP_PBUF]))
 		return 1;
 
