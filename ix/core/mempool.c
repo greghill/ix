@@ -31,7 +31,7 @@
 static void mempool_init_buf(struct mempool *m, int nr_elems, size_t elem_len)
 {
 	int i;
-	uintptr_t pos = ((uintptr_t) m->buf) + sizeof(void*);
+	uintptr_t pos = ((uintptr_t) m->buf) + MEMPOOL_INITIAL_OFFSET;
 	uintptr_t next_pos = pos + elem_len;
 
 	m->head = (struct mempool_hdr *)(pos);
@@ -66,15 +66,17 @@ int mempool_create(struct mempool *m, int nr_elems, size_t elem_len, int16_t san
 	if (!elem_len || !nr_elems)
 		return -EINVAL;
 
-	printf("mempool_create 0x%p\n",m);
-	// add space for pool pointer
-	elem_len = align_up(elem_len, sizeof(long)) + sizeof(void *);
+	elem_len = align_up(elem_len, sizeof(long)) + MEMPOOL_INITIAL_OFFSET;
 	nr_pages = PGN_2MB(nr_elems * elem_len + PGMASK_2MB);
 	nr_elems = nr_pages * PGSIZE_2MB / elem_len;
 	m->poison = 0x12911776;
 	m->nr_pages = nr_pages;
 	m->sanity = (sanity_type <<16) | sanity_id;
 	m->buf = mem_alloc_pages(nr_pages, PGSIZE_2MB, NULL, MPOL_PREFERRED);
+	m->nr_elems = nr_elems;
+	m->elem_len = elem_len;
+	m->page_aligned = 0;
+
 	if (m->buf == MAP_FAILED)
 		return -ENOMEM;
 
@@ -103,7 +105,7 @@ mempool_init_buf_with_pages(struct mempool *m, int elems_per_page,
 
 	for (i = 0; i < nr_pages; i++) {
 		cur = (struct mempool_hdr *)
-				((uintptr_t) m->buf + i * PGSIZE_2MB + sizeof(void*));
+			((uintptr_t) m->buf + i * PGSIZE_2MB + MEMPOOL_INITIAL_OFFSET);
 		for (j = 0; j < elems_per_page; j++) {
 
 			struct mempool **hidden = (struct mempool **)cur;
@@ -145,14 +147,15 @@ int mempool_pagemem_create(struct mempool *m, int nr_elems, size_t elem_len, int
 	if (!elem_len || elem_len > PGSIZE_2MB || !nr_elems)
 		return -EINVAL;
 
-	printf("mempool_create 0x%p\n",m);
-	elem_len = align_up(elem_len, sizeof(long)) + sizeof(void*);
+	elem_len = align_up(elem_len, sizeof(long)) + MEMPOOL_INITIAL_OFFSET;
 	elems_per_page = PGSIZE_2MB / elem_len;
 	nr_pages = div_up(nr_elems, elems_per_page);
 	m->nr_pages = nr_pages;
 	m->sanity = (sanity_type <<16) | sanity_id;
       	m->poison = 0x12911776;
-
+	m->nr_elems = nr_elems;
+	m->elem_len = elem_len;
+	m->page_aligned = 1;
 	m->buf = page_alloc_contig(nr_pages);
 	if (!m->buf)
 		return -ENOMEM;

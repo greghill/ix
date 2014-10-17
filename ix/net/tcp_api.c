@@ -66,9 +66,7 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 	set_current_queue(percpu_get(eth_rxqs[perfg_get(dev_idx)]));
 	p = &perfg_get(pcb_mempool);
 
-	api = (struct tcpapi_pcb *) ((uintptr_t) p->buf +
-				     idx * sizeof(struct tcpapi_pcb));
-
+	api = (struct tcpapi_pcb *) mempool_idx_to_ptr(p,idx);
 	MEMPOOL_SANITY_ACCESS(api);
 
 	/* check if the handle is actually allocated */
@@ -89,9 +87,8 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 static inline hid_t tcpapi_to_handle(struct tcpapi_pcb *pcb)
 {
 	struct mempool *p = &perfg_get(pcb_mempool);
-	
-	return (((uintptr_t) pcb - (uintptr_t) p->buf) / sizeof(struct tcpapi_pcb)) |
-	       ((uintptr_t) (perfg_get(fg_id)) << 48);
+	MEMPOOL_SANITY_ACCESS(pcb);
+	return mempool_ptr_to_idx(p,pcb) | ((uintptr_t) (perfg_get(fg_id)) << 48);
 }
 
 static void recv_a_pbuf(struct tcpapi_pcb *api, struct pbuf *p)

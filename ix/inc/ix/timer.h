@@ -15,8 +15,10 @@ struct timer {
 #ifdef ENABLE_KSTATS
 #define TIMER_SANITY(_container) do {\
 	MEMPOOL_SANITY_ACCESS(_container); \
-	MEMPOOL_SANITY_ISPERFG(_container);\
 	} while (0);
+
+	//MEMPOOL_SANITY_ISPERFG(_container);	\  XXX MUST BE ABLE TO ENABLE THIS.  FIXME
+
 #else
 #define TIMER_SANITY(_container)
 #endif
