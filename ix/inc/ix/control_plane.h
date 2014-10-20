@@ -4,6 +4,7 @@
 
 #include <ix/compiler.h>
 #include <ix/queue.h>
+#include <ix/ethfg.h>
 
 struct queue_metrics {
 	volatile int depth;
@@ -16,7 +17,7 @@ struct flow_group_metrics {
 
 extern volatile struct cp_shmem {
 	struct queue_metrics queue[NQUEUE];
-	struct flow_group_metrics flow_group[128];
+	struct flow_group_metrics flow_group[ETH_MAX_TOTAL_FG];
 } *cp_shmem;
 
 static inline void cp_queue_depth(int queue_id, int depth)
