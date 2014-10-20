@@ -7,6 +7,8 @@
 #include <ix/mem.h>
 #include <ix/errno.h>
 #include <ix/ethdev.h>
+#include <ix/control_plane.h>
+#include <ix/cfg.h>
 
 extern const char __perfg_start[];
 extern const char __perfg_end[];
@@ -66,3 +68,25 @@ void eth_fg_free(struct eth_fg *fg)
 		mem_free_pages(fg->perfg, div_up(len, PGSIZE_2MB), PGSIZE_2MB);
 }
 
+/**
+ * eth_fg_assign_to_cpu - assigns the flow group to the given cpu
+ * @fg_id: the flow group (global name; across devices)
+ * @cpu: the cpu sequence number
+ */
+void eth_fg_assign_to_cpu(int fg_id, int cpu)
+{
+	struct rte_eth_rss_reta rss_reta;
+	struct eth_fg *fg = fgs[fg_id];
+
+	rss_reta.mask_lo = 0;
+	rss_reta.mask_hi = 0;
+	if (fg->idx >= 64)
+		rss_reta.mask_hi = ((uint64_t) 1) << (fg->idx - 64);
+	else
+		rss_reta.mask_lo = ((uint64_t) 1) << fg->idx;
+
+	rss_reta.reta[fg->idx] = cpu;
+	cp_shmem->flow_group[fg_id].cpu = cpu;
+	fg->cur_cpu = cfg_cpu[cpu];
+	fg->eth->dev_ops->reta_update(fg->eth, &rss_reta);
+}

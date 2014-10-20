@@ -87,6 +87,7 @@ static inline void unset_current_fg(void)
 extern void eth_fg_init(struct eth_fg *fg, unsigned int idx);
 extern int eth_fg_init_cpu(struct eth_fg *fg);
 extern void eth_fg_free(struct eth_fg *fg);
+extern void eth_fg_assign_to_cpu(int fg_id, int cpu);
 
 extern struct eth_fg *fgs[ETH_MAX_TOTAL_FG];
 
