@@ -104,6 +104,7 @@ int eth_dev_add(struct rte_eth_dev *dev)
 
 	for (i = 0; i < dev->data->nb_rx_fgs; i++) {
 		struct eth_fg *fg = &dev->data->rx_fgs[i];
+		fg->eth = dev;
 		eth_fg_init(fg, i);
 	}
 

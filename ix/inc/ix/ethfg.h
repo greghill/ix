@@ -27,6 +27,8 @@ struct eth_fg {
 	void *		perfg;		/* per-flowgroup variables */
 
 	void (*steer) (struct eth_rx_queue *target);
+
+	struct		rte_eth_dev *eth;
 };
 
 struct eth_fg_listener {

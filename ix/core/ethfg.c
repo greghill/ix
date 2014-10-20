@@ -6,6 +6,7 @@
 #include <ix/ethfg.h>
 #include <ix/mem.h>
 #include <ix/errno.h>
+#include <ix/ethdev.h>
 
 extern const char __perfg_start[];
 extern const char __perfg_end[];
