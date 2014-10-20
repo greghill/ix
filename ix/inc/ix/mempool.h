@@ -88,6 +88,54 @@ static inline int __mempool_get_sanity(void *a) {
 
 
 
+/*
+ * mempool sanity macros ensures that pointers between mempool-allocated objects are of identical type
+ */
+
+#define MEMPOOL_SANITY_GLOBAL    0
+#define MEMPOOL_SANITY_PERCPU    1
+#define MEMPOOL_SANITY_PERQUEUE  2
+#define MEMPOOL_SANITY_PERFG     3
+
+#ifdef ENABLE_KSTATS
+
+
+#define MEMPOOL_SANITY_OBJECT(_a) do {\
+	struct mempool **hidden = (struct mempool **)_a;\
+	assert(hidden[-1] && hidden[-1]->poison == 0x12911776); \
+	} while (0);
+
+static inline int __mempool_get_sanity(void *a) {
+	struct mempool *p = (struct mempool *)(((uint64_t) a))-MEMPOOL_INITIAL_OFFSET;
+	return p->sanity;
+}
+
+#define MEMPOOL_SANITY_ISPERFG(_a) assert(__mempool_get_sanity(_a)>>16 == MEMPOOL_SANITY_PERFG)
+
+#define MEMPOOL_SANITY_ACCESS(_obj)   do { \
+	MEMPOOL_SANITY_OBJECT(_obj);\
+	int sanity = __mempool_get_sanity(_obj); \
+	if ((sanity >>16)==MEMPOOL_SANITY_PERCPU) assert(percpu_get(cpu_id)==(sanity & 0xffff));\
+	if ((sanity >>16)==MEMPOOL_SANITY_PERQUEUE) assert(perqueue_get(queue_id)==(sanity &0xffff));\
+	if ((sanity >>16)==MEMPOOL_SANITY_PERFG) assert(perfg_get(fg_id)==(sanity &0xffff));\
+	} while (0);
+
+#define  MEMPOOL_SANITY_LINK(_a,_b) do {\
+	MEMPOOL_SANITY_ACCESS(_a);\
+	MEMPOOL_SANITY_ACCESS(_b);\
+	int sa = __mempool_get_sanity(_a);\
+	int sb = __mempool_get_sanity(_b);\
+	assert (sa == sb);\
+	}  while (0);
+
+#else
+#define MEMPOOL_SANITY_ISPERFG(_a)
+#define MEMPOOL_SANITY_ACCESS(_a)
+#define MEMPOOL_SANITY_LINK(_a,_b)
+#endif
+
+
+
 /**
  * mempool_alloc - allocates an element from a memory pool
  * @m: the memory pool
@@ -98,9 +146,9 @@ static inline void *mempool_alloc(struct mempool *m)
 {
 	struct mempool_hdr *h = m->head;
 
-	if (likely(h))
+	if (likely(h)) {
 		m->head = h->next;
-
+	}
 	return (void *) h;
 }
 

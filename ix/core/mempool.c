@@ -34,8 +34,8 @@ static void mempool_init_buf(struct mempool *m, int nr_elems, size_t elem_len)
 	uintptr_t pos = ((uintptr_t) m->buf) + MEMPOOL_INITIAL_OFFSET;
 	uintptr_t next_pos = pos + elem_len;
 
-	m->head = (struct mempool_hdr *)pos;
-
+	m->head = (struct mempool_hdr *)(pos);
+	
 	for (i = 0; i < nr_elems - 1; i++) {
 		struct mempool **hidden = (struct mempool **)pos;
 		hidden[-1] = m;
