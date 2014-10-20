@@ -34,8 +34,8 @@ static void mempool_init_buf(struct mempool *m, int nr_elems, size_t elem_len)
 	uintptr_t pos = ((uintptr_t) m->buf) + MEMPOOL_INITIAL_OFFSET;
 	uintptr_t next_pos = pos + elem_len;
 
-	m->head = (struct mempool_hdr *)(pos);
-	
+	m->head = (struct mempool_hdr *)pos;
+
 	for (i = 0; i < nr_elems - 1; i++) {
 		struct mempool **hidden = (struct mempool **)pos;
 		hidden[-1] = m;
@@ -69,7 +69,7 @@ int mempool_create(struct mempool *m, int nr_elems, size_t elem_len, int16_t san
 	elem_len = align_up(elem_len, sizeof(long)) + MEMPOOL_INITIAL_OFFSET;
 	nr_pages = PGN_2MB(nr_elems * elem_len + PGMASK_2MB);
 	nr_elems = nr_pages * PGSIZE_2MB / elem_len;
-	m->poison = 0x12911776;
+	m->magic = MEMPOOL_MAGIC;
 	m->nr_pages = nr_pages;
 	m->sanity = (sanity_type <<16) | sanity_id;
 	m->buf = mem_alloc_pages(nr_pages, PGSIZE_2MB, NULL, MPOL_PREFERRED);
@@ -152,7 +152,7 @@ int mempool_pagemem_create(struct mempool *m, int nr_elems, size_t elem_len, int
 	nr_pages = div_up(nr_elems, elems_per_page);
 	m->nr_pages = nr_pages;
 	m->sanity = (sanity_type <<16) | sanity_id;
-      	m->poison = 0x12911776;
+      	m->magic = MEMPOOL_MAGIC;
 	m->nr_elems = nr_elems;
 	m->elem_len = elem_len;
 	m->page_aligned = 1;

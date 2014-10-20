@@ -109,8 +109,6 @@ static void * cpu_init_percpu(unsigned int cpu, unsigned int numa_node)
 		return NULL;
 
 	addr_percpu = addr + PERCPU_DUNE_LEN;
-
-	printf("cpu_init_percpu: clearing memory.  0x%lx len=0x%lx\n",addr_percpu,len);
 	memset(addr_percpu, 0, len);
 
 	*((char **) addr) = addr_percpu;

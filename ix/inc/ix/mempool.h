@@ -11,7 +11,9 @@
 #include <ix/queue.h>
 #include <ix/ethfg.h>
 
+
 #ifdef __KERNEL__
+// FIXME:offset can be made conditional to KSTATS
 #define MEMPOOL_INITIAL_OFFSET (sizeof(void*))
 #else
 #define MEMPOOL_INITIAL_OFFSET (0)
@@ -22,7 +24,7 @@ struct mempool_hdr {
 } __packed;
 
 struct mempool {
-	uint64_t                poison;
+	uint64_t                magic;
 	void			*buf;
 	struct mempool_hdr	*head;
 	int			nr_pages;
@@ -35,6 +37,7 @@ struct mempool {
 	uintptr_t		iomap_offset;
 #endif
 };
+#define MEMPOOL_MAGIC   0x12911776
 
 
 /*
@@ -51,7 +54,7 @@ struct mempool {
 
 #define MEMPOOL_SANITY_OBJECT(_a) do {\
 	struct mempool **hidden = (struct mempool **)_a;\
-	assert(hidden[-1] && hidden[-1]->poison == 0x12911776); \
+	assert(hidden[-1] && hidden[-1]->magic == MEMPOOL_MAGIC); \
 	} while (0);
 
 static inline int __mempool_get_sanity(void *a) {
@@ -95,9 +98,9 @@ static inline void *mempool_alloc(struct mempool *m)
 {
 	struct mempool_hdr *h = m->head;
 
-	if (likely(h)) {
+	if (likely(h))
 		m->head = h->next;
-	}
+
 	return (void *) h;
 }
 
