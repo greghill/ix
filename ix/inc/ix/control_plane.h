@@ -13,7 +13,7 @@ struct flow_group_metrics {
 	volatile int depth;
 } __aligned(64);
 
-extern struct cp_shmem {
+extern volatile struct cp_shmem {
 	struct queue_metrics queue[NQUEUE];
 	struct flow_group_metrics flow_group[128];
 } *cp_shmem;

@@ -10,7 +10,7 @@
 
 #include <ix/control_plane.h>
 
-struct cp_shmem *cp_shmem;
+volatile struct cp_shmem *cp_shmem;
 
 int cp_init(void)
 {
