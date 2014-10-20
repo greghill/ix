@@ -12,6 +12,8 @@
 
 volatile struct cp_shmem *cp_shmem;
 
+DEFINE_PERCPU(volatile struct command_struct *, cp_cmd);
+
 int cp_init(void)
 {
 	int fd, ret;

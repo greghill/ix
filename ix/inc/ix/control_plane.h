@@ -15,10 +15,28 @@ struct flow_group_metrics {
 	int cpu;
 } __aligned(64);
 
+enum commands {
+	CP_CMD_NOP = 0,
+	CP_CMD_MIGRATE_FLOW_GROUP,
+};
+
+struct command_struct {
+	enum commands cmd_id;
+	union {
+		struct {
+			int flow;
+			int cpu;
+		} migrate_flow_group;
+	};
+};
+
 extern volatile struct cp_shmem {
 	struct queue_metrics queue[NQUEUE];
 	struct flow_group_metrics flow_group[ETH_MAX_TOTAL_FG];
+	struct command_struct command[NCPU];
 } *cp_shmem;
+
+DECLARE_PERCPU(volatile struct command_struct *, cp_cmd);
 
 static inline void cp_queue_depth(int queue_id, int depth)
 {

@@ -18,6 +18,8 @@
 #include <ix/kstats.h>
 #include <ix/queue.h>
 #include <ix/log.h>
+#include <ix/control_plane.h>
+#include <ix/ethfg.h>
 
 #include <dune.h>
 
@@ -122,6 +124,15 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 		return ret;
 
 again:
+	switch (percpu_get(cp_cmd)->cmd_id) {
+		case CP_CMD_MIGRATE_FLOW_GROUP:
+			eth_fg_assign_to_cpu(percpu_get(cp_cmd)->migrate_flow_group.flow, percpu_get(cp_cmd)->migrate_flow_group.cpu);
+			percpu_get(cp_cmd)->cmd_id = CP_CMD_NOP;
+			break;
+		case CP_CMD_NOP:
+			break;
+	}
+
 	KSTATS_PUSH(percpu_bookkeeping, NULL);
 	cpu_do_bookkeeping();
 	KSTATS_POP(NULL);

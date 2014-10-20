@@ -19,6 +19,7 @@
 #include <ix/profiler.h>
 #include <ix/lock.h>
 #include <ix/cfg.h>
+#include <ix/control_plane.h>
 
 #include <net/ip.h>
 
@@ -253,6 +254,8 @@ void *start_cpu(void *arg)
 
 	started_cpus++;
 
+	percpu_get(cp_cmd) = &cp_shmem->command[started_cpus];
+
 	pthread_barrier_wait(&start_barrier);
 	wait_for_spawn();
 
@@ -284,6 +287,8 @@ static int init_hw(void)
 		log_err("init: failed to initialize CPU 0\n");
 		return ret;
 	}
+
+	percpu_get(cp_cmd) = &cp_shmem->command[0];
 
 	for (i = 1; i < cfg_cpu_nr; i++) {
 		ret = pthread_create(&tid, NULL, start_cpu, &cfg_cpu[i]);
