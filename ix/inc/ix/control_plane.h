@@ -11,6 +11,7 @@ struct queue_metrics {
 
 struct flow_group_metrics {
 	volatile int depth;
+	int cpu;
 } __aligned(64);
 
 extern volatile struct cp_shmem {
