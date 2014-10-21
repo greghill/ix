@@ -105,19 +105,19 @@ static int init_mempool(struct mempool *m, int fg, int nr_elems, size_t elem_len
 
 int memp_init_fg(int fgid)
 {
-	if (init_mempool(&perfg_get(pbuf_mempool), fgid, 65536, memp_sizes[MEMP_PBUF]))
+	if (init_mempool(&perfg_get(pbuf_mempool), fgid, 8192, memp_sizes[MEMP_PBUF]))
 		return 1;
 
-	if (init_mempool(&perfg_get(pbuf_with_payload_mempool), fgid, 65536, PBUF_WITH_PAYLOAD_SIZE))
+	if (init_mempool(&perfg_get(pbuf_with_payload_mempool), fgid, 8192, PBUF_WITH_PAYLOAD_SIZE))
 		return 1;
 
-	if (init_mempool(&perfg_get(tcp_pcb_mempool), fgid, 65536, memp_sizes[MEMP_TCP_PCB]))
+	if (init_mempool(&perfg_get(tcp_pcb_mempool), fgid, 8192, memp_sizes[MEMP_TCP_PCB]))
 		return 1;
 
-	if (init_mempool(&perfg_get(tcp_pcb_listen_mempool), fgid, 65536, memp_sizes[MEMP_TCP_PCB_LISTEN]))
+	if (init_mempool(&perfg_get(tcp_pcb_listen_mempool), fgid, 8192, memp_sizes[MEMP_TCP_PCB_LISTEN]))
 		return 1;
 
-	if (init_mempool(&perfg_get(tcp_seg_mempool), fgid, 65536, memp_sizes[MEMP_TCP_SEG]))
+	if (init_mempool(&perfg_get(tcp_seg_mempool), fgid, 8192, memp_sizes[MEMP_TCP_SEG]))
 		return 1;
 
 	return 0;
