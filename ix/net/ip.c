@@ -103,6 +103,7 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 		   because we don't own the memory pool */
 		log_warn("dropping packet: flow group %d should be handled by cpu %d\n", perfg_get(fg_id), fgs[perfg_get(fg_id)]->cur_cpu);
 		unset_current_queue();
+		unset_current_fg();
 	}
 
 	log_debug("ip: got ethernet packet of len %ld, type %x\n",

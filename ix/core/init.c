@@ -351,6 +351,7 @@ static int init_hw(void)
 
 		}
 	}
+	unset_current_fg();
 
 	nr_flow_groups = fg_id;
 
