@@ -1,5 +1,5 @@
 #include <ix/stddef.h>
-#include <ix/mempool.h>
+#include <mempool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -124,7 +124,7 @@ static void *pp_main(void *arg)
 	};
 
 	ret = mempool_create(&pp_conn_pool, pp_conn_pool_entries,
-			     sizeof(struct pp_conn) + msg_size,MEMPOOL_SANITY_GLOBAL,0);
+			     sizeof(struct pp_conn) + msg_size);
 	if (ret) {
 		printf("unable to create mempool\n");
 		return NULL;

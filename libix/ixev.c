@@ -3,7 +3,7 @@
  */
 
 #include <ix/stddef.h>
-#include <ix/mempool.h>
+#include <mempool.h>
 #include <stdio.h>
 #include <errno.h>
 
@@ -581,7 +581,7 @@ int ixev_init_thread(void)
 {
 	int ret;
 
-	ret = mempool_create(&ixev_buf_pool, 131072, sizeof(struct ixev_buf),MEMPOOL_SANITY_GLOBAL,0);
+	ret = mempool_create(&ixev_buf_pool, 131072, sizeof(struct ixev_buf));
 	if (ret)
 		return ret;
 

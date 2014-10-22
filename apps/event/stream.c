@@ -1,5 +1,5 @@
 #include <ix/stddef.h>
-#include <ix/mempool.h>
+#include <mempool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -111,7 +111,7 @@ static void *stream_main(void *arg)
 	};
 
 	ret = mempool_create(&stream_conn_pool, stream_conn_pool_entries,
-			     sizeof(struct stream_conn),MEMPOOL_SANITY_GLOBAL,0);
+			     sizeof(struct stream_conn));
 	if (ret) {
 		printf("unable to create mempool\n");
 		return NULL;

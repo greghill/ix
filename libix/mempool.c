@@ -4,7 +4,7 @@
 
 #include <ix/stddef.h>
 #include <ix/mem.h>
-#include <ix/mempool.h>
+#include <mempool.h>
 
 #include <errno.h>
 
@@ -39,7 +39,7 @@ static void mempool_init_buf(struct mempool *m, int nr_elems, size_t elem_len)
  *
  * Returns 0 if successful, otherwise fail.
  */
-int mempool_create(struct mempool *m, int nr_elems, size_t elem_len, int16_t foo, int16_t bar)
+int mempool_create(struct mempool *m, int nr_elems, size_t elem_len)
 {
 	int nr_pages;
 

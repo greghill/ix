@@ -1,6 +1,6 @@
 # A Makefile for libIX.
 
-INC	= -I../ix/inc
+INC	= -I. -I../ix/inc
 CC 	= gcc
 CFLAGS	= -g -Wall -O3 $(INC)
 AR	= ar

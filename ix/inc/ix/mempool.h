@@ -16,6 +16,8 @@
 // FIXME:offset can be made conditional to KSTATS
 #define MEMPOOL_INITIAL_OFFSET (sizeof(void*))
 #else
+#error "wrong include .. this is for IX kernel only"
+
 #define MEMPOOL_INITIAL_OFFSET (0)
 #endif
 

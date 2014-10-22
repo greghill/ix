@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ix/stddef.h>
-#include <ix/mempool.h>
+#include <mempool.h>
 
 #include <pthread.h>
 #include <string.h>

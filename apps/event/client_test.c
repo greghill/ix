@@ -1,5 +1,5 @@
 #include <ix/stddef.h>
-#include <ix/mempool.h>
+#include <mempool.h>
 #include <net/ip.h>
 #include <stdio.h>
 #include <stdlib.h>
