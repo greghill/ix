@@ -10,6 +10,7 @@
 #include <ix/cpu.h>
 #include <ix/queue.h>
 #include <ix/ethfg.h>
+#include <ix/log.h>
 
 
 #ifdef __KERNEL__
@@ -71,8 +72,10 @@ static inline int __mempool_get_sanity(void *a) {
 	MEMPOOL_SANITY_OBJECT(_obj);\
 	int sanity = __mempool_get_sanity(_obj); \
 	if ((sanity >>16)==MEMPOOL_SANITY_PERCPU) assert(percpu_get(cpu_id)==(sanity & 0xffff));\
-	if ((sanity >>16)==MEMPOOL_SANITY_PERQUEUE) assert(perqueue_get(queue_id)==(sanity &0xffff));\
-	if ((sanity >>16)==MEMPOOL_SANITY_PERFG) assert(perfg_get(fg_id)==(sanity &0xffff));\
+	else if ((sanity >>16)==MEMPOOL_SANITY_PERQUEUE) assert(perqueue_get(queue_id)==(sanity &0xffff));\
+	else if ((sanity >>16)==MEMPOOL_SANITY_PERFG) assert(perfg_get(fg_id)==(sanity &0xffff));\
+	else if ((sanity >>16)==MEMPOOL_SANITY_GLOBAL);\
+	else panic("invalid mempool sanity field %x at %s:%d\n", sanity, __FILE__, __LINE__);\
 	} while (0);
 
 #define  MEMPOOL_SANITY_LINK(_a,_b) do {\
