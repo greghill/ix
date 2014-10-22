@@ -60,7 +60,8 @@ struct mempool {
 	} while (0);
 
 static inline int __mempool_get_sanity(void *a) {
-	struct mempool *p = (struct mempool *)(((uint64_t) a))-MEMPOOL_INITIAL_OFFSET;
+	struct mempool **hidden = (struct mempool **)a;
+	struct mempool *p = hidden[-1];
 	return p->sanity;
 }
 
