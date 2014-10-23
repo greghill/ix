@@ -79,6 +79,7 @@ struct ctx {
 	struct bufferevent *bev;
     int flood;
     uint32_t msg_size;
+        struct event *event;
 };
 
 static struct sockaddr_in server_addr;
@@ -86,6 +87,8 @@ static int msg_size;
 static long messages_per_connection;
 
 static void new_connection(struct event_base *base, struct ctx *ctx);
+static int send_next_msg(struct ctx *ctx);
+static void send_msg_cb(evutil_socket_t fd, short what, void *arg);
 
 static void echo_read_cb(struct bufferevent *bev, void *arg)
 {
@@ -99,18 +102,29 @@ static void echo_read_cb(struct bufferevent *bev, void *arg)
 	ctx->bytes_left -= len;
 	if (!ctx->bytes_left) {
 		ctx->worker->total_messages++;
-		ctx->bytes_left = msg_size;
-		if (!ctx->messages_left) {
-			bufferevent_free(bev);
-			if (ctx->state == STATE_WAIT_FOR_RECV)
-				ctx->worker->active_connections--;
-			new_connection(ctx->worker->base, ctx);
-			return;
-		}
-		ctx->messages_left--;
-		bufferevent_write(bev, ctx->worker->buffer, msg_size);
+                send_next_msg(ctx);
 	}
-	UPDATE_STATE(ctx, STATE_WAIT_FOR_RECV);
+}
+
+static void send_msg_cb(evutil_socket_t fd, short what, void *arg) {
+	struct ctx *ctx = arg;
+        send_next_msg(ctx);
+}
+
+static int send_next_msg(struct ctx *ctx) {
+    ctx->bytes_left = ctx->msg_size;
+    if (!ctx->messages_left) {
+        bufferevent_free(ctx->bev);
+        if (ctx->state == STATE_WAIT_FOR_RECV)
+            ctx->worker->active_connections--;
+        new_connection(ctx->worker->base, ctx);
+        return 1;
+    }
+
+    ctx->messages_left--;
+    bufferevent_write(ctx->bev, ctx->worker->buffer, ctx->msg_size);
+    UPDATE_STATE(ctx, STATE_WAIT_FOR_RECV);
+    return 0; //hack to preserve old behaviour
 }
 
 static void maintain_connections_cb(evutil_socket_t fd, short what, void *arg)
@@ -257,6 +271,7 @@ static void *start_worker(void *p)
 	for (i = 0; i < worker->connections; i++) {
 		ctx = worker->first_ctx;
 		worker->first_ctx = malloc(sizeof(struct ctx));
+		worker->first_ctx->event = NULL;
 		worker->first_ctx->next = ctx;
 		UPDATE_STATE(worker->first_ctx, STATE_IDLE);
 		worker->first_ctx->worker = worker;
