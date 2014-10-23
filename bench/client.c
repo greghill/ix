@@ -83,6 +83,7 @@ struct ctx {
         struct event *event;
 };
 
+
 static struct sockaddr_in server_addr;
 static long messages_per_connection;
 
@@ -291,6 +292,11 @@ static void *start_worker(void *p)
 		worker->first_ctx->event = NULL;
                 worker->first_ctx->flood = 1;
                 worker->first_ctx->msg_size = msg_size;
+                if (i < worker->slow_connections) {
+                    worker->first_ctx->flood = 0;
+                    worker->first_ctx->msg_size = 64;
+                }
+
 		worker->first_ctx->next = ctx;
 		UPDATE_STATE(worker->first_ctx, STATE_IDLE);
 		worker->first_ctx->worker = worker;
