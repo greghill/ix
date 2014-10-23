@@ -52,14 +52,12 @@ int main(int argc, char **argv)
 
 	init();
 
-	if (argc < 2) {
-		fprintf(stderr, "Usage: %s MSG_SIZE [CPUS]\n", argv[0]);
-		return 1;
-	}
 
-	ret = parse_cpus(argc > 2 ? argv[2] : NULL);
-	if (ret)
+	ret = parse_cpus(argc > 1 ? argv[1] : NULL);
+	if (ret) {
+		fprintf(stderr, "Usage: %s [CPUS]\n", argv[0]);
 		return ret;
+	}
 
 	start_threads();
 
