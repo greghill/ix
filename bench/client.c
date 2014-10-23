@@ -304,11 +304,13 @@ static void *start_worker(void *p)
 	return 0;
 }
 
-static int start_threads(unsigned int cores, unsigned int connections)
+static int start_threads(unsigned int cores, unsigned int connections, unsigned int slow_connections)
 {
 	int i;
 	int connections_per_core = connections / cores;
+	int slow_connections_per_core = slow_connections / cores;
 	int leftover_connections = connections % cores;
+	int leftover_slow_connections = slow_connections % cores;
 
 	for (i = 0; i < cores; i++) {
 		worker[i].cpu = i;
@@ -316,6 +318,7 @@ static int start_threads(unsigned int cores, unsigned int connections)
 		worker[i].total_connections = 0;
 		worker[i].total_messages = 0;
 		worker[i].connections = connections_per_core + (i < leftover_connections ? 1 : 0);
+		worker[i].slow_connections = slow_connections_per_core + (i < leftover_slow_connections ? 1 : 0);
 		pthread_create(&worker[i].tid, NULL, start_worker, &worker[i]);
 	}
 
@@ -330,6 +333,7 @@ int main(int argc, char **argv)
 	int sum;
 	int cores;
 	int connections;
+	unsigned int slow_connections = 0;
 	long long total_connections;
 	long long total_messages;
 	int active_connections;
@@ -342,8 +346,13 @@ int main(int argc, char **argv)
 
 	prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
 
-	if (argc != 7) {
-		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION\n", argv[0]);
+	if (argc < 7) {
+		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION SLOW_CONNECTIONS\n", argv[0]);
+		return 1;
+	}
+
+	if (argc > 8) {
+		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION SLOW_CONNECTIONS\n", argv[0]);
 		return 1;
 	}
 
@@ -358,6 +367,10 @@ int main(int argc, char **argv)
 	msg_size = atoi(argv[5]);
 	messages_per_connection = strtol(argv[6], NULL, 10);
 
+        if (argc == 8)
+            slow_connections = atoi(argv[7]);
+
+
 	if (timer_calibrate_tsc()) {
 		fprintf(stderr, "Error: Timer calibration failed.\n");
 		return 1;
@@ -365,7 +378,7 @@ int main(int argc, char **argv)
 
 	get_ifname(&server_addr, ifname);
 
-	start_threads(cores, connections);
+	start_threads(cores, connections, slow_connections);
 	puts("ok");
 	fflush(stdout);
 
