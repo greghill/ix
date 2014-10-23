@@ -46,6 +46,7 @@
 struct worker {
 	int cpu;
 	unsigned int connections;
+	unsigned int slow_connections;
 	struct event_base *base;
 	pthread_t tid;
 	unsigned char *buffer;
@@ -76,6 +77,8 @@ struct ctx {
 	unsigned int bytes_left;
 	unsigned long timestamp;
 	struct bufferevent *bev;
+    int flood;
+    uint32_t msg_size;
 };
 
 static struct sockaddr_in server_addr;
