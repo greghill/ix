@@ -350,6 +350,8 @@ static int init_hw(void)
 		}
 	}
 
+	nr_flow_groups = fg_id;
+
 	return 0;
 }
 

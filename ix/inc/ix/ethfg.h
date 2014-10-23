@@ -89,6 +89,8 @@ extern int eth_fg_init_cpu(struct eth_fg *fg);
 extern void eth_fg_free(struct eth_fg *fg);
 extern void eth_fg_assign_to_cpu(int fg_id, int cpu);
 
+extern int nr_flow_groups;
+
 extern struct eth_fg *fgs[ETH_MAX_TOTAL_FG];
 
 DECLARE_PERFG(int, dev_idx);
