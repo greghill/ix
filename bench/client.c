@@ -84,13 +84,13 @@ struct ctx {
 };
 
 static struct sockaddr_in server_addr;
-static int msg_size;
 static long messages_per_connection;
 
 static void new_connection(struct event_base *base, struct ctx *ctx);
 static int send_next_msg(struct ctx *ctx);
 static void send_msg_cb(evutil_socket_t fd, short what, void *arg);
 
+static uint32_t msg_size;
 static void echo_read_cb(struct bufferevent *bev, void *arg)
 {
 	struct ctx *ctx = arg;
