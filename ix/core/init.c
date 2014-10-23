@@ -174,6 +174,9 @@ static int init_create_cpu(unsigned int cpu)
 		return ret;
 	}
 
+#ifdef ENABLE_KSTATS
+	timer_percpu_init_cpu();
+#endif
 	kstats_init_cpu();
 
 	ret = network_init_cpu(cpu);
@@ -383,6 +386,15 @@ int main(int argc, char *argv[])
 		log_err("init: failed to initialize timers\n");
 		return ret;
 	}
+
+#ifdef ENABLE_KSTATS
+	ret = timer_percpu_init();
+	if (ret) {
+		log_err("init: failed to initialize per CPU timers\n");
+		return ret;
+	}
+
+#endif
 
 	ret = net_init();
 	if (ret) {

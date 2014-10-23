@@ -146,6 +146,9 @@ again:
 		timer_run();
 	}
 	unset_current_fg();
+#ifdef ENABLE_KSTATS
+	timer_percpu_run();
+#endif
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(rx_poll, NULL);
