@@ -10,6 +10,9 @@
 #include <ix/bitmap.h>
 #include <ix/ethfg.h>
 #include <ix/queue.h>
+#ifdef ENABLE_PCAP
+#include <net/pcap.h>
+#endif
 
 #define ETH_DEV_RX_QUEUE_SZ     512
 #define ETH_DEV_TX_QUEUE_SZ     1024
