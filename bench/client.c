@@ -97,13 +97,25 @@ static void echo_read_cb(struct bufferevent *bev, void *arg)
 
 	long long len;
 	struct evbuffer *input = bufferevent_get_input(bev);
+        struct timeval send_tv = {1, 0};
 
 	len = evbuffer_get_length(input);
 	evbuffer_drain(input, len);
 	ctx->bytes_left -= len;
 	if (!ctx->bytes_left) {
 		ctx->worker->total_messages++;
-                send_next_msg(ctx);
+                if (!ctx->flood) {
+			if (!ctx->event){
+				ctx->event = event_new(worker->base, -1, EV_TIMEOUT, send_msg_cb, ctx);
+			}
+
+			event_add(ctx->event, &send_tv);
+			UPDATE_STATE(ctx, STATE_WAIT_FOR_SEND);
+			return;
+                }
+                else {
+                    send_next_msg(ctx);
+                }
 	}
 }
 
