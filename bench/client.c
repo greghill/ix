@@ -62,6 +62,7 @@ struct worker {
 #define STATE_IDLE 1
 #define STATE_CONNECTING 2
 #define STATE_WAIT_FOR_RECV 3
+#define STATE_WAIT_FOR_SEND 4
 
 #define UPDATE_STATE(ctx, new_state) \
 	do { \
