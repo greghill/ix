@@ -37,6 +37,7 @@ static int fd = -1;
 static int write_mode;
 static struct eth_addr filter_mac = { .addr = {0,0,0,0,0,0} };
 
+#if 0
 static int pcap_replay_filter(struct mbuf *pkt)
 {
 	struct eth_hdr *ethhdr;
@@ -47,6 +48,7 @@ static int pcap_replay_filter(struct mbuf *pkt)
 
 	return 1;
 }
+#endif
 
 static int pcap_write_filter(struct mbuf *pkt)
 {
@@ -64,6 +66,7 @@ static int pcap_write_filter(struct mbuf *pkt)
 	return 1;
 }
 
+#if 0
 static int pcap_read(struct mbuf *pkt)
 {
 	pcaprec_hdr_t hdr;
@@ -99,9 +102,11 @@ static int fake_xmit(struct eth_tx_queue *tx, int nr, struct mbuf **mbufs)
 
 	return nr;
 }
+#endif
 
 int pcap_open_read(const char *pathname, struct eth_addr *mac)
 {
+#if 0
 	pcap_hdr_t hdr;
 
 	fd = open(pathname, O_RDONLY);
@@ -125,6 +130,9 @@ int pcap_open_read(const char *pathname, struct eth_addr *mac)
 	percpu_get(eth_tx)->xmit = fake_xmit;
 
 	return 0;
+#endif
+	/* TODO: implement me */
+	return 1;
 }
 
 int pcap_open_write(const char *pathname)
@@ -188,6 +196,7 @@ fail:
 
 int pcap_replay()
 {
+#if 0
 	int ret;
 	struct mbuf *pkt;
 	struct eth_rx_queue rx_queue;
@@ -232,4 +241,7 @@ int pcap_replay()
 	}
 
 	return 0;
+#endif
+	/* TODO: implement me */
+	return 1;
 }
