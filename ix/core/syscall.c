@@ -109,6 +109,7 @@ static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
 static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 {
 	int ret, empty;
+	int i;
 
 	usys_reset();
 
@@ -138,7 +139,13 @@ again:
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(timer, NULL);
-	timer_run();
+	for (i = 0; i < nr_flow_groups; i++) {
+		if (fgs[i]->cur_cpu != percpu_get(cpu_id))
+			continue;
+		eth_fg_set_current(fgs[i]);
+		timer_run();
+	}
+	unset_current_fg();
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(rx_poll, NULL);
@@ -155,7 +162,18 @@ again:
 
 	if (!percpu_get(usys_arr)->len) {
 		if (empty) {
-			uint64_t deadline = timer_deadline(10 * ONE_MS);
+			uint64_t deadline = 0;
+
+			for (i = 0; i < nr_flow_groups; i++) {
+				if (fgs[i]->cur_cpu != percpu_get(cpu_id))
+					continue;
+				eth_fg_set_current(fgs[i]);
+				deadline = timer_deadline(10 * ONE_MS);
+				if (deadline == 0)
+					break;
+			}
+			unset_current_fg();
+
 			if (deadline > 0) { 
 				KSTATS_PUSH(idle, NULL);
 				eth_rx_idle_wait(deadline);

@@ -174,7 +174,6 @@ static int init_create_cpu(unsigned int cpu)
 		return ret;
 	}
 
-	timer_init_cpu();
 	kstats_init_cpu();
 
 	ret = network_init_cpu(cpu);
@@ -344,6 +343,9 @@ static int init_hw(void)
 				log_err("init: failed to initialize TCP API\n");
 				return ret;
 			}
+
+			timer_init_fg();
+
 			fg_id++;
 
 
