@@ -197,6 +197,7 @@ static void new_connection(struct event_base *base, struct ctx *ctx)
 	int s;
 	struct linger linger;
 	int flag;
+        char sizebuf[12]; // 10 digits, separator, \0
 
 	s = socket(AF_INET, SOCK_STREAM, 0);
 	if (s == -1) {
@@ -229,8 +230,11 @@ static void new_connection(struct event_base *base, struct ctx *ctx)
 	bufferevent_setcb(ctx->bev, echo_read_cb, NULL, echo_event_cb, ctx);
 	bufferevent_enable(ctx->bev, EV_READ);
 	ctx->messages_left = messages_per_connection - 1;
-	ctx->bytes_left = msg_size;
-	bufferevent_write(ctx->bev, ctx->worker->buffer, msg_size);
+	ctx->bytes_left = ctx->msg_size;
+        sprintf(sizebuf, "%010u|", ctx->msg_size);
+	bufferevent_write(ctx->bev, sizebuf, 11);
+
+	bufferevent_write(ctx->bev, ctx->worker->buffer, ctx->bytes_left);
 	UPDATE_STATE(ctx, STATE_CONNECTING);
 }
 
@@ -272,6 +276,8 @@ static void *start_worker(void *p)
 		ctx = worker->first_ctx;
 		worker->first_ctx = malloc(sizeof(struct ctx));
 		worker->first_ctx->event = NULL;
+                worker->first_ctx->flood = 1;
+                worker->first_ctx->msg_size = msg_size;
 		worker->first_ctx->next = ctx;
 		UPDATE_STATE(worker->first_ctx, STATE_IDLE);
 		worker->first_ctx->worker = worker;
