@@ -35,6 +35,11 @@ int cfg_dev_nr;
 extern int net_cfg(void);
 extern int arp_insert(struct ip_addr *addr, struct eth_addr *mac);
 
+#ifdef ENABLE_PCAP
+char *cfg_pcap_file;
+enum pcap_mode cfg_pcap_mode;
+#endif
+
 static int parse_ip_addr(FILE *fd, uint32_t *addr)
 {
 	unsigned char a, b, c, d;
@@ -216,7 +221,13 @@ static void print_usage(void)
 	"\tSpecifies maximum batch size of received packets to process. Default: 64.\n"
 	"--quiet\n"
 	"-q\n"
-	"\tLimits logging to critical errors.\n");
+	"\tLimits logging to critical errors.\n"
+#ifdef ENABLE_PCAP
+	"--pcap-write\n"
+	"-w\n"
+	"\tSave the packet data to a file for later analysis.\n"
+#endif
+	);
 }
 
 static int parse_arguments(int argc, char *argv[], int *args_parsed)
@@ -228,10 +239,17 @@ static int parse_arguments(int argc, char *argv[], int *args_parsed)
 		{"cpu", required_argument, NULL, 'c'},
 		{"batch", no_argument, NULL, 'b'},
 		{"quiet", no_argument, NULL, 'q'},
+#ifdef ENABLE_PCAP
+		{"pcap-write", required_argument, 0, 'w'},
+#endif
 		{NULL, 0, NULL, 0}
 	};
 
+#ifdef ENABLE_PCAP
+	static const char *optstring = "d:c:b:qw:";
+#else
 	static const char *optstring = "d:c:b:q";
+#endif
 
 	/* FIXME: get packet capture working again */
 
@@ -257,6 +275,12 @@ static int parse_arguments(int argc, char *argv[], int *args_parsed)
 		case 'q':
 			max_loglevel = LOG_WARN;
 			break;
+#ifdef ENABLE_PCAP
+		case 'w':
+			cfg_pcap_file = optarg;
+			cfg_pcap_mode = PCAP_MODE_WRITE;
+			break;
+#endif
 		default:
 			printf("cfg: invalid command option %x\n", c);
 			ret = -EINVAL;

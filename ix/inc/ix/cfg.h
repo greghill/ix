@@ -23,3 +23,12 @@ extern int cfg_dev_nr;
 
 extern int cfg_init(int argc, char *argv[], int *args_parsed);
 
+#ifdef ENABLE_PCAP
+extern char *cfg_pcap_file;
+enum pcap_mode {
+	PCAP_MODE_NONE,
+	PCAP_MODE_READ,
+	PCAP_MODE_WRITE,
+};
+extern enum pcap_mode cfg_pcap_mode;
+#endif
