@@ -434,6 +434,17 @@ int main(int argc, char *argv[])
 				panic("could not initialize IX\n");
 		}
 
+#ifdef ENABLE_PCAP
+	if (cfg_pcap_mode == PCAP_MODE_WRITE) {
+		ret = pcap_open_write(cfg_pcap_file);
+		if (ret) {
+			log_err("init: failed to open pcap file\n");
+			return ret;
+		}
+		log_info("init: dumping traffic to pcap file '%s'\n", cfg_pcap_file);
+	}
+#endif
+
 	ret = sandbox_init(argc - args_parsed - 1, &argv[args_parsed]);
 	if (ret) {
 		log_err("init: failed to start sandbox\n");
