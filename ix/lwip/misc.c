@@ -90,34 +90,62 @@ void tcp_input_tmp(struct mbuf *pkt, struct ip_hdr *iphdr, void *tcphdr)
 	tcp_input(pbuf, &netif);
 }
 
+
+static struct mempool_datastore  pbuf_ds;
+static struct mempool_datastore  pbuf_with_payload_ds;
+static struct mempool_datastore  tcp_pcb_ds;
+static struct mempool_datastore  tcp_pcb_listen_ds;
+static struct mempool_datastore  tcp_seg_ds;
+
 DEFINE_PERFG(struct mempool, pbuf_mempool);
 DEFINE_PERFG(struct mempool, pbuf_with_payload_mempool);
 DEFINE_PERFG(struct mempool, tcp_pcb_mempool);
 DEFINE_PERFG(struct mempool, tcp_pcb_listen_mempool);
 DEFINE_PERFG(struct mempool, tcp_seg_mempool);
 
+#define MEMP_SIZE (64*1024)
+
 #define PBUF_WITH_PAYLOAD_SIZE 4096
 
-static int init_mempool(struct mempool *m, int fg, int nr_elems, size_t elem_len)
+static int init_mempool(struct mempool_datastore *m, int nr_elems, size_t elem_len, const char *prettyname)
 {
-	return mempool_create(m, nr_elems, elem_len, MEMPOOL_SANITY_PERFG,fg);
+	return mempool_create_datastore(m, nr_elems, elem_len, 0, MEMPOOL_DEFAULT_CHUNKSIZE,prettyname);
+}
+
+int memp_init(void)
+{
+	if (init_mempool(&pbuf_ds, MEMP_SIZE, memp_sizes[MEMP_PBUF],"pbuf"))
+		return 1;
+
+	if (init_mempool(&pbuf_with_payload_ds, MEMP_SIZE, PBUF_WITH_PAYLOAD_SIZE,"pbuf_payload"))
+		return 1;
+
+	if (init_mempool(&tcp_pcb_ds, MEMP_SIZE, memp_sizes[MEMP_TCP_PCB],"tcp_pcb"))
+		return 1;
+
+	if (init_mempool(&tcp_pcb_listen_ds, MEMP_SIZE, memp_sizes[MEMP_TCP_PCB_LISTEN],"tcp_pcb_listen"))
+		return 1;
+
+	if (init_mempool(&tcp_seg_ds, MEMP_SIZE, memp_sizes[MEMP_TCP_SEG],"tcp_seg"))
+		return 1;
+	return 0;
 }
 
 int memp_init_fg(int fgid)
 {
-	if (init_mempool(&perfg_get(pbuf_mempool), fgid, 8192, memp_sizes[MEMP_PBUF]))
+	if (mempool_create(&perfg_get(pbuf_mempool),&pbuf_ds,MEMPOOL_SANITY_PERFG, fgid))
 		return 1;
 
-	if (init_mempool(&perfg_get(pbuf_with_payload_mempool), fgid, 8192, PBUF_WITH_PAYLOAD_SIZE))
+	if (mempool_create(&perfg_get(pbuf_with_payload_mempool), &pbuf_with_payload_ds, MEMPOOL_SANITY_PERFG, fgid))
 		return 1;
 
-	if (init_mempool(&perfg_get(tcp_pcb_mempool), fgid, 8192, memp_sizes[MEMP_TCP_PCB]))
+	if (mempool_create(&perfg_get(tcp_pcb_mempool), &tcp_pcb_ds, MEMPOOL_SANITY_PERFG, fgid))
 		return 1;
 
-	if (init_mempool(&perfg_get(tcp_pcb_listen_mempool), fgid, 8192, memp_sizes[MEMP_TCP_PCB_LISTEN]))
+	if (mempool_create(&perfg_get(tcp_pcb_listen_mempool), &tcp_pcb_listen_ds, MEMPOOL_SANITY_PERFG, fgid))
 		return 1;
 
-	if (init_mempool(&perfg_get(tcp_seg_mempool), fgid, 8192, memp_sizes[MEMP_TCP_SEG]))
+	if (mempool_create(&perfg_get(tcp_seg_mempool), &tcp_seg_ds, MEMPOOL_SANITY_PERFG, fgid))
 		return 1;
 
 	return 0;

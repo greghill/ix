@@ -15,7 +15,7 @@
 #include <ix/cpu.h>
 #include <ix/kstats.h>
 #include <ix/ethfg.h>
-
+#include <assert.h>
 #include <time.h>
 
 #define WHEEL_SHIFT_LOG2	3
@@ -47,9 +47,15 @@
  * Total range 0 to 256 seconds...
  */
 
-static DEFINE_PERFG(struct hlist_head, wheels[WHEEL_COUNT][WHEEL_SIZE]);
-static DEFINE_PERFG(uint64_t, now_us);
-static DEFINE_PERFG(uint64_t, timer_pos);
+struct timerwheel {
+	struct hlist_head wheels[WHEEL_COUNT][WHEEL_SIZE];
+	uint64_t now_us;
+	uint64_t timer_pos;
+};
+
+static DEFINE_PERFG(struct timerwheel,timer_wheel_fg);
+static DEFINE_PERCPU(struct timerwheel, timer_wheel_cpu);
+
 int cycles_per_us __aligned(64);
 
 /**
@@ -65,26 +71,26 @@ void __timer_delay_us(uint64_t us)
 		cpu_relax();	
 }
 
-static inline bool timer_expired(struct timer *t)
+static inline bool timer_expired(struct timerwheel *tw, struct timer *t)
 {
-	return (t->expires <= perfg_get(now_us));
+	return (t->expires <= tw->now_us);
 }
 
 static inline struct hlist_head *
-__timer_get_bucket(uint64_t left, uint64_t expires)
+__timer_get_bucket(struct timerwheel *tw, uint64_t left, uint64_t expires)
 {
 	int index = ((63 - clz64(left | MIN_DELAY_US) - MIN_DELAY_SHIFT)
 			>> WHEEL_SHIFT_LOG2);
 	int offset = WHEEL_OFFSET(expires, index);
 
-	return &perfg_get(wheels[index][offset]);
+	return &tw->wheels[index][offset];
 }
 
-static void timer_insert(struct timer *t,
+static void timer_insert(struct timerwheel *tw, struct timer *t,
 			 uint64_t left, uint64_t expires)
 {
 	struct hlist_head *bucket;
-	bucket = __timer_get_bucket(left, expires);
+	bucket = __timer_get_bucket(tw,left, expires);
 	hlist_add_head(bucket, &t->link);
 }
 
@@ -95,22 +101,36 @@ static void timer_insert(struct timer *t,
  *
  * Returns 0 if successful, otherwise failure.
  */
-int timer_add(struct timer *t, uint64_t usecs)
+static int __timer_add(struct timerwheel *tw, struct timer *t, uint64_t usecs)
 {
 	uint64_t expires;
 	if (unlikely(usecs >= MAX_DELAY_US))
 		return -EINVAL;
 
+	assert(tw);
 	/*
 	 * Make sure the expiration time is rounded
 	 * up past the current bucket.
 	 */
-	expires = perfg_get(now_us) + usecs + MIN_DELAY_US - 1;
+	expires = tw->now_us + usecs + MIN_DELAY_US - 1;
 	t->expires = expires;
-	timer_insert(t, usecs, expires);
+	timer_insert(tw,t, usecs, expires);
 
 	return 0;
 }
+
+int timer_add(struct timer *t, uint64_t usecs)
+{
+	struct timerwheel *tw = &perfg_get(timer_wheel_fg);
+	return __timer_add(tw,t,usecs);
+}
+
+int timer_percpu_add(struct timer *t, uint64_t usecs)
+{
+	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
+	return __timer_add(tw,t,usecs);
+}
+
 
 /**
  * timer_add_for_next_tick - adds a timer with the shortest possible delay
@@ -121,13 +141,14 @@ int timer_add(struct timer *t, uint64_t usecs)
  */
 void timer_add_for_next_tick(struct timer *t)
 {
+	struct timerwheel *tw = &perfg_get(timer_wheel_fg);
 	uint64_t expires;
-	expires = perfg_get(now_us) + MIN_DELAY_US;
+	expires = tw->now_us + MIN_DELAY_US;
 	t->expires = expires;
-	timer_insert(t, MIN_DELAY_US, expires);
+	timer_insert(tw,t, MIN_DELAY_US, expires);
 }
 
-static void timer_run_bucket(struct hlist_head *h)
+static void timer_run_bucket(struct timerwheel *tw, struct hlist_head *h)
 {
 	struct hlist_node *n, *tmp;
 	struct timer *t;
@@ -145,7 +166,7 @@ static void timer_run_bucket(struct hlist_head *h)
 	h->head = NULL;
 }
 
-static void timer_reinsert_bucket(struct hlist_head *h)
+static void timer_reinsert_bucket(struct timerwheel *tw, struct hlist_head *h)
 {
 	struct hlist_node *pos, *tmp;
 	struct timer *t;
@@ -157,14 +178,14 @@ static void timer_reinsert_bucket(struct hlist_head *h)
 		t = hlist_entry(pos, struct timer, link);
 		__timer_del(t);
 
-		if (timer_expired(t)) {
+		if (timer_expired(tw, t)) {
 			KSTATS_PUSH(timer_handler, &save);
 			t->handler(t);
 			KSTATS_POP(&save);
 			continue;
 		}
 
-		timer_insert(t, t->expires - perfg_get(now_us), t->expires);
+		timer_insert(tw, t, t->expires - tw->now_us, t->expires);
 	}
 }
 
@@ -173,31 +194,40 @@ static void timer_reinsert_bucket(struct hlist_head *h)
  * 
  * Call this once per device polling pass.
  */
-void timer_run(void)
+static void timer_runwheel(struct timerwheel *tw)
 {
-	uint64_t pos = perfg_get(timer_pos);
-	perfg_get(now_us) = rdtsc() / cycles_per_us;
+	uint64_t pos = tw->timer_pos;
+	tw->now_us = rdtsc() / cycles_per_us;
 
-	for (; pos <= perfg_get(now_us); pos += MIN_DELAY_US) {
+	for (; pos <= tw->now_us; pos += MIN_DELAY_US) {
 		int high_off = WHEEL_OFFSET(pos, 0);
 
 		/* collapse longer-term buckets into shorter-term buckets */
 		if (!high_off) {
 			int med_off = WHEEL_OFFSET(pos, 1);
-			timer_reinsert_bucket(&perfg_get(wheels[1][med_off]));
+			timer_reinsert_bucket(tw, &tw->wheels[1][med_off]);
 
 			if (!med_off) {
 				int low_off = WHEEL_OFFSET(pos, 2);
-				timer_reinsert_bucket(&perfg_get(wheels[2][low_off]));
+				timer_reinsert_bucket(tw, &tw->wheels[2][low_off]);
 			}
 		}
 
-		timer_run_bucket(&perfg_get(wheels[0][high_off]));
+		timer_run_bucket(tw,&tw->wheels[0][high_off]);
 	}
 
-	perfg_get(timer_pos) = pos;
+	tw->timer_pos = pos;
 }
 
+void timer_run(void)
+{
+	timer_runwheel(&perfg_get(timer_wheel_fg));
+}
+
+void timer_percpu_run(void)
+{
+	timer_runwheel(&percpu_get(timer_wheel_cpu));
+}
 
 /**
  * timer_deadline - determine the immediate timer deadline
@@ -205,10 +235,10 @@ void timer_run(void)
  * because of its implementation, will return [0..4ms], which is the high wheel resolution
 
  */
-uint64_t
-timer_deadline(uint64_t max_deadline_us)
+static uint64_t
+timer_wheel_deadline(struct timerwheel *tw, uint64_t max_deadline_us)
 {
-        uint64_t pos = perfg_get(timer_pos);
+        uint64_t pos = tw->timer_pos;
         uint64_t now_us = rdtsc() / cycles_per_us;
         uint64_t max_us = now_us + max_deadline_us;
 	
@@ -217,12 +247,18 @@ timer_deadline(uint64_t max_deadline_us)
 		
 		if (!high_off)
 			break;  // don't attempt to collapse; just stop at that side of the wheel
-		if (perfg_get(wheels[0][high_off].head)!= NULL)
+		if (tw->wheels[0][high_off].head!= NULL)
 			break; // pending event 
         }
         if (pos < now_us)
 		return 0;
         return pos - now_us;
+}
+
+uint64_t
+timer_deadline(uint64_t max_deadline_us)
+{
+	return timer_wheel_deadline(&perfg_get(timer_wheel_fg),max_deadline_us);
 }
 
 /* derived from DPDK */
@@ -259,10 +295,17 @@ timer_calibrate_tsc(void)
  */
 void timer_init_fg(void)
 {
-	perfg_get(now_us) = rdtsc() / cycles_per_us;
-	perfg_get(timer_pos) = perfg_get(now_us);
+	struct timerwheel *tw = &perfg_get(timer_wheel_fg);
+	tw->now_us = rdtsc() / cycles_per_us;
+	tw->timer_pos = tw->now_us;
 }
 
+void timer_init_cpu(void)
+{
+	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
+	tw->now_us = rdtsc() / cycles_per_us;
+	tw->timer_pos = tw->now_us;
+}	
 /**
  * timer_init - global timer initialization
  *

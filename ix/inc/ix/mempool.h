@@ -22,19 +22,51 @@
 #define MEMPOOL_INITIAL_OFFSET (0)
 #endif
 
+#define MEMPOOL_DEFAULT_CHUNKSIZE 128
+
 struct mempool_hdr {
 	struct mempool_hdr *next;
+	struct mempool_hdr *next_chunk;
 } __packed;
 
-struct mempool {
-	uint64_t                magic;
+
+// one per data type
+struct mempool_datastore {
+	uint64_t                 magic;
+	spinlock_t               lock;
+	struct mempool_hdr      *chunk_head;
 	void			*buf;
-	struct mempool_hdr	*head;
 	int			nr_pages;
+	uint32_t                nr_elems;
+	size_t                  elem_len;
+	int                     nostraddle;
+	int                     chunk_size;
+	int                     num_chunks;
+	int                     free_chunks;
+	int64_t                 num_locks;
+	const char             *prettyname;
+	struct mempool_datastore *next_ds;
+#ifdef __KERNEL__
+	void 			*iomap_addr;
+	uintptr_t		iomap_offset;
+#endif
+};
+
+
+struct mempool {
+	uint64_t                 magic;
+	void			*buf;
+	struct mempool_datastore *datastore;
+	struct mempool_hdr	*head;
+	struct mempool_hdr      *private_chunk;
+//	int			nr_pages;
 	int                     sanity;
 	uint32_t                nr_elems;
 	size_t                  elem_len;
-	int                     page_aligned;
+	int                     nostraddle;
+	int                     chunk_size;
+	int                     num_alloc;
+	int                     num_free;
 #ifdef __KERNEL__
 	void 			*iomap_addr;
 	uintptr_t		iomap_offset;
@@ -92,20 +124,26 @@ static inline int __mempool_get_sanity(void *a) {
 #define MEMPOOL_SANITY_LINK(_a,_b)
 #endif
 
+
 /**
  * mempool_alloc - allocates an element from a memory pool
  * @m: the memory pool
  *
  * Returns a pointer to the allocated element or NULL if unsuccessful.
  */
+extern void *mempool_alloc_2(struct mempool *m);
 static inline void *mempool_alloc(struct mempool *m)
 {
 	struct mempool_hdr *h = m->head;
 
 	if (likely(h)) {
 		m->head = h->next;
+		m->num_alloc++;
+		m->num_free--;
+		return (void *) h;
+	} else {
+		return mempool_alloc_2(m);
 	}
-	return (void *) h;
 }
 
 /**
@@ -115,19 +153,26 @@ static inline void *mempool_alloc(struct mempool *m)
  *
  * NOTE: Must be the same memory pool that it was allocated from
  */
+extern void mempool_free_2(struct mempool *m, void *ptr);
 static inline void mempool_free(struct mempool *m, void *ptr)
 {
 	struct mempool_hdr *elem = (struct mempool_hdr *) ptr;
 	MEMPOOL_SANITY_ACCESS(ptr);
-	elem->next = m->head;
-	m->head = elem;
+
+	if (likely(m->num_free<m->chunk_size)) {
+		m->num_free++;
+		m->num_alloc--;
+		elem->next = m->head;
+		m->head = elem;	
+	} else 
+		mempool_free_2(m,ptr);
 }
 
 static inline void *mempool_idx_to_ptr(struct mempool *m, uint32_t idx)
 {
 	void *p;
 	assert(idx<m->nr_elems);
-	assert(!m->page_aligned);
+	assert(!m->nostraddle);
 	p = m->buf + m->elem_len*idx + MEMPOOL_INITIAL_OFFSET;
 	MEMPOOL_SANITY_ACCESS(p);
 	return p;
@@ -142,7 +187,8 @@ static inline uintptr_t mempool_ptr_to_idx(struct mempool *m,void *p)
 }
 
 
-extern int mempool_create(struct mempool *m, int nr_elems, size_t elem_len, int16_t sanity_type, int16_t sanity_id);
+extern int mempool_create_datastore(struct mempool_datastore *m, int nr_elems, size_t elem_len, int nostraddle, int chunk_size, const char *prettyname);
+extern int mempool_create(struct mempool *m, struct mempool_datastore *mds, int16_t sanity_type, int16_t sanity_id);
 extern void mempool_destroy(struct mempool *m);
 
 
@@ -157,13 +203,21 @@ extern void mempool_destroy(struct mempool *m);
  */
 static inline void *mempool_pagemem_to_iomap(struct mempool *m, void *ptr)
 {
+	assert(m->iomap_offset);
 	return (void *) ((uintptr_t) ptr + m->iomap_offset);
 }
 
-extern int
-mempool_pagemem_create(struct mempool *m, int nr_elems, size_t elem_len,int16_t sanity_type, int16_t sanity_id);
-extern int mempool_pagemem_map_to_user(struct mempool *m);
-extern void mempool_pagemem_destroy(struct mempool *m);
+static inline void *mempool_iomap_to_ptr(struct mempool *m, void *ioptr) 
+{
+	assert(m->iomap_offset);
+	return ((void *) ((uintptr_t) (ioptr) - m->iomap_offset));
+}
+
+
+//extern int
+//mempool_pagemem_create(struct mempool *m, int nr_elems, size_t elem_len,int16_t sanity_type, int16_t sanity_id);
+extern int mempool_pagemem_map_to_user(struct mempool_datastore *m);
+extern void mempool_pagemem_destroy(struct mempool_datastore *m);
 
 #endif /* __KERNEL__ */
 

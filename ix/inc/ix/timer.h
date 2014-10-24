@@ -89,14 +89,14 @@ static inline void timer_del(struct timer *t)
 
 extern void timer_run(void);
 extern uint64_t timer_deadline(uint64_t max_us);
+
 extern void timer_init_fg(void);
+extern void timer_init_cpu(void);
 extern int timer_init(void);
 
 extern int cycles_per_us;
 
-#ifdef ENABLE_KSTATS
 extern int timer_percpu_add(struct timer *t, uint64_t usecs);
 extern void timer_percpu_run(void);
-extern void timer_percpu_init_cpu(void);
-extern int timer_percpu_init(void);
-#endif
+
+

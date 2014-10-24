@@ -83,6 +83,10 @@ static inline void unset_current_fg(void)
 	percpu_get(fg_offset) = NULL;
 }
 
+static inline int perfg_exists(void)
+{
+	return percpu_get(fg_offset) != NULL;
+}
 
 extern void eth_fg_init(struct eth_fg *fg, unsigned int idx);
 extern int eth_fg_init_cpu(struct eth_fg *fg);

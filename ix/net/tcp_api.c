@@ -16,7 +16,7 @@
 
 #include <lwip/tcp.h>
 
-#define MAX_PCBS	65536
+#define MAX_PCBS	(512*1024)
 
 static DEFINE_PERFG(struct tcp_pcb *, listen_pcb);
 /* FIXME: this should be probably per queue */
@@ -40,6 +40,9 @@ struct tcpapi_pcb {
 	int queue;
 	bool accepted;
 };
+
+static struct mempool_datastore pcb_datastore;
+static struct mempool_datastore id_datastore;
 
 static DEFINE_PERFG(struct mempool, pcb_mempool);
 static DEFINE_PERFG(struct mempool, id_mempool);
@@ -88,7 +91,8 @@ static inline hid_t tcpapi_to_handle(struct tcpapi_pcb *pcb)
 {
 	struct mempool *p = &perfg_get(pcb_mempool);
 	MEMPOOL_SANITY_ACCESS(pcb);
-	return mempool_ptr_to_idx(p,pcb) | ((uintptr_t) (perfg_get(fg_id)) << 48);
+	hid_t hid = mempool_ptr_to_idx(p,pcb) | ((uintptr_t) (perfg_get(fg_id)) << 48);
+	return hid;
 }
 
 static void recv_a_pbuf(struct tcpapi_pcb *api, struct pbuf *p)
@@ -561,7 +565,25 @@ pcb_fail:
 	return -RET_NOMEM;
 }
 
+
 int tcp_api_init(void)
+{
+	int ret;
+	ret = mempool_create_datastore(&pcb_datastore, MAX_PCBS,
+				       sizeof(struct tcpapi_pcb), 0, MEMPOOL_DEFAULT_CHUNKSIZE,"pcb");
+	if (ret)
+		return ret;
+
+	ret = mempool_create_datastore(&id_datastore, MAX_PCBS,
+				       sizeof(struct ip_tuple), 1, MEMPOOL_DEFAULT_CHUNKSIZE,"ip");
+	if (ret)
+		return ret;
+
+	ret = mempool_pagemem_map_to_user(&id_datastore);
+	return ret;
+}
+
+int tcp_api_init_fg(void)
 {
 	struct tcp_pcb *lpcb;
 	int ret;
@@ -582,21 +604,13 @@ int tcp_api_init(void)
 	perfg_get(listen_pcb) = lpcb;
 	tcp_accept(lpcb, on_accept);
 
-	ret = mempool_create(&perfg_get(pcb_mempool), MAX_PCBS,
-			     sizeof(struct tcpapi_pcb), MEMPOOL_SANITY_PERFG,perfg_get(fg_id));
+	ret = mempool_create(&perfg_get(pcb_mempool), &pcb_datastore, MEMPOOL_SANITY_PERFG,perfg_get(fg_id));
 	if (ret)
 		return ret;
 
-	ret = mempool_pagemem_create(&perfg_get(id_mempool),
-				     MAX_PCBS,
-				     sizeof(struct ip_tuple),MEMPOOL_SANITY_PERFG,perfg_get(fg_id));
+	ret = mempool_create(&perfg_get(id_mempool),&id_datastore,MEMPOOL_SANITY_PERFG,perfg_get(fg_id));
 	if (ret)
 		return ret;
-
-	ret = mempool_pagemem_map_to_user(&perfg_get(id_mempool));
-	if (ret)
-		return ret;
-
 	return 0;
 }
 

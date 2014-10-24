@@ -57,20 +57,22 @@ void __page_put_slow(void *addr)
 void *page_alloc_contig_on_node(unsigned int nr, int numa_node)
 {
 	int ret, i;
+
 	void *base = (void *) atomic64_fetch_and_add(&page_pos, nr * PGSIZE_2MB);
+
 	if ((uintptr_t) base >= MEM_USER_START)
 		return NULL;
+
 
 	base = __mem_alloc_pages_onnode(base, nr, PGSIZE_2MB, numa_node);
 	if (!base)
 		return NULL;
 
 	for (i = 0; i < nr; i++) {
+
 		void *pos = (void *) ((uintptr_t) base + i * PGSIZE_2MB);
 		struct page_ent *ent = addr_to_page_ent(pos);
-
 		*((int *) pos) = 0; /* force a fault */
-
 		ret = mem_lookup_page_machine_addr(pos, PGSIZE_2MB, &ent->maddr);
 		if (ret) {
 			mem_free_pages(base, nr, PGSIZE_2MB);

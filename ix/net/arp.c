@@ -53,6 +53,7 @@ static DEFINE_SPINLOCK(arp_lock);
 #define ARP_MAX_ENTRIES		65536
 #define ARP_HASH_SEED		0xa36bdcbe
 
+static struct mempool_datastore arp_datastore;
 static struct mempool		arp_mempool;
 static struct hlist_head	arp_tbl[ARP_MAX_ENTRIES];
 
@@ -362,7 +363,10 @@ static void arp_timer_handler(struct timer *t)
  */
 int arp_init(void)
 {
-	return mempool_create(&arp_mempool, ARP_MAX_ENTRIES,
-			      sizeof(struct arp_entry), MEMPOOL_SANITY_GLOBAL,0);
+	int ret;
+	ret = mempool_create_datastore(&arp_datastore,ARP_MAX_ENTRIES, sizeof(struct arp_entry), 0, MEMPOOL_DEFAULT_CHUNKSIZE,"arp");
+	if (ret) 
+		return ret;
+	return mempool_create(&arp_mempool, &arp_datastore, MEMPOOL_SANITY_GLOBAL,0);
 }
 

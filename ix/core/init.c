@@ -34,12 +34,14 @@
 
 extern int net_init(void);
 extern int tcp_api_init(void);
+extern int tcp_api_init_fg(void);
 extern int ixgbe_init(struct pci_dev *pci_dev,
 		      struct rte_eth_dev **ethp);
 extern int sandbox_init(int argc, char *argv[]);
 extern void tcp_init(void);
 extern void toeplitz_init(void);
 extern int cp_init(void);
+extern int mempool_init(void);
 
 volatile int uaccess_fault;
 
@@ -127,8 +129,7 @@ static int network_init_cpu(int cpu)
 
 	percpu_get(eth_num_queues) = eth_dev_count;
 
-	//ret = memp_init(); intiialized in init_hw
-	ret = 0;
+	ret = memp_init();
 	if (ret) {
 		log_err("init: failed to initialize lwip memp\n");
 		return ret;
@@ -152,11 +153,13 @@ static int network_init_cpu(int cpu)
  *
  * Returns 0 if successful, otherwise fail.
  */
-static int init_create_cpu(unsigned int cpu)
+static int init_create_cpu(unsigned int cpu, int first)
 {
-	int ret;
+	int ret=0;
 
-	ret = cpu_init_one(cpu);
+	if (!first) 
+		ret = cpu_init_one(cpu);
+
 	if (ret) {
 		log_err("init: unable to initialize CPU %d\n", cpu);
 		return ret;
@@ -174,9 +177,8 @@ static int init_create_cpu(unsigned int cpu)
 		return ret;
 	}
 
-#ifdef ENABLE_KSTATS
-	timer_percpu_init_cpu();
-#endif
+
+	timer_init_cpu();
 	kstats_init_cpu();
 
 	ret = network_init_cpu(cpu);
@@ -248,7 +250,7 @@ void *start_cpu(void *arg)
 	int ret;
 	unsigned int cpu = *((unsigned int *) arg);
 
-	ret = init_create_cpu(cpu);
+	ret = init_create_cpu(cpu,0);
 	if (ret) {
 		log_err("init: failed to initialize CPU %d\n", cpu);
 		exit(ret);
@@ -284,9 +286,24 @@ static int init_hw(void)
 		pthread_barrier_init(&start_barrier, NULL, cfg_cpu_nr);
 	}
 
-	ret = init_create_cpu(cfg_cpu[0]);
+
+	ret = cpu_init_one(cfg_cpu[0]);
 	if (ret) {
 		log_err("init: failed to initialize CPU 0\n");
+		return ret;
+	}
+
+	mbuf_init();
+
+	ret = tcp_api_init();
+	if (ret) {
+		log_err("init: failed to initialize tcp_api pools\n");
+		return ret;
+	}
+
+	ret = init_create_cpu(cfg_cpu[0], 1);
+	if (ret) {
+		log_err("init: failed to create CPU 0\n");
 		return ret;
 	}
 
@@ -341,7 +358,7 @@ static int init_hw(void)
 
 			tcp_init();
 
-			ret = tcp_api_init();
+			ret = tcp_api_init_fg();
 			if (ret) {
 				log_err("init: failed to initialize TCP API\n");
 				return ret;
@@ -358,6 +375,7 @@ static int init_hw(void)
 
 	nr_flow_groups = fg_id;
 
+	mempool_init();
 	return 0;
 }
 
@@ -386,15 +404,6 @@ int main(int argc, char *argv[])
 		log_err("init: failed to initialize timers\n");
 		return ret;
 	}
-
-#ifdef ENABLE_KSTATS
-	ret = timer_percpu_init();
-	if (ret) {
-		log_err("init: failed to initialize per CPU timers\n");
-		return ret;
-	}
-
-#endif
 
 	ret = net_init();
 	if (ret) {

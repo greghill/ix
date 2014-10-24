@@ -11,7 +11,7 @@
 #include <ix/vm.h>
 #include <ix/kstats.h>
 #include <ix/cfg.h>
-
+#include <ix/mempool.h>
 #include <asm/chksum.h>
 
 #include <net/ip.h>
@@ -216,6 +216,10 @@ long bsys_udp_recv_done(void *iomap)
 	
 	KSTATS_VECTOR(bsys_udp_recv_done);
 
+
+#if 0
+	// EdB: deprecated; rely on mempool sanity
+
 	/* validate the address */
 	if (unlikely((uintptr_t) addr < (uintptr_t) pool->buf ||
 		     (uintptr_t) addr >=
@@ -225,8 +229,13 @@ long bsys_udp_recv_done(void *iomap)
 			"at address %p\n", addr);
 		return -RET_FAULT;
 	}
+#endif
+	//FIXME: should support the conversion in mempool.h for nostraddle==1 pools
 
 	m = (struct mbuf *) (PGADDR_2MB(addr) + (off / MBUF_LEN) * MBUF_LEN);
+
+	MEMPOOL_SANITY_ACCESS(addr);
+
 
 	if (unlikely(m->done != (void *) 0xDEADBEEF)) {
 		log_err("udp: user tried to free an already free mbuf\n");

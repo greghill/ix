@@ -124,8 +124,7 @@ struct mbuf {
  *
  * Returns an address.
  */
-#define mbuf_to_iomap(mbuf, pos) \
-	((void *) ((uintptr_t) (pos) + (mbuf)->pool->iomap_offset))
+#define mbuf_to_iomap(mbuf, pos) mempool_pagemem_to_iomap(mbuf->pool,pos)
 
 /**
  * iomap_to_mbuf - determines the mbuf pointer based on the IOMAP address
@@ -134,8 +133,7 @@ struct mbuf {
  *
  * Returns an address.
  */
-#define iomap_to_mbuf(pool, pos) \
-	((void *) ((uintptr_t) (pos) - (pool)->iomap_offset))
+#define iomap_to_mbuf(pool, pos) mempool_iomap_to_ptr(pool,pos)
 
 extern void mbuf_default_done(struct mbuf *m);
 
@@ -199,6 +197,7 @@ static inline struct mbuf *mbuf_alloc_local(void)
 	return mbuf_alloc(&percpu_get(mbuf_mempool));
 }
 
+extern int mbuf_init(void);
 extern int mbuf_init_cpu(void);
 extern void mbuf_exit_cpu(void);
 
