@@ -97,6 +97,5 @@ extern int timer_init(void);
 extern int cycles_per_us;
 
 extern int timer_percpu_add(struct timer *t, uint64_t usecs);
-extern void timer_percpu_run(void);
 
 

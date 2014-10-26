@@ -139,16 +139,8 @@ again:
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(timer, NULL);
-	for (i = 0; i < nr_flow_groups; i++) {
-		if (fgs[i]->cur_cpu != percpu_get(cpu_id))
-			continue;
-		eth_fg_set_current(fgs[i]);
-		timer_run();
-	}
+	timer_run();
 	unset_current_fg();
-#ifdef ENABLE_KSTATS
-	timer_percpu_run();
-#endif
 	KSTATS_POP(NULL);
 
 	KSTATS_PUSH(rx_poll, NULL);
@@ -165,18 +157,7 @@ again:
 
 	if (!percpu_get(usys_arr)->len) {
 		if (empty) {
-			uint64_t deadline = 0;
-
-			for (i = 0; i < nr_flow_groups; i++) {
-				if (fgs[i]->cur_cpu != percpu_get(cpu_id))
-					continue;
-				eth_fg_set_current(fgs[i]);
-				deadline = timer_deadline(10 * ONE_MS);
-				if (deadline == 0)
-					break;
-			}
-			unset_current_fg();
-
+			uint64_t deadline = timer_deadline(10* ONE_MS);
 			if (deadline > 0) { 
 				KSTATS_PUSH(idle, NULL);
 				eth_rx_idle_wait(deadline);
