@@ -368,7 +368,7 @@ void             tcp_err     (struct tcp_pcb *pcb, tcp_err_fn err);
                                                (pcb)->state == LISTEN)
 #endif /* TCP_LISTEN_BACKLOG */
 
-void             tcp_recved  (struct tcp_pcb *pcb, u16_t len);
+void             tcp_recved  (struct tcp_pcb *pcb, u32_t len);
 err_t            tcp_bind    (struct tcp_pcb *pcb, ip_addr_t *ipaddr,
                               u16_t port);
 err_t            tcp_connect (struct tcp_pcb *pcb, ip_addr_t *ipaddr,
