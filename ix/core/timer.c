@@ -69,11 +69,11 @@ static struct timerwheel *fg_timerwheel[ETH_MAX_TOTAL_FG];
  */
 
 #define WHEELHINT_SHARING (ETH_MAX_TOTAL_FG/64)
-struct wheel0fg_hint { 
-	uint64_t hints[WHEEL_SIZE];
+struct wheelfg_hint { 
+	uint64_t hints[WHEEL_COUNT][WHEEL_SIZE];
 };
 
-static DEFINE_PERCPU(struct wheel0fg_hint, wheel0fg_hint);
+static DEFINE_PERCPU(struct wheelfg_hint, wheelfg_hint);
 
 
 
@@ -114,11 +114,10 @@ static void timer_insert(struct timerwheel *tw, struct timer *t,
 
 	bucket =&tw->wheels[index][offset];
 	hlist_add_head(bucket, &t->link);
-	if (index==0) {
-		struct wheel0fg_hint *hint = &percpu_get(wheel0fg_hint);
-		assert(tw->wheelhint_mask);
-		hint->hints[offset] |= tw->wheelhint_mask;
-	}
+
+	struct wheelfg_hint *hint = &percpu_get(wheelfg_hint);
+	assert(tw->wheelhint_mask);
+	hint->hints[index][offset] |= tw->wheelhint_mask;
 	//printf("timer_insert %d:%d expires %lu now:%lu left:%lu\n",index,offset,expires,percpu_get(now_us),left);
 
 }
@@ -225,20 +224,38 @@ static void timer_reinsert_bucket(struct timerwheel *tw, struct hlist_head *h, u
  * timer_collapse - collapselonger-term buckets into shorter-term buckets 
 */
 
-static void timer_collapse(struct timerwheel *tw, uint64_t pos)
-{
-	int med_off = WHEEL_OFFSET(pos, 1);
-	timer_reinsert_bucket(tw, &tw->wheels[1][med_off],pos);
-	
-	if (!med_off) {
-		int low_off = WHEEL_OFFSET(pos, 2);
-		timer_reinsert_bucket(tw, &tw->wheels[2][low_off],pos);
-		if (tw == &percpu_get(timer_wheel_cpu)) {
-			//printf("timer_collapse(low)  off %d %lu\n",low_off, pos);
-		}
-	}
 
+static void timer_collapse(struct wheelfg_hint *hint, uint64_t pos)
+{
+	struct timerwheel *tw;
+	int wheel;
+
+	for (wheel=1;wheel<WHEEL_COUNT;wheel++) {
+		int off = WHEEL_OFFSET(pos, wheel);
+		int i;
+
+		tw = &percpu_get(timer_wheel_cpu);
+		timer_reinsert_bucket(tw, &tw->wheels[wheel][off],pos);
+
+		uint64_t cur_hint = hint->hints[wheel][off];
+		hint->hints[wheel][off] = 0;		
+		for (i = 0; i < nr_flow_groups; i++) {
+			tw = fg_timerwheel[i];
+			if (fgs[i]->cur_cpu != percpu_get(cpu_id))
+				continue;
+			if (cur_hint & tw->wheelhint_mask) {
+				eth_fg_set_current(fgs[i]);
+				timer_reinsert_bucket(tw, &tw->wheels[wheel][off],pos);
+			}
+		}
+		assert (hint->hints[wheel][off] == 0);
+		
+		// only need to go to the next wheel if offset is zero
+		if (off)
+			break;
+	}
 }
+
 
 /**
  * timer_run - the main timer processing pass
@@ -250,31 +267,24 @@ void timer_run(void)
 {
 
 	uint64_t pos = percpu_get(timer_pos);
-	struct wheel0fg_hint *hint = &percpu_get(wheel0fg_hint);
+	struct wheelfg_hint *hint = &percpu_get(wheelfg_hint);
 	percpu_get(now_us) = rdtsc() / cycles_per_us;
 
 	for (; pos <= percpu_get(now_us); pos += MIN_DELAY_US) {
 		int i;
 		int high_off = WHEEL_OFFSET(pos, 0);
 
-		if (!high_off) {
-			/* warning -- O(#wheel entries * # flow groups) */
-			timer_collapse(&percpu_get(timer_wheel_cpu),pos);
-			for (i = 0; i < nr_flow_groups; i++) {
-				if (fgs[i]->cur_cpu != percpu_get(cpu_id))
-					continue;
-				eth_fg_set_current(fgs[i]);
-				timer_collapse(fg_timerwheel[i],pos);
-			}
-		}
-		if (hint->hints[high_off]) {
+		if (!high_off)
+			timer_collapse(hint, pos);
+
+		if (hint->hints[0][high_off]) {
 			struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
 			timer_run_bucket(tw,&tw->wheels[0][high_off]);
 			for (i = 0; i < nr_flow_groups; i++) {
 				tw = fg_timerwheel[i];
 				if (fgs[i]->cur_cpu != percpu_get(cpu_id))
 					continue;
-				if (hint->hints[high_off] & tw->wheelhint_mask) {
+				if (hint->hints[0][high_off] & tw->wheelhint_mask) {
 					eth_fg_set_current(fgs[i]);
 					timer_run_bucket(tw,&tw->wheels[0][high_off]);
 				} else {
@@ -283,7 +293,7 @@ void timer_run(void)
 #endif
 				}
 			}
-			hint->hints[high_off] = 0;
+			hint->hints[0][high_off] = 0;
 		} else {
 #ifdef DEBUG_TIMER
 			// debug only statement;
@@ -317,7 +327,7 @@ timer_deadline(uint64_t max_deadline_us)
 		int high_off = WHEEL_OFFSET(pos, 0);
 		if (!high_off)
 			break;  // don't attempt to collapse; just stop at that side of the wheel
-		if (percpu_get(wheel0fg_hint).hints[high_off])
+		if (percpu_get(wheelfg_hint).hints[0][high_off])
 			break; // pending event (at least likely; could be more granular)
         }
 	
@@ -334,12 +344,13 @@ timer_deadline(uint64_t max_deadline_us)
 void
 timer_addfg(int fgid)
 {
-	int i;
+	int i,j;
 	struct timerwheel *tw = fg_timerwheel[fgid];
 	assert(tw);
-	for (i=0;i<WHEEL_SIZE;i++) { 
-		percpu_get(wheel0fg_hint).hints[i] |= tw->wheelhint_mask;
-	}
+	for (j=0;j<WHEEL_COUNT;j++)
+		for (i=0;i<WHEEL_SIZE;i++)
+			percpu_get(wheelfg_hint).hints[j][i] |= tw->wheelhint_mask;
+
 }
 
 
@@ -377,20 +388,23 @@ timer_calibrate_tsc(void)
  */
 void timer_init_fg(void)
 {
+	printf("time_init_fg start\n");
 	struct timerwheel *tw = &perfg_get(timer_wheel_fg);
 	int id = perfg_get(fg_id);
 	assert (fg_timerwheel[id] == NULL);
 	fg_timerwheel[id] = tw;
 	int hint = id % 64;
 	tw->wheelhint_mask = (1LL << hint);
-	//printf("initializing fg wheel %d mask 0x%lx\n", id, tw->wheelhint_mask);
+	printf("timer_init_cpu done\n");
 }
 
 void timer_init_cpu(void)
 {
+	printf("timer_init_cpu start\n");
 	percpu_get(now_us) = rdtsc() / cycles_per_us;
 	percpu_get(timer_pos) = percpu_get(now_us);
 	percpu_get(timer_wheel_cpu).wheelhint_mask = 1; 
+	printf("timer_init_cpu done\n");
 }	
 /**
  * timer_init - global timer initialization
@@ -405,6 +419,7 @@ int timer_init(void)
 	if (ret)
 		return ret;
 
+	printf("timer_init done\n");
 	return 0;
 }
 
