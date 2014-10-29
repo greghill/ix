@@ -676,7 +676,7 @@ u32_t tcp_update_rcv_ann_wnd(struct tcp_pcb *pcb)
  * @param len the amount of bytes that have been read by the application
  */
 void
-tcp_recved(struct tcp_pcb *pcb, u16_t len)
+tcp_recved(struct tcp_pcb *pcb, u32_t len)
 {
   int wnd_inflation;
 

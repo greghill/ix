@@ -51,7 +51,7 @@ def main():
   buffer = mmap.mmap(shm.fd, ctypes.sizeof(ShMem), mmap.MAP_SHARED, mmap.PROT_WRITE)
   shmem = ShMem.from_buffer(buffer)
   print 'flow group assignments = ',
-  for i in xrange(128):
+  for i in xrange(128*4):
     print shmem.flow_group[i].cpu,
   print
   print 'commands running = ',

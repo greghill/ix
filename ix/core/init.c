@@ -354,7 +354,10 @@ static int init_hw(void)
 				return ret;
 			}
 
-			eth_fg_assign_to_cpu(fg_id, (i * ETH_RSS_RETA_NUM_ENTRIES + j) / step);
+			if (j == 0)
+				eth_fg_assign_to_cpu(fg_id, 0);
+			else
+				eth_fg_assign_to_cpu(fg_id, (i * ETH_RSS_RETA_NUM_ENTRIES + j) / step);
 
 			tcp_init();
 

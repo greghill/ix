@@ -458,40 +458,28 @@ static err_t on_connected(void *arg, struct tcp_pcb *pcb, err_t err)
 /* FIXME: we should maintain a bitmap to hold the available TCP ports */
 int get_local_port_and_set_queue(struct ip_tuple *id)
 {
-#if 0
-	int i;
 	uint32_t hash;
-	uint32_t queue_idx;
-#endif
+	uint32_t fg_idx;
 
 	if (!percpu_get(local_port))
 		percpu_get(local_port) = percpu_get(cpu_id) * PORTS_PER_CPU;
 
-	set_current_queue(percpu_get(eth_rxqs[0]));
-	percpu_get(local_port)++;
-	return 0;
-#if 0
 	while (1) {
 		percpu_get(local_port)++;
 		if (percpu_get(local_port) >= (percpu_get(cpu_id) + 1) * PORTS_PER_CPU)
 			percpu_get(local_port) = percpu_get(cpu_id) * PORTS_PER_CPU + 1;
 		hash = toeplitz_rawhash_addrport(hton32(id->src_ip), hton32(id->dst_ip),
 						 hton16(percpu_get(local_port)), hton16(id->dst_port));
-		queue_idx = hash & (ETH_RSS_RETA_MAX_QUEUE - 1);
-		if (percpu_get(eth_rx_bitmap) & (1 << queue_idx)) {
+		fg_idx = hash & (ETH_RSS_RETA_NUM_ENTRIES - 1);
+		if (percpu_get(eth_rxqs[0])->dev->data->rx_fgs[fg_idx].cur_cpu == percpu_get(cpu_id)) {
 			id->src_port = percpu_get(local_port);
-			for (i = 0; i < percpu_get(eth_rx_count); i++) {
-				if (percpu_get(eth_rx)[i]->queue_idx == queue_idx) {
-					set_current_queue(percpu_get(eth_rx)[i]);
-					break;
-				}
-			}
+			set_current_queue(percpu_get(eth_rxqs)[0]);
+			eth_fg_set_current(&percpu_get(eth_rxqs[0])->dev->data->rx_fgs[fg_idx]);
 			return 0;
 		}
 	}
 
 	return 1;
-#endif
 }
 
 long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
