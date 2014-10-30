@@ -341,26 +341,25 @@ run_single() {
     $SERVER $CORE_COUNT $MSG_SIZE
   done
   if [ $SERVER = server_mtcp_rpc ]; then
-    echo -ne "$[2*CORE_COUNT]\t$MSG_SIZE\t$MSG_PER_CONN\t" # >> $OUTDIR/data
+    echo -ne "$[2*CORE_COUNT]\t$MSG_SIZE\t$MSG_PER_CONN\t" >> $OUTDIR/data
   else
-    echo -ne "$CORE_COUNT\t$MSG_SIZE\t$MSG_PER_CONN\t" # >> $OUTDIR/data
+    echo -ne "$CORE_COUNT\t$MSG_SIZE\t$MSG_PER_CONN\t" >> $OUTDIR/data
   fi
-  python $DIR/launch.py --time $TIME --clients $CLIENT_HOSTS --client-cmdline "`eval echo $CLIENT_CMDLINE`" # >> $OUTDIR/data
+  python $DIR/launch.py --time $TIME --clients $CLIENT_HOSTS --client-cmdline "`eval echo $CLIENT_CMDLINE`" >> $OUTDIR/data
   $ON_EXIT
 }
 
 run() {
   if [ $CLUSTER_ID = 'EPFL' ]; then
-    run_single 16 64 1
-    #for i in `eval echo "{1..$MAX_CORES}"`; do
-    #  run_single $i 64 1
-    #done
-    #for i in 2 8 32 64 128 256 512 1024; do
-    #  run_single $MAX_CORES 64 $i
-    #done
-    #for i in 256 1024 4096 8192; do
-    #  run_single $MAX_CORES $i 1
-    #done
+    for i in `eval echo "{1..$MAX_CORES}"`; do
+      run_single $i 64 1
+    done
+    for i in 2 8 32 64 128 256 512 1024; do
+      run_single $MAX_CORES 64 $i
+    done
+    for i in 256 1024 4096 8192; do
+      run_single $MAX_CORES $i 1
+    done
   elif [ $CLUSTER_ID = 'Stanford-IX' ]; then
     for i in `eval echo "{1..$MAX_CORES}"`; do
       run_single $i 64 1
@@ -375,7 +374,7 @@ run() {
 }
 
 prepare $BUILD_IX
-#OUTDIR=`bench_start "short/$SERVER_SPEC/$CLIENT_SPEC"`
+OUTDIR=`bench_start "short/$SERVER_SPEC/$CLIENT_SPEC"`
 trap $ON_EXIT EXIT
 run
-#bench_stop $OUTDIR
+bench_stop $OUTDIR
