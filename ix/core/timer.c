@@ -54,32 +54,14 @@
 
 
 struct timerwheel {
+	uint64_t now_us;
+	uint64_t timer_pos;
 	struct hlist_head wheels[WHEEL_COUNT][WHEEL_SIZE];
-	uint64_t wheelhint_mask;  // one hot encoding
-	char prettyname[32];
+
 };
 
 
-static DEFINE_PERFG(struct timerwheel,timer_wheel_fg);
 static DEFINE_PERCPU(struct timerwheel, timer_wheel_cpu);
-
-static DEFINE_PERCPU(uint64_t, now_us);
-static DEFINE_PERCPU(uint64_t, timer_pos);
-
-static struct timerwheel *fg_timerwheel[ETH_MAX_TOTAL_FG];
-
-/*
- * bitvector with possible non-empty bucket
- * kept on a per-cpu basis to avoid false sharing
- */
-
-#define WHEELHINT_SHARING (ETH_MAX_TOTAL_FG/64)
-struct wheelfg_hint { 
-	uint64_t hints[WHEEL_COUNT][WHEEL_SIZE];
-};
-
-static DEFINE_PERCPU(struct wheelfg_hint, wheelfg_hint);
-
 
 
 int cycles_per_us __aligned(64);
@@ -99,7 +81,7 @@ void __timer_delay_us(uint64_t us)
 
 static inline bool timer_expired(struct timerwheel *tw, struct timer *t)
 {
-	return (t->expires <= percpu_get(now_us));
+	return (t->expires <= tw->now_us);
 }
 
 
@@ -112,17 +94,8 @@ static void timer_insert(struct timerwheel *tw, struct timer *t,
 	assert (index >=0 && index <=2);
 	int offset = WHEEL_OFFSET(expires, index);
 
-	if (index ==2) {
-		uint64_t prev = expires-left;
-		assert (offset != WHEEL_OFFSET(prev,2));
-	}
-
 	bucket =&tw->wheels[index][offset];
 	hlist_add_head(bucket, &t->link);
-
-	struct wheelfg_hint *hint = &percpu_get(wheelfg_hint);
-	assert(tw->wheelhint_mask);
-	hint->hints[index][offset] |= tw->wheelhint_mask;
 }
 
 /**
@@ -145,7 +118,7 @@ static int __timer_add(struct timerwheel *tw, struct timer *t, uint64_t usecs)
 	 * Make sure the expiration time is rounded
 	 * up past the current bucket.
 	 */
-	expires = percpu_get(now_us) + usecs + MIN_DELAY_US - 1;
+	expires = tw->now_us + usecs + MIN_DELAY_US - 1;
 	t->expires = expires;
 	timer_insert(tw,t, usecs, expires);
 
@@ -154,8 +127,8 @@ static int __timer_add(struct timerwheel *tw, struct timer *t, uint64_t usecs)
 
 int timer_add(struct timer *t, uint64_t usecs)
 {
-	struct timerwheel *tw = &perfg_get(timer_wheel_fg);
-	assert(tw->prettyname[0] == 'f');
+	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
+	t->fg_id = perfg_get(fg_id);
 	return __timer_add(tw,t,usecs);
 
 }
@@ -163,8 +136,7 @@ int timer_add(struct timer *t, uint64_t usecs)
 int timer_percpu_add(struct timer *t, uint64_t usecs)
 {
 	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
-	assert(tw->prettyname[0] == 'c');
-	assert(usecs>0);
+	t->fg_id = -1;
 	return __timer_add(tw,t,usecs);
 }
 
@@ -178,10 +150,11 @@ int timer_percpu_add(struct timer *t, uint64_t usecs)
  */
 void timer_add_for_next_tick(struct timer *t)
 {
-	struct timerwheel *tw = &perfg_get(timer_wheel_fg);
+	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
 	uint64_t expires;
-	expires = percpu_get(now_us) + MIN_DELAY_US;
+	expires = tw->now_us + MIN_DELAY_US;
 	t->expires = expires;
+	t->fg_id = perfg_get(fg_id);
 	timer_insert(tw,t, MIN_DELAY_US, expires);
 }
 
@@ -197,6 +170,8 @@ static void timer_run_bucket(struct timerwheel *tw, struct hlist_head *h)
 		t = hlist_entry(n, struct timer, link);
 		__timer_del(t);
 		KSTATS_PUSH(timer_handler, &save);
+		if (t->fg_id >=0)
+			eth_fg_set_current(fgs[t->fg_id]);
 		t->handler(t);
 		KSTATS_POP(&save);
 	}
@@ -218,6 +193,8 @@ static int timer_reinsert_bucket(struct timerwheel *tw, struct hlist_head *h, ui
 		count++;
 		if (timer_expired(tw, t)) {
 			KSTATS_PUSH(timer_handler, &save);
+			if (t->fg_id >=0)
+				eth_fg_set_current(fgs[t->fg_id]);
 			t->handler(t);
 			KSTATS_POP(&save);
 			continue;
@@ -232,7 +209,7 @@ static int timer_reinsert_bucket(struct timerwheel *tw, struct hlist_head *h, ui
 */
 
 
-static int timer_collapse(struct wheelfg_hint *hint, uint64_t pos)
+static int timer_collapse(uint64_t pos)
 {
 	struct timerwheel *tw;
 	int wheel;
@@ -242,28 +219,9 @@ static int timer_collapse(struct wheelfg_hint *hint, uint64_t pos)
 
 	for (wheel=1;wheel<WHEEL_COUNT;wheel++) {
 		int off = WHEEL_OFFSET(pos, wheel);
-		int i;
 		
 		tw = &percpu_get(timer_wheel_cpu);
 		count = timer_reinsert_bucket(tw, &tw->wheels[wheel][off],pos);
-		
-		uint64_t cur_hint = hint->hints[wheel][off];
-		hint->hints[wheel][off] = 0;		
-		for (i = 0; i < nr_flow_groups; i++) {
-			tw = fg_timerwheel[i];
-			assert(tw);
-
-			if (fgs[i]->cur_cpu != percpu_get(cpu_id)) {
-				continue;
-			}
-			if (cur_hint & tw->wheelhint_mask) {
-				eth_fg_set_current(fgs[i]);
-				count = timer_reinsert_bucket(tw, &tw->wheels[wheel][off],pos);
-			} else {
-				assert(hlist_empty(&tw->wheels[wheel][off]));
-			}
-		}
-		assert (hint->hints[wheel][off] == 0);
 		
 		// only need to go to the next wheel if offset is zero
 		if (off)
@@ -282,51 +240,19 @@ static int timer_collapse(struct wheelfg_hint *hint, uint64_t pos)
 void timer_run(void)
 {
 
-	uint64_t pos = percpu_get(timer_pos);
-	struct wheelfg_hint *hint = &percpu_get(wheelfg_hint);
-	percpu_get(now_us) = rdtsc() / cycles_per_us;
+	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
+	uint64_t pos = tw->timer_pos;
+	tw->now_us = rdtsc() / cycles_per_us;
 
-
-	for (; pos <= percpu_get(now_us); pos += MIN_DELAY_US) {
-		int i;
+	for (; pos <= tw->now_us; pos += MIN_DELAY_US) {
 		int high_off = WHEEL_OFFSET(pos, 0);
 
 		if (!high_off)
-			timer_collapse(hint, pos);
-
-		if (hint->hints[0][high_off]) {
-			struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
-			timer_run_bucket(tw,&tw->wheels[0][high_off]);
-			for (i = 0; i < nr_flow_groups; i++) {
-				tw = fg_timerwheel[i];
-				assert(tw);
-				if (fgs[i]->cur_cpu != percpu_get(cpu_id)) {
-					continue;
-				}
-				if (hint->hints[0][high_off] & tw->wheelhint_mask) {
-					eth_fg_set_current(fgs[i]);
-					timer_run_bucket(tw,&tw->wheels[0][high_off]);
-				} else {
-#ifdef DEBUG_TIMER
-					assert(hlist_empty(&tw->wheels[0][high_off]));
-#endif
-				}
-			}
-			hint->hints[0][high_off] = 0;
-		} else {
-#ifdef DEBUG_TIMER
-			// debug only statement;
-			// FIXME: on rebalance, must set all hints for the FG
-			assert (hlist_empty(&percpu_get(timer_wheel_cpu).wheels[0][high_off]));
-			for (i = 0; i < nr_flow_groups; i++) {
-                                if (fgs[i]->cur_cpu != percpu_get(cpu_id))
-                                        continue;
-                                assert(hlist_empty(&fg_timerwheel[i]->wheels[0][high_off]));
-			}
-#endif
-		}
+			timer_collapse(pos);
+		
+		timer_run_bucket(tw,&tw->wheels[0][high_off]);
 	}
-	percpu_get(timer_pos) = pos;
+	tw->timer_pos = pos;
 	unset_current_fg();
 }
 
@@ -339,7 +265,8 @@ void timer_run(void)
 uint64_t
 timer_deadline(uint64_t max_deadline_us)
 {
-	uint64_t pos = percpu_get(timer_pos);
+	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
+	uint64_t pos = tw->timer_pos;
         uint64_t now_us = rdtsc() / cycles_per_us;
         uint64_t max_us = now_us + max_deadline_us;
 	
@@ -348,8 +275,8 @@ timer_deadline(uint64_t max_deadline_us)
 		int high_off = WHEEL_OFFSET(pos, 0);
 		if (!high_off)
 			break;  // don't attempt to collapse; just stop at that side of the wheel
-		if (percpu_get(wheelfg_hint).hints[0][high_off])
-			break; // pending event (at least likely; could be more granular)
+		if (!hlist_empty(&tw->wheels[0][high_off])) 
+			break; // pending event 
         }
 
         if (pos < now_us)
@@ -358,21 +285,66 @@ timer_deadline(uint64_t max_deadline_us)
 }
 
 /**
- * timer_addfg 
- * @fgid: new flow group now owned by the current core
+ * timer_collect_fgs -- collect all pending timer events corresponding to a set of fg_id
+ * @fg_vector -- vector of all flow group ids to collect --must be of size ETH_MAX_NUM_FG * eth_dev_count (in bytes)
+ * @list -- out-parmeter of all matching events
+ @ @time_pos - out-parameter.  timer_pos at the time of extraction.
  */
 
-void
-timer_addfg(int fgid)
+//NOT TESTED. EdB
+int
+timer_collect_fgs(uint8_t *fg_vector, struct hlist_head *list,uint64_t *timer_pos)
 {
-	int i,j;
-	struct timerwheel *tw = fg_timerwheel[fgid];
-	assert(tw);
-	for (j=0;j<WHEEL_COUNT;j++)
-		for (i=0;i<WHEEL_SIZE;i++)
-			percpu_get(wheelfg_hint).hints[j][i] |= tw->wheelhint_mask;
+	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
+	int wheel,pos,count=0;
+	struct hlist_node *x, *tmp;
+	struct timer *t;
 
+	for (wheel=0;wheel<WHEEL_COUNT;wheel++) 
+		for (pos=0;pos<WHEEL_SIZE;pos++)
+			hlist_for_each_safe(&tw->wheels[wheel][pos], x, tmp) {
+				t = hlist_entry(x, struct timer, link);
+				if (t->fg_id>=0 && fg_vector[t->fg_id]) {
+					hlist_del(&t->link);
+					hlist_add_head(list,&t->link);
+					count++;
+				}
+			}
+
+	return count;
 }
+
+/**
+ * timer_reinject_fg -- insert collected pending timer events on destination CPU
+ * @list - list of timers
+ * @timer_pos -- count (in usec) of the collection time
+ */
+
+// NOT TESTED 
+void
+timer_reinject_fgs(struct hlist_head *list,uint64_t timer_pos)
+{
+	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
+        struct hlist_node *x, *tmp;
+        struct timer *t;
+	uint64_t t_base;
+	
+	if (timer_pos >= tw->timer_pos)
+		t_base = tw->timer_pos;
+	else 
+		t_base = timer_pos;
+
+	hlist_for_each_safe(list, x, tmp) {
+		t = hlist_entry(x, struct timer, link);
+		uint64_t delay = t->expires - t_base;
+		if (delay<=0) 
+			timer_add_for_next_tick(t);
+		else 
+			__timer_add(tw,t,delay);
+	}
+}
+
+
 
 
 /* derived from DPDK */
@@ -409,21 +381,14 @@ timer_calibrate_tsc(void)
  */
 void timer_init_fg(void)
 {
-	struct timerwheel *tw = &perfg_get(timer_wheel_fg);
-	int id = perfg_get(fg_id);
-	assert (fg_timerwheel[id] == NULL);
-	fg_timerwheel[id] = tw;
-	int hint = id % 64;
-	tw->wheelhint_mask = (1LL << hint);
-	sprintf(tw->prettyname,"fg:%d",id);
+	;
 }
 
 int timer_init_cpu(void)
 {
-	percpu_get(now_us) = rdtsc() / cycles_per_us;
-	percpu_get(timer_pos) = percpu_get(now_us);
-	percpu_get(timer_wheel_cpu).wheelhint_mask = 1; 
-	sprintf(percpu_get(timer_wheel_cpu).prettyname,"cpu:%d",percpu_get(cpu_id));
+	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
+	tw->now_us = rdtsc() / cycles_per_us;
+	tw->timer_pos = tw->now_us;
 	return 0;
 }	
 /**

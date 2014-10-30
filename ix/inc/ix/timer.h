@@ -10,6 +10,7 @@ struct timer {
 	struct hlist_node link;
 	void (*handler)(struct timer *t);
 	uint64_t expires;
+	int fg_id;
 };
 
 
@@ -79,6 +80,10 @@ static inline void timer_del(struct timer *t)
 
 extern void timer_run(void);
 extern uint64_t timer_deadline(uint64_t max_us);
+
+extern int timer_collect_fgs(uint8_t *fg_vector, struct hlist_head *list,uint64_t *timer_pos);
+extern void timer_reinject_fgs(struct hlist_head *list,uint64_t timer_pos);
+
 
 extern void timer_init_fg(void);
 extern int timer_init_cpu(void);
