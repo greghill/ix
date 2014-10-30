@@ -8,6 +8,7 @@ DEF_KSTATS(none);
 DEF_KSTATS(idle);
 DEF_KSTATS(user);
 DEF_KSTATS(timer);
+DEF_KSTATS(timer_collapse);
 DEF_KSTATS(print_kstats);
 DEF_KSTATS(percpu_bookkeeping);
 DEF_KSTATS(tx_reclaim);

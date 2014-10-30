@@ -44,8 +44,8 @@ struct tcpapi_pcb {
 static struct mempool_datastore pcb_datastore;
 static struct mempool_datastore id_datastore;
 
-static DEFINE_PERFG(struct mempool, pcb_mempool);
-static DEFINE_PERFG(struct mempool, id_mempool);
+static DEFINE_PERCPU(struct mempool, pcb_mempool);
+static DEFINE_PERCPU(struct mempool, id_mempool);
 
 /**
  * handle_to_tcpapi - converts a handle to a PCB
@@ -67,7 +67,7 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 
 	eth_fg_set_current(fgs[fg]);
 	set_current_queue(percpu_get(eth_rxqs[perfg_get(dev_idx)]));
-	p = &perfg_get(pcb_mempool);
+	p = &percpu_get(pcb_mempool);
 
 	api = (struct tcpapi_pcb *) mempool_idx_to_ptr(p,idx);
 	MEMPOOL_SANITY_ACCESS(api);
@@ -89,7 +89,7 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
  */
 static inline hid_t tcpapi_to_handle(struct tcpapi_pcb *pcb)
 {
-	struct mempool *p = &perfg_get(pcb_mempool);
+	struct mempool *p = &percpu_get(pcb_mempool);
 	MEMPOOL_SANITY_ACCESS(pcb);
 	hid_t hid = mempool_ptr_to_idx(p,pcb) | ((uintptr_t) (perfg_get(fg_id)) << 48);
 	return hid;
@@ -133,7 +133,7 @@ long bsys_tcp_accept(hid_t handle, unsigned long cookie)
 	}
 
 	if (api->id) {
-		mempool_free(&perfg_get(id_mempool), api->id);
+		mempool_free(&percpu_get(id_mempool), api->id);
 		api->id = NULL;
 	}
 
@@ -300,10 +300,10 @@ long bsys_tcp_close(hid_t handle)
 	}
 
 	if (api->id) {
-		mempool_free(&perfg_get(id_mempool), api->id);
+		mempool_free(&percpu_get(id_mempool), api->id);
 	}
 
-	mempool_free(&perfg_get(pcb_mempool), api);
+	mempool_free(&percpu_get(pcb_mempool), api);
 	return RET_OK;
 }
 
@@ -397,16 +397,16 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	struct tcpapi_pcb *api;
 	struct ip_tuple *id;
 	hid_t handle;
-
+	
 	log_debug("tcpapi: on_accept - arg %p, pcb %p, err %d\n",
 		  arg, pcb, err);
 
-	api = mempool_alloc(&perfg_get(pcb_mempool));
+	api = mempool_alloc(&percpu_get(pcb_mempool));
 	if (unlikely(!api))
 		return ERR_MEM;
-	id = mempool_alloc(&perfg_get(id_mempool));
+	id = mempool_alloc(&percpu_get(id_mempool));
 	if (unlikely(!id)) {
-		mempool_free(&perfg_get(pcb_mempool), api);
+		mempool_free(&percpu_get(pcb_mempool), api);
 		return ERR_MEM;
 	}
 
@@ -422,6 +422,7 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	tcp_recv(pcb, on_recv);
 	tcp_err(pcb, on_err);
 	tcp_sent(pcb, on_sent);
+
 	tcp_accepted(perfg_get(listen_pcb));
 
 	id->src_ip = 0; /* FIXME: LWIP doesn't provide this information :( */
@@ -429,14 +430,12 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	id->src_port = pcb->local_port;
 	id->dst_port = pcb->remote_port;
 	api->id = id;
-
 	handle = tcpapi_to_handle(api);
 	api->handle = handle;
 	id = (struct ip_tuple *)
-		mempool_pagemem_to_iomap(&perfg_get(id_mempool), id);
+		mempool_pagemem_to_iomap(&percpu_get(id_mempool), id);
 
 	usys_tcp_knock(handle, id);
-
 	return ERR_OK;
 }
 
@@ -512,7 +511,7 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 		goto pcb_fail;
 	tcp_nagle_disable(pcb);
 
-	api = mempool_alloc(&perfg_get(pcb_mempool));
+	api = mempool_alloc(&percpu_get(pcb_mempool));
 	if (unlikely(!api)) {
 		goto connect_fail;
 	}
@@ -571,6 +570,20 @@ int tcp_api_init(void)
 	return ret;
 }
 
+
+int tcp_api_init_cpu(void)
+{
+	int ret;
+	ret = mempool_create(&percpu_get(pcb_mempool), &pcb_datastore, MEMPOOL_SANITY_PERCPU,percpu_get(cpu_id));
+	if (ret)
+		return ret;
+
+	ret = mempool_create(&percpu_get(id_mempool),&id_datastore,MEMPOOL_SANITY_PERCPU,percpu_get(cpu_id));
+	if (ret)
+		return ret;
+	return 0;
+}
+
 int tcp_api_init_fg(void)
 {
 	struct tcp_pcb *lpcb;
@@ -592,13 +605,6 @@ int tcp_api_init_fg(void)
 	perfg_get(listen_pcb) = lpcb;
 	tcp_accept(lpcb, on_accept);
 
-	ret = mempool_create(&perfg_get(pcb_mempool), &pcb_datastore, MEMPOOL_SANITY_PERFG,perfg_get(fg_id));
-	if (ret)
-		return ret;
-
-	ret = mempool_create(&perfg_get(id_mempool),&id_datastore,MEMPOOL_SANITY_PERFG,perfg_get(fg_id));
-	if (ret)
-		return ret;
 	return 0;
 }
 

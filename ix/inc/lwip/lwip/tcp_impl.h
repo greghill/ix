@@ -506,7 +506,6 @@ static inline void tcp_ack(struct tcp_pcb *pcb)
 		pcb->flags |= TF_ACK_NOW;
 	} else {
 		pcb->delayed_ack_counter = 1;
-		TIMER_SANITY(pcb);
 		timer_add(&pcb->delayed_ack_timer, TCP_ACK_DELAY);    
 	}
 }  

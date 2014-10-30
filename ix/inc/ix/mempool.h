@@ -81,8 +81,6 @@ struct mempool {
 
 #define MEMPOOL_SANITY_GLOBAL    0
 #define MEMPOOL_SANITY_PERCPU    1
-#define MEMPOOL_SANITY_PERQUEUE  2
-#define MEMPOOL_SANITY_PERFG     3
 
 #ifdef ENABLE_KSTATS
 
@@ -98,16 +96,9 @@ static inline int __mempool_get_sanity(void *a) {
 	return p->sanity;
 }
 
-#define MEMPOOL_SANITY_ISPERFG(_a) assert(__mempool_get_sanity(_a)>>16 == MEMPOOL_SANITY_PERFG)
 
 #define MEMPOOL_SANITY_ACCESS(_obj)   do { \
 	MEMPOOL_SANITY_OBJECT(_obj);\
-	int sanity = __mempool_get_sanity(_obj); \
-	if ((sanity >>16)==MEMPOOL_SANITY_PERCPU) assert(percpu_get(cpu_id)==(sanity & 0xffff));\
-	else if ((sanity >>16)==MEMPOOL_SANITY_PERQUEUE) assert(perqueue_get(queue_id)==(sanity &0xffff));\
-	else if ((sanity >>16)==MEMPOOL_SANITY_PERFG) assert(perfg_get(fg_id)==(sanity &0xffff));\
-	else if ((sanity >>16)==MEMPOOL_SANITY_GLOBAL);\
-	else panic("invalid mempool sanity field %x at %s:%d\n", sanity, __FILE__, __LINE__);\
 	} while (0);
 
 #define  MEMPOOL_SANITY_LINK(_a,_b) do {\

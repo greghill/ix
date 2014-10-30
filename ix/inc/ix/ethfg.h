@@ -100,3 +100,26 @@ extern struct eth_fg *fgs[ETH_MAX_TOTAL_FG];
 DECLARE_PERFG(int, dev_idx);
 
 DECLARE_PERFG(int, fg_id);
+
+
+/**                                                                                                                                                                         
+ * for_each_active_fg -- iterates over all fg owned by this cpu
+ * @fgid: integer to store the fg
+ *                                                                                                                                                                           */
+
+static inline unsigned int __fg_next_active(unsigned int fgid)
+{
+        while (fgid < nr_flow_groups) {
+                fgid++;
+
+                if (fgs[fgid]->cur_cpu == percpu_get(cpu_id))
+                        return fgid;
+        }
+
+        return fgid;
+}
+
+#define for_each_active_fg(fgid)                                \
+        for ((fgid) = -1; (fgid) = __fgid_next_active(fgid); (fgid) < nr_flow_groups)
+
+DECLARE_PERCPU(unsigned int, cpu_numa_node);

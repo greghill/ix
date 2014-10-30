@@ -142,7 +142,6 @@ static inline int eth_send(struct mbuf *mbuf)
 {
 	struct eth_tx_queue *txq = perqueue_get(eth_txq);
 	int nr = 1 + mbuf->nr_iov;
-
 	if (unlikely(nr > txq->cap))
 		return -EBUSY;
 

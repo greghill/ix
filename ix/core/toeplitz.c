@@ -113,7 +113,7 @@ toeplitz_cache_create(uint32_t cache[][256], int cache_len,
 	}
 }
 
-void
+int
 toeplitz_init(void)
 {
 	uint8_t key[TOEPLITZ_INIT_KEYLEN];
@@ -126,6 +126,7 @@ toeplitz_init(void)
 
 	toeplitz_cache_create(toeplitz_cache, TOEPLITZ_KEYSEED_CNT,
 			      key, TOEPLITZ_INIT_KEYLEN);
+	return 0;
 }
 
 void

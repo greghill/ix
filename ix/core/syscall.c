@@ -109,7 +109,6 @@ static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
 static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 {
 	int ret, empty;
-	int i;
 
 	usys_reset();
 

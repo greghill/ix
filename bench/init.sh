@@ -37,7 +37,7 @@ if [ $SERVER == "1" ]; then
       echo '2) Add the following line into /etc/rc.local:'
       echo "sysctl fs.nr_open=$NOFILE"
       echo '3) Reboot'
-      exit 1
+#      exit 1
     fi
   fi
 else

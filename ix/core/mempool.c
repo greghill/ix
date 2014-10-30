@@ -204,10 +204,14 @@ int mempool_create_datastore(struct mempool_datastore *mds, int nr_elems, size_t
 
 	spin_lock_init(&mds->lock);
 
-	if (mds->buf == MAP_FAILED) {
+	if (mds->buf == MAP_FAILED || mds->buf == 0) {
 		log_err("mempool alloc failed\n");
+		printf("Unable to create mempool datastore %s\n",name);
+
+		panic("unable to create mempool datstore for %s\n",name);
 		return -ENOMEM;
 	}
+
 	if (nostraddle) {
 		int elems_per_page = PGSIZE_2MB / elem_len;
 		mempool_init_buf_with_pages(mds, elems_per_page, nr_pages, elem_len);
@@ -239,7 +243,14 @@ int mempool_create_datastore(struct mempool_datastore *mds, int nr_elems, size_t
 int mempool_create(struct mempool *m, struct mempool_datastore *mds, int16_t sanity_type, int16_t sanity_id)
 {
 
+	if (mds->magic != MEMPOOL_MAGIC)
+		panic("mempool_create when datastore does not exist\n");
+
 	assert(mds->magic == MEMPOOL_MAGIC);
+	
+	if (m->magic != 0)
+		panic("mempool_create attempt to call twice (ds=%s)\n",mds->prettyname);
+
 	assert(m->magic == 0);
 	m->magic = MEMPOOL_MAGIC;
 	m->buf = mds->buf;

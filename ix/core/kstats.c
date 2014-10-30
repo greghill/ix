@@ -182,7 +182,7 @@ static int init_perf_event(struct perf_event_attr *attr)
   return fd;
 }
 
-void kstats_init_cpu(void)
+int kstats_init_cpu(void)
 {
   struct perf_event_attr llc_load_misses_attr = {.type = PERF_TYPE_HW_CACHE, .config = (PERF_COUNT_HW_CACHE_LL) | (PERF_COUNT_HW_CACHE_OP_READ << 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS << 16)};
   struct perf_event_attr hw_instructions_attr = {.type = PERF_TYPE_HARDWARE, .config = PERF_COUNT_HW_INSTRUCTIONS};
@@ -192,5 +192,6 @@ void kstats_init_cpu(void)
 
   percpu_get(llc_load_misses_fd) = init_perf_event(&llc_load_misses_attr);
   percpu_get(hw_instructions_fd) = init_perf_event(&hw_instructions_attr);
+  return 0;
 }
 

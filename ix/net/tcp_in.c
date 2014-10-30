@@ -951,7 +951,6 @@ tcp_receive(struct LWIP_Context *lwip_ctxt,struct tcp_pcb *pcb)
           /* start persist timer */
           pcb->persist_cnt = 0;
           pcb->persist_backoff = 1;
-	  TIMER_SANITY(pcb);
           timer_add(&pcb->persist_timer, tcp_persist_backoff[pcb->persist_backoff - 1] * RTO_UNITS);
         }
       } else {

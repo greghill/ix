@@ -558,7 +558,8 @@ tcp_listen_with_backlog(struct tcp_pcb *pcb, u8_t backlog)
 {
   struct tcp_pcb_listen *lpcb;
 
-	MEMPOOL_SANITY_ACCESS(pcb);
+
+  MEMPOOL_SANITY_ACCESS(pcb);
   LWIP_UNUSED_ARG(backlog);
   LWIP_ERROR("tcp_listen: pcb already connected", pcb->state == CLOSED, return NULL);
 
@@ -567,6 +568,9 @@ tcp_listen_with_backlog(struct tcp_pcb *pcb, u8_t backlog)
     return pcb;
   }
 #if SO_REUSE
+
+  assert(0); // IX debugging
+
   if (ip_get_option(pcb, SOF_REUSEADDR)) {
     /* Since SOF_REUSEADDR allows reusing a local address before the pcb's usage
        is declared (listen-/connection-pcb), we have to make sure now that
@@ -679,6 +683,7 @@ void
 tcp_recved(struct tcp_pcb *pcb, u32_t len)
 {
   int wnd_inflation;
+
 
 	MEMPOOL_SANITY_ACCESS(pcb);
   /* pcb->state LISTEN not allowed here */
@@ -1092,7 +1097,6 @@ void tcp_retransmit_handler(struct timer *t)
 
 	if (pcb->snd_wnd == 0) {
 		pcb->rto = (pcb->sa >> 3) + pcb->sv;
-		TIMER_SANITY(pcb);
 		timer_add(t, pcb->rto * RTO_UNITS);
 		return;
 	}
@@ -1143,7 +1147,6 @@ void tcp_persist_handler(struct timer *t)
 		pcb->persist_backoff++;
 	}
 	tcp_zero_window_probe(pcb);
-	TIMER_SANITY(pcb);
 	timer_add(t, tcp_persist_backoff[pcb->persist_backoff - 1] * RTO_UNITS);
 }
 
@@ -1410,7 +1413,6 @@ tcp_alloc(u8_t prio)
   u32_t iss;
 
   pcb = (struct tcp_pcb *)memp_malloc(MEMP_TCP_PCB);
-
   if (pcb == NULL) {
     /* Try killing oldest connection in TIME-WAIT. */
     LWIP_DEBUGF(TCP_DEBUG, ("tcp_alloc: killing off oldest TIME-WAIT connection\n"));
@@ -1732,6 +1734,7 @@ tcp_pcb_remove(struct tcp_pcb **pcblist, struct tcp_pcb *pcb)
 u32_t
 tcp_next_iss(void)
 {
+	assert(perfg_exists());
   perfg_get(iss) += perfg_get(tcp_ticks);       /* XXX */
   return perfg_get(iss);
 }

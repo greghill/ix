@@ -12,16 +12,6 @@ struct timer {
 	uint64_t expires;
 };
 
-#ifdef ENABLE_KSTATS
-#define TIMER_SANITY(_container) do {\
-	MEMPOOL_SANITY_ACCESS(_container); \
-	} while (0); \
-	MEMPOOL_SANITY_ISPERFG(_container);
-
-#else
-#define TIMER_SANITY(_container)
-#endif
-
 
 #define ONE_SECOND	1000000
 #define ONE_MS		1000
@@ -91,7 +81,7 @@ extern void timer_run(void);
 extern uint64_t timer_deadline(uint64_t max_us);
 
 extern void timer_init_fg(void);
-extern void timer_init_cpu(void);
+extern int timer_init_cpu(void);
 extern int timer_init(void);
 
 extern int cycles_per_us;

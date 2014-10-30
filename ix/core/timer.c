@@ -9,7 +9,7 @@
  * hierarchical sets of buckets are used.
  */
 
-#undef DEBUG_TIMER
+#define DEBUG_TIMER
 
 #include <ix/timer.h>
 #include <ix/errno.h>
@@ -20,6 +20,7 @@
 #include <assert.h>
 #include <time.h>
 #include <ix/log.h>
+#include <stdio.h>
 
 #define WHEEL_SHIFT_LOG2	3
 #define WHEEL_SHIFT		(1 << WHEEL_SHIFT_LOG2)
@@ -50,10 +51,14 @@
  * Total range 0 to 256 seconds...
  */
 
+
+
 struct timerwheel {
 	struct hlist_head wheels[WHEEL_COUNT][WHEEL_SIZE];
 	uint64_t wheelhint_mask;  // one hot encoding
+	char prettyname[32];
 };
+
 
 static DEFINE_PERFG(struct timerwheel,timer_wheel_fg);
 static DEFINE_PERCPU(struct timerwheel, timer_wheel_cpu);
@@ -118,8 +123,6 @@ static void timer_insert(struct timerwheel *tw, struct timer *t,
 	struct wheelfg_hint *hint = &percpu_get(wheelfg_hint);
 	assert(tw->wheelhint_mask);
 	hint->hints[index][offset] |= tw->wheelhint_mask;
-	//printf("timer_insert %d:%d expires %lu now:%lu left:%lu\n",index,offset,expires,percpu_get(now_us),left);
-
 }
 
 /**
@@ -143,7 +146,6 @@ static int __timer_add(struct timerwheel *tw, struct timer *t, uint64_t usecs)
 	 * up past the current bucket.
 	 */
 	expires = percpu_get(now_us) + usecs + MIN_DELAY_US - 1;
-	//printf("__timer_add now %lu | %lu - %lu = %lu \n",percpu_get(now_us),expires,t->expires,expires-t->expires);
 	t->expires = expires;
 	timer_insert(tw,t, usecs, expires);
 
@@ -153,12 +155,15 @@ static int __timer_add(struct timerwheel *tw, struct timer *t, uint64_t usecs)
 int timer_add(struct timer *t, uint64_t usecs)
 {
 	struct timerwheel *tw = &perfg_get(timer_wheel_fg);
+	assert(tw->prettyname[0] == 'f');
 	return __timer_add(tw,t,usecs);
+
 }
 
 int timer_percpu_add(struct timer *t, uint64_t usecs)
 {
 	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
+	assert(tw->prettyname[0] == 'c');
 	assert(usecs>0);
 	return __timer_add(tw,t,usecs);
 }
@@ -198,18 +203,19 @@ static void timer_run_bucket(struct timerwheel *tw, struct hlist_head *h)
 	h->head = NULL;
 }
 
-static void timer_reinsert_bucket(struct timerwheel *tw, struct hlist_head *h, uint64_t now_us)
+static int timer_reinsert_bucket(struct timerwheel *tw, struct hlist_head *h, uint64_t now_us)
 {
 	struct hlist_node *x, *tmp;
 	struct timer *t;
 #ifdef ENABLE_KSTATS
 	kstats_accumulate save;
 #endif
+	int count = 0;
 
 	hlist_for_each_safe(h, x, tmp) {
 		t = hlist_entry(x, struct timer, link);
 		__timer_del(t);
-
+		count++;
 		if (timer_expired(tw, t)) {
 			KSTATS_PUSH(timer_handler, &save);
 			t->handler(t);
@@ -218,6 +224,7 @@ static void timer_reinsert_bucket(struct timerwheel *tw, struct hlist_head *h, u
 		}
  		timer_insert(tw, t, t->expires - now_us, t->expires);
 	}
+	return count;
 }
 
 /**
@@ -225,27 +232,35 @@ static void timer_reinsert_bucket(struct timerwheel *tw, struct hlist_head *h, u
 */
 
 
-static void timer_collapse(struct wheelfg_hint *hint, uint64_t pos)
+static int timer_collapse(struct wheelfg_hint *hint, uint64_t pos)
 {
 	struct timerwheel *tw;
 	int wheel;
+	int count;
+	KSTATS_VECTOR(timer_collapse);
+
 
 	for (wheel=1;wheel<WHEEL_COUNT;wheel++) {
 		int off = WHEEL_OFFSET(pos, wheel);
 		int i;
-
+		
 		tw = &percpu_get(timer_wheel_cpu);
-		timer_reinsert_bucket(tw, &tw->wheels[wheel][off],pos);
-
+		count = timer_reinsert_bucket(tw, &tw->wheels[wheel][off],pos);
+		
 		uint64_t cur_hint = hint->hints[wheel][off];
 		hint->hints[wheel][off] = 0;		
 		for (i = 0; i < nr_flow_groups; i++) {
 			tw = fg_timerwheel[i];
-			if (fgs[i]->cur_cpu != percpu_get(cpu_id))
+			assert(tw);
+
+			if (fgs[i]->cur_cpu != percpu_get(cpu_id)) {
 				continue;
+			}
 			if (cur_hint & tw->wheelhint_mask) {
 				eth_fg_set_current(fgs[i]);
-				timer_reinsert_bucket(tw, &tw->wheels[wheel][off],pos);
+				count = timer_reinsert_bucket(tw, &tw->wheels[wheel][off],pos);
+			} else {
+				assert(hlist_empty(&tw->wheels[wheel][off]));
 			}
 		}
 		assert (hint->hints[wheel][off] == 0);
@@ -254,6 +269,7 @@ static void timer_collapse(struct wheelfg_hint *hint, uint64_t pos)
 		if (off)
 			break;
 	}
+	return count;
 }
 
 
@@ -270,6 +286,7 @@ void timer_run(void)
 	struct wheelfg_hint *hint = &percpu_get(wheelfg_hint);
 	percpu_get(now_us) = rdtsc() / cycles_per_us;
 
+
 	for (; pos <= percpu_get(now_us); pos += MIN_DELAY_US) {
 		int i;
 		int high_off = WHEEL_OFFSET(pos, 0);
@@ -282,8 +299,10 @@ void timer_run(void)
 			timer_run_bucket(tw,&tw->wheels[0][high_off]);
 			for (i = 0; i < nr_flow_groups; i++) {
 				tw = fg_timerwheel[i];
-				if (fgs[i]->cur_cpu != percpu_get(cpu_id))
+				assert(tw);
+				if (fgs[i]->cur_cpu != percpu_get(cpu_id)) {
 					continue;
+				}
 				if (hint->hints[0][high_off] & tw->wheelhint_mask) {
 					eth_fg_set_current(fgs[i]);
 					timer_run_bucket(tw,&tw->wheels[0][high_off]);
@@ -308,6 +327,7 @@ void timer_run(void)
 		}
 	}
 	percpu_get(timer_pos) = pos;
+	unset_current_fg();
 }
 
 
@@ -323,6 +343,7 @@ timer_deadline(uint64_t max_deadline_us)
         uint64_t now_us = rdtsc() / cycles_per_us;
         uint64_t max_us = now_us + max_deadline_us;
 	
+
         for (; pos <= max_us; pos += MIN_DELAY_US) {
 		int high_off = WHEEL_OFFSET(pos, 0);
 		if (!high_off)
@@ -330,7 +351,7 @@ timer_deadline(uint64_t max_deadline_us)
 		if (percpu_get(wheelfg_hint).hints[0][high_off])
 			break; // pending event (at least likely; could be more granular)
         }
-	
+
         if (pos < now_us)
 		return 0;
         return pos - now_us;
@@ -388,23 +409,22 @@ timer_calibrate_tsc(void)
  */
 void timer_init_fg(void)
 {
-	printf("time_init_fg start\n");
 	struct timerwheel *tw = &perfg_get(timer_wheel_fg);
 	int id = perfg_get(fg_id);
 	assert (fg_timerwheel[id] == NULL);
 	fg_timerwheel[id] = tw;
 	int hint = id % 64;
 	tw->wheelhint_mask = (1LL << hint);
-	printf("timer_init_cpu done\n");
+	sprintf(tw->prettyname,"fg:%d",id);
 }
 
-void timer_init_cpu(void)
+int timer_init_cpu(void)
 {
-	printf("timer_init_cpu start\n");
 	percpu_get(now_us) = rdtsc() / cycles_per_us;
 	percpu_get(timer_pos) = percpu_get(now_us);
 	percpu_get(timer_wheel_cpu).wheelhint_mask = 1; 
-	printf("timer_init_cpu done\n");
+	sprintf(percpu_get(timer_wheel_cpu).prettyname,"cpu:%d",percpu_get(cpu_id));
+	return 0;
 }	
 /**
  * timer_init - global timer initialization
@@ -419,7 +439,6 @@ int timer_init(void)
 	if (ret)
 		return ret;
 
-	printf("timer_init done\n");
 	return 0;
 }
 

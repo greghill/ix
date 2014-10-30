@@ -18,7 +18,6 @@
 	extern DEFINE_PERQUEUE(type, name)
 
 DECLARE_PERCPU(void *, current_perqueue);
-DECLARE_PERQUEUE(int, queue_id);
 
 static inline void * __perqueue_get(void *key)
 {

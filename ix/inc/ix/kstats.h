@@ -86,7 +86,7 @@ static inline void kstats_backlog_inc(int count)
 #define KSTATS_BACKLOG_INC(_count) \
 	kstats_backlog_inc(_count)
 
-extern void kstats_init_cpu(void);
+extern int kstats_init_cpu(void);
 
 #else /* ENABLE_KSTATS */
 
@@ -98,7 +98,6 @@ extern void kstats_init_cpu(void);
 #define KSTATS_BATCH_INC(_count)
 #define KSTATS_BACKLOG_INC(_count)
 
-static inline void kstats_init_cpu(void) { }
 
 #endif /* ENABLE_KSTATS */
 

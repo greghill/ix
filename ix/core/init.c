@@ -32,16 +32,59 @@
 #include <lwip/memp.h>
 
 
+static int init_dune(void);
+static int init_cfg(void);
+static int init_firstcpu(void);
+static int init_hw(void);
+static int init_network_cpu(void);
+static int init_ethdev(void);
+
 extern int net_init(void);
 extern int tcp_api_init(void);
+extern int tcp_api_init_cpu(void);
 extern int tcp_api_init_fg(void);
 extern int ixgbe_init(struct pci_dev *pci_dev,
 		      struct rte_eth_dev **ethp);
 extern int sandbox_init(int argc, char *argv[]);
 extern void tcp_init(void);
-extern void toeplitz_init(void);
+extern int toeplitz_init(void);
 extern int cp_init(void);
 extern int mempool_init(void);
+
+
+struct init_vector_t {
+	const char *name;
+	int (*f)(void);
+	int (*fcpu)(void);
+	int (*ffg)(unsigned int);
+};
+
+
+static struct init_vector_t init_tbl[] =
+{ { "CPU",     cpu_init,     NULL,NULL}, 
+  { "Dune",    init_dune,    NULL,NULL},
+  { "timer",   timer_init,   timer_init_cpu,NULL},
+  { "net",     net_init,     NULL,NULL},
+  { "cfg",     init_cfg,     NULL,NULL},               // after net
+  { "toeplitz",toeplitz_init,NULL,NULL},
+  { "cp",      cp_init,      NULL,NULL},
+  { "firstcpu",init_firstcpu,NULL,NULL},                // after cfg
+  { "mbuf",    mbuf_init,    mbuf_init_cpu,NULL},       // after firstcpu
+  { "memp",    memp_init,    memp_init_cpu, NULL},
+  { "tcpapi",  tcp_api_init, tcp_api_init_cpu,NULL},
+  { "ethdev",  init_ethdev,  NULL, NULL},
+  { "hw",      init_hw,      NULL,NULL},                // spaws per-cpu init sequence
+  { "syscall", NULL,         syscall_init_cpu,NULL},
+#ifdef ENABLE_KSTATS
+  { "kstats",  NULL,         kstats_init_cpu, NULL},    // after timer
+#endif
+  { "init-net",NULL,         init_network_cpu,NULL},    // FIXME should be split
+  { NULL,NULL,NULL,NULL}};
+
+
+static int init_argc;
+static char **init_argv;
+static int args_parsed;
 
 volatile int uaccess_fault;
 
@@ -66,51 +109,53 @@ pgflt_handler(uintptr_t addr, uint64_t fec, struct dune_tf *tf)
 }
 
 /**
- * init_create_ethdev - initializes an ethernet device
+ * init_ethdev - initializes an ethernet device
  * @pci_addr: the PCI address of the device
  *
  * FIXME: For now this is IXGBE-specific.
  *
  * Returns 0 if successful, otherwise fail.
  */
-static int init_create_ethdev(const struct pci_addr *addr)
+static int init_ethdev(void)
 {
-	struct pci_dev *dev;
-	struct rte_eth_dev *eth;
 	int ret;
+	int i;
+	for (i = 0; i < cfg_dev_nr; i++) {
+                const struct pci_addr *addr = &cfg_dev[i];
+		struct pci_dev *dev;
+		struct rte_eth_dev *eth;
+   
+		dev = pci_alloc_dev(addr);
+		if (!dev)
+			return -ENOMEM;
 
-	dev = pci_alloc_dev(addr);
-	if (!dev)
-		return -ENOMEM;
+		ret = ixgbe_init(dev, &eth);
+		if (ret) {
+			log_err("init: failed to start driver\n");
+			free(dev);
+			goto err;
+		}
 
-	ret = ixgbe_init(dev, &eth);
-	if (ret) {
-		log_err("init: failed to start driver\n");
-		goto err;
+		ret = eth_dev_add(eth);
+		if (ret) {
+			log_err("init: unable to add ethernet device\n");
+			eth_dev_destroy(eth);
+			goto err;
+		}
 	}
-
-	ret = eth_dev_add(eth);
-	if (ret) {
-		log_err("init: unable to add ethernet device\n");
-		goto err_add;
-	}
-
 	return 0;
 
-err_add:
-	eth_dev_destroy(eth);
 err:
-	free(dev);
 	return ret;
 }
 
 static DEFINE_SPINLOCK(assign_lock);
 
-static int network_init_cpu(int cpu)
+static int init_network_cpu(void)
 {
 	int ret, idx, i;
-
 	spin_lock(&assign_lock);
+	ret = 0;
 	for (i = 0; i < eth_dev_count; i++) {
 		struct rte_eth_dev *eth = eth_dev[i];
 		ret = eth_dev_get_rx_queue(eth, &percpu_get(eth_rxqs[i]));
@@ -129,16 +174,10 @@ static int network_init_cpu(int cpu)
 
 	percpu_get(eth_num_queues) = eth_dev_count;
 
-	ret = memp_init();
-	if (ret) {
-		log_err("init: failed to initialize lwip memp\n");
-		return ret;
-	}
-
+	
 	/* initialize perqueue data structures */
 	for_each_queue(idx) {
 		perqueue_get(eth_txq) = percpu_get(eth_txqs[idx]);
-		perqueue_get(queue_id) = idx;
 	}
 
 	unset_current_queue();
@@ -155,7 +194,7 @@ static int network_init_cpu(int cpu)
  */
 static int init_create_cpu(unsigned int cpu, int first)
 {
-	int ret=0;
+	int ret=0,i;
 
 	if (!first) 
 		ret = cpu_init_one(cpu);
@@ -165,30 +204,18 @@ static int init_create_cpu(unsigned int cpu, int first)
 		return ret;
 	}
 
-	ret = mbuf_init_cpu();
-	if (ret) {
-		log_err("init: unable to initialize mbufs\n");
-		return ret;
-	}
+	log_info("init: percpu phase %d\n",cpu);
+	for (i=0;init_tbl[i].name;i++)
+		if (init_tbl[i].fcpu) {
+			ret = init_tbl[i].fcpu();
+			log_info("init: module %-10s on %d: %s \n",init_tbl[i].name, percpu_get(cpu_id),(ret?"FAILURE":"SUCESS"));
+			if (ret)
+				panic("could not initialize IX\n");
+		}
 
-	ret = syscall_init_cpu();
-	if (ret) {
-		log_err("init: unable to initialize batched syscall array\n");
-		return ret;
-	}
-
-
-	timer_init_cpu();
-	kstats_init_cpu();
-
-	ret = network_init_cpu(cpu);
-	if (ret) {
-		log_err("init: unable to initialize per-CPU network stack\n");
-		return ret;
-	}
 
 	log_info("init: CPU %d ready\n", cpu);
-
+	printf("init:CPU %d ready\n",cpu);
 	return 0;
 }
 
@@ -250,6 +277,7 @@ void *start_cpu(void *arg)
 	int ret;
 	unsigned int cpu = *((unsigned int *) arg);
 
+
 	ret = init_create_cpu(cpu,0);
 	if (ret) {
 		log_err("init: failed to initialize CPU %d\n", cpu);
@@ -268,39 +296,13 @@ void *start_cpu(void *arg)
 
 static int init_hw(void)
 {
-	int i, ret;
+	int i, ret = 0;
 	pthread_t tid;
 	int j, step;
 	int fg_id;
 
-	for (i = 0; i < cfg_dev_nr; i++) {
-		ret = init_create_ethdev(&cfg_dev[i]);
-		if (ret) {
-			log_err("init: failed to initialize ethernet controller\n");
-			return ret;
-		}
-	}
-
-	cpus_active = cfg_cpu_nr;
-	if (cfg_cpu_nr > 1) {
-		pthread_barrier_init(&start_barrier, NULL, cfg_cpu_nr);
-	}
-
-
-	ret = cpu_init_one(cfg_cpu[0]);
-	if (ret) {
-		log_err("init: failed to initialize CPU 0\n");
-		return ret;
-	}
-
-	mbuf_init();
-
-	ret = tcp_api_init();
-	if (ret) {
-		log_err("init: failed to initialize tcp_api pools\n");
-		return ret;
-	}
-
+	
+	// will spawn per-cpu initialization sequence on CPU0
 	ret = init_create_cpu(cfg_cpu[0], 1);
 	if (ret) {
 		log_err("init: failed to create CPU 0\n");
@@ -322,6 +324,8 @@ static int init_hw(void)
 	if (cfg_cpu_nr > 1) {
 		pthread_barrier_wait(&start_barrier);
 	}
+
+	log_info("init: barrier after al CPU initialization\n");
 
 	step = cfg_dev_nr * ETH_RSS_RETA_NUM_ENTRIES / cfg_cpu_nr;
 	if (cfg_dev_nr * ETH_RSS_RETA_NUM_ENTRIES % cfg_cpu_nr != 0)
@@ -348,32 +352,25 @@ static int init_hw(void)
 			perfg_get(fg_id) = fg_id;
 			perfg_get(dev_idx) = i;
 
-			ret = memp_init_fg(fg_id);
-			if (ret) {
-				log_err("init: failed to initialize lwip memp\n");
-				return ret;
-			}
-
+			
 			if (j == 0)
 				eth_fg_assign_to_cpu(fg_id, 0);
 			else
 				eth_fg_assign_to_cpu(fg_id, (i * ETH_RSS_RETA_NUM_ENTRIES + j) / step);
 
 			tcp_init();
-
 			ret = tcp_api_init_fg();
 			if (ret) {
-				log_err("init: failed to initialize TCP API\n");
+				log_err("init: failed to initialize tcp_api \n");
 				return ret;
 			}
 
 			timer_init_fg();
 
 			fg_id++;
-
-
 		}
 	}
+
 	unset_current_fg();
 
 	nr_flow_groups = fg_id;
@@ -382,57 +379,54 @@ static int init_hw(void)
 	return 0;
 }
 
+static int init_dune(void)
+{
+	int ret = dune_init(false);
+	if (ret) return ret;
+	dune_register_pgflt_handler(pgflt_handler);
+	return ret;
+}
+
+static int init_cfg(void)
+{
+	return cfg_init(init_argc,init_argv,&args_parsed);
+
+}
+
+static int init_firstcpu(void)
+{
+	int ret;
+	cpus_active = cfg_cpu_nr;
+	if (cfg_cpu_nr > 1) {
+		pthread_barrier_init(&start_barrier, NULL, cfg_cpu_nr);
+	}
+
+
+	ret = cpu_init_one(cfg_cpu[0]);
+	if (ret) {
+		log_err("init: failed to initialize CPU 0\n");
+		return ret;
+	}
+	return ret;
+}
+
 int main(int argc, char *argv[])
 {
-	int ret, args_parsed;
+	int ret, i;
+
+	init_argc = argc;
+	init_argv = argv;
 
 	log_info("init: starting IX\n");
 
-	ret = cpu_init();
-	if (ret) {
-		log_err("init: failed to initalize CPU cores\n");
-		return ret;
-	}
-
-	ret = dune_init(false);
-	if (ret) {
-		log_err("init: failed to initialize dune\n");
-		return ret;
-	}
-
-	dune_register_pgflt_handler(pgflt_handler);
-
-	ret = timer_init();
-	if (ret) {
-		log_err("init: failed to initialize timers\n");
-		return ret;
-	}
-
-	ret = net_init();
-	if (ret) {
-		log_err("init: failed to initialize netstack\n");
-		return ret;
-	}
-
-	ret = cfg_init(argc, argv, &args_parsed);
-	if (ret) {
-		log_err("init: failed to load configuration\n");
-		return ret;
-	}
-
-	toeplitz_init();
-
-	ret = cp_init();
-	if (ret) {
-		log_err("init: failed to initialize control plane\n");
-		return ret;
-	}
-
-	ret = init_hw();
-	if (ret) {
-		log_err("init: failed to initialize hardware\n");
-		return ret;
-	}
+	log_info("init: cpu phase\n");
+	for (i=0;init_tbl[i].name;i++)
+		if (init_tbl[i].f) {
+			ret = init_tbl[i].f();
+			log_info("init: module %-10s %s\n",init_tbl[i].name, (ret?"FAILURE":"SUCESS"));
+			if (ret)
+				panic("could not initialize IX\n");
+		}
 
 	ret = sandbox_init(argc - args_parsed - 1, &argv[args_parsed]);
 	if (ret) {
@@ -440,6 +434,7 @@ int main(int argc, char *argv[])
 		return ret;
 	}
 
+	log_info("init done\n");
 	return 0;
 }
 
