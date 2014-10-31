@@ -85,17 +85,33 @@ static inline bool timer_expired(struct timerwheel *tw, struct timer *t)
 }
 
 
-static void timer_insert(struct timerwheel *tw, struct timer *t,
-			 uint64_t left, uint64_t expires)
+static void timer_insert(struct timerwheel *tw, struct timer *t)
 {
-	struct hlist_head *bucket;
-	int index = ((63 - clz64(left | MIN_DELAY_US) - MIN_DELAY_SHIFT)
-			>> WHEEL_SHIFT_LOG2);
-	assert (index >=0 && index <=2);
-	int offset = WHEEL_OFFSET(expires, index);
+	uint64_t expire_us,delay_us;
+        int index, offset;
 
-	bucket =&tw->wheels[index][offset];
-	hlist_add_head(bucket, &t->link);
+        /*
+         * Round up to the next bucket because part of the time
+         * between buckets has likely already passed.
+         */
+        expire_us = t->expires + MIN_DELAY_US;
+        delay_us = expire_us - tw->now_us;
+
+        /*
+         * This code looks a little strange because it was optimized to
+         * calculate the correct bucket placement without using any
+         * branch instructions, instead using count last zero (CLZ).
+         *
+         * NOTE: This assumes MIN_DELAY_US was added above. Otherwise
+         * the index might be calculated as negative, so be careful
+         * about this constraint when modifying this code.
+         */
+        index = ((63 - clz64(delay_us) - MIN_DELAY_SHIFT)
+		 >> WHEEL_SHIFT_LOG2);
+        offset = WHEEL_OFFSET(expire_us, index);
+
+        hlist_add_head(&tw->wheels[index][offset], &t->link);
+
 }
 
 /**
@@ -105,11 +121,11 @@ static void timer_insert(struct timerwheel *tw, struct timer *t,
  *
  * Returns 0 if successful, otherwise failure.
  */
-static int __timer_add(struct timerwheel *tw, struct timer *t, uint64_t usecs)
+static int __timer_add(struct timerwheel *tw, struct timer *t, uint64_t delay_us)
 {
 	uint64_t expires;
-	assert(usecs>0);
-	if (unlikely(usecs >= MAX_DELAY_US)) {
+	assert(delay_us>0);
+	if (unlikely(delay_us >= MAX_DELAY_US)) {
 		panic("__timer_add out of range\n");
 		return -EINVAL;
 	}
@@ -118,9 +134,9 @@ static int __timer_add(struct timerwheel *tw, struct timer *t, uint64_t usecs)
 	 * Make sure the expiration time is rounded
 	 * up past the current bucket.
 	 */
-	expires = tw->now_us + usecs + MIN_DELAY_US - 1;
+	expires = tw->now_us + delay_us;
 	t->expires = expires;
-	timer_insert(tw,t, usecs, expires);
+	timer_insert(tw,t);
 
 	return 0;
 }
@@ -151,11 +167,10 @@ int timer_percpu_add(struct timer *t, uint64_t usecs)
 void timer_add_for_next_tick(struct timer *t)
 {
 	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
-	uint64_t expires;
-	expires = tw->now_us + MIN_DELAY_US;
-	t->expires = expires;
+        uint64_t expire_us = tw->now_us + MIN_DELAY_US;
+	t->expires = expire_us;
 	t->fg_id = perfg_get(fg_id);
-	timer_insert(tw,t, MIN_DELAY_US, expires);
+	timer_insert(tw,t);
 }
 
 static void timer_run_bucket(struct timerwheel *tw, struct hlist_head *h)
@@ -199,7 +214,7 @@ static int timer_reinsert_bucket(struct timerwheel *tw, struct hlist_head *h, ui
 			KSTATS_POP(&save);
 			continue;
 		}
- 		timer_insert(tw, t, t->expires - now_us, t->expires);
+ 		timer_insert(tw, t) ;
 	}
 	return count;
 }
@@ -258,30 +273,51 @@ void timer_run(void)
 
 
 /**
- * timer_deadline - determine the immediate timer deadline
+ * timer_deadline - determine the time remaining until the next deadline
+ * @max_deadline_us: the maximum amount of time to look into the future
+ *
+ * NOTE: A short @max_deadline_us will reduce the overhead of calling
+ * this function. However, even very large values will yield acceptable
+ * performance.
+ *
+ * NOTE: If a timer is about to be cascaded, this function could
+ * underestimate the next deadline.
  * 
- * because of its implementation, will return [0..4ms], which is the high wheel resolution
+ * Returns time in microseconds until the next timer expires or
+ * @max_deadline_us, whichever is smaller.
  */
+
+
 uint64_t
 timer_deadline(uint64_t max_deadline_us)
 {
 	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
-	uint64_t pos = tw->timer_pos;
-        uint64_t now_us = rdtsc() / cycles_per_us;
-        uint64_t max_us = now_us + max_deadline_us;
-	
+        uint64_t now_us = tw->now_us;
+        uint64_t future_us = now_us + max_deadline_us;
+	int idx;
 
-        for (; pos <= max_us; pos += MIN_DELAY_US) {
-		int high_off = WHEEL_OFFSET(pos, 0);
-		if (!high_off)
-			break;  // don't attempt to collapse; just stop at that side of the wheel
-		if (!hlist_empty(&tw->wheels[0][high_off])) 
-			break; // pending event 
+        for (idx = 0; idx < WHEEL_COUNT; idx++) {
+                uint64_t start = (now_us >> WHEEL_IDX_TO_SHIFT(idx));
+                uint64_t end = (future_us >> WHEEL_IDX_TO_SHIFT(idx));
+
+                if (start == end)
+                        break;
+
+                end = min(end, start + WHEEL_SIZE);
+                for (start++; start <= end; start++) {
+                        if (!hlist_empty(&tw->wheels[idx][start & WHEEL_MASK])) {
+                                uint64_t deadline_us = (start << WHEEL_IDX_TO_SHIFT(idx));
+                                uint64_t tsc_us = rdtsc() / cycles_per_us;
+                                if (deadline_us <= tsc_us)
+                                        return 0;
+                                else
+                                        return deadline_us - tsc_us;
+                        }
+                }
         }
 
-        if (pos < now_us)
-		return 0;
-        return pos - now_us;
+        return max_deadline_us;
+
 }
 
 /**
