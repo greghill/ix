@@ -1,4 +1,4 @@
-all_used: client pingpongs # pingpongs_mtcp NPtcp NPmtcp
+all_used: client pingpongs pingpongs_mtcp NPtcp NPmtcp
 
 NPtcp:
 	$(MAKE) -C ../apps/NetPIPE-3.7.1/ tcp
