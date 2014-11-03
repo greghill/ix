@@ -22,7 +22,7 @@ struct ip_globals
 
 void tcp_input(struct pbuf *p, struct netif *inp);
 
-DEFINE_PERFG(struct ip_globals, ip_data);
+DEFINE_PERCPU(struct ip_globals, ip_data);
 
 extern void tcp_tmr(void);
 DECLARE_PERFG(struct tcp_pcb *, tcp_active_pcbs);
@@ -85,8 +85,8 @@ void tcp_input_tmp(struct mbuf *pkt, struct ip_hdr *iphdr, void *tcphdr)
 	pbuf = pbuf_alloc(PBUF_RAW, ntoh16(iphdr->len) - iphdr->header_len * 4, PBUF_ROM);
 	pbuf->payload = tcphdr;
 	pbuf->mbuf = pkt;
-	perfg_get(ip_data).current_iphdr_dest.addr = iphdr->dst_addr.addr;
-	perfg_get(ip_data).current_iphdr_src.addr = iphdr->src_addr.addr;
+	percpu_get(ip_data).current_iphdr_dest.addr = iphdr->dst_addr.addr;
+	percpu_get(ip_data).current_iphdr_src.addr = iphdr->src_addr.addr;
 	tcp_input(pbuf, &netif);
 }
 

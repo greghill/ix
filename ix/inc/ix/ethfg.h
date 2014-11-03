@@ -8,6 +8,7 @@
 #include <ix/list.h>
 #include <ix/lock.h>
 #include <ix/cpu.h>
+#include <assert.h>
 
 #define ETH_MAX_NUM_FG	128 
 
@@ -75,6 +76,7 @@ static inline void * __perfg_get(void *key)
  */
 static inline void eth_fg_set_current(struct eth_fg *fg)
 {
+	assert(fg->cur_cpu == percpu_get(cpu_id));
 	percpu_get(fg_offset) = fg->perfg;
 }
 

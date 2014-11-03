@@ -20,6 +20,7 @@ DEF_KSTATS(timer_tcp_fasttmr);
 DEF_KSTATS(timer_tcp_slowtmr);
 DEF_KSTATS(eth_input);
 DEF_KSTATS(tcp_input_fast_path);
+DEF_KSTATS(tcp_input_listen);
 DEF_KSTATS(timer_tcp_send_delayed_ack);
 DEF_KSTATS(timer_handler);
 DEF_KSTATS(timer_tcp_retransmit);

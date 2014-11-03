@@ -344,7 +344,7 @@ DECLARE_PERFG(union tcp_listen_pcbs_t, tcp_listen_pcbs);
 DECLARE_PERFG(struct tcp_pcb *, tcp_active_pcbs);  /* List of all TCP PCBs that are in a
               state in which they accept or send
               data. */
-#define TCP_ACTIVE_PCBS_MAX_BUCKETS 65536
+#define TCP_ACTIVE_PCBS_MAX_BUCKETS (2*1024)
 #define TCP_ACTIVE_PCBS_HASH_SEED 0xa36bdcbe
 
 DECLARE_PERFG(struct tcp_pcb *, tcp_active_pcbs_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS]);
