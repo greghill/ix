@@ -8,6 +8,7 @@
 #include <ix/atomic.h>
 #include <ix/lock.h>
 #include <ix/vm.h>
+#include <ix/log.h>
 
 #include <dune.h>
 
@@ -16,6 +17,9 @@
 #include <asm/mman.h>
 #include <unistd.h>
 #include <fcntl.h>
+
+#include  <signal.h>
+
 
 #if !defined(MAP_HUGE_2MB) || !defined(MAP_HUGE_1GB)
 #warning "Your system does not support MAP_HUGETLB page sizes"
@@ -28,6 +32,13 @@
  */
 static DEFINE_SPINLOCK(mem_lock);
 static uintptr_t mem_pos = MEM_PHYS_BASE_ADDR;
+
+
+void sigbus_error(int sig)
+{
+	log_err("FATAL - mbind is tricking you ... no numa pages ... aborting\n");
+	abort();
+}
 
 void *__mem_alloc_pages(void *base, int nr, int size,
 			struct bitmask *mask, int numa_policy)
@@ -67,6 +78,10 @@ void *__mem_alloc_pages(void *base, int nr, int size,
 	if (vm_map_phys((physaddr_t) vaddr, (virtaddr_t) vaddr, nr, size,
 			VM_PERM_R | VM_PERM_W))
 		goto fail;
+
+	sighandler_t s = signal(SIGBUS,sigbus_error);
+	*(uint64_t*)vaddr = 0;
+	signal(SIGBUS,s);
 
 	return vaddr;
 
