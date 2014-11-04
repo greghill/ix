@@ -666,7 +666,7 @@ tcp_process(struct LWIP_Context * lwip_ctxt, struct tcp_pcb *pcb)
       LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_process: Connection RESET\n"));
       LWIP_ASSERT("tcp_input: pcb->state != CLOSED", pcb->state != CLOSED);
       lwip_ctxt->recv_flags |= TF_RESET;
-      timer_del(&pcb->delayed_ack_timer);
+      pcb->timer_delayedack_expires = 0;
       return ERR_RST;
     } else {
       LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_process: unacceptable reset seqno %"U32_F" rcv_nxt %"U32_F"\n",
@@ -728,11 +728,12 @@ tcp_process(struct LWIP_Context * lwip_ctxt, struct tcp_pcb *pcb)
       /* If there's nothing left to acknowledge, stop the retransmit
          timer, otherwise reset it to start again */
       if(pcb->unacked == NULL)
-        timer_del(&pcb->retransmit_timer);
+	      pcb->timer_retransmit_expires = 0;
       else {
-        timer_mod(&pcb->retransmit_timer, pcb->rto * RTO_UNITS);
-        pcb->nrtx = 0;
+	      pcb->timer_retransmit_expires = timer_now() + pcb->rto * RTO_UNITS;
+	      pcb->nrtx = 0;
       }
+      tcp_recompute_timers(pcb);
 
       /* Call the user specified function to call when sucessfully
        * connected. */
@@ -948,15 +949,17 @@ tcp_receive(struct LWIP_Context *lwip_ctxt,struct tcp_pcb *pcb)
       pcb->snd_wl1 = lwip_ctxt->seqno;
       pcb->snd_wl2 = lwip_ctxt->ackno;
       if (pcb->snd_wnd == 0) {
-        if (!timer_pending(&pcb->persist_timer)) {
+	      if (pcb->timer_persist_expires>0) {
           /* start persist timer */
           pcb->persist_cnt = 0;
           pcb->persist_backoff = 1;
-          timer_add(&pcb->persist_timer, tcp_persist_backoff[pcb->persist_backoff - 1] * RTO_UNITS);
+	  pcb->timer_persist_expires = timer_now() + tcp_persist_backoff[pcb->persist_backoff - 1] * RTO_UNITS;
+	  tcp_recompute_timers(pcb);
         }
       } else {
         /* stop persist timer */
-          timer_del(&pcb->persist_timer);
+	      pcb->timer_persist_expires = 0;
+	      tcp_recompute_timers(pcb);
           pcb->persist_backoff = 0;
       }
       LWIP_DEBUGF(TCP_WND_DEBUG, ("tcp_receive: window update %"U16_F"\n", pcb->snd_wnd));
@@ -993,38 +996,38 @@ tcp_receive(struct LWIP_Context *lwip_ctxt,struct tcp_pcb *pcb)
 
     /* Clause 1 */
     if (TCP_SEQ_LEQ(lwip_ctxt->ackno, pcb->lastack)) {
-      pcb->acked = 0;
-      /* Clause 2 */
-      if (lwip_ctxt->tcplen == 0) {
-        /* Clause 3 */
-        if (pcb->snd_wl2 + pcb->snd_wnd == right_wnd_edge){
-          /* Clause 4 */
-          if (timer_pending(&pcb->retransmit_timer)) {
-            /* Clause 5 */
-            if (pcb->lastack == lwip_ctxt->ackno) {
-              found_dupack = 1;
-              if ((u8_t)(pcb->dupacks + 1) > pcb->dupacks) {
-                ++pcb->dupacks;
-              }
-              if (pcb->dupacks > 3) {
-                /* Inflate the congestion window, but not if it means that
-                   the value overflows. */
-                if ((tcpwnd_size_t)(pcb->cwnd + pcb->mss) > pcb->cwnd) {
-                  pcb->cwnd += pcb->mss;
-                }
-              } else if (pcb->dupacks == 3) {
-                /* Do fast retransmit */
-                tcp_rexmit_fast(pcb);
-              }
-            }
-          }
-        }
-      }
-      /* If Clause (1) or more is true, but not a duplicate ack, reset
-       * count of consecutive duplicate acks */
-      if (!found_dupack) {
-        pcb->dupacks = 0;
-      }
+	    pcb->acked = 0;
+	    /* Clause 2 */
+	    if (lwip_ctxt->tcplen == 0) {
+		    /* Clause 3 */
+		    if (pcb->snd_wl2 + pcb->snd_wnd == right_wnd_edge){
+			    /* Clause 4 */
+			    if (pcb->timer_retransmit_expires>0) {
+				    /* Clause 5 */
+				    if (pcb->lastack == lwip_ctxt->ackno) {
+					    found_dupack = 1;
+					    if ((u8_t)(pcb->dupacks + 1) > pcb->dupacks) {
+						    ++pcb->dupacks;
+					    }
+					    if (pcb->dupacks > 3) {
+						    /* Inflate the congestion window, but not if it means that
+						       the value overflows. */
+						    if ((tcpwnd_size_t)(pcb->cwnd + pcb->mss) > pcb->cwnd) {
+							    pcb->cwnd += pcb->mss;
+						    }
+					    } else if (pcb->dupacks == 3) {
+						    /* Do fast retransmit */
+						    tcp_rexmit_fast(pcb);
+					    }
+				    }
+			    }
+		    }
+	    }
+	    /* If Clause (1) or more is true, but not a duplicate ack, reset
+	     * count of consecutive duplicate acks */
+	    if (!found_dupack) {
+		    pcb->dupacks = 0;
+	    }
     } else if (TCP_SEQ_BETWEEN(lwip_ctxt->ackno, pcb->lastack+1, pcb->snd_nxt)){
       /* We come here when the ACK acknowledges new data. */
 
@@ -1108,10 +1111,11 @@ tcp_receive(struct LWIP_Context *lwip_ctxt,struct tcp_pcb *pcb)
       /* If there's nothing left to acknowledge, stop the retransmit
          timer, otherwise reset it to start again */
       if (pcb->unacked == NULL) {
-        timer_del(&pcb->retransmit_timer);
+	      pcb->timer_retransmit_expires = 0;
       } else {
-        timer_mod(&pcb->retransmit_timer, pcb->rto * RTO_UNITS);
+	      pcb->timer_retransmit_expires = timer_now() + pcb->rto * RTO_UNITS;
       }
+      tcp_recompute_timers(pcb);
 
       pcb->polltmr = 0;
 

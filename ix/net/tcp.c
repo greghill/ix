@@ -129,6 +129,7 @@ static DEFINE_PERFG(u32_t, iss);
 void
 tcp_init(void)
 {
+
 #if LWIP_RANDOMIZE_INITIAL_LOCAL_PORTS && defined(LWIP_RAND)
   tcp_port = TCP_ENSURE_LOCAL_PORT_RANGE(LWIP_RAND());
 #endif /* LWIP_RANDOMIZE_INITIAL_LOCAL_PORTS && defined(LWIP_RAND) */
@@ -158,8 +159,13 @@ tcp_trim_hash_bucket(void)
 	struct hlist_node *cur,*tmp;
 	struct tcp_hash_entry *he;
 	int rm=0,stay=0;
+	
+
 	hlist_for_each_safe(&perfg_get(tcp_lists).active_buckets,cur,tmp) { 
+		assert (cur->prev != NULL);
 		he  = hlist_entry(cur,struct tcp_hash_entry, hash_link);
+		assert ((uintptr_t) he >= (uintptr_t)&perfg_get(tcp_active_pcbs_tbl)[0]);
+		assert ((uintptr_t) he < (uintptr_t)&perfg_get(tcp_active_pcbs_tbl)[TCP_ACTIVE_PCBS_MAX_BUCKETS]);
 		if (hlist_empty(&he->pcbs)) {
 			hlist_del(cur);
 			cur->prev = NULL;
@@ -167,10 +173,8 @@ tcp_trim_hash_bucket(void)
 		} else 
 			stay++;
 	}
-//	printf("tcp_trim_hash fg:%2d stay=%3d rm=%2d\n",perfg_get(fg_id),stay,rm); 
+       
 }
-		  
-
 /**
  * Called periodically to dispatch TCP timers.
  */
@@ -178,6 +182,7 @@ void
 tcp_tmr(void)
 {
   /* Call tcp_fasttmr() every 250 ms */
+
   KSTATS_VECTOR(timer_tcp_fasttmr);
   tcp_fasttmr();
 
@@ -518,8 +523,6 @@ tcp_bind_checklist(struct hlist_head *list, struct tcp_pcb *pcb, ip_addr_t *ipad
 err_t
 tcp_bind(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port)
 {
-  int i;
-  int max_pcb_list = NUM_TCP_PCB_LISTS;
   struct hlist_node *cur;
 
   MEMPOOL_SANITY_ACCESS(pcb);
@@ -958,7 +961,6 @@ tcp_slowtmr_start:
 		LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: no active pcbs\n"));
 	}
   
-	tcp_trim_hash_bucket();
 
 	hlist_for_each(&perfg_get(tcp_lists).active_buckets,cur) { 
 		hash_head = hlist_entry(cur,struct tcp_hash_entry,hash_link);
@@ -1105,87 +1107,86 @@ tcp_slowtmr_start:
 	}
 }
 
-void tcp_send_delayed_ack(struct timer *t)
+void tcp_unified_timer_handler(struct timer *t)
 {
-	struct tcp_pcb *pcb = container_of(t, struct tcp_pcb, delayed_ack_timer);
-
-	MEMPOOL_SANITY_ACCESS(pcb);
-	KSTATS_VECTOR(timer_tcp_send_delayed_ack);
+	struct tcp_pcb *pcb = container_of(t, struct tcp_pcb, unified_timer);
+	uint64_t now_us = timer_now();
+	
+	KSTATS_VECTOR(tcp_unified_handler);
 	percpu_get(current_perqueue) = pcb->perqueue;
+	
+	if (pcb->timer_delayedack_expires && pcb->timer_delayedack_expires <=now_us) {
+		KSTATS_VECTOR(timer_tcp_send_delayed_ack);
+		tcp_ack_now(pcb);
+		tcp_output(pcb);
+		pcb->flags &= ~TF_ACK_NOW;
+		pcb->timer_delayedack_expires = 0;
+	} 
+	if (pcb->timer_retransmit_expires && pcb->timer_retransmit_expires <= now_us) {
+		int pcb_remove;
+		tcpwnd_size_t eff_wnd;
 
-	tcp_ack_now(pcb);
-	tcp_output(pcb);
-	pcb->flags &= ~TF_ACK_NOW;
+		KSTATS_VECTOR(timer_tcp_retransmit);		
+		pcb->timer_retransmit_expires = 0;
+		
+		if (pcb->unacked == NULL)
+			goto next;
+
+		if (pcb->snd_wnd == 0) {
+			pcb->rto = (pcb->sa >> 3) + pcb->sv;
+			pcb->timer_retransmit_expires = now_us + pcb->rto * RTO_UNITS;
+			goto next;
+		}
+
+		pcb_remove = 0;
+		if (pcb->state == SYN_SENT && pcb->nrtx == TCP_SYNMAXRTX)
+			pcb_remove = 1;
+		else if (pcb->nrtx == TCP_MAXRTX)
+			pcb_remove = 1;
+
+		if (pcb_remove) {
+			pcb_remove_called_from_timer(pcb, 0);
+			return;
+		}
+
+		/* Time for a retransmission. */
+		
+		/* Double retransmission time-out unless we are trying to
+		 * connect to somebody (i.e., we are in SYN_SENT). */
+		if (pcb->state != SYN_SENT) {
+			pcb->rto = ((pcb->sa >> 3) + pcb->sv) << tcp_backoff[pcb->nrtx];
+		}
+		
+		/* Reduce congestion window and ssthresh. */
+		eff_wnd = LWIP_MIN(pcb->cwnd, pcb->snd_wnd);
+		pcb->ssthresh = eff_wnd >> 1;
+		if (pcb->ssthresh < (tcpwnd_size_t)(pcb->mss << 1)) {
+			pcb->ssthresh = (pcb->mss << 1);
+		}
+		pcb->cwnd = pcb->mss;
+		
+		/* The following needs to be called AFTER cwnd is set to one
+		   mss - STJ */
+		tcp_rexmit_rto(pcb);
+	}
+
+next:
+	if (pcb->timer_persist_expires > 0 && pcb->timer_persist_expires <= now_us) {
+		KSTATS_VECTOR(timer_tcp_persist);
+		pcb->timer_persist_expires = 0;
+		/* If snd_wnd is zero, use persist timer to send 1 byte probes
+		 * instead of using the standard retransmission mechanism. */
+		if (pcb->persist_backoff < sizeof(tcp_persist_backoff)) {
+			pcb->persist_backoff++;
+		}
+		tcp_zero_window_probe(pcb);
+		pcb->timer_persist_expires = now_us + tcp_persist_backoff[pcb->persist_backoff - 1] * RTO_UNITS;
+	}
+
+	tcp_recompute_timers(pcb);
+		
 }
-
-void tcp_retransmit_handler(struct timer *t)
-{
-	tcpwnd_size_t eff_wnd;
-	int pcb_remove;
-	struct tcp_pcb *pcb = container_of(t, struct tcp_pcb, retransmit_timer);
-
-	MEMPOOL_SANITY_ACCESS(pcb);
-	KSTATS_VECTOR(timer_tcp_retransmit);
-	percpu_get(current_perqueue) = pcb->perqueue;
-
-	if (pcb->unacked == NULL)
-		return;
-
-	if (pcb->snd_wnd == 0) {
-		pcb->rto = (pcb->sa >> 3) + pcb->sv;
-		timer_add(t, pcb->rto * RTO_UNITS);
-		return;
-	}
-
-	pcb_remove = 0;
-	if (pcb->state == SYN_SENT && pcb->nrtx == TCP_SYNMAXRTX)
-		pcb_remove = 1;
-	else if (pcb->nrtx == TCP_MAXRTX)
-		pcb_remove = 1;
-
-	if (pcb_remove) {
-		pcb_remove_called_from_timer(pcb, 0);
-		return;
-	}
-
-	/* Time for a retransmission. */
-
-	/* Double retransmission time-out unless we are trying to
-	 * connect to somebody (i.e., we are in SYN_SENT). */
-	if (pcb->state != SYN_SENT) {
-		pcb->rto = ((pcb->sa >> 3) + pcb->sv) << tcp_backoff[pcb->nrtx];
-	}
-
-	/* Reduce congestion window and ssthresh. */
-	eff_wnd = LWIP_MIN(pcb->cwnd, pcb->snd_wnd);
-	pcb->ssthresh = eff_wnd >> 1;
-	if (pcb->ssthresh < (tcpwnd_size_t)(pcb->mss << 1)) {
-		pcb->ssthresh = (pcb->mss << 1);
-	}
-	pcb->cwnd = pcb->mss;
-
-	/* The following needs to be called AFTER cwnd is set to one
-	   mss - STJ */
-	tcp_rexmit_rto(pcb);
-}
-
-void tcp_persist_handler(struct timer *t)
-{
-	struct tcp_pcb *pcb = container_of(t, struct tcp_pcb, persist_timer);
-
-	MEMPOOL_SANITY_ACCESS(pcb);
-	KSTATS_VECTOR(timer_tcp_persist);
-	percpu_get(current_perqueue) = pcb->perqueue;
-
-	/* If snd_wnd is zero, use persist timer to send 1 byte probes
-	 * instead of using the standard retransmission mechanism. */
-	if (pcb->persist_backoff < sizeof(tcp_persist_backoff)) {
-		pcb->persist_backoff++;
-	}
-	tcp_zero_window_probe(pcb);
-	timer_add(t, tcp_persist_backoff[pcb->persist_backoff - 1] * RTO_UNITS);
-}
-
+	
 /**
  * Is called every TCP_FAST_INTERVAL (250 ms) and process data previously
  * "refused" by upper layer (application) and sends delayed ACKs.
@@ -1200,7 +1201,6 @@ tcp_fasttmr(void)
 	struct hlist_node *cur;
 	++perfg_get(tcp_timer_ctr);
 	
-	tcp_trim_hash_bucket();
 	
 tcp_fasttmr_start:
 
@@ -1730,7 +1730,7 @@ tcp_pcb_purge(struct tcp_pcb *pcb)
 
     /* Stop the retransmission timer as it will expect data on unacked
        queue if it fires */
-    timer_del(&pcb->retransmit_timer);
+    timer_del(&pcb->unified_timer);
 
     tcp_segs_free(pcb->unsent);
     tcp_segs_free(pcb->unacked);
@@ -1758,7 +1758,7 @@ tcp_pcb_remove(struct tcp_pcb *pcb)
   /* if there is an outstanding delayed ACKs, send it */
   if (pcb->state != TIME_WAIT &&
      pcb->state != LISTEN &&
-     timer_pending(&pcb->delayed_ack_timer)) {
+      pcb->timer_delayedack_expires>0) {
     pcb->flags |= TF_ACK_NOW;
     tcp_output(pcb);
   }
@@ -1809,6 +1809,9 @@ static void tcpip_tcp_timer(struct timer *t)
 	if (!perfg_get(tcpip_tcp_timer_active))
 		return;
 	
+	tcp_trim_hash_bucket();
+
+
 	/* call TCP timer handler */
 	tcp_tmr();
 	
@@ -1823,12 +1826,13 @@ static void tcpip_tcp_timer(struct timer *t)
 	}
 	
 	if (needed)
-		timer_add(&perfg_get(tcpip_timer), TCP_TMR_INTERVAL * 1000 * 1000);
+		timer_add(t, TCP_TMR_INTERVAL * 1000);
 }
 
 void tcp_timer_needed(void)
 {
 	/* timer is off but needed again? */
+
 	if (!perfg_get(tcpip_tcp_timer_active) && 
 	    (!hlist_empty(&perfg_get(tcp_lists).active_buckets) ||
 	     !hlist_empty(&perfg_get(tcp_lists).tw_pcbs))) {
@@ -1839,7 +1843,7 @@ void tcp_timer_needed(void)
 			timer_init_entry(&perfg_get(tcpip_timer), &tcpip_tcp_timer);
 
 		if (!timer_pending(&perfg_get(tcpip_timer)))
-			timer_add(&perfg_get(tcpip_timer), TCP_TMR_INTERVAL);
+			timer_add(&perfg_get(tcpip_timer), TCP_TMR_INTERVAL * 1000);
 	}
 }
 

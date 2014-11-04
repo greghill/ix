@@ -169,6 +169,10 @@ enum tcp_state {
 
 /**
  * members common to struct tcp_pcb and struct tcp_listen_pcb
+  struct timer delayed_ack_timer; \
+  struct timer retransmit_timer; \
+  struct timer persist_timer; \
+ * 
  */
 #define TCP_PCB_COMMON(type) \
 	/*type *next;*/ /* for the linked list */	\
@@ -177,9 +181,10 @@ enum tcp_state {
 	struct hlist_node link;  /* doubly linked list wihtin hash */ 		\
   void *perqueue; \
   u32_t delayed_ack_counter; \
-  struct timer delayed_ack_timer; \
-  struct timer retransmit_timer; \
-  struct timer persist_timer; \
+  struct timer unified_timer; \
+  uint64_t timer_delayedack_expires;\
+  uint64_t timer_retransmit_expires;\
+  uint64_t timer_persist_expires;\
   void *callback_arg; \
   /* the accept callback for listen- and normal pcbs, if LWIP_CALLBACK_API */ \
   DEF_ACCEPT_CALLBACK \
