@@ -20,6 +20,7 @@
 #include <ix/lock.h>
 #include <ix/cfg.h>
 #include <ix/control_plane.h>
+#include <ix/log.h>
 
 #include <net/ip.h>
 
@@ -301,7 +302,6 @@ static int init_hw(void)
 	int j, step;
 	int fg_id;
 
-	
 	// will spawn per-cpu initialization sequence on CPU0
 	ret = init_create_cpu(cfg_cpu[0], 1);
 	if (ret) {
@@ -346,17 +346,16 @@ static int init_hw(void)
 
 		for (j = 0; j < eth->data->nb_rx_fgs; j++) {
 			eth_fg_init_cpu(&eth->data->rx_fgs[j]);
-
-			eth_fg_set_current(&eth->data->rx_fgs[j]);
 			fgs[fg_id] = &eth->data->rx_fgs[j];
+
+                        /* fake assignment, valid only during init */
+			eth_fg_assign_to_cpu(fg_id,0);
+			eth_fg_set_current(&eth->data->rx_fgs[j]);
+
 			perfg_get(fg_id) = fg_id;
 			perfg_get(dev_idx) = i;
 
-			
-			if (j == 0)
-				eth_fg_assign_to_cpu(fg_id, 0);
-			else
-				eth_fg_assign_to_cpu(fg_id, (i * ETH_RSS_RETA_NUM_ENTRIES + j) / step);
+			assert(fgs[fg_id]->cur_cpu == percpu_get(cpu_id));
 
 			tcp_init();
 			ret = tcp_api_init_fg();
@@ -366,6 +365,13 @@ static int init_hw(void)
 			}
 
 			timer_init_fg();
+
+			/* assign fg to various cpu */
+			if (j == 0)
+				eth_fg_assign_to_cpu(fg_id, 0);
+			else
+				eth_fg_assign_to_cpu(fg_id, (i * ETH_RSS_RETA_NUM_ENTRIES + j) / step);
+
 
 			fg_id++;
 		}

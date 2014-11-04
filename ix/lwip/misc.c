@@ -1,3 +1,5 @@
+
+
 #include <ix/mbuf.h>
 #include <ix/timer.h>
 #include <ix/queue.h>
@@ -24,54 +26,6 @@ void tcp_input(struct pbuf *p, struct netif *inp);
 
 DEFINE_PERCPU(struct ip_globals, ip_data);
 
-extern void tcp_tmr(void);
-DECLARE_PERFG(struct tcp_pcb *, tcp_active_pcbs);
-DECLARE_PERFG(struct tcp_pcb *, tcp_tw_pcbs);
-/* in us */
-#define TCP_TMR_INTERVAL 250000
-
-static DEFINE_PERFG(struct timer, tcp_timer);
-static DEFINE_PERFG(int, tcpip_tcp_timer_active);
-
-static void tcpip_tcp_timer(struct timer *t)
-{
-	int needed;
-	needed = 0;
-	
-	assert(t == &perfg_get(tcp_timer));
-	assert(perfg_get(tcpip_tcp_timer_active));
-	if (!perfg_get(tcpip_tcp_timer_active))
-		return;
-	
-	/* call TCP timer handler */
-	tcp_tmr();
-	
-	/* timer still needed? */
-	if (perfg_get(tcp_active_pcbs) || perfg_get(tcp_tw_pcbs)) {
-		/* restart timer */
-		needed = 1;
-	} else {
-		/* disable timer */
-		perfg_get(tcpip_tcp_timer_active) = 0;
-	}
-	
-	if (needed)
-		timer_add(&perfg_get(tcp_timer), TCP_TMR_INTERVAL);
-}
-
-void tcp_timer_needed(void)
-{
-	/* timer is off but needed again? */
-	if (!perfg_get(tcpip_tcp_timer_active) && (perfg_get(tcp_active_pcbs) || perfg_get(tcp_tw_pcbs))) {
-		/* enable and start timer */
-		perfg_get(tcpip_tcp_timer_active) = 1;
-		if (!perfg_get(tcp_timer).handler)
-			timer_init_entry(&perfg_get(tcp_timer), &tcpip_tcp_timer);
-
-		if (!timer_pending(&perfg_get(tcp_timer)))
-			timer_add(&perfg_get(tcp_timer), TCP_TMR_INTERVAL);
-	}
-}
 
 struct netif *ip_route(struct ip_addr *dest)
 {

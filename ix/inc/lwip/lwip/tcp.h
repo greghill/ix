@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
- * All rights reserved. 
+c * All rights reserved. 
  * 
  * Redistribution and use in source and binary forms, with or without modification, 
  * are permitted provided that the following conditions are met:
@@ -37,6 +37,7 @@
 #if LWIP_TCP /* don't build if not configured for use in lwipopts.h */
 
 #include <ix/timer.h>
+#include <ix/list.h>
 
 #include "lwip/mem.h"
 #include "lwip/pbuf.h"
@@ -170,9 +171,10 @@ enum tcp_state {
  * members common to struct tcp_pcb and struct tcp_listen_pcb
  */
 #define TCP_PCB_COMMON(type) \
-  type *next; /* for the linked list */ \
-  type *prev; /* for the linked list */ \
-  type *hash_bucket_next; /* for the hash bucket linked list */ \
+	/*type *next;*/ /* for the linked list */	\
+	/*type *prev;*/ /* for the linked list */		\
+	/*type *hash_bucket_next;*/ /* for the hash bucket linked list */ \
+	struct hlist_node link;  /* doubly linked list wihtin hash */ 		\
   void *perqueue; \
   u32_t delayed_ack_counter; \
   struct timer delayed_ack_timer; \

@@ -18,6 +18,7 @@
 
 #define MAX_PCBS	(512*1024)
 
+// XXX fixme ..whats' listen_pcb
 static DEFINE_PERFG(struct tcp_pcb *, listen_pcb);
 /* FIXME: this should be probably per queue */
 static DEFINE_PERCPU(uint16_t, local_port);

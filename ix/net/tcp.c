@@ -94,7 +94,7 @@ const char * const tcp_state_str[] = {
 };
 
 /* last local TCP port */
-static u16_t tcp_port = TCP_LOCAL_PORT_RANGE_START;
+//static u16_t tcp_port = TCP_LOCAL_PORT_RANGE_START;
 
 /* Incremented every coarse grained timer shot (typically every 500 ms). */
 DEFINE_PERFG(u32_t, tcp_ticks);
@@ -105,21 +105,14 @@ const u8_t tcp_persist_backoff[7] = { 3, 6, 12, 24, 48, 96, 120 };
 
 /* The TCP PCB lists. */
 
-/** List of all TCP PCBs bound but not yet (connected || listening) */
-DEFINE_PERFG(struct tcp_pcb*, tcp_bound_pcbs);
-/** List of all TCP PCBs in LISTEN state */
-DEFINE_PERFG(union tcp_listen_pcbs_t, tcp_listen_pcbs);
-/** List of all TCP PCBs that are in a state in which
- * they accept or send data. */
-DEFINE_PERFG(struct tcp_pcb*, tcp_active_pcbs);
-DEFINE_PERFG(struct tcp_pcb*, tcp_active_pcbs_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS]);
-/** List of all TCP PCBs in TIME-WAIT state */
-DEFINE_PERFG(struct tcp_pcb*, tcp_tw_pcbs);
+DEFINE_PERFG(struct tcp_global_lists, tcp_lists);
+DEFINE_PERFG(struct tcp_hash_entry, tcp_active_pcbs_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS]);
+
 
 #define NUM_TCP_PCB_LISTS               4
 #define NUM_TCP_PCB_LISTS_NO_TIME_WAIT  3
 /** An array with all (non-temporary) PCB lists, mainly used for smaller code size */
-DEFINE_PERFG(struct tcp_pcb **, tcp_pcb_lists[NUM_TCP_PCB_LISTS]);
+//DEFINE_PERFG(struct hlist_head *, tcp_pcb_lists[NUM_TCP_PCB_LISTS]);
 
 DEFINE_PERFG(u8_t, tcp_active_pcbs_changed);
 
@@ -139,16 +132,44 @@ tcp_init(void)
 #if LWIP_RANDOMIZE_INITIAL_LOCAL_PORTS && defined(LWIP_RAND)
   tcp_port = TCP_ENSURE_LOCAL_PORT_RANGE(LWIP_RAND());
 #endif /* LWIP_RANDOMIZE_INITIAL_LOCAL_PORTS && defined(LWIP_RAND) */
-  perfg_get(tcp_pcb_lists)[0] = &perfg_get(tcp_listen_pcbs).pcbs;
-  perfg_get(tcp_pcb_lists)[1] = &perfg_get(tcp_bound_pcbs);
-  perfg_get(tcp_pcb_lists)[2] = &perfg_get(tcp_active_pcbs);
-  perfg_get(tcp_pcb_lists)[3] = &perfg_get(tcp_tw_pcbs);
+
+
+//  perfg_get(tcp_pcb_lists)[0] = &perfg_get(tcp_listen_pcbs).pcbs;
+//  perfg_get(tcp_pcb_lists)[1] = &perfg_get(tcp_bound_pcbs);
+//  perfg_get(tcp_pcb_lists)[2] = &perfg_get(tcp_active_pcbs);
+//  perfg_get(tcp_pcb_lists)[3] = &perfg_get(tcp_tw_pcbs);
 #ifdef ENABLE_PCAP
   perfg_get(iss) = 42;
 #else
   perfg_get(iss) = rand();
 #endif
 }
+
+
+/**
+ * tcp_trim_hash_bucket  -  remove from list all entries with zero-length hash queues
+ *
+ */
+ 
+
+void
+tcp_trim_hash_bucket(void)
+{
+	struct hlist_node *cur,*tmp;
+	struct tcp_hash_entry *he;
+	int rm=0,stay=0;
+	hlist_for_each_safe(&perfg_get(tcp_lists).active_buckets,cur,tmp) { 
+		he  = hlist_entry(cur,struct tcp_hash_entry, hash_link);
+		if (hlist_empty(&he->pcbs)) {
+			hlist_del(cur);
+			cur->prev = NULL;
+			rm++;
+		} else 
+			stay++;
+	}
+//	printf("tcp_trim_hash fg:%2d stay=%3d rm=%2d\n",perfg_get(fg_id),stay,rm); 
+}
+		  
 
 /**
  * Called periodically to dispatch TCP timers.
@@ -216,7 +237,7 @@ tcp_close_shutdown(struct tcp_pcb *pcb, u8_t rst_on_unacked_data)
       if (pcb->state == ESTABLISHED) {
         /* move to TIME_WAIT since we close actively */
         pcb->state = TIME_WAIT;
-        TCP_REG(&perfg_get(tcp_tw_pcbs), pcb);
+        TCP_REG(&perfg_get(tcp_lists).tw_pcbs, pcb);
       } else {
         /* CLOSE_WAIT: deallocate the pcb since we already sent a RST for it */
         memp_free(MEMP_TCP_PCB, pcb);
@@ -236,14 +257,14 @@ tcp_close_shutdown(struct tcp_pcb *pcb, u8_t rst_on_unacked_data)
      * been freed, and so any remaining handles are bogus. */
     err = ERR_OK;
     if (pcb->local_port != 0) {
-      TCP_RMV(&perfg_get(tcp_bound_pcbs), pcb);
+	    TCP_RMV(&perfg_get(tcp_lists).bound_pcbs, pcb);
     }
     memp_free(MEMP_TCP_PCB, pcb);
     pcb = NULL;
     break;
   case LISTEN:
     err = ERR_OK;
-    tcp_pcb_remove(&perfg_get(tcp_listen_pcbs).pcbs, pcb);
+    tcp_pcb_remove(pcb);
     memp_free(MEMP_TCP_PCB_LISTEN, pcb);
     pcb = NULL;
     break;
@@ -402,7 +423,7 @@ tcp_abandon(struct tcp_pcb *pcb, int reset)
      are in an active state, call the receive function associated with
      the PCB with a NULL argument, and send an RST to the remote end. */
   if (pcb->state == TIME_WAIT) {
-    tcp_pcb_remove(&perfg_get(tcp_tw_pcbs), pcb);
+    tcp_pcb_remove(pcb);
     memp_free(MEMP_TCP_PCB, pcb);
   } else {
     int send_rst = reset && (pcb->state != CLOSED);
@@ -450,6 +471,36 @@ tcp_abort(struct tcp_pcb *pcb)
   tcp_abandon(pcb, 1);
 }
 
+
+static err_t 
+tcp_bind_checklist(struct hlist_head *list, struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port)
+{
+	struct hlist_node *n;
+	struct tcp_pcb *cpcb;	
+	hlist_for_each(list, n) { 
+		cpcb = hlist_entry(n,struct tcp_pcb,link);
+		if (cpcb->local_port == port) {
+#if SO_REUSE
+			/* Omit checking for the same port if both pcbs have REUSEADDR set.
+			   For SO_REUSEADDR, the duplicate-check for a 5-tuple is done in
+			   tcp_connect. */
+			if (!ip_get_option(pcb, SOF_REUSEADDR) ||
+			    !ip_get_option(cpcb, SOF_REUSEADDR))
+#endif /* SO_REUSE */
+			{
+				/* @todo: check accept_any_ip_version */
+				if (IP_PCB_IPVER_EQ(pcb, cpcb) &&
+				    (ipX_addr_isany(PCB_ISIPV6(pcb), &cpcb->local_ip) ||
+				     ipX_addr_isany(PCB_ISIPV6(pcb), ip_2_ipX(ipaddr)) ||
+				     ipX_addr_cmp(PCB_ISIPV6(pcb), &cpcb->local_ip, ip_2_ipX(ipaddr)))) {
+					return ERR_USE;
+				}
+			}
+		}
+	}
+	return 0;
+}
+
 /**
  * Binds the connection to a local portnumber and IP address. If the
  * IP address is not given (i.e., ipaddr == NULL), the IP address of
@@ -469,7 +520,7 @@ tcp_bind(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port)
 {
   int i;
   int max_pcb_list = NUM_TCP_PCB_LISTS;
-  struct tcp_pcb *cpcb;
+  struct hlist_node *cur;
 
   MEMPOOL_SANITY_ACCESS(pcb);
   LWIP_ERROR("tcp_bind: can only bind in state CLOSED", pcb->state == CLOSED, return ERR_VAL);
@@ -492,35 +543,31 @@ tcp_bind(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port)
     }
   }
 
+
   /* Check if the address already is in use (on all lists) */
-  for (i = 0; i < max_pcb_list; i++) {
-    for(cpcb = *perfg_get(tcp_pcb_lists)[i]; cpcb != NULL; cpcb = cpcb->next) {
-      if (cpcb->local_port == port) {
-#if SO_REUSE
-        /* Omit checking for the same port if both pcbs have REUSEADDR set.
-           For SO_REUSEADDR, the duplicate-check for a 5-tuple is done in
-           tcp_connect. */
-        if (!ip_get_option(pcb, SOF_REUSEADDR) ||
-            !ip_get_option(cpcb, SOF_REUSEADDR))
-#endif /* SO_REUSE */
-        {
-          /* @todo: check accept_any_ip_version */
-          if (IP_PCB_IPVER_EQ(pcb, cpcb) &&
-              (ipX_addr_isany(PCB_ISIPV6(pcb), &cpcb->local_ip) ||
-              ipX_addr_isany(PCB_ISIPV6(pcb), ip_2_ipX(ipaddr)) ||
-              ipX_addr_cmp(PCB_ISIPV6(pcb), &cpcb->local_ip, ip_2_ipX(ipaddr)))) {
-            return ERR_USE;
-          }
-        }
-      }
-    }
+  err_t err = 0;
+  
+  hlist_for_each(&perfg_get(tcp_lists).active_buckets,cur) {
+	  struct tcp_hash_entry *hash_head = hlist_entry(cur,struct tcp_hash_entry,hash_link);
+	  err = tcp_bind_checklist(&hash_head->pcbs,pcb,ipaddr,port);
+	  if (err) return err;
   }
+
+  err = tcp_bind_checklist(&perfg_get(tcp_lists).listen_pcbs,pcb,ipaddr,port);
+  if (err) return err;
+
+  err = tcp_bind_checklist(&perfg_get(tcp_lists).bound_pcbs,pcb,ipaddr,port);
+  if (err) return err;
+
+  err = tcp_bind_checklist(&perfg_get(tcp_lists).tw_pcbs,pcb,ipaddr,port);
+  if (err) return err;
+  
 
   if (!ipX_addr_isany(PCB_ISIPV6(pcb), ip_2_ipX(ipaddr))) {
     ipX_addr_set(PCB_ISIPV6(pcb), &pcb->local_ip, ip_2_ipX(ipaddr));
   }
   pcb->local_port = port;
-  TCP_REG(&perfg_get(tcp_bound_pcbs), pcb);
+  TCP_REG(&perfg_get(tcp_lists).bound_pcbs, pcb);
   LWIP_DEBUGF(TCP_DEBUG, ("tcp_bind: bind to port %"U16_F"\n", port));
   return ERR_OK;
 }
@@ -572,18 +619,19 @@ tcp_listen_with_backlog(struct tcp_pcb *pcb, u8_t backlog)
   assert(0); // IX debugging
 
   if (ip_get_option(pcb, SOF_REUSEADDR)) {
-    /* Since SOF_REUSEADDR allows reusing a local address before the pcb's usage
-       is declared (listen-/connection-pcb), we have to make sure now that
-       this port is only used once for every local IP. */
-    for(lpcb = perfg_get(tcp_listen_pcbs).listen_pcbs; lpcb != NULL; lpcb = lpcb->next) {
-      if ((lpcb->local_port == pcb->local_port) &&
-          IP_PCB_IPVER_EQ(pcb, lpcb)) {
-        if (ipX_addr_cmp(PCB_ISIPV6(pcb), &lpcb->local_ip, &pcb->local_ip)) {
-          /* this address/port is already used */
-          return NULL;
-        }
-      }
-    }
+	  /* Since SOF_REUSEADDR allows reusing a local address before the pcb's usage
+	     is declared (listen-/connection-pcb), we have to make sure now that
+	     this port is only used once for every local IP. */
+	  
+	  hlist_for_each(perfg_get(tcp_listen_pcbs).listen_pcbs,lpcb) { 
+		  if ((lpcb->local_port == pcb->local_port) &&
+		      IP_PCB_IPVER_EQ(pcb, lpcb)) {
+			  if (ipX_addr_cmp(PCB_ISIPV6(pcb), &lpcb->local_ip, &pcb->local_ip)) {
+				  /* this address/port is already used */
+				  return NULL;
+			  }
+		  }
+	  }
   }
 #endif /* SO_REUSE */
   lpcb = (struct tcp_pcb_listen *)memp_malloc(MEMP_TCP_PCB_LISTEN);
@@ -614,7 +662,7 @@ tcp_listen_with_backlog(struct tcp_pcb *pcb, u8_t backlog)
   lpcb->accepts_pending = 0;
   lpcb->backlog = (backlog ? backlog : 1);
 #endif /* TCP_LISTEN_BACKLOG */
-  TCP_REG(&perfg_get(tcp_listen_pcbs).pcbs, (struct tcp_pcb *)lpcb);
+  TCP_REG(&perfg_get(tcp_lists).listen_pcbs, (struct tcp_pcb *)lpcb);
   return (struct tcp_pcb *)lpcb;
 }
 
@@ -720,6 +768,8 @@ tcp_recved(struct tcp_pcb *pcb, u32_t len)
 static u16_t
 tcp_new_port(void)
 {
+#ifdef EDB_TODO_LATER
+
   u8_t i;
   u16_t n = 0;
   struct tcp_pcb *pcb;
@@ -730,7 +780,9 @@ again:
   }
   /* Check all PCB lists. */
   for (i = 0; i < NUM_TCP_PCB_LISTS; i++) {
-    for(pcb = *perfg_get(tcp_pcb_lists)[i]; pcb != NULL; pcb = pcb->next) {
+	  struct hlist_node *n;
+	  hlist_for_each(perfg_get(tcp_pcb_lists)[i],n) {
+		  pcb = hlist_entry(n,struct tcp_pcb,link);
       if (pcb->local_port == tcp_port) {
         if (++n > (TCP_LOCAL_PORT_RANGE_END - TCP_LOCAL_PORT_RANGE_START)) {
           return 0;
@@ -740,6 +792,8 @@ again:
     }
   }
   return tcp_port;
+#endif
+  assert(0); // not implemented
 }
 
 /**
@@ -804,16 +858,16 @@ tcp_connect(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port,
     int i;
     /* Don't check listen- and bound-PCBs, check active- and TIME-WAIT PCBs. */
     for (i = 2; i < NUM_TCP_PCB_LISTS; i++) {
-      for(cpcb = *tcp_pcb_lists[i]; cpcb != NULL; cpcb = cpcb->next) {
-        if ((cpcb->local_port == pcb->local_port) &&
-            (cpcb->remote_port == port) &&
-            IP_PCB_IPVER_EQ(cpcb, pcb) &&
-            ipX_addr_cmp(PCB_ISIPV6(pcb), &cpcb->local_ip, &pcb->local_ip) &&
-            ipX_addr_cmp(PCB_ISIPV6(pcb), &cpcb->remote_ip, ip_2_ipX(ipaddr))) {
-          /* linux returns EISCONN here, but ERR_USE should be OK for us */
-          return ERR_USE;
-        }
-      }
+	    hlist_for_each(tcp_pcb_lists[i], cpcb) {
+		    if ((cpcb->local_port == pcb->local_port) &&
+			(cpcb->remote_port == port) &&
+			IP_PCB_IPVER_EQ(cpcb, pcb) &&
+			ipX_addr_cmp(PCB_ISIPV6(pcb), &cpcb->local_ip, &pcb->local_ip) &&
+			ipX_addr_cmp(PCB_ISIPV6(pcb), &cpcb->remote_ip, ip_2_ipX(ipaddr))) {
+			    /* linux returns EISCONN here, but ERR_USE should be OK for us */
+			    return ERR_USE;
+		    }
+	    }
     }
   }
 #endif /* SO_REUSE */
@@ -861,16 +915,10 @@ void pcb_remove_called_from_timer(struct tcp_pcb *pcb, int pcb_reset)
 
 	MEMPOOL_SANITY_ACCESS(pcb);
       tcp_pcb_purge(pcb);
-      /* Remove PCB from tcp_active_pcbs list. */
-      TCP_HASH_RMV(perfg_get(tcp_active_pcbs_tbl), pcb);
-      if (pcb->prev != NULL) {
-        LWIP_ASSERT("tcp_slowtmr: middle tcp != tcp_active_pcbs", pcb != perfg_get(tcp_active_pcbs));
-        pcb->prev->next = pcb->next;
-      } else {
-        /* This PCB was the first. */
-        LWIP_ASSERT("tcp_slowtmr: first pcb == tcp_active_pcbs", perfg_get(tcp_active_pcbs) == pcb);
-        perfg_get(tcp_active_pcbs) = pcb->next;
-      }
+      /* Remove PCB from tcp_lists.active_pcbs list. */
+      TCP_HASH_RMV(perfg_get(tcp_lists.active_pcbs_tbl), pcb);
+      hlist_del(&pcb->link);
+
 
       if (pcb_reset) {
         tcp_rst(pcb->snd_nxt, pcb->rcv_nxt, &pcb->local_ip, &pcb->remote_ip,
@@ -890,183 +938,171 @@ void pcb_remove_called_from_timer(struct tcp_pcb *pcb, int pcb_reset)
 void
 tcp_slowtmr(void)
 {
-  struct tcp_pcb *pcb, *prev;
-  u8_t pcb_remove;      /* flag if a PCB should be removed */
-  u8_t pcb_reset;       /* flag if a RST should be sent when removing */
-  err_t err;
+	struct tcp_pcb *pcb;
+	u8_t pcb_remove;      /* flag if a PCB should be removed */
+	u8_t pcb_reset;       /* flag if a RST should be sent when removing */
+	err_t err;
+	struct hlist_node *cur;
+	struct tcp_hash_entry *hash_head = NULL;
+	struct hlist_node *n,*tmp;
 
-  err = ERR_OK;
+	err = ERR_OK;
 
-  ++perfg_get(tcp_ticks);
-  ++perfg_get(tcp_timer_ctr);
+	++perfg_get(tcp_ticks);
+	++perfg_get(tcp_timer_ctr);
 
 tcp_slowtmr_start:
-  /* Steps through all of the active PCBs. */
-  prev = NULL;
-  pcb = perfg_get(tcp_active_pcbs);
-  if (pcb == NULL) {
-    LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: no active pcbs\n"));
-  }
-  while (pcb != NULL) {
+	/* Steps through all of the active PCBs. */
 
-	MEMPOOL_SANITY_ACCESS(pcb);
+	if (hash_head == NULL) {
+		LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: no active pcbs\n"));
+	}
+  
+	tcp_trim_hash_bucket();
 
-    LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: processing active pcb\n"));
-    LWIP_ASSERT("tcp_slowtmr: active pcb->state != CLOSED\n", pcb->state != CLOSED);
-    LWIP_ASSERT("tcp_slowtmr: active pcb->state != LISTEN\n", pcb->state != LISTEN);
-    LWIP_ASSERT("tcp_slowtmr: active pcb->state != TIME-WAIT\n", pcb->state != TIME_WAIT);
-    if (pcb->last_timer == perfg_get(tcp_timer_ctr)) {
-      /* skip this pcb, we have already processed it */
-      pcb = pcb->next;
-      continue;
-    }
-    pcb->last_timer = perfg_get(tcp_timer_ctr);
+	hlist_for_each(&perfg_get(tcp_lists).active_buckets,cur) { 
+		hash_head = hlist_entry(cur,struct tcp_hash_entry,hash_link);
+		hlist_for_each_safe(&hash_head->pcbs,n,tmp) {
+			pcb = hlist_entry(n,struct tcp_pcb,link);
+			MEMPOOL_SANITY_ACCESS(pcb);
+		  
+			LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: processing active pcb\n"));
+			LWIP_ASSERT("tcp_slowtmr: active pcb->state != CLOSED\n", pcb->state != CLOSED);
+			LWIP_ASSERT("tcp_slowtmr: active pcb->state != LISTEN\n", pcb->state != LISTEN);
+			LWIP_ASSERT("tcp_slowtmr: active pcb->state != TIME-WAIT\n", pcb->state != TIME_WAIT);
+			if (pcb->last_timer == perfg_get(tcp_timer_ctr)) {
+				/* skip this pcb, we have already processed it */
+				continue;
+			}
+			pcb->last_timer = perfg_get(tcp_timer_ctr);
 
-    pcb_remove = 0;
-    pcb_reset = 0;
+			pcb_remove = 0;
+			pcb_reset = 0;
 
-    /* Check if this PCB has stayed too long in FIN-WAIT-2 */
-    if (pcb->state == FIN_WAIT_2) {
-      /* If this PCB is in FIN_WAIT_2 because of SHUT_WR don't let it time out. */
-      if (pcb->flags & TF_RXCLOSED) {
-        /* PCB was fully closed (either through close() or SHUT_RDWR):
-           normal FIN-WAIT timeout handling. */
-        if ((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) >
-            TCP_FIN_WAIT_TIMEOUT / TCP_SLOW_INTERVAL) {
-          ++pcb_remove;
-          LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: removing pcb stuck in FIN-WAIT-2\n"));
-        }
-      }
-    }
+			/* Check if this PCB has stayed too long in FIN-WAIT-2 */
+			if (pcb->state == FIN_WAIT_2) {
+				/* If this PCB is in FIN_WAIT_2 because of SHUT_WR don't let it time out. */
+				if (pcb->flags & TF_RXCLOSED) {
+					/* PCB was fully closed (either through close() or SHUT_RDWR):
+					   normal FIN-WAIT timeout handling. */
+					if ((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) >
+					    TCP_FIN_WAIT_TIMEOUT / TCP_SLOW_INTERVAL) {
+						++pcb_remove;
+						LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: removing pcb stuck in FIN-WAIT-2\n"));
+					}
+				}
+			}
 
-    /* Check if KEEPALIVE should be sent */
-    if(ip_get_option(pcb, SOF_KEEPALIVE) &&
-       ((pcb->state == ESTABLISHED) ||
-        (pcb->state == CLOSE_WAIT))) {
-      if((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) >
-         (pcb->keep_idle + TCP_KEEP_DUR(pcb)) / TCP_SLOW_INTERVAL)
-      {
-        LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: KEEPALIVE timeout. Aborting connection to "));
-        ipX_addr_debug_print(PCB_ISIPV6(pcb), TCP_DEBUG, &pcb->remote_ip);
-        LWIP_DEBUGF(TCP_DEBUG, ("\n"));
+			/* Check if KEEPALIVE should be sent */
+			if(ip_get_option(pcb, SOF_KEEPALIVE) &&
+			   ((pcb->state == ESTABLISHED) ||
+			    (pcb->state == CLOSE_WAIT))) {
+				if((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) >
+				   (pcb->keep_idle + TCP_KEEP_DUR(pcb)) / TCP_SLOW_INTERVAL)
+				{
+					LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: KEEPALIVE timeout. Aborting connection to "));
+					ipX_addr_debug_print(PCB_ISIPV6(pcb), TCP_DEBUG, &pcb->remote_ip);
+					LWIP_DEBUGF(TCP_DEBUG, ("\n"));
 
-        ++pcb_remove;
-        ++pcb_reset;
-      }
-      else if((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) >
-              (pcb->keep_idle + pcb->keep_cnt_sent * TCP_KEEP_INTVL(pcb))
-              / TCP_SLOW_INTERVAL)
-      {
-        tcp_keepalive(pcb);
-        pcb->keep_cnt_sent++;
-      }
-    }
+					++pcb_remove;
+					++pcb_reset;
+				}
+				else if((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) >
+					(pcb->keep_idle + pcb->keep_cnt_sent * TCP_KEEP_INTVL(pcb))
+					/ TCP_SLOW_INTERVAL)
+				{
+					tcp_keepalive(pcb);
+					pcb->keep_cnt_sent++;
+				}
+			}
 
-    /* If this PCB has queued out of sequence data, but has been
-       inactive for too long, will drop the data (it will eventually
-       be retransmitted). */
+			/* If this PCB has queued out of sequence data, but has been
+			   inactive for too long, will drop the data (it will eventually
+			   be retransmitted). */
 #if TCP_QUEUE_OOSEQ
-    if (pcb->ooseq != NULL &&
-        (u32_t)perfg_get(tcp_ticks) - pcb->tmr >= pcb->rto * TCP_OOSEQ_TIMEOUT) {
-      tcp_segs_free(pcb->ooseq);
-      pcb->ooseq = NULL;
-      LWIP_DEBUGF(TCP_CWND_DEBUG, ("tcp_slowtmr: dropping OOSEQ queued data\n"));
-    }
+			if (pcb->ooseq != NULL &&
+			    (u32_t)perfg_get(tcp_ticks) - pcb->tmr >= pcb->rto * TCP_OOSEQ_TIMEOUT) {
+				tcp_segs_free(pcb->ooseq);
+				pcb->ooseq = NULL;
+				LWIP_DEBUGF(TCP_CWND_DEBUG, ("tcp_slowtmr: dropping OOSEQ queued data\n"));
+			}
 #endif /* TCP_QUEUE_OOSEQ */
 
-    /* Check if this PCB has stayed too long in SYN-RCVD */
-    if (pcb->state == SYN_RCVD) {
-      if ((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) >
-          TCP_SYN_RCVD_TIMEOUT / TCP_SLOW_INTERVAL) {
-        ++pcb_remove;
-        LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: removing pcb stuck in SYN-RCVD\n"));
-      }
-    }
+			/* Check if this PCB has stayed too long in SYN-RCVD */
+			if (pcb->state == SYN_RCVD) {
+				if ((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) >
+				    TCP_SYN_RCVD_TIMEOUT / TCP_SLOW_INTERVAL) {
+					++pcb_remove;
+					LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: removing pcb stuck in SYN-RCVD\n"));
+				}
+			}
 
-    /* Check if this PCB has stayed too long in LAST-ACK */
-    if (pcb->state == LAST_ACK) {
-      if ((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) > 2 * TCP_MSL / TCP_SLOW_INTERVAL) {
-        ++pcb_remove;
-        LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: removing pcb stuck in LAST-ACK\n"));
-      }
-    }
+			/* Check if this PCB has stayed too long in LAST-ACK */
+			if (pcb->state == LAST_ACK) {
+				if ((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) > 2 * TCP_MSL / TCP_SLOW_INTERVAL) {
+					++pcb_remove;
+					LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: removing pcb stuck in LAST-ACK\n"));
+				}
+			}
 
-    /* If the PCB should be removed, do it. */
-    if (pcb_remove) {
-      struct tcp_pcb *pcb2;
-      tcp_err_fn err_fn;
-      void *err_arg;
+			/* If the PCB should be removed, do it. */
+			if (pcb_remove) {
+				tcp_err_fn err_fn;
+				void *err_arg;
 
-      err_fn = pcb->errf;
-      err_arg = pcb->callback_arg;
-      pcb2 = pcb;
-      pcb = pcb->next;
-      pcb_remove_called_from_timer(pcb2, pcb_reset);
+				err_fn = pcb->errf;
+				err_arg = pcb->callback_arg;
+				hlist_del(&pcb->link);
+				pcb_remove_called_from_timer(pcb, pcb_reset);
 
-      perfg_get(tcp_active_pcbs_changed) = 0;
-      TCP_EVENT_ERR(err_fn, err_arg, ERR_ABRT);
-      if (perfg_get(tcp_active_pcbs_changed)) {
-        goto tcp_slowtmr_start;
-      }
-    } else {
-      /* get the 'next' element now and work with 'prev' below (in case of abort) */
-      prev = pcb;
-      pcb = pcb->next;
+				perfg_get(tcp_active_pcbs_changed) = 0;
+				TCP_EVENT_ERR(err_fn, err_arg, ERR_ABRT);
+				if (perfg_get(tcp_active_pcbs_changed)) {
+					goto tcp_slowtmr_start;
+				}
+			} else {
+				/* We check if we should poll the connection. */
+				++pcb->polltmr;
+				if (pcb->polltmr >= pcb->pollinterval) {
+					pcb->polltmr = 0;
+					LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: polling application\n"));
+					perfg_get(tcp_active_pcbs_changed) = 0;
+					TCP_EVENT_POLL(pcb, err);
+					if (perfg_get(tcp_active_pcbs_changed)) {
+						goto tcp_slowtmr_start;
+					}
+					/* if err == ERR_ABRT, 'pcb' is already deallocated */
+					if (err == ERR_OK) {
+						tcp_output(pcb);
+					}
+				}
+			}
+		}
+	  
 
-      /* We check if we should poll the connection. */
-      ++prev->polltmr;
-      if (prev->polltmr >= prev->pollinterval) {
-        prev->polltmr = 0;
-        LWIP_DEBUGF(TCP_DEBUG, ("tcp_slowtmr: polling application\n"));
-        perfg_get(tcp_active_pcbs_changed) = 0;
-        TCP_EVENT_POLL(prev, err);
-        if (perfg_get(tcp_active_pcbs_changed)) {
-          goto tcp_slowtmr_start;
-        }
-        /* if err == ERR_ABRT, 'prev' is already deallocated */
-        if (err == ERR_OK) {
-          tcp_output(prev);
-        }
-      }
-    }
-  }
+		/* Steps through all of the TIME-WAIT PCBs. */
+		hlist_for_each_safe(&perfg_get(tcp_lists).tw_pcbs,n,tmp) {
+			pcb = hlist_entry(n,struct tcp_pcb,link);
+                
+			LWIP_ASSERT("tcp_slowtmr: TIME-WAIT pcb->state == TIME-WAIT", pcb->state == TIME_WAIT);
+			pcb_remove = 0;
 
-
-  /* Steps through all of the TIME-WAIT PCBs. */
-  prev = NULL;
-  pcb = perfg_get(tcp_tw_pcbs);
-  while (pcb != NULL) {
-    LWIP_ASSERT("tcp_slowtmr: TIME-WAIT pcb->state == TIME-WAIT", pcb->state == TIME_WAIT);
-    pcb_remove = 0;
-
-    /* Check if this PCB has stayed long enough in TIME-WAIT */
-    if ((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) > 2 * TCP_MSL / TCP_SLOW_INTERVAL) {
-      ++pcb_remove;
-    }
+			/* Check if this PCB has stayed long enough in TIME-WAIT */
+			if ((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) > 2 * TCP_MSL / TCP_SLOW_INTERVAL) {
+				++pcb_remove;
+			}
 
 
 
-    /* If the PCB should be removed, do it. */
-    if (pcb_remove) {
-      struct tcp_pcb *pcb2;
-      tcp_pcb_purge(pcb);
-      /* Remove PCB from tcp_tw_pcbs list. */
-      if (prev != NULL) {
-        LWIP_ASSERT("tcp_slowtmr: middle tcp != tcp_tw_pcbs", pcb != perfg_get(tcp_tw_pcbs));
-        prev->next = pcb->next;
-      } else {
-        /* This PCB was the first. */
-        LWIP_ASSERT("tcp_slowtmr: first pcb == tcp_tw_pcbs", perfg_get(tcp_tw_pcbs) == pcb);
-        perfg_get(tcp_tw_pcbs) = pcb->next;
-      }
-      pcb2 = pcb;
-      pcb = pcb->next;
-      memp_free(MEMP_TCP_PCB, pcb2);
-    } else {
-      prev = pcb;
-      pcb = pcb->next;
-    }
-  }
+			/* If the PCB should be removed, do it. */
+			if (pcb_remove) {
+				tcp_pcb_purge(pcb);
+				hlist_del(&pcb->link);
+				memp_free(MEMP_TCP_PCB, pcb);
+			} 
+
+		}
+	}
 }
 
 void tcp_send_delayed_ack(struct timer *t)
@@ -1092,7 +1128,7 @@ void tcp_retransmit_handler(struct timer *t)
 	KSTATS_VECTOR(timer_tcp_retransmit);
 	percpu_get(current_perqueue) = pcb->perqueue;
 
-        if (pcb->unacked == NULL)
+	if (pcb->unacked == NULL)
 		return;
 
 	if (pcb->snd_wnd == 0) {
@@ -1115,7 +1151,7 @@ void tcp_retransmit_handler(struct timer *t)
 	/* Time for a retransmission. */
 
 	/* Double retransmission time-out unless we are trying to
-	* connect to somebody (i.e., we are in SYN_SENT). */
+	 * connect to somebody (i.e., we are in SYN_SENT). */
 	if (pcb->state != SYN_SENT) {
 		pcb->rto = ((pcb->sa >> 3) + pcb->sv) << tcp_backoff[pcb->nrtx];
 	}
@@ -1129,7 +1165,7 @@ void tcp_retransmit_handler(struct timer *t)
 	pcb->cwnd = pcb->mss;
 
 	/* The following needs to be called AFTER cwnd is set to one
-	mss - STJ */
+	   mss - STJ */
 	tcp_rexmit_rto(pcb);
 }
 
@@ -1142,7 +1178,7 @@ void tcp_persist_handler(struct timer *t)
 	percpu_get(current_perqueue) = pcb->perqueue;
 
 	/* If snd_wnd is zero, use persist timer to send 1 byte probes
-	* instead of using the standard retransmission mechanism. */
+	 * instead of using the standard retransmission mechanism. */
 	if (pcb->persist_backoff < sizeof(tcp_persist_backoff)) {
 		pcb->persist_backoff++;
 	}
@@ -1159,34 +1195,36 @@ void tcp_persist_handler(struct timer *t)
 void
 tcp_fasttmr(void)
 {
-  struct tcp_pcb *pcb;
-
-  ++perfg_get(tcp_timer_ctr);
-
+	struct tcp_pcb *pcb;
+	struct hlist_node *n,*tmp;
+	struct hlist_node *cur;
+	++perfg_get(tcp_timer_ctr);
+	
+	tcp_trim_hash_bucket();
+	
 tcp_fasttmr_start:
-  pcb = perfg_get(tcp_active_pcbs);
 
-  while(pcb != NULL) {
-    if (pcb->last_timer != perfg_get(tcp_timer_ctr)) {
-      struct tcp_pcb *next;
-      pcb->last_timer = perfg_get(tcp_timer_ctr);
-
-      next = pcb->next;
-
-      /* If there is data which was previously "refused" by upper layer */
-      if (pcb->refused_data != NULL) {
-        perfg_get(tcp_active_pcbs_changed) = 0;
-        tcp_process_refused_data(pcb);
-        if (perfg_get(tcp_active_pcbs_changed)) {
-          /* application callback has changed the pcb list: restart the loop */
-          goto tcp_fasttmr_start;
-        }
-      }
-      pcb = next;
-    } else {
-      pcb = pcb->next;
-    }
-  }
+	hlist_for_each(&perfg_get(tcp_lists).active_buckets,cur) {
+		struct tcp_hash_entry *he = hlist_entry(cur,struct tcp_hash_entry,hash_link);
+		hlist_for_each_safe(&he->pcbs,n,tmp) {
+			pcb = hlist_entry(n,struct tcp_pcb,link);
+			
+			if (pcb->last_timer != perfg_get(tcp_timer_ctr)) {
+				pcb->last_timer = perfg_get(tcp_timer_ctr);
+				
+				/* If there is data which was previously "refused" by upper layer */
+				if (pcb->refused_data != NULL) {
+					perfg_get(tcp_active_pcbs_changed) = 0;
+					tcp_process_refused_data(pcb);
+					if (perfg_get(tcp_active_pcbs_changed)) {
+						/* application callback has changed the pcb list: restart the loop */
+						goto tcp_fasttmr_start;
+					}
+				}
+				
+			}
+		}
+	}
 }
 
 /** Pass pcb->refused_data to the recv callback */
@@ -1194,61 +1232,61 @@ err_t
 tcp_process_refused_data(struct tcp_pcb *pcb)
 {
 #if TCP_QUEUE_OOSEQ && LWIP_WND_SCALE
-  struct pbuf *rest;
+	struct pbuf *rest;
 
 	MEMPOOL_SANITY_ACCESS(pcb);
-  while (pcb->refused_data != NULL)
+	while (pcb->refused_data != NULL)
 #endif /* TCP_QUEUE_OOSEQ && LWIP_WND_SCALE */
-  {
-    err_t err;
-    u8_t refused_flags = pcb->refused_data->flags;
-    /* set pcb->refused_data to NULL in case the callback frees it and then
-       closes the pcb */
-    struct pbuf *refused_data = pcb->refused_data;
+	{
+		err_t err;
+		u8_t refused_flags = pcb->refused_data->flags;
+		/* set pcb->refused_data to NULL in case the callback frees it and then
+		   closes the pcb */
+		struct pbuf *refused_data = pcb->refused_data;
 #if TCP_QUEUE_OOSEQ && LWIP_WND_SCALE
-    pbuf_split_64k(refused_data, &rest);
-    pcb->refused_data = rest;
+		pbuf_split_64k(refused_data, &rest);
+		pcb->refused_data = rest;
 #else /* TCP_QUEUE_OOSEQ && LWIP_WND_SCALE */
-    pcb->refused_data = NULL;
+		pcb->refused_data = NULL;
 #endif /* TCP_QUEUE_OOSEQ && LWIP_WND_SCALE */
-    /* Notify again application with data previously received. */
-    LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_input: notify kept packet\n"));
-    TCP_EVENT_RECV(pcb, refused_data, ERR_OK, err);
-    if (err == ERR_OK) {
-      /* did refused_data include a FIN? */
-      if (refused_flags & PBUF_FLAG_TCP_FIN
+		/* Notify again application with data previously received. */
+		LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_input: notify kept packet\n"));
+		TCP_EVENT_RECV(pcb, refused_data, ERR_OK, err);
+		if (err == ERR_OK) {
+			/* did refused_data include a FIN? */
+			if (refused_flags & PBUF_FLAG_TCP_FIN
 #if TCP_QUEUE_OOSEQ && LWIP_WND_SCALE
-          && (rest == NULL)
+			    && (rest == NULL)
 #endif /* TCP_QUEUE_OOSEQ && LWIP_WND_SCALE */
-         ) {
-        /* correct rcv_wnd as the application won't call tcp_recved()
-           for the FIN's seqno */
-        if (pcb->rcv_wnd != TCP_WND) {
-          pcb->rcv_wnd++;
-        }
-        TCP_EVENT_CLOSED(pcb, err);
-        if (err == ERR_ABRT) {
-          return ERR_ABRT;
-        }
-      }
-    } else if (err == ERR_ABRT) {
-      /* if err == ERR_ABRT, 'pcb' is already deallocated */
-      /* Drop incoming packets because pcb is "full" (only if the incoming
-         segment contains data). */
-      LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_input: drop incoming packets, because pcb is \"full\"\n"));
-      return ERR_ABRT;
-    } else {
-      /* data is still refused, pbuf is still valid (go on for ACK-only packets) */
+				) {
+				/* correct rcv_wnd as the application won't call tcp_recved()
+				   for the FIN's seqno */
+				if (pcb->rcv_wnd != TCP_WND) {
+					pcb->rcv_wnd++;
+				}
+				TCP_EVENT_CLOSED(pcb, err);
+				if (err == ERR_ABRT) {
+					return ERR_ABRT;
+				}
+			}
+		} else if (err == ERR_ABRT) {
+			/* if err == ERR_ABRT, 'pcb' is already deallocated */
+			/* Drop incoming packets because pcb is "full" (only if the incoming
+			   segment contains data). */
+			LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_input: drop incoming packets, because pcb is \"full\"\n"));
+			return ERR_ABRT;
+		} else {
+			/* data is still refused, pbuf is still valid (go on for ACK-only packets) */
 #if TCP_QUEUE_OOSEQ && LWIP_WND_SCALE
-      if (rest != NULL) {
-        pbuf_cat(refused_data, rest);
-      }
+			if (rest != NULL) {
+				pbuf_cat(refused_data, rest);
+			}
 #endif /* TCP_QUEUE_OOSEQ && LWIP_WND_SCALE */
-      pcb->refused_data = refused_data;
-      return ERR_INPROGRESS;
-    }
-  }
-  return ERR_OK;
+			pcb->refused_data = refused_data;
+			return ERR_INPROGRESS;
+		}
+	}
+	return ERR_OK;
 }
 
 /**
@@ -1259,31 +1297,31 @@ tcp_process_refused_data(struct tcp_pcb *pcb)
 void
 tcp_segs_free(struct tcp_seg *seg)
 {
-  while (seg != NULL) {
-    struct tcp_seg *next = seg->next;
-    tcp_seg_free(seg);
-    seg = next;
+	  while (seg != NULL) {
+		  struct tcp_seg *next = seg->next;
+		  tcp_seg_free(seg);
+		  seg = next;
+	  }
   }
-}
 
 /**
  * Frees a TCP segment (tcp_seg structure).
  *
  * @param seg single tcp_seg to free
  */
-void
-tcp_seg_free(struct tcp_seg *seg)
-{
-  if (seg != NULL) {
-    if (seg->p != NULL) {
-      pbuf_free(seg->p);
+  void
+	  tcp_seg_free(struct tcp_seg *seg)
+  {
+	  if (seg != NULL) {
+		  if (seg->p != NULL) {
+			  pbuf_free(seg->p);
 #if TCP_DEBUG
-      seg->p = NULL;
+			  seg->p = NULL;
 #endif /* TCP_DEBUG */
-    }
-    memp_free(MEMP_TCP_SEG, seg);
+		  }
+		  memp_free(MEMP_TCP_SEG, seg);
+	  }
   }
-}
 
 /**
  * Sets the priority of a connection.
@@ -1291,11 +1329,11 @@ tcp_seg_free(struct tcp_seg *seg)
  * @param pcb the tcp_pcb to manipulate
  * @param prio new priority
  */
-void
-tcp_setprio(struct tcp_pcb *pcb, u8_t prio)
-{
-  pcb->prio = prio;
-}
+  void
+	  tcp_setprio(struct tcp_pcb *pcb, u8_t prio)
+  {
+	  pcb->prio = prio;
+  }
 
 #if TCP_QUEUE_OOSEQ
 /**
@@ -1305,19 +1343,19 @@ tcp_setprio(struct tcp_pcb *pcb, u8_t prio)
  * @param seg the old tcp_seg
  * @return a copy of seg
  */
-struct tcp_seg *
-tcp_seg_copy(struct tcp_seg *seg)
-{
-  struct tcp_seg *cseg;
+  struct tcp_seg *
+	  tcp_seg_copy(struct tcp_seg *seg)
+  {
+	  struct tcp_seg *cseg;
 
-  cseg = (struct tcp_seg *)memp_malloc(MEMP_TCP_SEG);
-  if (cseg == NULL) {
-    return NULL;
+	  cseg = (struct tcp_seg *)memp_malloc(MEMP_TCP_SEG);
+	  if (cseg == NULL) {
+		  return NULL;
+	  }
+	  SMEMCPY((u8_t *)cseg, (const u8_t *)seg, sizeof(struct tcp_seg));
+	  pbuf_ref(cseg->p);
+	  return cseg;
   }
-  SMEMCPY((u8_t *)cseg, (const u8_t *)seg, sizeof(struct tcp_seg));
-  pbuf_ref(cseg->p);
-  return cseg;
-}
 #endif /* TCP_QUEUE_OOSEQ */
 
 #if LWIP_CALLBACK_API
@@ -1328,14 +1366,14 @@ tcp_seg_copy(struct tcp_seg *seg)
 err_t
 tcp_recv_null(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 {
-  LWIP_UNUSED_ARG(arg);
-  if (p != NULL) {
-    tcp_recved(pcb, p->tot_len);
-    pbuf_free(p);
-  } else if (err == ERR_OK) {
-    return tcp_close(pcb);
-  }
-  return ERR_OK;
+	LWIP_UNUSED_ARG(arg);
+	if (p != NULL) {
+		tcp_recved(pcb, p->tot_len);
+		pbuf_free(p);
+	} else if (err == ERR_OK) {
+		return tcp_close(pcb);
+	}
+	return ERR_OK;
 }
 #endif /* LWIP_CALLBACK_API */
 
@@ -1348,30 +1386,40 @@ tcp_recv_null(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
 static void
 tcp_kill_prio(u8_t prio)
 {
-  struct tcp_pcb *pcb, *inactive;
-  u32_t inactivity;
-  u8_t mprio;
+	struct tcp_pcb *pcb, *inactive;
+	u32_t inactivity;
+	u8_t mprio;
 
+	struct hlist_node *cur;
+	struct tcp_hash_entry *hash_head = NULL;
+	struct hlist_node *n;
+	  
 
-  mprio = TCP_PRIO_MAX;
+	mprio = TCP_PRIO_MAX;
 
-  /* We kill the oldest active connection that has lower priority than prio. */
-  inactivity = 0;
-  inactive = NULL;
-  for(pcb = perfg_get(tcp_active_pcbs); pcb != NULL; pcb = pcb->next) {
-    if (pcb->prio <= prio &&
-       pcb->prio <= mprio &&
-       (u32_t)(perfg_get(tcp_ticks) - pcb->tmr) >= inactivity) {
-      inactivity = perfg_get(tcp_ticks) - pcb->tmr;
-      inactive = pcb;
-      mprio = pcb->prio;
-    }
-  }
-  if (inactive != NULL) {
-    LWIP_DEBUGF(TCP_DEBUG, ("tcp_kill_prio: killing oldest PCB %p (%"S32_F")\n",
-           (void *)inactive, inactivity));
-    tcp_abort(inactive);
-  }
+	/* We kill the oldest active connection that has lower priority than prio. */
+	inactivity = 0;
+	inactive = NULL;
+
+	hlist_for_each(&perfg_get(tcp_lists).active_buckets,cur) { 
+		hash_head = hlist_entry(cur,struct tcp_hash_entry,hash_link);
+		hlist_for_each(&hash_head->pcbs,n) {
+			pcb = hlist_entry(n,struct tcp_pcb,link);
+			  
+			if (pcb->prio <= prio &&
+			    pcb->prio <= mprio &&
+			    (u32_t)(perfg_get(tcp_ticks) - pcb->tmr) >= inactivity) {
+				inactivity = perfg_get(tcp_ticks) - pcb->tmr;
+				inactive = pcb;
+				mprio = pcb->prio;
+			}
+		}
+	}
+	if (inactive != NULL) {
+		LWIP_DEBUGF(TCP_DEBUG, ("tcp_kill_prio: killing oldest PCB %p (%"S32_F")\n",
+					(void *)inactive, inactivity));
+		tcp_abort(inactive);
+	}
 }
 
 /**
@@ -1381,23 +1429,25 @@ tcp_kill_prio(u8_t prio)
 static void
 tcp_kill_timewait(void)
 {
-  struct tcp_pcb *pcb, *inactive;
-  u32_t inactivity;
+	struct tcp_pcb *pcb, *inactive;
+	struct hlist_node *n;
+	u32_t inactivity;
 
-  inactivity = 0;
-  inactive = NULL;
-  /* Go through the list of TIME_WAIT pcbs and get the oldest pcb. */
-  for(pcb = perfg_get(tcp_tw_pcbs); pcb != NULL; pcb = pcb->next) {
-    if ((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) >= inactivity) {
-      inactivity = perfg_get(tcp_ticks) - pcb->tmr;
-      inactive = pcb;
-    }
-  }
-  if (inactive != NULL) {
-    LWIP_DEBUGF(TCP_DEBUG, ("tcp_kill_timewait: killing oldest TIME-WAIT PCB %p (%"S32_F")\n",
-           (void *)inactive, inactivity));
-    tcp_abort(inactive);
-  }
+	inactivity = 0;
+	inactive = NULL;
+	/* Go through the list of TIME_WAIT pcbs and get the oldest pcb. */
+	hlist_for_each(&perfg_get(tcp_lists).tw_pcbs,n) {
+		pcb = hlist_entry(n,struct tcp_pcb,link);
+		if ((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) >= inactivity) {
+			inactivity = perfg_get(tcp_ticks) - pcb->tmr;
+			inactive = pcb;
+		}
+	}
+	if (inactive != NULL) {
+		LWIP_DEBUGF(TCP_DEBUG, ("tcp_kill_timewait: killing oldest TIME-WAIT PCB %p (%"S32_F")\n",
+					(void *)inactive, inactivity));
+		tcp_abort(inactive);
+	}
 }
 
 /**
@@ -1698,9 +1748,9 @@ tcp_pcb_purge(struct tcp_pcb *pcb)
  * @param pcb tcp_pcb to purge. The pcb itself is NOT deallocated!
  */
 void
-tcp_pcb_remove(struct tcp_pcb **pcblist, struct tcp_pcb *pcb)
+tcp_pcb_remove(struct tcp_pcb *pcb)
 {
-  TCP_RMV(pcblist, pcb);
+  TCP_RMV(FOOBAR, pcb);
 
   MEMPOOL_SANITY_ACCESS(pcb);
   tcp_pcb_purge(pcb);
@@ -1737,6 +1787,60 @@ tcp_next_iss(void)
 	assert(perfg_exists());
   perfg_get(iss) += perfg_get(tcp_ticks);       /* XXX */
   return perfg_get(iss);
+}
+
+
+extern void tcp_tmr(void);
+//DECLARE_PERFG(struct tcp_pcb *, tcp_active_pcbs);
+//DECLARE_PERFG(struct tcp_pcb *, tcp_tw_pcbs);
+/* in us */
+
+
+static DEFINE_PERFG(struct timer, tcpip_timer);
+static DEFINE_PERFG(int, tcpip_tcp_timer_active);
+
+static void tcpip_tcp_timer(struct timer *t)
+{
+	int needed;
+	needed = 0;
+	
+	assert(t == &perfg_get(tcpip_timer));
+	assert(perfg_get(tcpip_tcp_timer_active));
+	if (!perfg_get(tcpip_tcp_timer_active))
+		return;
+	
+	/* call TCP timer handler */
+	tcp_tmr();
+	
+	/* timer still needed? */
+	if (!hlist_empty(&perfg_get(tcp_lists).active_buckets) || 
+	    !hlist_empty(&perfg_get(tcp_lists).tw_pcbs)) {
+		/* restart timer */
+		needed = 1;
+	} else {
+		/* disable timer */
+		perfg_get(tcpip_tcp_timer_active) = 0;
+	}
+	
+	if (needed)
+		timer_add(&perfg_get(tcpip_timer), TCP_TMR_INTERVAL * 1000 * 1000);
+}
+
+void tcp_timer_needed(void)
+{
+	/* timer is off but needed again? */
+	if (!perfg_get(tcpip_tcp_timer_active) && 
+	    (!hlist_empty(&perfg_get(tcp_lists).active_buckets) ||
+	     !hlist_empty(&perfg_get(tcp_lists).tw_pcbs))) {
+
+		/* enable and start timer */
+		perfg_get(tcpip_tcp_timer_active) = 1;
+		if (!perfg_get(tcpip_timer).handler)
+			timer_init_entry(&perfg_get(tcpip_timer), &tcpip_tcp_timer);
+
+		if (!timer_pending(&perfg_get(tcpip_timer)))
+			timer_add(&perfg_get(tcpip_timer), TCP_TMR_INTERVAL);
+	}
 }
 
 #if TCP_CALCULATE_EFF_SEND_MSS
@@ -1883,7 +1987,7 @@ tcp_debug_print_pcbs(void)
 {
   struct tcp_pcb *pcb;
   LWIP_DEBUGF(TCP_DEBUG, ("Active PCB states:\n"));
-  for(pcb = perfg_get(tcp_active_pcbs); pcb != NULL; pcb = pcb->next) {
+  for(pcb = perfg_get(tcp_lists.active_buckets); pcb != NULL; pcb = pcb->next) {
     LWIP_DEBUGF(TCP_DEBUG, ("Local port %"U16_F", foreign port %"U16_F" snd_nxt %"U32_F" rcv_nxt %"U32_F" ",
                        pcb->local_port, pcb->remote_port,
                        pcb->snd_nxt, pcb->rcv_nxt));
@@ -1912,7 +2016,7 @@ s16_t
 tcp_pcbs_sane(void)
 {
   struct tcp_pcb *pcb;
-  for(pcb = perfg_get(tcp_active_pcbs); pcb != NULL; pcb = pcb->next) {
+  for(pcb = perfg_get(tcp_lists.active_buckets); pcb != NULL; pcb = pcb->next) {
     LWIP_ASSERT("tcp_pcbs_sane: active pcb->state != CLOSED", pcb->state != CLOSED);
     LWIP_ASSERT("tcp_pcbs_sane: active pcb->state != LISTEN", pcb->state != LISTEN);
     LWIP_ASSERT("tcp_pcbs_sane: active pcb->state != TIME-WAIT", pcb->state != TIME_WAIT);
