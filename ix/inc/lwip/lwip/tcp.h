@@ -381,7 +381,7 @@ err_t            tcp_bind    (struct tcp_pcb *pcb, ip_addr_t *ipaddr,
 err_t            tcp_connect (struct tcp_pcb *pcb, ip_addr_t *ipaddr,
                               u16_t port, tcp_connected_fn connected);
 
-struct tcp_pcb * tcp_listen_with_backlog(struct tcp_pcb *pcb, u8_t backlog);
+extern int tcp_listen_with_backlog(struct tcp_pcb_listen *, u8_t backlog, ip_addr_t *addr, u16_t port);
 #define          tcp_listen(pcb) tcp_listen_with_backlog(pcb, TCP_DEFAULT_LISTEN_BACKLOG)
 
 void             tcp_abort (struct tcp_pcb *pcb);

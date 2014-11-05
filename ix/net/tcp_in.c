@@ -185,7 +185,7 @@ tcp_input(struct pbuf *p, struct netif *inp)
      for an active connection. */
   
   int idx = tcp_to_idx(ipX_current_dest_addr(), ipX_current_src_addr(), lwip_context.tcphdr->dest, lwip_context.tcphdr->src);
-  hlist_for_each(&perfg_get(tcp_active_pcbs_tbl)[idx].pcbs,n) {
+  hlist_for_each(&perfg_get(tcp_fg_lists).active_tbl[idx].pcbs,n) {
 	  pcb = hlist_entry(n,struct tcp_pcb,link);
 	  MEMPOOL_SANITY_LINK(pcb,p);
 	  LWIP_ASSERT("tcp_input: active pcb->state != CLOSED", pcb->state != CLOSED);
@@ -206,7 +206,7 @@ tcp_input(struct pbuf *p, struct netif *inp)
   if (pcb == NULL) {
 	  /* If it did not go to an active connection, we check the connections
 	     in the TIME-WAIT state. */
-	  hlist_for_each(&perfg_get(tcp_lists).tw_pcbs,n) {
+	  hlist_for_each(&perfg_get(tcp_fg_lists).tw_pcbs,n) {
 		  pcb = hlist_entry(n,struct tcp_pcb,link);
 
 		  MEMPOOL_SANITY_LINK(pcb,p);
@@ -230,7 +230,7 @@ tcp_input(struct pbuf *p, struct netif *inp)
   /* Finally, if we still did not get a match, we check all PCBs that
      are LISTENing for incoming connections. */
   lpcb = NULL;
-  hlist_for_each(&perfg_get(tcp_lists).listen_pcbs, n) {
+  hlist_for_each(&percpu_get(tcp_cpu_lists).listen_pcbs, n) {
 	  lpcb = hlist_entry(n,struct tcp_pcb_listen,link);
 
 	  if (lpcb->local_port == lwip_context.tcphdr->dest) {
@@ -332,7 +332,6 @@ done_tcp_input:
            application that the connection is dead before we
            deallocate the PCB. */
         TCP_EVENT_ERR(pcb->errf, pcb->callback_arg, ERR_RST);
-        TCP_HASH_RMV(perfg_get(tcp_active_pcbs_tbl), pcb);
         tcp_pcb_remove(pcb);
         memp_free(MEMP_TCP_PCB, pcb);
       } else if (lwip_context.recv_flags & TF_CLOSED) {
@@ -344,7 +343,6 @@ done_tcp_input:
              ensure the application doesn't continue using the PCB. */
           TCP_EVENT_ERR(pcb->errf, pcb->callback_arg, ERR_CLSD);
         }
-        TCP_HASH_RMV(perfg_get(tcp_active_pcbs_tbl), pcb);
         tcp_pcb_remove(pcb);
         memp_free(MEMP_TCP_PCB, pcb);
       } else {
@@ -526,6 +524,9 @@ static err_t tcp_listen_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb_lis
       return ERR_ABRT;
     }
 #endif /* TCP_LISTEN_BACKLOG */
+
+    KSTATS_VECTOR(tcp_input_listen);
+
     npcb = tcp_alloc(pcb->prio);
     /* If a new PCB could not be created (probably due to lack of memory),
        we don't do anything, but rely on the sender will retransmit the
@@ -816,7 +817,7 @@ tcp_process(struct LWIP_Context * lwip_ctxt, struct tcp_pcb *pcb)
         tcp_pcb_purge(pcb);
         TCP_RMV_ACTIVE(pcb);
         pcb->state = TIME_WAIT;
-        TCP_REG(&perfg_get(tcp_lists).tw_pcbs, pcb);
+        TCP_REG(&perfg_get(tcp_fg_lists).tw_pcbs, pcb);
       } else {
         tcp_ack_now(pcb);
         pcb->state = CLOSING;
@@ -833,7 +834,7 @@ tcp_process(struct LWIP_Context * lwip_ctxt, struct tcp_pcb *pcb)
       tcp_pcb_purge(pcb);
       TCP_RMV_ACTIVE(pcb);
       pcb->state = TIME_WAIT;
-      TCP_REG(&perfg_get(tcp_lists).tw_pcbs, pcb);
+      TCP_REG(&perfg_get(tcp_fg_lists).tw_pcbs, pcb);
     }
     break;
   case CLOSING:
@@ -843,7 +844,7 @@ tcp_process(struct LWIP_Context * lwip_ctxt, struct tcp_pcb *pcb)
       tcp_pcb_purge(pcb);
       TCP_RMV_ACTIVE(pcb);
       pcb->state = TIME_WAIT;
-      TCP_REG(&perfg_get(tcp_lists).tw_pcbs, pcb);
+      TCP_REG(&perfg_get(tcp_fg_lists).tw_pcbs, pcb);
     }
     break;
   case LAST_ACK:

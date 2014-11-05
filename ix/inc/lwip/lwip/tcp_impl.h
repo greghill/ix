@@ -362,19 +362,24 @@ union tcp_listen_pcbs_t { /* List of all TCP PCBs in LISTEN state. */
 //DECLARE_PERFG(struct tcp_hash_entry, tcp_active_pcbs);  /* List of all TCP PCBs that are in a
 //              state in which they accept or send
 //              data. */
-#define TCP_ACTIVE_PCBS_MAX_BUCKETS (2*1024)    // per flow group
+#define TCP_ACTIVE_PCBS_MAX_BUCKETS (512)    // per flow group
 
 #define TCP_ACTIVE_PCBS_HASH_SEED 0xa36bdcbe
 
-struct tcp_global_lists {
+struct tcp_global_perfg_lists {
 	struct hlist_head active_buckets; // tcp_hash_entry list
-	struct hlist_head listen_pcbs;    // tcp_pcb
-	struct hlist_head bound_pcbs;     // tcp_pcb
 	struct hlist_head tw_pcbs;        // tcp_pcb
+	struct hlist_head bound_pcbs;     // tcp_pcb
+	struct tcp_hash_entry active_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS];
 };
 
-DECLARE_PERFG(struct tcp_global_lists, tcp_lists);
-DECLARE_PERFG(struct tcp_hash_entry, tcp_active_pcbs_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS]);
+struct tcp_global_percpu_lists {
+	struct hlist_head listen_pcbs;    // tcp_pcb
+	int nothing;
+};
+
+DECLARE_PERFG(struct tcp_global_perfg_lists, tcp_fg_lists);
+DECLARE_PERCPU(struct tcp_global_percpu_lists,tcp_cpu_lists);
 
 static inline int tcp_to_idx(ipX_addr_t *local_ip, ipX_addr_t *remote_ip, uint16_t local_port, uint16_t remote_port)
 {
@@ -451,7 +456,7 @@ extern void tcp_unified_timer_handler(struct timer *t);
 
 static inline void __TCP_RMV(struct tcp_pcb *pcb)
 {
-	struct tcp_hash_entry *he = &perfg_get(tcp_active_pcbs_tbl)[0];
+	struct tcp_hash_entry *he = &perfg_get(tcp_fg_lists).active_tbl[0];
 	struct tcp_hash_entry *he2;
 	/* if you are removing the only entry in the hash list, remove the bucket from the bucket list */
 	if ((uintptr_t) pcb->link.prev >= (uintptr_t)he && 
@@ -503,12 +508,12 @@ extern void tcp_timer_needed(void);
 static inline void TCP_REG_ACTIVE(struct tcp_pcb *npcb)
 {
 	int idx = tcp_to_idx(&npcb->local_ip, &npcb->remote_ip, npcb->local_port, npcb->remote_port);
-	struct tcp_hash_entry *he = &perfg_get(tcp_active_pcbs_tbl)[idx];
+	struct tcp_hash_entry *he = &perfg_get(tcp_fg_lists).active_tbl[idx];
 	
 	/* going from empty to non-empty list */
 	if (hlist_empty(&he->pcbs))
 		if (he->hash_link.prev == NULL)
-			hlist_add_head(&perfg_get(tcp_lists).active_buckets,&he->hash_link);
+			hlist_add_head(&perfg_get(tcp_fg_lists).active_buckets,&he->hash_link);
 	
 	TCP_REG(&he->pcbs, npcb);
 	tcp_timer_needed();
@@ -518,14 +523,12 @@ static inline void TCP_REG_ACTIVE(struct tcp_pcb *npcb)
 
 #define TCP_RMV_ACTIVE(npcb)                       \
   do {                                             \
-    TCP_HASH_RMV(perfg_get(tcp_active_pcbs_tbl), npcb);       \
     TCP_RMV(&perfg_get(tcp_active_pcbs), npcb);               \
     perfg_get(tcp_active_pcbs_changed) = 1;                   \
   } while (0)
 
 #define TCP_PCB_REMOVE_ACTIVE(pcb)                 \
   do {                                             \
-    TCP_HASH_RMV(perfg_get(tcp_active_pcbs_tbl), pcb);        \
     tcp_pcb_remove(pcb);         \
     perfg_get(tcp_active_pcbs_changed) = 1;                   \
   } while (0)

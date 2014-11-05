@@ -48,7 +48,6 @@ void tcp_input_tmp(struct mbuf *pkt, struct ip_hdr *iphdr, void *tcphdr)
 static struct mempool_datastore  pbuf_ds;
 static struct mempool_datastore  pbuf_with_payload_ds;
 static struct mempool_datastore  tcp_pcb_ds;
-static struct mempool_datastore  tcp_pcb_listen_ds;
 static struct mempool_datastore  tcp_seg_ds;
 
 DEFINE_PERCPU(struct mempool, pbuf_mempool);
@@ -77,9 +76,6 @@ int memp_init(void)
 	if (init_mempool(&tcp_pcb_ds, MEMP_SIZE, memp_sizes[MEMP_TCP_PCB],"tcp_pcb"))
 		return 1;
 
-	if (init_mempool(&tcp_pcb_listen_ds, MEMP_SIZE, memp_sizes[MEMP_TCP_PCB_LISTEN],"tcp_pcb_listen"))
-		return 1;
-
 	if (init_mempool(&tcp_seg_ds, MEMP_SIZE, memp_sizes[MEMP_TCP_SEG],"tcp_seg"))
 		return 1;
 	return 0;
@@ -95,9 +91,6 @@ int memp_init_cpu(void)
 		return 1;
 
 	if (mempool_create(&percpu_get(tcp_pcb_mempool), &tcp_pcb_ds, MEMPOOL_SANITY_PERCPU, cpu))
-		return 1;
-
-	if (mempool_create(&percpu_get(tcp_pcb_listen_mempool), &tcp_pcb_listen_ds, MEMPOOL_SANITY_PERCPU, cpu))
 		return 1;
 
 	if (mempool_create(&percpu_get(tcp_seg_mempool), &tcp_seg_ds, MEMPOOL_SANITY_PERCPU, cpu))

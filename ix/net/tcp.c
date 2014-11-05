@@ -105,8 +105,9 @@ const u8_t tcp_persist_backoff[7] = { 3, 6, 12, 24, 48, 96, 120 };
 
 /* The TCP PCB lists. */
 
-DEFINE_PERFG(struct tcp_global_lists, tcp_lists);
-DEFINE_PERFG(struct tcp_hash_entry, tcp_active_pcbs_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS]);
+DEFINE_PERFG(struct tcp_global_perfg_lists, tcp_fg_lists);
+DEFINE_PERCPU(struct tcp_global_percpu_lists,tcp_cpu_lists);
+
 
 
 #define NUM_TCP_PCB_LISTS               4
@@ -161,11 +162,11 @@ tcp_trim_hash_bucket(void)
 	int rm=0,stay=0;
 	
 
-	hlist_for_each_safe(&perfg_get(tcp_lists).active_buckets,cur,tmp) { 
+	hlist_for_each_safe(&perfg_get(tcp_fg_lists).active_buckets,cur,tmp) { 
 		assert (cur->prev != NULL);
 		he  = hlist_entry(cur,struct tcp_hash_entry, hash_link);
-		assert ((uintptr_t) he >= (uintptr_t)&perfg_get(tcp_active_pcbs_tbl)[0]);
-		assert ((uintptr_t) he < (uintptr_t)&perfg_get(tcp_active_pcbs_tbl)[TCP_ACTIVE_PCBS_MAX_BUCKETS]);
+		assert ((uintptr_t) he >= (uintptr_t)&perfg_get(tcp_fg_lists).active_tbl[0]);
+		assert ((uintptr_t) he < (uintptr_t)&perfg_get(tcp_fg_lists).active_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS]);
 		if (hlist_empty(&he->pcbs)) {
 			hlist_del(cur);
 			cur->prev = NULL;
@@ -242,7 +243,7 @@ tcp_close_shutdown(struct tcp_pcb *pcb, u8_t rst_on_unacked_data)
       if (pcb->state == ESTABLISHED) {
         /* move to TIME_WAIT since we close actively */
         pcb->state = TIME_WAIT;
-        TCP_REG(&perfg_get(tcp_lists).tw_pcbs, pcb);
+        TCP_REG(&perfg_get(tcp_fg_lists).tw_pcbs, pcb);
       } else {
         /* CLOSE_WAIT: deallocate the pcb since we already sent a RST for it */
         memp_free(MEMP_TCP_PCB, pcb);
@@ -262,7 +263,7 @@ tcp_close_shutdown(struct tcp_pcb *pcb, u8_t rst_on_unacked_data)
      * been freed, and so any remaining handles are bogus. */
     err = ERR_OK;
     if (pcb->local_port != 0) {
-	    TCP_RMV(&perfg_get(tcp_lists).bound_pcbs, pcb);
+	    TCP_RMV(&perfg_get(tcp_fg_lists).bound_pcbs, pcb);
     }
     memp_free(MEMP_TCP_PCB, pcb);
     pcb = NULL;
@@ -525,6 +526,9 @@ tcp_bind(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port)
 {
   struct hlist_node *cur;
 
+  /* called only to initiate connection, on a per-fg basis; listening scoket bypass this */
+  assert(perfg_exists());
+
   MEMPOOL_SANITY_ACCESS(pcb);
   LWIP_ERROR("tcp_bind: can only bind in state CLOSED", pcb->state == CLOSED, return ERR_VAL);
 
@@ -550,19 +554,22 @@ tcp_bind(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port)
   /* Check if the address already is in use (on all lists) */
   err_t err = 0;
   
-  hlist_for_each(&perfg_get(tcp_lists).active_buckets,cur) {
+  hlist_for_each(&perfg_get(tcp_fg_lists).active_buckets,cur) {
 	  struct tcp_hash_entry *hash_head = hlist_entry(cur,struct tcp_hash_entry,hash_link);
 	  err = tcp_bind_checklist(&hash_head->pcbs,pcb,ipaddr,port);
 	  if (err) return err;
   }
 
-  err = tcp_bind_checklist(&perfg_get(tcp_lists).listen_pcbs,pcb,ipaddr,port);
+#ifdef LATER_EDB_LAZY
+  /* assume that the local ephemeral range does not overlap with listenign ports */
+  err = tcp_bind_checklist(&perfg_get(tcp_fg_lists).listen_pcbs,pcb,ipaddr,port);
+  if (err) return err;
+#endif
+
+  err = tcp_bind_checklist(&perfg_get(tcp_fg_lists).bound_pcbs,pcb,ipaddr,port);
   if (err) return err;
 
-  err = tcp_bind_checklist(&perfg_get(tcp_lists).bound_pcbs,pcb,ipaddr,port);
-  if (err) return err;
-
-  err = tcp_bind_checklist(&perfg_get(tcp_lists).tw_pcbs,pcb,ipaddr,port);
+  err = tcp_bind_checklist(&perfg_get(tcp_fg_lists).tw_pcbs,pcb,ipaddr,port);
   if (err) return err;
   
 
@@ -570,7 +577,7 @@ tcp_bind(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port)
     ipX_addr_set(PCB_ISIPV6(pcb), &pcb->local_ip, ip_2_ipX(ipaddr));
   }
   pcb->local_port = port;
-  TCP_REG(&perfg_get(tcp_lists).bound_pcbs, pcb);
+  TCP_REG(&perfg_get(tcp_fg_lists).bound_pcbs, pcb);
   LWIP_DEBUGF(TCP_DEBUG, ("tcp_bind: bind to port %"U16_F"\n", port));
   return ERR_OK;
 }
@@ -602,62 +609,43 @@ tcp_accept_null(void *arg, struct tcp_pcb *pcb, err_t err)
  * @note The original tcp_pcb is freed. This function therefore has to be
  *       called like this:
  *             tpcb = tcp_listen(tpcb);
+
+ * 
+ * IX change -- call tcp_listen_with_backlog without bind 
+ *   (there is no bind queue)
  */
-struct tcp_pcb *
-tcp_listen_with_backlog(struct tcp_pcb *pcb, u8_t backlog)
+int
+tcp_listen_with_backlog(struct tcp_pcb_listen *lpcb, u8_t backlog, ip_addr_t *addr, u16_t port)
 {
-  struct tcp_pcb_listen *lpcb;
 
-
-  MEMPOOL_SANITY_ACCESS(pcb);
+  /* percpu, not perfg */
+  assert (!perfg_exists());
+  
   LWIP_UNUSED_ARG(backlog);
-  LWIP_ERROR("tcp_listen: pcb already connected", pcb->state == CLOSED, return NULL);
 
-  /* already listening? */
-  if (pcb->state == LISTEN) {
-    return pcb;
-  }
-#if SO_REUSE
 
-  assert(0); // IX debugging
-
-  if (ip_get_option(pcb, SOF_REUSEADDR)) {
-	  /* Since SOF_REUSEADDR allows reusing a local address before the pcb's usage
-	     is declared (listen-/connection-pcb), we have to make sure now that
-	     this port is only used once for every local IP. */
-	  
-	  hlist_for_each(perfg_get(tcp_listen_pcbs).listen_pcbs,lpcb) { 
-		  if ((lpcb->local_port == pcb->local_port) &&
-		      IP_PCB_IPVER_EQ(pcb, lpcb)) {
-			  if (ipX_addr_cmp(PCB_ISIPV6(pcb), &lpcb->local_ip, &pcb->local_ip)) {
-				  /* this address/port is already used */
-				  return NULL;
-			  }
-		  }
-	  }
-  }
-#endif /* SO_REUSE */
-  lpcb = (struct tcp_pcb_listen *)memp_malloc(MEMP_TCP_PCB_LISTEN);
   if (lpcb == NULL) {
-    return NULL;
+	  return -1;
   }
-  lpcb->callback_arg = pcb->callback_arg;
-  lpcb->local_port = pcb->local_port;
+ 
+  bzero(lpcb,sizeof(struct tcp_pcb_listen));
+
+
+//  lpcb->callback_arg = pcb->callback_arg;
+  lpcb->local_port = port;
   lpcb->state = LISTEN;
-  lpcb->prio = pcb->prio;
-  lpcb->so_options = pcb->so_options;
+//  lpcb->prio = pcb->prio;
+  // lpcb->so_options = pcb->so_options;
   ip_set_option(lpcb, SOF_ACCEPTCONN);
-  lpcb->ttl = pcb->ttl;
-  lpcb->tos = pcb->tos;
+  // lpcb->ttl = pcb->ttl;
+  //lpcb->tos = pcb->tos;
 #if LWIP_IPV6
   PCB_ISIPV6(lpcb) = PCB_ISIPV6(pcb);
   lpcb->accept_any_ip_version = 0;
 #endif /* LWIP_IPV6 */
-  ipX_addr_copy(PCB_ISIPV6(pcb), lpcb->local_ip, pcb->local_ip);
-  if (pcb->local_port != 0) {
-    TCP_RMV(&perfg_get(tcp_bound_pcbs), pcb);
-  }
-  memp_free(MEMP_TCP_PCB, pcb);
+  //ipX_addr_copy(PCB_ISIPV6(pcb), lpcb->local_ip, pcb->local_ip);
+ 
+
 #if LWIP_CALLBACK_API
   lpcb->accept = tcp_accept_null;
 #endif /* LWIP_CALLBACK_API */
@@ -665,8 +653,12 @@ tcp_listen_with_backlog(struct tcp_pcb *pcb, u8_t backlog)
   lpcb->accepts_pending = 0;
   lpcb->backlog = (backlog ? backlog : 1);
 #endif /* TCP_LISTEN_BACKLOG */
-  TCP_REG(&perfg_get(tcp_lists).listen_pcbs, (struct tcp_pcb *)lpcb);
-  return (struct tcp_pcb *)lpcb;
+
+  /* register the lpcb - nothing else */
+  hlist_add_head(&percpu_get(tcp_cpu_lists).listen_pcbs,&lpcb->link);
+  lpcb->perqueue = percpu_get(current_perqueue);
+ 
+  return 0;
 }
 
 #if LWIP_IPV6
@@ -918,8 +910,7 @@ void pcb_remove_called_from_timer(struct tcp_pcb *pcb, int pcb_reset)
 
 	MEMPOOL_SANITY_ACCESS(pcb);
       tcp_pcb_purge(pcb);
-      /* Remove PCB from tcp_lists.active_pcbs list. */
-      TCP_HASH_RMV(perfg_get(tcp_lists.active_pcbs_tbl), pcb);
+      /* Remove PCB from tcp_fg_lists.active_pcbs list. */
       hlist_del(&pcb->link);
 
 
@@ -962,7 +953,7 @@ tcp_slowtmr_start:
 	}
   
 
-	hlist_for_each(&perfg_get(tcp_lists).active_buckets,cur) { 
+	hlist_for_each(&perfg_get(tcp_fg_lists).active_buckets,cur) { 
 		hash_head = hlist_entry(cur,struct tcp_hash_entry,hash_link);
 		hlist_for_each_safe(&hash_head->pcbs,n,tmp) {
 			pcb = hlist_entry(n,struct tcp_pcb,link);
@@ -1083,7 +1074,7 @@ tcp_slowtmr_start:
 	  
 
 		/* Steps through all of the TIME-WAIT PCBs. */
-		hlist_for_each_safe(&perfg_get(tcp_lists).tw_pcbs,n,tmp) {
+		hlist_for_each_safe(&perfg_get(tcp_fg_lists).tw_pcbs,n,tmp) {
 			pcb = hlist_entry(n,struct tcp_pcb,link);
                 
 			LWIP_ASSERT("tcp_slowtmr: TIME-WAIT pcb->state == TIME-WAIT", pcb->state == TIME_WAIT);
@@ -1204,7 +1195,7 @@ tcp_fasttmr(void)
 	
 tcp_fasttmr_start:
 
-	hlist_for_each(&perfg_get(tcp_lists).active_buckets,cur) {
+	hlist_for_each(&perfg_get(tcp_fg_lists).active_buckets,cur) {
 		struct tcp_hash_entry *he = hlist_entry(cur,struct tcp_hash_entry,hash_link);
 		hlist_for_each_safe(&he->pcbs,n,tmp) {
 			pcb = hlist_entry(n,struct tcp_pcb,link);
@@ -1401,7 +1392,7 @@ tcp_kill_prio(u8_t prio)
 	inactivity = 0;
 	inactive = NULL;
 
-	hlist_for_each(&perfg_get(tcp_lists).active_buckets,cur) { 
+	hlist_for_each(&perfg_get(tcp_fg_lists).active_buckets,cur) { 
 		hash_head = hlist_entry(cur,struct tcp_hash_entry,hash_link);
 		hlist_for_each(&hash_head->pcbs,n) {
 			pcb = hlist_entry(n,struct tcp_pcb,link);
@@ -1436,7 +1427,7 @@ tcp_kill_timewait(void)
 	inactivity = 0;
 	inactive = NULL;
 	/* Go through the list of TIME_WAIT pcbs and get the oldest pcb. */
-	hlist_for_each(&perfg_get(tcp_lists).tw_pcbs,n) {
+	hlist_for_each(&perfg_get(tcp_fg_lists).tw_pcbs,n) {
 		pcb = hlist_entry(n,struct tcp_pcb,link);
 		if ((u32_t)(perfg_get(tcp_ticks) - pcb->tmr) >= inactivity) {
 			inactivity = perfg_get(tcp_ticks) - pcb->tmr;
@@ -1816,8 +1807,8 @@ static void tcpip_tcp_timer(struct timer *t)
 	tcp_tmr();
 	
 	/* timer still needed? */
-	if (!hlist_empty(&perfg_get(tcp_lists).active_buckets) || 
-	    !hlist_empty(&perfg_get(tcp_lists).tw_pcbs)) {
+	if (!hlist_empty(&perfg_get(tcp_fg_lists).active_buckets) || 
+	    !hlist_empty(&perfg_get(tcp_fg_lists).tw_pcbs)) {
 		/* restart timer */
 		needed = 1;
 	} else {
@@ -1833,9 +1824,11 @@ void tcp_timer_needed(void)
 {
 	/* timer is off but needed again? */
 
+	assert (perfg_exists()); // cannot be called on per-cpu
+
 	if (!perfg_get(tcpip_tcp_timer_active) && 
-	    (!hlist_empty(&perfg_get(tcp_lists).active_buckets) ||
-	     !hlist_empty(&perfg_get(tcp_lists).tw_pcbs))) {
+	    (!hlist_empty(&perfg_get(tcp_fg_lists).active_buckets) ||
+	     !hlist_empty(&perfg_get(tcp_fg_lists).tw_pcbs))) {
 
 		/* enable and start timer */
 		perfg_get(tcpip_tcp_timer_active) = 1;
@@ -1991,7 +1984,7 @@ tcp_debug_print_pcbs(void)
 {
   struct tcp_pcb *pcb;
   LWIP_DEBUGF(TCP_DEBUG, ("Active PCB states:\n"));
-  for(pcb = perfg_get(tcp_lists.active_buckets); pcb != NULL; pcb = pcb->next) {
+  for(pcb = perfg_get(tcp_fg_lists.active_buckets); pcb != NULL; pcb = pcb->next) {
     LWIP_DEBUGF(TCP_DEBUG, ("Local port %"U16_F", foreign port %"U16_F" snd_nxt %"U32_F" rcv_nxt %"U32_F" ",
                        pcb->local_port, pcb->remote_port,
                        pcb->snd_nxt, pcb->rcv_nxt));
@@ -2020,7 +2013,7 @@ s16_t
 tcp_pcbs_sane(void)
 {
   struct tcp_pcb *pcb;
-  for(pcb = perfg_get(tcp_lists.active_buckets); pcb != NULL; pcb = pcb->next) {
+  for(pcb = perfg_get(tcp_fg_lists.active_buckets); pcb != NULL; pcb = pcb->next) {
     LWIP_ASSERT("tcp_pcbs_sane: active pcb->state != CLOSED", pcb->state != CLOSED);
     LWIP_ASSERT("tcp_pcbs_sane: active pcb->state != LISTEN", pcb->state != LISTEN);
     LWIP_ASSERT("tcp_pcbs_sane: active pcb->state != TIME-WAIT", pcb->state != TIME_WAIT);
