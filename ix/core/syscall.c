@@ -154,7 +154,7 @@ again:
 	eth_process_send();
 	KSTATS_POP(NULL);
 
-	if (!percpu_get(usys_arr)->len) {
+	if (!nr && !percpu_get(usys_arr)->len) {
 		if (empty) {
 			uint64_t deadline = timer_deadline(10* ONE_MS);
 			if (deadline > 0) { 
