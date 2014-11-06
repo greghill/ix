@@ -165,6 +165,7 @@ void timer_add_abs(struct timer *t, uint64_t abs_usecs)
 	assert (abs_usecs > tw->timer_pos);
 	assert (!timer_pending(t));
 	t->expires = abs_usecs;
+	t->fg_id = perfg_get(fg_id);
 	timer_insert(tw,t);
 }
 
