@@ -547,7 +547,7 @@ struct tcp_seg *tcp_seg_copy(struct tcp_seg *seg);
 static inline void
 tcp_recompute_timers(struct tcp_pcb *pcb)
 {
-	uint64_t first = 0;
+	uint64_t first = -1ul;
 	if (pcb->timer_delayedack_expires>0)
 		first = pcb->timer_delayedack_expires;
 	if (pcb->timer_retransmit_expires>0 && pcb->timer_retransmit_expires<first)
@@ -555,11 +555,11 @@ tcp_recompute_timers(struct tcp_pcb *pcb)
 	if (pcb->timer_persist_expires>0 && pcb->timer_persist_expires<first)
 		first = pcb->timer_persist_expires;
 
-	if (first>0 && first>=pcb->unified_timer.expires) {
+	if (timer_pending(&pcb->unified_timer) && first>=pcb->unified_timer.expires) {
 		;/* nothing */
 	} else {
 		timer_del(&pcb->unified_timer);
-		if (first)
+		if (first != -1ul)
 			timer_add_abs(&pcb->unified_timer,first);
 	}
 }
