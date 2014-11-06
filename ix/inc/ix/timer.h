@@ -41,7 +41,8 @@ static inline bool timer_pending(struct timer *t)
 
 extern int timer_add(struct timer *t, uint64_t usecs);
 extern void timer_add_for_next_tick(struct timer *t);
-
+extern void timer_add_abs(struct timer *t,uint64_t usecs);
+extern uint64_t timer_now(void);
 
 static inline void __timer_del(struct timer *t)
 {

@@ -156,7 +156,23 @@ int timer_percpu_add(struct timer *t, uint64_t usecs)
 	return __timer_add(tw,t,usecs);
 }
 
+/** 
+ *  timer_add_abs -- use absoute time (in usecs)
+ */ 
+void timer_add_abs(struct timer *t, uint64_t abs_usecs)
+{
+        struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
+	assert (abs_usecs > tw->timer_pos);
+	assert (!timer_pending(t));
+	t->expires = abs_usecs;
+	timer_insert(tw,t);
+}
 
+uint64_t timer_now()
+{
+        struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
+	return tw->now_us;
+}
 /**
  * timer_add_for_next_tick - adds a timer with the shortest possible delay
  * @t: the timer
@@ -172,6 +188,7 @@ void timer_add_for_next_tick(struct timer *t)
 	t->fg_id = perfg_get(fg_id);
 	timer_insert(tw,t);
 }
+
 
 static void timer_run_bucket(struct timerwheel *tw, struct hlist_head *h)
 {

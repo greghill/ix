@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
- * All rights reserved. 
+c * All rights reserved. 
  * 
  * Redistribution and use in source and binary forms, with or without modification, 
  * are permitted provided that the following conditions are met:
@@ -37,6 +37,7 @@
 #if LWIP_TCP /* don't build if not configured for use in lwipopts.h */
 
 #include <ix/timer.h>
+#include <ix/list.h>
 
 #include "lwip/mem.h"
 #include "lwip/pbuf.h"
@@ -168,16 +169,22 @@ enum tcp_state {
 
 /**
  * members common to struct tcp_pcb and struct tcp_listen_pcb
- */
-#define TCP_PCB_COMMON(type) \
-  type *next; /* for the linked list */ \
-  type *prev; /* for the linked list */ \
-  type *hash_bucket_next; /* for the hash bucket linked list */ \
-  void *perqueue; \
-  u32_t delayed_ack_counter; \
   struct timer delayed_ack_timer; \
   struct timer retransmit_timer; \
   struct timer persist_timer; \
+ * 
+ */
+#define TCP_PCB_COMMON(type) \
+	/*type *next;*/ /* for the linked list */	\
+	/*type *prev;*/ /* for the linked list */		\
+	/*type *hash_bucket_next;*/ /* for the hash bucket linked list */ \
+	struct hlist_node link;  /* doubly linked list wihtin hash */ 		\
+  void *perqueue; \
+  u32_t delayed_ack_counter; \
+  struct timer unified_timer; \
+  uint64_t timer_delayedack_expires;\
+  uint64_t timer_retransmit_expires;\
+  uint64_t timer_persist_expires;\
   void *callback_arg; \
   /* the accept callback for listen- and normal pcbs, if LWIP_CALLBACK_API */ \
   DEF_ACCEPT_CALLBACK \
@@ -374,7 +381,7 @@ err_t            tcp_bind    (struct tcp_pcb *pcb, ip_addr_t *ipaddr,
 err_t            tcp_connect (struct tcp_pcb *pcb, ip_addr_t *ipaddr,
                               u16_t port, tcp_connected_fn connected);
 
-struct tcp_pcb * tcp_listen_with_backlog(struct tcp_pcb *pcb, u8_t backlog);
+extern int tcp_listen_with_backlog(struct tcp_pcb_listen *, u8_t backlog, ip_addr_t *addr, u16_t port);
 #define          tcp_listen(pcb) tcp_listen_with_backlog(pcb, TCP_DEFAULT_LISTEN_BACKLOG)
 
 void             tcp_abort (struct tcp_pcb *pcb);

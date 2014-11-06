@@ -18,8 +18,9 @@
 
 #define MAX_PCBS	(512*1024)
 
-static DEFINE_PERFG(struct tcp_pcb *, listen_pcb);
 /* FIXME: this should be probably per queue */
+static DEFINE_PERCPU(struct tcp_pcb_listen, port8000);
+
 static DEFINE_PERCPU(uint16_t, local_port);
 /* FIXME: this should be more adaptive to various configurations */
 #define PORTS_PER_CPU (65536 / 32)
@@ -398,6 +399,8 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	struct ip_tuple *id;
 	hid_t handle;
 	
+	assert(perfg_exists());
+
 	log_debug("tcpapi: on_accept - arg %p, pcb %p, err %d\n",
 		  arg, pcb, err);
 
@@ -423,7 +426,7 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	tcp_err(pcb, on_err);
 	tcp_sent(pcb, on_sent);
 
-	tcp_accepted(perfg_get(listen_pcb));
+//	tcp_accepted(perfg_get(listen_pcb));
 
 	id->src_ip = 0; /* FIXME: LWIP doesn't provide this information :( */
 	id->dst_ip = cfg_host_addr.addr;
@@ -581,29 +584,19 @@ int tcp_api_init_cpu(void)
 	ret = mempool_create(&percpu_get(id_mempool),&id_datastore,MEMPOOL_SANITY_PERCPU,percpu_get(cpu_id));
 	if (ret)
 		return ret;
+
+	ret = tcp_listen_with_backlog(&percpu_get(port8000),TCP_DEFAULT_LISTEN_BACKLOG,  IP_ADDR_ANY, 8000);
+	if (ret)
+		return ret;
+	
+	percpu_get(port8000).accept = on_accept;
+
+
 	return 0;
 }
 
 int tcp_api_init_fg(void)
 {
-	struct tcp_pcb *lpcb;
-	int ret;
-
-	/* FIXME: Do a better job of freeing memory on failures */
-	lpcb = tcp_new();
-	if (!lpcb)
-		return -ENOMEM;
-
-	ret = tcp_bind(lpcb, IP_ADDR_ANY, 8000);
-	if (ret != ERR_OK)
-		return -EIO;
-
-	lpcb = tcp_listen(lpcb);
-	if (!lpcb)
-		return -ENOMEM;
-
-	perfg_get(listen_pcb) = lpcb;
-	tcp_accept(lpcb, on_accept);
 
 	return 0;
 }

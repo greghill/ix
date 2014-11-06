@@ -335,19 +335,51 @@ DECLARE_PERFG(u32_t, tcp_ticks);
 DECLARE_PERFG(u8_t, tcp_active_pcbs_changed);
 
 /* The TCP PCB lists. */
+
+/**
+ * big changes from original LWIP:
+ *
+ * all active pcbs are accessed via a hash function.
+ * the pcbs form a doubly-linked list (all belonging to the same hash value)
+ * hash bucktets themselves are linked together (head = tcp_active_pcbs) via a singly-linked list of
+ * entries with >0 pcbs. (updated lazily).
+ */
+
+struct tcp_hash_entry { 
+	struct hlist_head pcbs;
+	struct hlist_node hash_link;
+};
+
+
+
 union tcp_listen_pcbs_t { /* List of all TCP PCBs in LISTEN state. */
   struct tcp_pcb_listen *listen_pcbs; 
   struct tcp_pcb *pcbs;
 };
-extern struct tcp_pcb *tcp_bound_pcbs;
-DECLARE_PERFG(union tcp_listen_pcbs_t, tcp_listen_pcbs);
-DECLARE_PERFG(struct tcp_pcb *, tcp_active_pcbs);  /* List of all TCP PCBs that are in a
-              state in which they accept or send
-              data. */
-#define TCP_ACTIVE_PCBS_MAX_BUCKETS (2*1024)
+
+//extern struct hlist_head tcp_bound_pcbs;
+//DECLARE_PERFG(struct hlist_head, tcp_listen_pcbs);
+//DECLARE_PERFG(struct tcp_hash_entry, tcp_active_pcbs);  /* List of all TCP PCBs that are in a
+//              state in which they accept or send
+//              data. */
+#define TCP_ACTIVE_PCBS_MAX_BUCKETS (512)    // per flow group
+
 #define TCP_ACTIVE_PCBS_HASH_SEED 0xa36bdcbe
 
-DECLARE_PERFG(struct tcp_pcb *, tcp_active_pcbs_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS]);
+struct tcp_global_perfg_lists {
+	struct hlist_head active_buckets; // tcp_hash_entry list
+	struct hlist_head tw_pcbs;        // tcp_pcb
+	struct hlist_head bound_pcbs;     // tcp_pcb
+	struct tcp_hash_entry active_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS];
+};
+
+struct tcp_global_percpu_lists {
+	struct hlist_head listen_pcbs;    // tcp_pcb
+	int nothing;
+};
+
+DECLARE_PERFG(struct tcp_global_perfg_lists, tcp_fg_lists);
+DECLARE_PERCPU(struct tcp_global_percpu_lists,tcp_cpu_lists);
 
 static inline int tcp_to_idx(ipX_addr_t *local_ip, ipX_addr_t *remote_ip, uint16_t local_port, uint16_t remote_port)
 {
@@ -357,7 +389,7 @@ static inline int tcp_to_idx(ipX_addr_t *local_ip, ipX_addr_t *remote_ip, uint16
   return idx;
 }
 
-DECLARE_PERFG(struct tcp_pcb *, tcp_tw_pcbs);      /* List of all TCP PCBs in TIME-WAIT. */
+//DECLARE_PERFG(struct tcp_pcb *, tcp_tw_pcbs);      /* List of all TCP PCBs in TIME-WAIT. */
 
 /* Axioms about the above lists:   
    1) Every TCP PCB that is not CLOSED is in one of the lists.
@@ -371,6 +403,7 @@ DECLARE_PERFG(struct tcp_pcb *, tcp_tw_pcbs);      /* List of all TCP PCBs in TI
 #define TCP_DEBUG_PCB_LISTS 0
 #endif
 #if TCP_DEBUG_PCB_LISTS
+#error "not working in IX"
 #define TCP_REG(pcbs, npcb) do {\
                             LWIP_DEBUGF(TCP_DEBUG, ("TCP_REG %p local port %d\n", (npcb), (npcb)->local_port)); \
                             for(tcp_tmp_pcb = *(pcbs); \
@@ -406,37 +439,49 @@ DECLARE_PERFG(struct tcp_pcb *, tcp_tw_pcbs);      /* List of all TCP PCBs in TI
 void tcp_send_delayed_ack(struct timer *t);
 void tcp_retransmit_handler(struct timer *t);
 void tcp_persist_handler(struct timer *t);
+extern void tcp_unified_timer_handler(struct timer *t);
 
 #define TCP_REG(pcbs, npcb)                        \
   do {                                             \
-    if (*(pcbs))                                   \
-      (*(pcbs))->prev = (npcb);                    \
-    (npcb)->next = *pcbs;                          \
-    (npcb)->prev = NULL;                           \
-    *(pcbs) = (npcb);                              \
+      assert((npcb)->link.prev == NULL);           \
+	hlist_add_head(pcbs,&(npcb)->link);	     \
     (npcb)->perqueue = percpu_get(current_perqueue); \
-    timer_init_entry(&(npcb)->delayed_ack_timer, tcp_send_delayed_ack); \
-    timer_init_entry(&(npcb)->retransmit_timer, tcp_retransmit_handler); \
-    timer_init_entry(&(npcb)->persist_timer, tcp_persist_handler); \
+    timer_init_entry(&(npcb)->unified_timer, tcp_unified_timer_handler);	\
     tcp_timer_needed();                            \
   } while (0)
 
-#define TCP_RMV(pcbs, npcb)                        \
-  do {                                             \
-    if(*(pcbs) == (npcb)) {                        \
-      (*(pcbs)) = (*pcbs)->next;                   \
-    }                                              \
-    if ((npcb)->next)                              \
-      (npcb)->next->prev = (npcb)->prev;           \
-    if ((npcb)->prev)                              \
-      (npcb)->prev->next = (npcb)->next;           \
-    (npcb)->perqueue = NULL;                       \
-    timer_del(&(npcb)->delayed_ack_timer);         \
-    timer_del(&(npcb)->retransmit_timer);          \
-    timer_del(&(npcb)->persist_timer);             \
-  } while(0)
+/** 
+ * __TCP_RMV -- complement to TCP_REG and TCP_REG_ACTIVE
+ */
 
-#define TCP_HASH_RMV(pcbs, npcb)                   \
+static inline void __TCP_RMV(struct tcp_pcb *pcb)
+{
+	struct tcp_hash_entry *he = &perfg_get(tcp_fg_lists).active_tbl[0];
+	struct tcp_hash_entry *he2;
+	/* if you are removing the only entry in the hash list, remove the bucket from the bucket list */
+	if ((uintptr_t) pcb->link.prev >= (uintptr_t)he && 
+	    (uintptr_t) pcb->link.prev < (uintptr_t)&he[TCP_ACTIVE_PCBS_MAX_BUCKETS] &&
+	    pcb->link.next == NULL) {
+		he2 = (struct tcp_hash_entry *) pcb->link.prev;
+		int idx = he2 - he;
+		assert (idx>=0 && idx<TCP_ACTIVE_PCBS_MAX_BUCKETS);
+		assert ((uintptr_t)he + idx * sizeof(struct tcp_hash_entry) == (uintptr_t)he2);
+		
+		hlist_del(&he2->hash_link);
+		he2->hash_link.prev = NULL;
+	}
+	hlist_del(&pcb->link);		
+	pcb->link.prev = NULL;
+	pcb->perqueue = NULL;
+	timer_del(&pcb->unified_timer);
+}
+
+
+#define TCP_RMV(pcbs, npcb)   __TCP_RMV(npcb)
+
+#define TCP_HASH_RMV(pcbs,npcb)
+
+#define TCP_HASH_RMV_NOT_USED(pcbs, npcb)                   \
   do {                                             \
     int idx = tcp_to_idx(&npcb->local_ip, &npcb->remote_ip, npcb->local_port, npcb->remote_port); \
     if((pcbs)[idx] == (npcb)) {                    \
@@ -458,26 +503,33 @@ void tcp_persist_handler(struct timer *t);
 
 #endif /* LWIP_DEBUG */
 
-#define TCP_REG_ACTIVE(npcb)                       \
-  do {                                             \
-    int idx = tcp_to_idx(&npcb->local_ip, &npcb->remote_ip, npcb->local_port, npcb->remote_port); \
-    TCP_REG(&perfg_get(tcp_active_pcbs), npcb);               \
-    npcb->hash_bucket_next = perfg_get(tcp_active_pcbs_tbl)[idx]; \
-    perfg_get(tcp_active_pcbs_tbl)[idx] = npcb;               \
-    perfg_get(tcp_active_pcbs_changed) = 1;                   \
-  } while (0)
+extern void tcp_timer_needed(void);
+
+static inline void TCP_REG_ACTIVE(struct tcp_pcb *npcb)
+{
+	int idx = tcp_to_idx(&npcb->local_ip, &npcb->remote_ip, npcb->local_port, npcb->remote_port);
+	struct tcp_hash_entry *he = &perfg_get(tcp_fg_lists).active_tbl[idx];
+	
+	/* going from empty to non-empty list */
+	if (hlist_empty(&he->pcbs))
+		if (he->hash_link.prev == NULL)
+			hlist_add_head(&perfg_get(tcp_fg_lists).active_buckets,&he->hash_link);
+	
+	TCP_REG(&he->pcbs, npcb);
+	tcp_timer_needed();
+	perfg_get(tcp_active_pcbs_changed) = 1;					
+}
+
 
 #define TCP_RMV_ACTIVE(npcb)                       \
   do {                                             \
-    TCP_HASH_RMV(perfg_get(tcp_active_pcbs_tbl), npcb);       \
     TCP_RMV(&perfg_get(tcp_active_pcbs), npcb);               \
     perfg_get(tcp_active_pcbs_changed) = 1;                   \
   } while (0)
 
 #define TCP_PCB_REMOVE_ACTIVE(pcb)                 \
   do {                                             \
-    TCP_HASH_RMV(perfg_get(tcp_active_pcbs_tbl), pcb);        \
-    tcp_pcb_remove(&perfg_get(tcp_active_pcbs), pcb);         \
+    tcp_pcb_remove(pcb);         \
     perfg_get(tcp_active_pcbs_changed) = 1;                   \
   } while (0)
 
@@ -485,28 +537,51 @@ void tcp_persist_handler(struct timer *t);
 /* Internal functions: */
 struct tcp_pcb *tcp_pcb_copy(struct tcp_pcb *pcb);
 void tcp_pcb_purge(struct tcp_pcb *pcb);
-void tcp_pcb_remove(struct tcp_pcb **pcblist, struct tcp_pcb *pcb);
+void tcp_pcb_remove(struct tcp_pcb *pcb);
 
 void tcp_segs_free(struct tcp_seg *seg);
 void tcp_seg_free(struct tcp_seg *seg);
 struct tcp_seg *tcp_seg_copy(struct tcp_seg *seg);
 
 
+static inline void
+tcp_recompute_timers(struct tcp_pcb *pcb)
+{
+	uint64_t first = 0;
+	if (pcb->timer_delayedack_expires>0)
+		first = pcb->timer_delayedack_expires;
+	if (pcb->timer_retransmit_expires>0 && pcb->timer_retransmit_expires<first)
+		first = pcb->timer_retransmit_expires;
+	if (pcb->timer_persist_expires>0 && pcb->timer_persist_expires<first)
+		first = pcb->timer_persist_expires;
+
+	if (first>0 && first>=pcb->unified_timer.expires) {
+		;/* nothing */
+	} else {
+		timer_del(&pcb->unified_timer);
+		if (first)
+			timer_add_abs(&pcb->unified_timer,first);
+	}
+}
+
+			
 /* MAX_PACKETS_DELAYED_ACK -- LWIP behavior set to 2 */
 #define MAX_PACKETS_DELAYED_ACK 2 
 static inline void tcp_ack(struct tcp_pcb *pcb)
 {
-	if(timer_pending(&pcb->delayed_ack_timer)) {	
+	if(pcb->timer_delayedack_expires>0) {	
 		pcb->delayed_ack_counter++;
 		if (pcb->delayed_ack_counter>=MAX_PACKETS_DELAYED_ACK) {
-			timer_del(&pcb->delayed_ack_timer);
+			pcb->timer_delayedack_expires = 0;
+			tcp_recompute_timers(pcb);
 			pcb->flags |= TF_ACK_NOW;
 		}
 	} else if (MAX_PACKETS_DELAYED_ACK == 1) {
 		pcb->flags |= TF_ACK_NOW;
 	} else {
 		pcb->delayed_ack_counter = 1;
-		timer_add(&pcb->delayed_ack_timer, TCP_ACK_DELAY);    
+		pcb->timer_delayedack_expires = timer_now() + TCP_ACK_DELAY;
+		tcp_recompute_timers(pcb);
 	}
 }  
     
