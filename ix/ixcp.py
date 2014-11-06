@@ -34,8 +34,12 @@ class Command(ctypes.Structure):
   CP_CMD_NOP = 0
   CP_CMD_MIGRATE_FLOW_GROUP = 1
 
+  CP_STATUS_NOT_RUNNING = 0
+  CP_STATUS_RUNNING = 1
+
   _fields_ = [
     ('cmd_id', ctypes.c_uint),
+    ('status', ctypes.c_uint),
     ('cmd_params', CommandParameters),
   ]
 
@@ -56,7 +60,7 @@ def main():
   print
   print 'commands running = ',
   for i in xrange(16):
-     print '%d' % shmem.command[i].cmd_id,
+     print '%d' % shmem.command[i].status,
   print
   if len(sys.argv) >= 2 and sys.argv[1] == '--single-cpu':
     for i in xrange(128):
@@ -64,9 +68,10 @@ def main():
       cmd.cmd_params.migrate_flow_group.flow = i
       cmd.cmd_params.migrate_flow_group.cpu = 0
       cmd.cmd_id = Command.CP_CMD_MIGRATE_FLOW_GROUP
+      cmd.status = Command.CP_STATUS_RUNNING
       sys.stdout.write('.')
       sys.stdout.flush()
-      while cmd.cmd_id != 0:
+      while cmd.status != Command.CP_STATUS_NOT_RUNNING:
         time.sleep(0.01)
     print
 

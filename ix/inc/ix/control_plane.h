@@ -20,8 +20,14 @@ enum commands {
 	CP_CMD_MIGRATE_FLOW_GROUP,
 };
 
+enum status {
+	CP_STATUS_NOT_RUNNING = 0,
+	CP_STATUS_RUNNING,
+};
+
 struct command_struct {
 	enum commands cmd_id;
+	enum status status;
 	union {
 		struct {
 			int flow;
