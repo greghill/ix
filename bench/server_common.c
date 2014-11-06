@@ -31,7 +31,7 @@ static void accept_conn_cb(struct evconnlistener *listener, evutil_socket_t fd, 
 	worker->total_connections++;
 	bev = bufferevent_socket_new(worker->base, fd, BEV_OPT_CLOSE_ON_FREE);
 	ctx = init_ctx(worker);
-	bufferevent_setcb(bev, echo_read_cb, NULL, echo_event_cb, ctx);
+	bufferevent_setcb(bev, msg_size_cb, NULL, echo_event_cb, ctx);
 	bufferevent_enable(bev, EV_READ|EV_WRITE);
 }
 

@@ -32,4 +32,5 @@ void init(void);
 int parse_cpus(char *cpus);
 int start_threads(void);
 void echo_read_cb(struct bufferevent *bev, void *arg);
+void msg_size_cb(struct bufferevent *bev, void *arg);
 struct ctx *init_ctx(struct worker *worker);

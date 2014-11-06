@@ -46,6 +46,7 @@
 struct worker {
 	int cpu;
 	unsigned int connections;
+	unsigned int slow_connections;
 	struct event_base *base;
 	pthread_t tid;
 	unsigned char *buffer;
@@ -61,6 +62,7 @@ struct worker {
 #define STATE_IDLE 1
 #define STATE_CONNECTING 2
 #define STATE_WAIT_FOR_RECV 3
+#define STATE_WAIT_FOR_SEND 4
 
 #define UPDATE_STATE(ctx, new_state) \
 	do { \
@@ -76,38 +78,67 @@ struct ctx {
 	unsigned int bytes_left;
 	unsigned long timestamp;
 	struct bufferevent *bev;
+    int flood;
+    uint32_t msg_size;
+        struct event *event;
 };
 
+
 static struct sockaddr_in server_addr;
-static int msg_size;
 static long messages_per_connection;
 
 static void new_connection(struct event_base *base, struct ctx *ctx);
+static int send_next_msg(struct ctx *ctx);
+static void send_msg_cb(evutil_socket_t fd, short what, void *arg);
 
+static uint32_t msg_size;
 static void echo_read_cb(struct bufferevent *bev, void *arg)
 {
 	struct ctx *ctx = arg;
 
 	long long len;
 	struct evbuffer *input = bufferevent_get_input(bev);
+        struct timeval send_tv = {1, 0};
 
 	len = evbuffer_get_length(input);
 	evbuffer_drain(input, len);
 	ctx->bytes_left -= len;
 	if (!ctx->bytes_left) {
 		ctx->worker->total_messages++;
-		ctx->bytes_left = msg_size;
-		if (!ctx->messages_left) {
-			bufferevent_free(bev);
-			if (ctx->state == STATE_WAIT_FOR_RECV)
-				ctx->worker->active_connections--;
-			new_connection(ctx->worker->base, ctx);
+                if (!ctx->flood) {
+			if (!ctx->event){
+				ctx->event = event_new(worker->base, -1, EV_TIMEOUT, send_msg_cb, ctx);
+			}
+
+			event_add(ctx->event, &send_tv);
+			UPDATE_STATE(ctx, STATE_WAIT_FOR_SEND);
 			return;
-		}
-		ctx->messages_left--;
-		bufferevent_write(bev, ctx->worker->buffer, msg_size);
+                }
+                else {
+                    send_next_msg(ctx);
+                }
 	}
-	UPDATE_STATE(ctx, STATE_WAIT_FOR_RECV);
+}
+
+static void send_msg_cb(evutil_socket_t fd, short what, void *arg) {
+	struct ctx *ctx = arg;
+        send_next_msg(ctx);
+}
+
+static int send_next_msg(struct ctx *ctx) {
+    ctx->bytes_left = ctx->msg_size;
+    if (!ctx->messages_left) {
+        bufferevent_free(ctx->bev);
+        if (ctx->state == STATE_WAIT_FOR_RECV)
+            ctx->worker->active_connections--;
+        new_connection(ctx->worker->base, ctx);
+        return 1;
+    }
+
+    ctx->messages_left--;
+    bufferevent_write(ctx->bev, ctx->worker->buffer, ctx->msg_size);
+    UPDATE_STATE(ctx, STATE_WAIT_FOR_RECV);
+    return 0; //hack to preserve old behaviour
 }
 
 static void maintain_connections_cb(evutil_socket_t fd, short what, void *arg)
@@ -180,6 +211,7 @@ static void new_connection(struct event_base *base, struct ctx *ctx)
 	int s;
 	struct linger linger;
 	int flag;
+        char sizebuf[12]; // 10 digits, separator, \0
 
 	s = socket(AF_INET, SOCK_STREAM, 0);
 	if (s == -1) {
@@ -212,8 +244,11 @@ static void new_connection(struct event_base *base, struct ctx *ctx)
 	bufferevent_setcb(ctx->bev, echo_read_cb, NULL, echo_event_cb, ctx);
 	bufferevent_enable(ctx->bev, EV_READ);
 	ctx->messages_left = messages_per_connection - 1;
-	ctx->bytes_left = msg_size;
-	bufferevent_write(ctx->bev, ctx->worker->buffer, msg_size);
+	ctx->bytes_left = ctx->msg_size;
+        sprintf(sizebuf, "%010u|", ctx->msg_size);
+	bufferevent_write(ctx->bev, sizebuf, 11);
+
+	bufferevent_write(ctx->bev, ctx->worker->buffer, ctx->bytes_left);
 	UPDATE_STATE(ctx, STATE_CONNECTING);
 }
 
@@ -254,6 +289,14 @@ static void *start_worker(void *p)
 	for (i = 0; i < worker->connections; i++) {
 		ctx = worker->first_ctx;
 		worker->first_ctx = malloc(sizeof(struct ctx));
+		worker->first_ctx->event = NULL;
+                worker->first_ctx->flood = 1;
+                worker->first_ctx->msg_size = msg_size;
+                if (i < worker->slow_connections) {
+                    worker->first_ctx->flood = 0;
+                    worker->first_ctx->msg_size = 64;
+                }
+
 		worker->first_ctx->next = ctx;
 		UPDATE_STATE(worker->first_ctx, STATE_IDLE);
 		worker->first_ctx->worker = worker;
@@ -267,11 +310,13 @@ static void *start_worker(void *p)
 	return 0;
 }
 
-static int start_threads(unsigned int cores, unsigned int connections)
+static int start_threads(unsigned int cores, unsigned int connections, unsigned int slow_connections)
 {
 	int i;
 	int connections_per_core = connections / cores;
+	int slow_connections_per_core = slow_connections / cores;
 	int leftover_connections = connections % cores;
+	int leftover_slow_connections = slow_connections % cores;
 
 	for (i = 0; i < cores; i++) {
 		worker[i].cpu = i;
@@ -279,6 +324,7 @@ static int start_threads(unsigned int cores, unsigned int connections)
 		worker[i].total_connections = 0;
 		worker[i].total_messages = 0;
 		worker[i].connections = connections_per_core + (i < leftover_connections ? 1 : 0);
+		worker[i].slow_connections = slow_connections_per_core + (i < leftover_slow_connections ? 1 : 0);
 		pthread_create(&worker[i].tid, NULL, start_worker, &worker[i]);
 	}
 
@@ -293,6 +339,7 @@ int main(int argc, char **argv)
 	int sum;
 	int cores;
 	int connections;
+	unsigned int slow_connections = 0;
 	long long total_connections;
 	long long total_messages;
 	int active_connections;
@@ -305,8 +352,13 @@ int main(int argc, char **argv)
 
 	prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
 
-	if (argc != 7) {
-		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION\n", argv[0]);
+	if (argc < 7) {
+		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION SLOW_CONNECTIONS\n", argv[0]);
+		return 1;
+	}
+
+	if (argc > 8) {
+		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION SLOW_CONNECTIONS\n", argv[0]);
 		return 1;
 	}
 
@@ -321,6 +373,10 @@ int main(int argc, char **argv)
 	msg_size = atoi(argv[5]);
 	messages_per_connection = strtol(argv[6], NULL, 10);
 
+        if (argc == 8)
+            slow_connections = atoi(argv[7]);
+
+
 	if (timer_calibrate_tsc()) {
 		fprintf(stderr, "Error: Timer calibration failed.\n");
 		return 1;
@@ -328,7 +384,7 @@ int main(int argc, char **argv)
 
 	get_ifname(&server_addr, ifname);
 
-	start_threads(cores, connections);
+	start_threads(cores, connections, slow_connections);
 	puts("ok");
 	fflush(stdout);
 
