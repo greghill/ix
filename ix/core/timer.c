@@ -354,6 +354,8 @@ timer_collect_fgs(uint8_t *fg_vector, struct hlist_head *list,uint64_t *timer_po
 	struct hlist_node *x, *tmp;
 	struct timer *t;
 
+	*timer_pos = tw->timer_pos;
+
 	for (wheel=0;wheel<WHEEL_COUNT;wheel++) 
 		for (pos=0;pos<WHEEL_SIZE;pos++)
 			hlist_for_each_safe(&tw->wheels[wheel][pos], x, tmp) {
