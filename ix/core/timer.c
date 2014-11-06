@@ -392,7 +392,7 @@ timer_reinject_fgs(struct hlist_head *list,uint64_t timer_pos)
 
 	hlist_for_each_safe(list, x, tmp) {
 		t = hlist_entry(x, struct timer, link);
-		uint64_t delay = t->expires - t_base;
+		int64_t delay = t->expires - t_base;
 		if (delay<=0) 
 			timer_add_for_next_tick(t);
 		else 
