@@ -9,6 +9,7 @@
 #include <ix/lock.h>
 #include <ix/cpu.h>
 #include <assert.h>
+#include <ix/timer.h>
 
 #define ETH_MAX_NUM_FG	128 
 
@@ -21,6 +22,7 @@ struct eth_fg {
 	bool		in_transition;	/* is the fg being migrated? */
 	unsigned int	cur_cpu;	/* the current CPU */
 	unsigned int	target_cpu;	/* the migration target CPU */
+	unsigned int	prev_cpu;
 	unsigned int	idx;		/* the flow index */
 
 	spinlock_t	lock;		/* protects fg data during migration */
@@ -30,6 +32,8 @@ struct eth_fg {
 	void (*steer) (struct eth_rx_queue *target);
 
 	struct		rte_eth_dev *eth;
+
+	struct timer	transition_timeout;
 };
 
 struct eth_fg_listener {
@@ -125,3 +129,8 @@ static inline unsigned int __fg_next_active(unsigned int fgid)
         for ((fgid) = -1; (fgid) = __fgid_next_active(fgid); (fgid) < nr_flow_groups)
 
 DECLARE_PERCPU(unsigned int, cpu_numa_node);
+
+struct mbuf;
+
+void eth_input_at_prev(struct eth_rx_queue *rx_queue, struct mbuf *pkt);
+void eth_input_at_target(struct eth_rx_queue *rx_queue, struct mbuf *pkt);
