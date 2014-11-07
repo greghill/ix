@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <string.h>
+
 #include <ix/stddef.h>
 
 #define BITS_PER_LONG	(sizeof(long) * 8)
@@ -25,7 +27,7 @@ typedef unsigned long *bitmap_ptr;
  */
 static inline void bitmap_set(unsigned long *bits, int pos)
 {
-	bits[BITMAP_POS_IDX(pos)] |= (1 << BITMAP_POS_SHIFT(pos));
+	bits[BITMAP_POS_IDX(pos)] |= (1ul << BITMAP_POS_SHIFT(pos));
 }
 
 /**
@@ -35,7 +37,7 @@ static inline void bitmap_set(unsigned long *bits, int pos)
  */
 static inline void bitmap_clear(unsigned long *bits, int pos)
 {
-	bits[BITMAP_POS_IDX(pos)] &= ~(1 << BITMAP_POS_SHIFT(pos));
+	bits[BITMAP_POS_IDX(pos)] &= ~(1ul << BITMAP_POS_SHIFT(pos));
 }
 
 /**
@@ -47,7 +49,7 @@ static inline void bitmap_clear(unsigned long *bits, int pos)
  */
 static inline bool bitmap_test(unsigned long *bits, int pos)
 {
-	return (bits[BITMAP_POS_IDX(pos)] & (1 << BITMAP_POS_SHIFT(pos))) != 0;
+	return (bits[BITMAP_POS_IDX(pos)] & (1ul << BITMAP_POS_SHIFT(pos))) != 0;
 }
 
 /**
