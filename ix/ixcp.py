@@ -67,6 +67,16 @@ def bitmap_create(size, on):
 
   return bitmap
 
+def migrate(shmem, source_cpu, target_cpu, flow_groups):
+  cmd = shmem.command[source_cpu]
+  bitmap = bitmap_create(ETH_MAX_TOTAL_FG, flow_groups)
+  cmd.cmd_params.migrate_flow_group.fg_bitmap = (ctypes.c_ulong * len(bitmap))(*bitmap)
+  cmd.cmd_params.migrate_flow_group.cpu = target_cpu
+  cmd.cmd_id = Command.CP_CMD_MIGRATE
+  cmd.status = Command.CP_STATUS_RUNNING
+  while cmd.status != Command.CP_STATUS_READY:
+    time.sleep(0.01)
+
 def main():
   shm = posix_ipc.SharedMemory('/ix', 0)
   buffer = mmap.mmap(shm.fd, ctypes.sizeof(ShMem), mmap.MAP_SHARED, mmap.PROT_WRITE)
@@ -101,17 +111,9 @@ def main():
     for cpu in xrange(NCPU):
       if cpu == target_cpu:
         continue
-
-      cmd = shmem.command[cpu]
-      bitmap = bitmap_create(ETH_MAX_TOTAL_FG, fg_per_cpu[cpu])
-      cmd.cmd_params.migrate_flow_group.fg_bitmap = (ctypes.c_ulong * len(bitmap))(*bitmap)
-      cmd.cmd_params.migrate_flow_group.cpu = target_cpu
-      cmd.cmd_id = Command.CP_CMD_MIGRATE
-      cmd.status = Command.CP_STATUS_RUNNING
+      migrate(shmem, cpu, target_cpu, fg_per_cpu[cpu])
       sys.stdout.write('.')
       sys.stdout.flush()
-      while cmd.status != Command.CP_STATUS_READY:
-        time.sleep(0.01)
     print
 
 if __name__ == '__main__':
