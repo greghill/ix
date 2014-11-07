@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import argparse
 import ctypes
 import mmap
 import posix_ipc
@@ -81,7 +82,12 @@ def main():
   if empty:
     print 'none',
   print
-  if len(sys.argv) >= 2 and sys.argv[1] == '--single-cpu':
+
+  parser = argparse.ArgumentParser()
+  parser.add_argument('--single-cpu', action='store_true')
+  args = parser.parse_args()
+
+  if args.single_cpu:
     for i in xrange(shmem.nr_flow_groups):
       cmd = shmem.command[shmem.flow_group[i].cpu]
       cmd.cmd_params.migrate_flow_group.flow = i
