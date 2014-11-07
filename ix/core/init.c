@@ -15,7 +15,6 @@
 #include <ix/mbuf.h>
 #include <ix/syscall.h>
 #include <ix/kstats.h>
-//#include <ix/queue.h>
 #include <ix/profiler.h>
 #include <ix/lock.h>
 #include <ix/cfg.h>

@@ -46,3 +46,4 @@
 
 /* EdB 2014-11-07 */
 #define LWIP_NOASSERT
+#define LWIP_EVENT_API 1

@@ -3,7 +3,6 @@
  */
 
 #include <ix/compiler.h>
-//#include <ix/queue.h>
 #include <ix/ethfg.h>
 
 #define NQUEUE 64

@@ -2,7 +2,6 @@
 
 #include <ix/mbuf.h>
 #include <ix/timer.h>
-//#include <ix/queue.h>
 #include <ix/ethfg.h>
 
 #include <net/ip.h>

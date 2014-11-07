@@ -8,7 +8,6 @@
 #include <ix/mem.h>
 #include <assert.h>
 #include <ix/cpu.h>
-//#include <ix/queue.h>
 #include <ix/ethfg.h>
 #include <ix/log.h>
 

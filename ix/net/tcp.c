@@ -1043,8 +1043,11 @@ tcp_slowtmr_start:
 				tcp_err_fn err_fn;
 				void *err_arg;
 
+#ifdef LWIP_CALLBACK_API
 				err_fn = pcb->errf;
+#endif
 				err_arg = pcb->callback_arg;
+
 				hlist_del(&pcb->link);
 				pcb_remove_called_from_timer(pcb, pcb_reset);
 

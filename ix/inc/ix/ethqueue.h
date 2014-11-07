@@ -9,7 +9,6 @@
 #include <ix/errno.h>
 #include <ix/bitmap.h>
 #include <ix/ethfg.h>
-//#include <ix/queue.h>
 #ifdef ENABLE_PCAP
 #include <net/pcap.h>
 #endif

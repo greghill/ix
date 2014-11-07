@@ -9,7 +9,6 @@
 #include <ix/ethdev.h>
 #include <ix/log.h>
 #include <ix/cpu.h>
-//#include <ix/queue.h>
 #include <ix/toeplitz.h>
 #include <ix/cfg.h>
 

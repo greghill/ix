@@ -14,7 +14,6 @@
 #include <ix/mem.h>
 #include <ix/mbuf.h>
 #include <ix/cpu.h>
-//#include <ix/queue.h>
 #include <ix/control_plane.h>
 
 #include "ixgbe_api.h"

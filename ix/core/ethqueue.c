@@ -5,7 +5,6 @@
 #include <ix/stddef.h>
 #include <ix/kstats.h>
 #include <ix/ethdev.h>
-//#include <ix/queue.h>
 #include <ix/log.h>
 
 DEFINE_PERCPU(int, eth_num_queues);

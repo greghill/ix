@@ -8,7 +8,6 @@
 #include <ix/byteorder.h>
 #include <ix/errno.h>
 #include <ix/log.h>
-//#include <ix/queue.h>
 #include <ix/cfg.h>
 #include <ix/control_plane.h>
 

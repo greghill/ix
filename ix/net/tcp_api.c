@@ -6,7 +6,6 @@
 #include <ix/stddef.h>
 #include <ix/errno.h>
 #include <ix/syscall.h>
-//#include <ix/queue.h>
 #include <ix/log.h>
 #include <ix/uaccess.h>
 #include <ix/ethdev.h>
@@ -422,9 +421,12 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 
 	tcp_nagle_disable(pcb);
 	tcp_arg(pcb, api);
+
+#if  LWIP_CALLBACK_API
 	tcp_recv(pcb, on_recv);
 	tcp_err(pcb, on_err);
 	tcp_sent(pcb, on_sent);
+#endif
 
 //	tcp_accepted(perfg_get(listen_pcb));
 
@@ -455,6 +457,46 @@ static err_t on_connected(void *arg, struct tcp_pcb *pcb, err_t err)
 
 	usys_tcp_connected(api->handle, api->cookie, RET_OK);
 	return ERR_OK;
+}
+
+
+
+/**
+ * lwip_tcp_event -- "callback from the LWIP library
+ */
+
+err_t 
+lwip_tcp_event(void *arg, struct tcp_pcb *pcb,
+	       enum lwip_event event,
+	       struct pbuf *p,
+	       u16_t size,
+	       err_t err)
+{
+	switch (event) {
+	case LWIP_EVENT_ACCEPT:
+		return on_accept(arg,pcb,err);
+		break;
+	case LWIP_EVENT_SENT:
+		return on_sent(arg,pcb,size);
+		break;
+	case LWIP_EVENT_RECV:
+		return on_recv(arg,pcb,p,err);
+		break;
+	case LWIP_EVENT_CONNECTED: 
+		return on_connected(arg,pcb,err);
+		break;
+	case LWIP_EVENT_ERR:
+		on_err(arg,err);
+		return 0;
+		break;
+
+	case LWIP_EVENT_POLL:
+		return ERR_OK;
+	default: 
+		assert (0);
+	}
+	return ERR_OK;
+
 }
 
 /* FIXME: we should maintain a bitmap to hold the available TCP ports */
@@ -530,9 +572,11 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 
 	api->handle = tcpapi_to_handle(api);
 
+#if  LWIP_CALLBACK_API
 	tcp_recv(pcb, on_recv);
 	tcp_err(pcb, on_err);
 	tcp_sent(pcb, on_sent);
+#endif
 
 	addr.addr = hton32(tmp.src_ip);
 
@@ -589,7 +633,7 @@ int tcp_api_init_cpu(void)
 	if (ret)
 		return ret;
 	
-	percpu_get(port8000).accept = on_accept;
+//	percpu_get(port8000).accept = on_accept;
 
 
 	return 0;
