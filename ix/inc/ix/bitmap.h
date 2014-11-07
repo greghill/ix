@@ -13,6 +13,8 @@
 #define DEFINE_BITMAP(name, nbits) \
 	unsigned long name[BITMAP_LONG_SIZE(nbits)]
 
+typedef unsigned long *bitmap_ptr;
+
 #define BITMAP_POS_IDX(pos)	((pos) / BITS_PER_LONG)
 #define BITMAP_POS_SHIFT(pos)	((pos) & (BITS_PER_LONG - 1))
 
