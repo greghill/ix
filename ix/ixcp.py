@@ -6,6 +6,11 @@ import posix_ipc
 import sys
 import time
 
+NCPU = 128
+ETH_MAX_NUM_FG = 128
+NETHDEV = 16
+ETH_MAX_TOTAL_FG = ETH_MAX_NUM_FG * NETHDEV
+
 class QueueMetrics(ctypes.Structure):
   _fields_ = [
     ('depth', ctypes.c_uint),
@@ -48,8 +53,8 @@ class ShMem(ctypes.Structure):
     ('nr_flow_groups', ctypes.c_uint),
     ('padding', ctypes.c_byte * 60),
     ('queue', QueueMetrics * 64),
-    ('flow_group', FlowGroupMetrics * (16 * 128)),
-    ('command', Command * 128),
+    ('flow_group', FlowGroupMetrics * ETH_MAX_TOTAL_FG),
+    ('command', Command * NCPU),
   ]
 
 def main():
