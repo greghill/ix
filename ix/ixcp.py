@@ -45,6 +45,8 @@ class Command(ctypes.Structure):
 
 class ShMem(ctypes.Structure):
   _fields_ = [
+    ('nr_flow_groups', ctypes.c_uint),
+    ('padding', ctypes.c_byte * 60),
     ('queue', QueueMetrics * 64),
     ('flow_group', FlowGroupMetrics * (16 * 128)),
     ('command', Command * 128),
@@ -55,7 +57,7 @@ def main():
   buffer = mmap.mmap(shm.fd, ctypes.sizeof(ShMem), mmap.MAP_SHARED, mmap.PROT_WRITE)
   shmem = ShMem.from_buffer(buffer)
   print 'flow group assignments = ',
-  for i in xrange(128):
+  for i in xrange(shmem.nr_flow_groups):
     print shmem.flow_group[i].cpu,
   print
   print 'commands running = ',
@@ -63,7 +65,7 @@ def main():
      print '%d' % shmem.command[i].status,
   print
   if len(sys.argv) >= 2 and sys.argv[1] == '--single-cpu':
-    for i in xrange(128):
+    for i in xrange(shmem.nr_flow_groups):
       cmd = shmem.command[shmem.flow_group[i].cpu]
       cmd.cmd_params.migrate_flow_group.flow = i
       cmd.cmd_params.migrate_flow_group.cpu = 0

@@ -384,6 +384,7 @@ static int init_hw(void)
 	unset_current_fg();
 
 	nr_flow_groups = fg_id;
+	cp_shmem->nr_flow_groups = nr_flow_groups;
 
 	mempool_init();
 	return 0;
