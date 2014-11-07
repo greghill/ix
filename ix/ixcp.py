@@ -97,11 +97,15 @@ def main():
   args = parser.parse_args()
 
   if args.single_cpu:
-    for i in xrange(shmem.nr_flow_groups):
-      cmd = shmem.command[shmem.flow_group[i].cpu]
-      bitmap = bitmap_create(ETH_MAX_TOTAL_FG, {i})
+    target_cpu = 0
+    for cpu in xrange(NCPU):
+      if cpu == target_cpu:
+        continue
+
+      cmd = shmem.command[cpu]
+      bitmap = bitmap_create(ETH_MAX_TOTAL_FG, fg_per_cpu[cpu])
       cmd.cmd_params.migrate_flow_group.fg_bitmap = (ctypes.c_ulong * len(bitmap))(*bitmap)
-      cmd.cmd_params.migrate_flow_group.cpu = 0
+      cmd.cmd_params.migrate_flow_group.cpu = target_cpu
       cmd.cmd_id = Command.CP_CMD_MIGRATE
       cmd.status = Command.CP_STATUS_RUNNING
       sys.stdout.write('.')
