@@ -224,17 +224,38 @@ static void enqueue(struct queue *q, struct mbuf *pkt)
 	}
 }
 
-void eth_input_at_prev(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
+void eth_recv_at_prev(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 {
 	struct eth_fg *fg = &rx_queue->dev->data->rx_fgs[pkt->fg_id];
 	struct queue *q = &percpu_get_remote(remote_mbuf_queue, fg->target_cpu);
 	enqueue(q, pkt);
 }
 
-void eth_input_at_target(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
+void eth_recv_at_target(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 {
 	struct queue *q = &percpu_get(local_mbuf_queue);
 	enqueue(q, pkt);
+}
+
+int eth_recv_handle_fg_transition(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
+{
+	struct eth_fg *fg = &rx_queue->dev->data->rx_fgs[pkt->fg_id];
+
+	if (!fg->in_transition && fg->cur_cpu == percpu_get(cpu_id)) {
+		/* continue processing */
+		return 0;
+	} else if (fg->in_transition && fg->prev_cpu == percpu_get(cpu_id)) {
+		eth_recv_at_prev(rx_queue, pkt);
+		return 1;
+	} else if (fg->in_transition && fg->target_cpu == percpu_get(cpu_id)) {
+		eth_recv_at_target(rx_queue, pkt);
+		return 1;
+	} else {
+		/* FIXME: somebody must mbuf_free(pkt) but we cannot do it here
+		   because we don't own the memory pool */
+		log_warn("dropping packet: flow group %d should be handled by cpu %d\n", perfg_get(fg_id), fgs[perfg_get(fg_id)]->cur_cpu);
+		return 1;
+	}
 }
 
 static void migrate_timers_to_remote(int fg_id)

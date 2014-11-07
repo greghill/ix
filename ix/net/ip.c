@@ -100,21 +100,6 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 
 	set_current_queue(rx_queue);
 	fg = &rx_queue->dev->data->rx_fgs[pkt->fg_id];
-	if (!fg->in_transition && fg->cur_cpu == percpu_get(cpu_id)) {
-		/* continue processing */
-	} else if (fg->in_transition && fg->prev_cpu == percpu_get(cpu_id)) {
-		eth_input_at_prev(rx_queue, pkt);
-		goto ret;
-	} else if (fg->in_transition && fg->target_cpu == percpu_get(cpu_id)) {
-		eth_input_at_target(rx_queue, pkt);
-		goto ret;
-	} else {
-		/* FIXME: somebody must mbuf_free(pkt) but we cannot do it here
-		   because we don't own the memory pool */
-		log_warn("dropping packet: flow group %d should be handled by cpu %d\n", perfg_get(fg_id), fgs[perfg_get(fg_id)]->cur_cpu);
-		goto ret;
-	}
-
 	eth_fg_set_current(fg);
 
 	log_debug("ip: got ethernet packet of len %ld, type %x\n",
@@ -135,7 +120,6 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 		mbuf_free(pkt);
 	}
 
-ret:
 	unset_current_queue();
 	unset_current_fg();
 }

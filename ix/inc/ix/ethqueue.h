@@ -64,6 +64,9 @@ static inline int eth_rx_poll(struct eth_rx_queue *rx)
  */
 static inline int eth_recv(struct eth_rx_queue *rxq, struct mbuf *mbuf)
 {
+	if (eth_recv_handle_fg_transition(rxq, mbuf))
+		return 0;
+
 	if (unlikely(rxq->len >= ETH_RX_MAX_DEPTH))
 		return -EBUSY;
 

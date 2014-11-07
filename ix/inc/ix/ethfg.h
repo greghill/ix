@@ -132,5 +132,4 @@ DECLARE_PERCPU(unsigned int, cpu_numa_node);
 
 struct mbuf;
 
-void eth_input_at_prev(struct eth_rx_queue *rx_queue, struct mbuf *pkt);
-void eth_input_at_target(struct eth_rx_queue *rx_queue, struct mbuf *pkt);
+int eth_recv_handle_fg_transition(struct eth_rx_queue *rx_queue, struct mbuf *pkt);
