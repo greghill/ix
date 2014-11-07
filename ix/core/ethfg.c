@@ -103,6 +103,7 @@ void eth_fg_assign_to_cpu(int fg_id, int cpu)
 	assert(!fg->in_transition);
 
 	if (fg->cur_cpu == cfg_cpu[cpu]) {
+		percpu_get(cp_cmd)->status = CP_STATUS_READY;
 		return;
 	} else if (fg->cur_cpu == -1) {
 		fg->cur_cpu = cfg_cpu[cpu];
