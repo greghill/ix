@@ -656,7 +656,7 @@ tcp_listen_with_backlog(struct tcp_pcb_listen *lpcb, u8_t backlog, ip_addr_t *ad
 
   /* register the lpcb - nothing else */
   hlist_add_head(&percpu_get(tcp_cpu_lists).listen_pcbs,&lpcb->link);
-  lpcb->perqueue = percpu_get(current_perqueue);
+  //lpcb->perqueue = percpu_get(current_perqueue);
  
   return 0;
 }
@@ -1104,7 +1104,8 @@ void tcp_unified_timer_handler(struct timer *t)
 	uint64_t now_us = timer_now();
 	
 	KSTATS_VECTOR(tcp_unified_handler);
-	percpu_get(current_perqueue) = pcb->perqueue;
+       
+	//percpu_get(current_perqueue) = pcb->perqueue;
 	
 	if (pcb->timer_delayedack_expires && pcb->timer_delayedack_expires <=now_us) {
 		KSTATS_VECTOR(timer_tcp_send_delayed_ack);
@@ -1455,6 +1456,8 @@ tcp_alloc(u8_t prio)
 
   pcb = (struct tcp_pcb *)memp_malloc(MEMP_TCP_PCB);
   if (pcb == NULL) {
+
+	  panic("tcp_alloc oom\n");
     /* Try killing oldest connection in TIME-WAIT. */
     LWIP_DEBUGF(TCP_DEBUG, ("tcp_alloc: killing off oldest TIME-WAIT connection\n"));
     tcp_kill_timewait();
@@ -1817,7 +1820,7 @@ static void tcpip_tcp_timer(struct timer *t)
 	}
 	
 	if (needed)
-		timer_add(t, TCP_TMR_INTERVAL * 1000);
+		timer_add(t, TCP_TMR_INTERVAL * ONE_MS);
 }
 
 void tcp_timer_needed(void)
@@ -1836,7 +1839,7 @@ void tcp_timer_needed(void)
 			timer_init_entry(&perfg_get(tcpip_timer), &tcpip_tcp_timer);
 
 		if (!timer_pending(&perfg_get(tcpip_timer)))
-			timer_add(&perfg_get(tcpip_timer), TCP_TMR_INTERVAL * 1000);
+			timer_add(&perfg_get(tcpip_timer), TCP_TMR_INTERVAL * ONE_MS);
 	}
 }
 

@@ -4,6 +4,8 @@
 
 #pragma once
 
+#error "can't use queue.h anymore"
+
 #include <ix/types.h>
 #include <ix/cpu.h>
 
@@ -16,6 +18,7 @@
 /* used to make perqueue variables externally available */
 #define DECLARE_PERQUEUE(type, name) \
 	extern DEFINE_PERQUEUE(type, name)
+
 
 DECLARE_PERCPU(void *, current_perqueue);
 
@@ -36,6 +39,8 @@ static inline void * __perqueue_get(void *key)
  */
 #define perqueue_get(var)						\
 	(*((typeof(perqueue_##var) *) (__perqueue_get(&perqueue_##var))))
+
+
 
 /**
  * for_each_queue - iterate over every queue

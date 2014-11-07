@@ -445,7 +445,7 @@ extern void tcp_unified_timer_handler(struct timer *t);
   do {                                             \
       assert((npcb)->link.prev == NULL);           \
 	hlist_add_head(pcbs,&(npcb)->link);	     \
-    (npcb)->perqueue = percpu_get(current_perqueue); \
+	/* (npcb)->perqueue = percpu_get(current_perqueue);*/		\
     timer_init_entry(&(npcb)->unified_timer, tcp_unified_timer_handler);	\
     tcp_timer_needed();                            \
   } while (0)
@@ -472,7 +472,7 @@ static inline void __TCP_RMV(struct tcp_pcb *pcb)
 	}
 	hlist_del(&pcb->link);		
 	pcb->link.prev = NULL;
-	pcb->perqueue = NULL;
+//	pcb->perqueue = NULL;
 	timer_del(&pcb->unified_timer);
 }
 
@@ -516,7 +516,6 @@ static inline void TCP_REG_ACTIVE(struct tcp_pcb *npcb)
 			hlist_add_head(&perfg_get(tcp_fg_lists).active_buckets,&he->hash_link);
 	
 	TCP_REG(&he->pcbs, npcb);
-	tcp_timer_needed();
 	perfg_get(tcp_active_pcbs_changed) = 1;					
 }
 

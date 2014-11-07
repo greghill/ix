@@ -15,7 +15,7 @@
 #include <ix/mbuf.h>
 #include <ix/syscall.h>
 #include <ix/kstats.h>
-#include <ix/queue.h>
+//#include <ix/queue.h>
 #include <ix/profiler.h>
 #include <ix/lock.h>
 #include <ix/cfg.h>
@@ -176,12 +176,12 @@ static int init_network_cpu(void)
 	percpu_get(eth_num_queues) = eth_dev_count;
 
 	
-	/* initialize perqueue data structures */
+#if 0	/* initialize perqueue data structures */
 	for_each_queue(idx) {
 		perqueue_get(eth_txq) = percpu_get(eth_txqs[idx]);
 	}
+#endif
 
-	unset_current_queue();
 
 	return 0;
 }

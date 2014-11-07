@@ -16,7 +16,7 @@
 #include <ix/page.h>
 #include <ix/vm.h>
 #include <ix/kstats.h>
-#include <ix/queue.h>
+//#include <ix/queue.h>
 #include <ix/log.h>
 #include <ix/control_plane.h>
 #include <ix/ethfg.h>

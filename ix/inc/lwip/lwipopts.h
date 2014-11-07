@@ -10,7 +10,8 @@
 #define MEM_LIBC_MALLOC 1
 #define MEMP_MEM_MALLOC 1
 
-#define	LWIP_DEBUG		LWIP_DBG_OFF
+//#define	LWIP_DEBUG		LWIP_DBG_OFF
+#undef LWIP_DEBUG
 #define	TCP_CWND_DEBUG		LWIP_DBG_OFF
 #define	TCP_DEBUG		LWIP_DBG_OFF
 #define	TCP_FR_DEBUG		LWIP_DBG_OFF
@@ -23,6 +24,8 @@
 
 #include <ix/stddef.h>
 #include <ix/byteorder.h>
+
+#define LWIP_IX
 
 #define LWIP_PLATFORM_BYTESWAP	1
 #define LWIP_PLATFORM_HTONS(x) hton16(x)
@@ -41,3 +44,5 @@
 #define TCP_ACK_DELAY (1 * ONE_MS)
 #define RTO_UNITS (500 * ONE_MS)
 
+/* EdB 2014-11-07 */
+#define LWIP_NOASSERT

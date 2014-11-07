@@ -179,15 +179,15 @@ enum tcp_state {
 	/*type *prev;*/ /* for the linked list */		\
 	/*type *hash_bucket_next;*/ /* for the hash bucket linked list */ \
 	struct hlist_node link;  /* doubly linked list wihtin hash */ 		\
-  void *perqueue; \
-  u32_t delayed_ack_counter; \
+	/*void *perqueue;*/						\
   struct timer unified_timer; \
   uint64_t timer_delayedack_expires;\
   uint64_t timer_retransmit_expires;\
   uint64_t timer_persist_expires;\
-  void *callback_arg; \
+  void *callback_arg;						\
   /* the accept callback for listen- and normal pcbs, if LWIP_CALLBACK_API */ \
   DEF_ACCEPT_CALLBACK \
+  u32_t delayed_ack_counter; \
   enum tcp_state state; /* TCP state */ \
   u8_t prio; \
   /* ports are in host byte order */ \

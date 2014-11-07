@@ -14,7 +14,7 @@
 #include <ix/mem.h>
 #include <ix/mbuf.h>
 #include <ix/cpu.h>
-#include <ix/queue.h>
+//#include <ix/queue.h>
 #include <ix/control_plane.h>
 
 #include "ixgbe_api.h"
@@ -222,7 +222,7 @@ bool eth_rx_idle_wait(uint64_t usecs)
 	addrs = alloca(sizeof(union ixgbe_adv_rx_desc *) *
 		       percpu_get(eth_num_queues));
 
-	for_each_queue(i) {
+	for (i=0;i<percpu_get(eth_num_queues);i++) {
 		struct eth_rx_queue *rx = percpu_get(eth_rxqs[i]);
 		struct rx_queue *rxq = eth_rx_queue_to_drv(rx);
 		addrs[i] = &rxq->ring[rxq->head & (rxq->len - 1)];

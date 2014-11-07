@@ -2,7 +2,7 @@
 
 #include <ix/mbuf.h>
 #include <ix/timer.h>
-#include <ix/queue.h>
+//#include <ix/queue.h>
 #include <ix/ethfg.h>
 
 #include <net/ip.h>
@@ -84,6 +84,12 @@ int memp_init(void)
 int memp_init_cpu(void)
 {
 	int cpu = percpu_get(cpu_id);
+
+	// compile checks
+	LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("hello kitty %p\n",foobar));
+	LWIP_ASSERT("mem_malloc", foobar < PBUF_WITH_PAYLOAD_SIZE);
+
+
 	if (mempool_create(&percpu_get(pbuf_mempool),&pbuf_ds,MEMPOOL_SANITY_PERCPU, cpu))
 		return 1;
 

@@ -9,10 +9,11 @@
 #include <ix/errno.h>
 #include <ix/bitmap.h>
 #include <ix/ethfg.h>
-#include <ix/queue.h>
+//#include <ix/queue.h>
 #ifdef ENABLE_PCAP
 #include <net/pcap.h>
 #endif
+
 
 #define ETH_DEV_RX_QUEUE_SZ     512
 #define ETH_DEV_TX_QUEUE_SZ     1024
@@ -136,7 +137,7 @@ static inline int eth_tx_xmit(struct eth_tx_queue *tx,
 }
 
 /* FIXME: convert to per-flowgroup */
-DECLARE_PERQUEUE(struct eth_tx_queue *, eth_txq);
+//DECLARE_PERQUEUE(struct eth_tx_queue *, eth_txq);
 
 /**
  * eth_send - enqueues a packet to be sent
@@ -144,9 +145,8 @@ DECLARE_PERQUEUE(struct eth_tx_queue *, eth_txq);
  *
  * Returns 0 if successful, otherwise out of space.
  */
-static inline int eth_send(struct mbuf *mbuf)
+static inline int eth_send(struct eth_tx_queue *txq, struct mbuf *mbuf)
 {
-	struct eth_tx_queue *txq = perqueue_get(eth_txq);
 	int nr = 1 + mbuf->nr_iov;
 	if (unlikely(nr > txq->cap))
 		return -EBUSY;
@@ -164,12 +164,12 @@ static inline int eth_send(struct mbuf *mbuf)
  *
  * Returns 0 if successful, otherwise out of space.
  */
-static inline int eth_send_one(struct mbuf *mbuf, size_t len)
+static inline int eth_send_one(struct eth_tx_queue *txq, struct mbuf *mbuf, size_t len)
 {
 	mbuf->len = len;
 	mbuf->nr_iov = 0;
 
-	return eth_send(mbuf);
+	return eth_send(txq,mbuf);
 }
 
 DECLARE_PERCPU(int, eth_num_queues);

@@ -489,6 +489,7 @@ pbuf_header(struct pbuf *p, s16_t header_size_increment)
   p->len += header_size_increment;
   p->tot_len += header_size_increment;
 
+
   LWIP_DEBUGF(PBUF_DEBUG | LWIP_DBG_TRACE, ("pbuf_header: old %p new %p (%"S16_F")\n",
     (void *)payload, (void *)p->payload, header_size_increment));
 
@@ -988,6 +989,7 @@ pbuf_coalesce(struct pbuf *p, pbuf_layer layer)
     return p;
   }
   err = pbuf_copy(q, p);
+  assert(err == ERR_OK);
   LWIP_ASSERT("pbuf_copy failed", err == ERR_OK);
   pbuf_free(p);
   return q;

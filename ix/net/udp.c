@@ -107,7 +107,8 @@ static int udp_output(struct mbuf *__restrict pkt,
 
 	pkt->len = UDP_PKT_SIZE;
 
-	ret = eth_send(pkt);
+	assert (perfg_exists());
+	ret = eth_send(percpu_get(eth_txqs)[perfg_get(dev_idx)],pkt);
 	if (ret)
 		return ret;
 

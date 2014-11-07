@@ -9,7 +9,7 @@
 #include <ix/ethdev.h>
 #include <ix/log.h>
 #include <ix/cpu.h>
-#include <ix/queue.h>
+//#include <ix/queue.h>
 #include <ix/toeplitz.h>
 #include <ix/cfg.h>
 
@@ -229,7 +229,7 @@ int eth_dev_get_rx_queue(struct rte_eth_dev *dev,
 		return ret;
 	}
 
-	ret = queue_init_one(dev->data->rx_queues[rx_idx]);
+//	ret = queue_init_one(dev->data->rx_queues[rx_idx]);
 	if (ret)
 		goto err;
 

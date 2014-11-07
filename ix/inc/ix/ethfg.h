@@ -17,6 +17,9 @@
 #define NETHDEV	16
 #define ETH_MAX_TOTAL_FG (ETH_MAX_NUM_FG * NETHDEV)
 
+//FIXME - should be a function of max_cpu * NETDEV
+#define NQUEUE 64
+
 struct eth_rx_queue;
 
 struct eth_fg {

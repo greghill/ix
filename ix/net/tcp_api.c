@@ -6,7 +6,7 @@
 #include <ix/stddef.h>
 #include <ix/errno.h>
 #include <ix/syscall.h>
-#include <ix/queue.h>
+//#include <ix/queue.h>
 #include <ix/log.h>
 #include <ix/uaccess.h>
 #include <ix/ethdev.h>
@@ -67,7 +67,7 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 		return NULL;
 
 	eth_fg_set_current(fgs[fg]);
-	set_current_queue(percpu_get(eth_rxqs[perfg_get(dev_idx)]));
+	//set_current_queue(percpu_get(eth_rxqs[perfg_get(dev_idx)]));
 	p = &percpu_get(pcb_mempool);
 
 	api = (struct tcpapi_pcb *) mempool_idx_to_ptr(p,idx);
@@ -475,7 +475,7 @@ int get_local_port_and_set_queue(struct ip_tuple *id)
 		fg_idx = hash & (ETH_RSS_RETA_NUM_ENTRIES - 1);
 		if (percpu_get(eth_rxqs[0])->dev->data->rx_fgs[fg_idx].cur_cpu == percpu_get(cpu_id)) {
 			id->src_port = percpu_get(local_port);
-			set_current_queue(percpu_get(eth_rxqs)[0]);
+			//set_current_queue(percpu_get(eth_rxqs)[0]);
 			eth_fg_set_current(&percpu_get(eth_rxqs[0])->dev->data->rx_fgs[fg_idx]);
 			return 0;
 		}

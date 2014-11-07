@@ -8,21 +8,26 @@
 #include <ix/mem.h>
 #include <assert.h>
 #include <ix/cpu.h>
-#include <ix/queue.h>
+//#include <ix/queue.h>
 #include <ix/ethfg.h>
 #include <ix/log.h>
 
 
-#ifdef __KERNEL__
-// FIXME:offset can be made conditional to KSTATS
-#define MEMPOOL_INITIAL_OFFSET (sizeof(void*))
-#else
+#ifndef __KERNEL__
 #error "wrong include .. this is for IX kernel only"
-
-#define MEMPOOL_INITIAL_OFFSET (0)
 #endif
 
+
 #define MEMPOOL_DEFAULT_CHUNKSIZE 128
+
+
+#undef  DEBUG_MEMPOOL
+
+#ifdef  DEBUG_MEMPOOL
+#define MEMPOOL_INITIAL_OFFSET (sizeof(void*))
+#else 
+#define MEMPOOL_INITIAL_OFFSET (0)
+#endif
 
 struct mempool_hdr {
 	struct mempool_hdr *next;
@@ -82,7 +87,7 @@ struct mempool {
 #define MEMPOOL_SANITY_GLOBAL    0
 #define MEMPOOL_SANITY_PERCPU    1
 
-#ifdef ENABLE_KSTATS
+#ifdef DEBUG_MEMPOOL
 
 
 #define MEMPOOL_SANITY_OBJECT(_a) do {\

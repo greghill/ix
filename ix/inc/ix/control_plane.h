@@ -3,8 +3,10 @@
  */
 
 #include <ix/compiler.h>
-#include <ix/queue.h>
+//#include <ix/queue.h>
 #include <ix/ethfg.h>
+
+#define NQUEUE 64
 
 struct queue_metrics {
 	volatile int depth;

@@ -1,3 +1,6 @@
+
+#error "don't build me"
+
 #include <unistd.h>
 #include <sys/syscall.h>
 

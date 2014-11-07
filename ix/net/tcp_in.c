@@ -94,6 +94,31 @@ static err_t tcp_timewait_input(struct LWIP_Context *,struct tcp_pcb *pcb);
 
 extern const u8_t tcp_persist_backoff[];
 
+
+struct tcp_pcb *
+tcp_input_find_list(struct LWIP_Context *lwip_ctxt, struct hlist_head *list)
+{
+	struct tcp_pcb *pcb;
+	struct hlist_node *n;
+	hlist_for_each(list,n) {
+		pcb = hlist_entry(n,struct tcp_pcb,link);
+		LWIP_ASSERT("tcp_input: active pcb->state != CLOSED", pcb->state != CLOSED);
+		LWIP_ASSERT("tcp_input: active pcb->state != TIME-WAIT", pcb->state != TIME_WAIT);
+		LWIP_ASSERT("tcp_input: active pcb->state != LISTEN", pcb->state != LISTEN);
+		
+
+		if (pcb->remote_port == lwip_ctxt->tcphdr->src &&
+		    pcb->local_port == lwip_ctxt->tcphdr->dest &&
+		    IP_PCB_IPVER_INPUT_MATCH(pcb) &&
+		    ipX_addr_cmp(ip_current_is_v6(), &pcb->remote_ip, ipX_current_src_addr()) &&
+		    ipX_addr_cmp(ip_current_is_v6(),&pcb->local_ip, ipX_current_dest_addr()))
+			return pcb;
+		
+	}
+	return NULL;
+}
+
+
 /**
  * The initial input processing of TCP. It verifies the TCP header, demultiplexes
  * the segment between the PCBs and passes it on to tcp_process(), which implements
@@ -184,55 +209,34 @@ tcp_input(struct pbuf *p, struct netif *inp)
   /* Demultiplex an incoming segment. First, we check if it is destined
      for an active connection. */
   
+  
+  
   int idx = tcp_to_idx(ipX_current_dest_addr(), ipX_current_src_addr(), lwip_context.tcphdr->dest, lwip_context.tcphdr->src);
-  hlist_for_each(&perfg_get(tcp_fg_lists).active_tbl[idx].pcbs,n) {
-	  pcb = hlist_entry(n,struct tcp_pcb,link);
-	  MEMPOOL_SANITY_LINK(pcb,p);
-	  LWIP_ASSERT("tcp_input: active pcb->state != CLOSED", pcb->state != CLOSED);
-	  LWIP_ASSERT("tcp_input: active pcb->state != TIME-WAIT", pcb->state != TIME_WAIT);
-	  LWIP_ASSERT("tcp_input: active pcb->state != LISTEN", pcb->state != LISTEN);
-
-
-	  if (pcb->remote_port == lwip_context.tcphdr->src &&
-	      pcb->local_port == lwip_context.tcphdr->dest &&
-	      IP_PCB_IPVER_INPUT_MATCH(pcb) &&
-	      ipX_addr_cmp(ip_current_is_v6(), &pcb->remote_ip, ipX_current_src_addr()) &&
-	      ipX_addr_cmp(ip_current_is_v6(),&pcb->local_ip, ipX_current_dest_addr())) {
-		  KSTATS_VECTOR(tcp_input_fast_path);
-		  goto done_tcp_input;
-	  }
+  pcb = tcp_input_find_list(&lwip_context,&perfg_get(tcp_fg_lists).active_tbl[idx].pcbs);
+  if (pcb) {
+	  KSTATS_VECTOR(tcp_input_fast_path);
+	  goto done_tcp_input;
   }
-
-  if (pcb == NULL) {
-	  /* If it did not go to an active connection, we check the connections
-	     in the TIME-WAIT state. */
-	  hlist_for_each(&perfg_get(tcp_fg_lists).tw_pcbs,n) {
-		  pcb = hlist_entry(n,struct tcp_pcb,link);
-
-		  MEMPOOL_SANITY_LINK(pcb,p);
-		  LWIP_ASSERT("tcp_input: TIME-WAIT pcb->state == TIME-WAIT", pcb->state == TIME_WAIT);
-		  if (pcb->remote_port == lwip_context.tcphdr->src &&
-		      pcb->local_port == lwip_context.tcphdr->dest &&
-		      IP_PCB_IPVER_INPUT_MATCH(pcb) &&
-		      ipX_addr_cmp(ip_current_is_v6(), &pcb->remote_ip, ipX_current_src_addr()) &&
-		      ipX_addr_cmp(ip_current_is_v6(),&pcb->local_ip, ipX_current_dest_addr())) {
-			  /* We don't really care enough to move this PCB to the front
-			     of the list since we are not very likely to receive that
-			     many segments for connections in TIME-WAIT. */
-			  LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_input: packed for TIME_WAITing connection.\n"));
-			  tcp_timewait_input(&lwip_context,pcb);
-			  pbuf_free(p);
-			  return;
-		  }
-	  }
+  
+  /* If it did not go to an active connection, we check the connections
+     in the TIME-WAIT state. */
+  pcb = tcp_input_find_list(&lwip_context,&perfg_get(tcp_fg_lists).tw_pcbs);
+  if (pcb) {
+	  /* We don't really care enough to move this PCB to the front
+	     of the list since we are not very likely to receive that
+	     many segments for connections in TIME-WAIT. */
+	  LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_input: packed for TIME_WAITing connection.\n"));
+	  tcp_timewait_input(&lwip_context,pcb);
+	  pbuf_free(p);
+	  return;
   }
-
+  
   /* Finally, if we still did not get a match, we check all PCBs that
      are LISTENing for incoming connections. */
   lpcb = NULL;
   hlist_for_each(&percpu_get(tcp_cpu_lists).listen_pcbs, n) {
 	  lpcb = hlist_entry(n,struct tcp_pcb_listen,link);
-
+	  
 	  if (lpcb->local_port == lwip_context.tcphdr->dest) {
 #if LWIP_IPV6
 		  if (lpcb->accept_any_ip_version) {
@@ -261,9 +265,9 @@ tcp_input(struct pbuf *p, struct netif *inp)
 			  }
 	  }
   }
+ 
 
-
-
+  
 #if SO_REUSE
   /* first try specific local IP */
   if (lpcb == NULL) {
@@ -272,22 +276,22 @@ tcp_input(struct pbuf *p, struct netif *inp)
 	  prev = lpcb_prev;
   }
 #endif /* SO_REUSE */
-
+  
   if (lpcb != NULL) {
 	  
 	  LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_input: packed for LISTENing connection.\n"));
 	  tcp_listen_input(&lwip_context,lpcb);
 	  pbuf_free(p);
-      return;
+	  return;
   }
-
+  
 #if TCP_INPUT_DEBUG
   LWIP_DEBUGF(TCP_INPUT_DEBUG, ("+-+-+-+-+-+-+-+-+-+-+-+-+-+- tcp_input: flags "));
   tcp_debug_print_flags(TCPH_FLAGS(lwip_context.tcphdr));
   LWIP_DEBUGF(TCP_INPUT_DEBUG, ("-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n"));
 #endif /* TCP_INPUT_DEBUG */
-
-
+  
+  
 done_tcp_input:
   if (pcb != NULL) {
     /* The incoming segment belongs to a connection. */
@@ -580,7 +584,15 @@ static err_t tcp_listen_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb_lis
       tcp_abandon(npcb, 0);
       return rc;
     }
-    return tcp_output(npcb);
+    
+#ifdef ENABLE_KSTATS
+    kstats_accumulate save;
+#endif
+    KSTATS_PUSH(tcp_output_syn,&save);
+    rc = tcp_output(npcb);
+    KSTATS_POP(&save);
+    return rc;
+
   }
   return ERR_OK;
 }

@@ -70,7 +70,7 @@ void *mempool_alloc_2(struct mempool *m)
 		mds->num_locks++;
 	}
 	spin_unlock(&mds->lock);
-#ifdef ENABLE_KSTATS
+#ifdef DEBUG_MEMPOOL
 	struct mempool_hdr *cur = h;
 	for (;cur;cur=cur->next) {
 		struct mempool **hidden = (struct mempool **)cur;

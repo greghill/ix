@@ -8,7 +8,7 @@
 #include <ix/byteorder.h>
 #include <ix/errno.h>
 #include <ix/log.h>
-#include <ix/queue.h>
+//#include <ix/queue.h>
 #include <ix/cfg.h>
 #include <ix/control_plane.h>
 
@@ -98,7 +98,7 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 	struct eth_hdr *ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
 	struct eth_fg *fg;
 
-	set_current_queue(rx_queue);
+	//set_current_queue(rx_queue);
 	fg = &rx_queue->dev->data->rx_fgs[pkt->fg_id];
 	eth_fg_set_current(fg);
 
@@ -120,7 +120,7 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 		mbuf_free(pkt);
 	}
 
-	unset_current_queue();
+//	unset_current_queue();
 	unset_current_fg();
 }
 
@@ -169,7 +169,7 @@ int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest,
 	pkt->ol_flags = PKT_TX_IP_CKSUM;
 	pkt->ol_flags |= PKT_TX_TCP_CKSUM;
 
-	ret = eth_send_one(pkt, sizeof(struct eth_hdr) +
+	ret = eth_send_one(percpu_get(eth_txqs)[perfg_get(dev_idx)],pkt, sizeof(struct eth_hdr) +
 				sizeof(struct ip_hdr) + p->tot_len);
 	if (unlikely(ret)) {
 		mbuf_free(pkt);

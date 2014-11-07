@@ -22,8 +22,8 @@ int nr_flow_groups;
 struct eth_fg *fgs[ETH_MAX_TOTAL_FG];
 
 DEFINE_PERFG(int, dev_idx);
-
 DEFINE_PERFG(int, fg_id);
+
 
 struct queue {
 	struct mbuf *head;

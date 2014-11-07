@@ -5,7 +5,7 @@
 #include <ix/stddef.h>
 #include <ix/kstats.h>
 #include <ix/ethdev.h>
-#include <ix/queue.h>
+//#include <ix/queue.h>
 #include <ix/log.h>
 
 DEFINE_PERCPU(int, eth_num_queues);
@@ -13,7 +13,7 @@ DEFINE_PERCPU(struct eth_rx_queue *, eth_rxqs[NETHDEV]);
 DEFINE_PERCPU(struct eth_tx_queue *, eth_txqs[NETHDEV]);
 
 /* FIXME: convert to per-flowgroup */
-DEFINE_PERQUEUE(struct eth_tx_queue *, eth_txq);
+//DEFINE_PERQUEUE(struct eth_tx_queue *, eth_txq);
 
 unsigned int eth_rx_max_batch = 64;
 
