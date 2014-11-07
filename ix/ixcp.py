@@ -61,13 +61,25 @@ def main():
   shm = posix_ipc.SharedMemory('/ix', 0)
   buffer = mmap.mmap(shm.fd, ctypes.sizeof(ShMem), mmap.MAP_SHARED, mmap.PROT_WRITE)
   shmem = ShMem.from_buffer(buffer)
-  print 'flow group assignments = ',
+  fg_per_cpu = {}
+  for i in xrange(NCPU):
+    fg_per_cpu[i] = []
   for i in xrange(shmem.nr_flow_groups):
-    print shmem.flow_group[i].cpu,
-  print
-  print 'commands running = ',
-  for i in xrange(16):
-     print '%d' % shmem.command[i].status,
+    cpu = shmem.flow_group[i].cpu
+    fg_per_cpu[cpu].append(i)
+  print 'flow group assignments:'
+  for cpu in xrange(NCPU):
+    if len(fg_per_cpu[cpu]) == 0:
+      continue
+    print '  CPU %02d: flow groups %r' % (cpu, fg_per_cpu[cpu])
+  print 'commands running at:',
+  empty = True
+  for i in xrange(NCPU):
+    if shmem.command[i].status != Command.CP_STATUS_READY:
+      print 'CPU %02d,' % i,
+      empty = False
+  if empty:
+    print 'none',
   print
   if len(sys.argv) >= 2 and sys.argv[1] == '--single-cpu':
     for i in xrange(shmem.nr_flow_groups):
