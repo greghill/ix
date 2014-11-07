@@ -104,6 +104,7 @@ def main():
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--single-cpu', action='store_true')
+  parser.add_argument('--cpus', type=int)
   args = parser.parse_args()
 
   if args.single_cpu:
@@ -114,6 +115,32 @@ def main():
       migrate(shmem, cpu, target_cpu, fg_per_cpu[cpu])
       sys.stdout.write('.')
       sys.stdout.flush()
+    print
+  elif args.cpus is not None:
+    fgs_per_cpu = int(shmem.nr_flow_groups / args.cpus)
+    one_more_fg = shmem.nr_flow_groups % args.cpus
+
+    start = 0
+    for target_cpu in xrange(args.cpus):
+      count = fgs_per_cpu
+      if target_cpu < one_more_fg:
+        count += 1
+      target_fgs = range(start, start + count)
+      start += count
+
+      for source_cpu in xrange(NCPU):
+        if source_cpu == target_cpu:
+          continue
+
+        intersection = set(target_fgs).intersection(set(fg_per_cpu[source_cpu]))
+        if len(intersection) == 0:
+          continue
+        #print 'migrate from %d to %d fgs %r' % (source_cpu, target_cpu, list(intersection))
+        migrate(shmem, source_cpu, target_cpu, list(intersection))
+        sys.stdout.write('.')
+        sys.stdout.flush()
+        fg_per_cpu[source_cpu] = list(set(fg_per_cpu[source_cpu]) - intersection)
+        fg_per_cpu[target_cpu] = list(set(fg_per_cpu[target_cpu]) | intersection)
     print
 
 if __name__ == '__main__':
