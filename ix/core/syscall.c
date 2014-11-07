@@ -125,7 +125,7 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 
 again:
 	switch (percpu_get(cp_cmd)->cmd_id) {
-		case CP_CMD_MIGRATE_FLOW_GROUP:
+		case CP_CMD_MIGRATE:
 			eth_fg_assign_to_cpu(percpu_get(cp_cmd)->migrate_flow_group.flow, percpu_get(cp_cmd)->migrate_flow_group.cpu);
 			percpu_get(cp_cmd)->cmd_id = CP_CMD_NOP;
 			break;

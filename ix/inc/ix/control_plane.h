@@ -17,11 +17,11 @@ struct flow_group_metrics {
 
 enum commands {
 	CP_CMD_NOP = 0,
-	CP_CMD_MIGRATE_FLOW_GROUP,
+	CP_CMD_MIGRATE,
 };
 
 enum status {
-	CP_STATUS_NOT_RUNNING = 0,
+	CP_STATUS_READY = 0,
 	CP_STATUS_RUNNING,
 };
 

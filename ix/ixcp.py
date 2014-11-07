@@ -32,9 +32,9 @@ class CommandParameters(ctypes.Union):
 
 class Command(ctypes.Structure):
   CP_CMD_NOP = 0
-  CP_CMD_MIGRATE_FLOW_GROUP = 1
+  CP_CMD_MIGRATE = 1
 
-  CP_STATUS_NOT_RUNNING = 0
+  CP_STATUS_READY = 0
   CP_STATUS_RUNNING = 1
 
   _fields_ = [
@@ -67,11 +67,11 @@ def main():
       cmd = shmem.command[shmem.flow_group[i].cpu]
       cmd.cmd_params.migrate_flow_group.flow = i
       cmd.cmd_params.migrate_flow_group.cpu = 0
-      cmd.cmd_id = Command.CP_CMD_MIGRATE_FLOW_GROUP
+      cmd.cmd_id = Command.CP_CMD_MIGRATE
       cmd.status = Command.CP_STATUS_RUNNING
       sys.stdout.write('.')
       sys.stdout.flush()
-      while cmd.status != Command.CP_STATUS_NOT_RUNNING:
+      while cmd.status != Command.CP_STATUS_READY:
         time.sleep(0.01)
     print
 

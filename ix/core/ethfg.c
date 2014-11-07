@@ -181,7 +181,7 @@ static void transition_handler_target(void *fg_)
 
 	migrate_timers_from_remote();
 
-	percpu_get_remote(cp_cmd, prev_cpu)->status = CP_STATUS_NOT_RUNNING;
+	percpu_get_remote(cp_cmd, prev_cpu)->status = CP_STATUS_READY;
 }
 
 static void migrate_pkts_to_remote(struct eth_fg *fg)
