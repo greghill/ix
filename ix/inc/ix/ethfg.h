@@ -10,6 +10,7 @@
 #include <ix/cpu.h>
 #include <assert.h>
 #include <ix/timer.h>
+#include <ix/bitmap.h>
 
 #define ETH_MAX_NUM_FG	128 
 
@@ -97,7 +98,7 @@ static inline int perfg_exists(void)
 extern void eth_fg_init(struct eth_fg *fg, unsigned int idx);
 extern int eth_fg_init_cpu(struct eth_fg *fg);
 extern void eth_fg_free(struct eth_fg *fg);
-extern void eth_fg_assign_to_cpu(int fg_id, int cpu);
+extern void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu);
 
 extern int nr_flow_groups;
 

@@ -301,6 +301,7 @@ static int init_hw(void)
 	pthread_t tid;
 	int j, step;
 	int fg_id;
+	DEFINE_BITMAP(fg_bitmap, ETH_MAX_TOTAL_FG);
 
 	// will spawn per-cpu initialization sequence on CPU0
 	ret = init_create_cpu(cfg_cpu[0], 1);
@@ -332,6 +333,7 @@ static int init_hw(void)
 		step++;
 
 	fg_id = 0;
+	bitmap_init(fg_bitmap, ETH_MAX_TOTAL_FG, 0);
 	for (i = 0; i < cfg_dev_nr; i++) {
 		struct rte_eth_dev *eth = eth_dev[i];
 
@@ -349,7 +351,8 @@ static int init_hw(void)
 			fgs[fg_id] = &eth->data->rx_fgs[j];
 
                         /* fake assignment, valid only during init */
-			eth_fg_assign_to_cpu(fg_id,0);
+			bitmap_set(fg_bitmap, fg_id);
+			eth_fg_assign_to_cpu(fg_bitmap,0);
 			eth_fg_set_current(&eth->data->rx_fgs[j]);
 
 			perfg_get(fg_id) = fg_id;
@@ -368,9 +371,10 @@ static int init_hw(void)
 
 			/* assign fg to various cpu */
 			if (j == 0)
-				eth_fg_assign_to_cpu(fg_id, 0);
+				eth_fg_assign_to_cpu(fg_bitmap, 0);
 			else
-				eth_fg_assign_to_cpu(fg_id, (i * ETH_RSS_RETA_NUM_ENTRIES + j) / step);
+				eth_fg_assign_to_cpu(fg_bitmap, (i * ETH_RSS_RETA_NUM_ENTRIES + j) / step);
+			bitmap_clear(fg_bitmap, fg_id);
 
 
 			fg_id++;

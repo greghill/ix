@@ -90,14 +90,8 @@ void eth_fg_free(struct eth_fg *fg)
 		mem_free_pages(fg->perfg, div_up(len, PGSIZE_2MB), PGSIZE_2MB);
 }
 
-/**
- * eth_fg_assign_to_cpu - assigns the flow group to the given cpu
- * @fg_id: the flow group (global name; across devices)
- * @cpu: the cpu sequence number
- */
-void eth_fg_assign_to_cpu(int fg_id, int cpu)
+static void eth_fg_assign_single_to_cpu(int fg_id, int cpu, struct rte_eth_rss_reta *rss_reta, struct rte_eth_dev **eth)
 {
-	struct rte_eth_rss_reta rss_reta;
 	struct eth_fg *fg = fgs[fg_id];
 
 	assert(!fg->in_transition);
@@ -108,6 +102,7 @@ void eth_fg_assign_to_cpu(int fg_id, int cpu)
 	} else if (fg->cur_cpu == -1) {
 		fg->cur_cpu = cfg_cpu[cpu];
 	} else {
+		assert(fg->cur_cpu == percpu_get(cpu_id));
 		fg->in_transition = true;
 		fg->prev_cpu = fg->cur_cpu;
 		fg->cur_cpu = -1;
@@ -117,16 +112,46 @@ void eth_fg_assign_to_cpu(int fg_id, int cpu)
 		migrate_timers_to_remote(fg_id);
 	}
 
-	rss_reta.mask_lo = 0;
-	rss_reta.mask_hi = 0;
 	if (fg->idx >= 64)
-		rss_reta.mask_hi = ((uint64_t) 1) << (fg->idx - 64);
+		rss_reta->mask_hi |= ((uint64_t) 1) << (fg->idx - 64);
 	else
-		rss_reta.mask_lo = ((uint64_t) 1) << fg->idx;
+		rss_reta->mask_lo |= ((uint64_t) 1) << fg->idx;
 
-	rss_reta.reta[fg->idx] = cpu;
+	rss_reta->reta[fg->idx] = cpu;
 	cp_shmem->flow_group[fg_id].cpu = cpu;
-	fg->eth->dev_ops->reta_update(fg->eth, &rss_reta);
+	*eth = fg->eth;
+}
+
+/**
+ * eth_fg_assign_to_cpu - assigns the flow group to the given cpu
+ * @fg_id: the flow group (global name; across devices)
+ * @cpu: the cpu sequence number
+ */
+void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
+{
+	int i, j;
+	struct rte_eth_rss_reta rss_reta;
+	struct rte_eth_dev *eth, *first_eth;
+
+	for (i = 0; i < NETHDEV; i++) {
+		rss_reta.mask_lo = 0;
+		rss_reta.mask_hi = 0;
+		first_eth = NULL;
+		eth = NULL;
+
+		for (j = 0; j < ETH_MAX_NUM_FG; j++) {
+			if (!bitmap_test(fg_bitmap, i * ETH_MAX_NUM_FG + j))
+				continue;
+			eth_fg_assign_single_to_cpu(i * ETH_MAX_NUM_FG + j, cpu, &rss_reta, &eth);
+			if (!first_eth)
+				first_eth = eth;
+			else
+				assert(first_eth == eth);
+		}
+
+		if (eth)
+			eth->dev_ops->reta_update(eth, &rss_reta);
+	}
 }
 
 static void transition_handler_prev(struct timer *t)
