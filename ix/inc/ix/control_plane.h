@@ -30,7 +30,7 @@ struct command_struct {
 	enum status status;
 	union {
 		struct {
-			int flow;
+			DEFINE_BITMAP(fg_bitmap, ETH_MAX_TOTAL_FG);
 			int cpu;
 		} migrate_flow_group;
 	};

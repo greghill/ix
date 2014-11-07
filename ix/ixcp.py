@@ -7,6 +7,7 @@ import posix_ipc
 import sys
 import time
 
+BITS_PER_LONG = 64
 NCPU = 128
 ETH_MAX_NUM_FG = 128
 NETHDEV = 16
@@ -27,7 +28,7 @@ class FlowGroupMetrics(ctypes.Structure):
 
 class CmdParamsMigrateFlowGroup(ctypes.Structure):
   _fields_ = [
-    ('flow', ctypes.c_uint),
+    ('fg_bitmap', ctypes.c_ulong * (ETH_MAX_TOTAL_FG / BITS_PER_LONG)),
     ('cpu', ctypes.c_uint),
   ]
 
@@ -57,6 +58,14 @@ class ShMem(ctypes.Structure):
     ('flow_group', FlowGroupMetrics * ETH_MAX_TOTAL_FG),
     ('command', Command * NCPU),
   ]
+
+def bitmap_create(size, on):
+  bitmap = [0] * (size / BITS_PER_LONG)
+
+  for pos in on:
+    bitmap[pos / BITS_PER_LONG] |= 1 << (pos % BITS_PER_LONG)
+
+  return bitmap
 
 def main():
   shm = posix_ipc.SharedMemory('/ix', 0)
@@ -90,7 +99,8 @@ def main():
   if args.single_cpu:
     for i in xrange(shmem.nr_flow_groups):
       cmd = shmem.command[shmem.flow_group[i].cpu]
-      cmd.cmd_params.migrate_flow_group.flow = i
+      bitmap = bitmap_create(ETH_MAX_TOTAL_FG, {i})
+      cmd.cmd_params.migrate_flow_group.fg_bitmap = (ctypes.c_ulong * len(bitmap))(*bitmap)
       cmd.cmd_params.migrate_flow_group.cpu = 0
       cmd.cmd_id = Command.CP_CMD_MIGRATE
       cmd.status = Command.CP_STATUS_RUNNING

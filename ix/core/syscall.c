@@ -109,7 +109,6 @@ static int bsys_dispatch(struct bsys_desc __user *d, unsigned int nr)
 static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 {
 	int ret, empty;
-	DEFINE_BITMAP(fg_bitmap, ETH_MAX_TOTAL_FG);
 
 	usys_reset();
 
@@ -127,9 +126,7 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 again:
 	switch (percpu_get(cp_cmd)->cmd_id) {
 		case CP_CMD_MIGRATE:
-			bitmap_init(fg_bitmap, ETH_MAX_TOTAL_FG, 0);
-			bitmap_set(fg_bitmap, percpu_get(cp_cmd)->migrate_flow_group.flow);
-			eth_fg_assign_to_cpu(fg_bitmap, percpu_get(cp_cmd)->migrate_flow_group.cpu);
+			eth_fg_assign_to_cpu((bitmap_ptr) percpu_get(cp_cmd)->migrate_flow_group.fg_bitmap, percpu_get(cp_cmd)->migrate_flow_group.cpu);
 			percpu_get(cp_cmd)->cmd_id = CP_CMD_NOP;
 			break;
 		case CP_CMD_NOP:
