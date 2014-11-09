@@ -55,7 +55,7 @@ DEFINE_PERCPU(struct mempool, tcp_pcb_mempool);
 DEFINE_PERCPU(struct mempool, tcp_pcb_listen_mempool);
 DEFINE_PERCPU(struct mempool, tcp_seg_mempool);
 
-#define MEMP_SIZE (64*1024)
+#define MEMP_SIZE (256*1024)
 
 #define PBUF_WITH_PAYLOAD_SIZE 4096
 

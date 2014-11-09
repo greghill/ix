@@ -11,7 +11,7 @@
 #include <ix/cpu.h>
 
 /* Capacity should be at least RX queues per CPU * ETH_DEV_RX_QUEUE_SZ */
-#define MBUF_CAPACITY	131072
+#define MBUF_CAPACITY	(384*1024)
 
 static struct mempool_datastore mbuf_datastore;
 
