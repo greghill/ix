@@ -277,7 +277,8 @@ static volatile int started_cpus;
 void *start_cpu(void *arg)
 {
 	int ret;
-	unsigned int cpu = *((unsigned int *) arg);
+	unsigned int cpu_nr_ = (unsigned int) (unsigned long) arg;
+	unsigned int cpu = cfg_cpu[cpu_nr_];
 
 
 	ret = init_create_cpu(cpu,0);
@@ -288,6 +289,7 @@ void *start_cpu(void *arg)
 
 	started_cpus++;
 
+	percpu_get(cpu_nr) = cpu_nr_;
 	percpu_get(cp_cmd) = &cp_shmem->command[started_cpus];
 
 	pthread_barrier_wait(&start_barrier);
@@ -311,10 +313,11 @@ static int init_hw(void)
 		return ret;
 	}
 
+	percpu_get(cpu_nr) = 0;
 	percpu_get(cp_cmd) = &cp_shmem->command[0];
 
 	for (i = 1; i < cfg_cpu_nr; i++) {
-		ret = pthread_create(&tid, NULL, start_cpu, &cfg_cpu[i]);
+		ret = pthread_create(&tid, NULL, start_cpu, (void *) (unsigned long) i);
 		if (ret) {
 			log_err("init: unable to create pthread\n");
 			return -EAGAIN;

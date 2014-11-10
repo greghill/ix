@@ -19,6 +19,7 @@ int cpus_active;
 
 DEFINE_PERCPU(unsigned int, cpu_numa_node);
 DEFINE_PERCPU(unsigned int, cpu_id);
+DEFINE_PERCPU(unsigned int, cpu_nr);
 
 void *percpu_offsets[NCPU];
 
