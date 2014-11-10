@@ -370,6 +370,12 @@ static void on_err(void *arg, err_t err)
 
 	log_debug("tcpapi: on_err - arg %p err %d\n", arg, err);
 
+	/* Because we use the LWIP_EVENT_API, LWIP can invoke on_err before we
+	 * invoke tcp_arg, thus arg will be NULL. This happens, e.g., if we
+	 * receive a RST after sending a SYN+ACK. */
+	if (!arg)
+		return;
+
 	api = (struct tcpapi_pcb *) arg;
 	cookie = api->cookie;
 
