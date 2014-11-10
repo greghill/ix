@@ -271,6 +271,51 @@ int init_do_spawn(void *arg)
 	return 0;
 }
 
+static int init_fg_cpu(void)
+{
+	int fg_id, ret;
+	int fgs_per_cpu, one_more_fg, start, count;
+	DEFINE_BITMAP(fg_bitmap, ETH_MAX_TOTAL_FG);
+
+	fgs_per_cpu = nr_flow_groups / cfg_cpu_nr;
+	one_more_fg = nr_flow_groups % cfg_cpu_nr;
+
+	start = percpu_get(cpu_nr) * fgs_per_cpu;
+	start += min(percpu_get(cpu_nr), one_more_fg);
+
+	count = fgs_per_cpu;
+	if (percpu_get(cpu_nr) < one_more_fg)
+		count++;
+
+	bitmap_init(fg_bitmap, ETH_MAX_TOTAL_FG, 0);
+	for (fg_id = start; fg_id < start + count; fg_id++)
+		bitmap_set(fg_bitmap, fg_id);
+
+	eth_fg_assign_to_cpu(fg_bitmap, percpu_get(cpu_nr));
+
+	for (fg_id = start; fg_id < start + count; fg_id++) {
+		eth_fg_set_current(fgs[fg_id]);
+
+		perfg_get(fg_id) = fg_id;
+		perfg_get(dev_idx) = fgs[fg_id]->dev_idx;
+
+		assert(fgs[fg_id]->cur_cpu == percpu_get(cpu_id));
+
+		tcp_init();
+		ret = tcp_api_init_fg();
+		if (ret) {
+			log_err("init: failed to initialize tcp_api \n");
+			return ret;
+		}
+
+		timer_init_fg();
+	}
+
+	unset_current_fg();
+
+	return 0;
+}
+
 static pthread_barrier_t start_barrier;
 static volatile int started_cpus;
 
@@ -293,6 +338,13 @@ void *start_cpu(void *arg)
 	percpu_get(cp_cmd) = &cp_shmem->command[started_cpus];
 
 	pthread_barrier_wait(&start_barrier);
+
+	ret = init_fg_cpu();
+	if (ret) {
+		log_err("init: failed to initialize flow groups\n");
+		exit(ret);
+	}
+
 	wait_for_spawn();
 
 	return NULL;
@@ -302,9 +354,8 @@ static int init_hw(void)
 {
 	int i, ret = 0;
 	pthread_t tid;
-	int j, step;
+	int j;
 	int fg_id;
-	DEFINE_BITMAP(fg_bitmap, ETH_MAX_TOTAL_FG);
 
 	// will spawn per-cpu initialization sequence on CPU0
 	ret = init_create_cpu(cfg_cpu[0], 1);
@@ -326,18 +377,7 @@ static int init_hw(void)
 			usleep(100);
 	}
 
-	if (cfg_cpu_nr > 1) {
-		pthread_barrier_wait(&start_barrier);
-	}
-
-	log_info("init: barrier after al CPU initialization\n");
-
-	step = cfg_dev_nr * ETH_RSS_RETA_NUM_ENTRIES / cfg_cpu_nr;
-	if (cfg_dev_nr * ETH_RSS_RETA_NUM_ENTRIES % cfg_cpu_nr != 0)
-		step++;
-
 	fg_id = 0;
-	bitmap_init(fg_bitmap, ETH_MAX_TOTAL_FG, 0);
 	for (i = 0; i < cfg_dev_nr; i++) {
 		struct rte_eth_dev *eth = eth_dev[i];
 
@@ -355,43 +395,27 @@ static int init_hw(void)
 			fgs[fg_id] = &eth->data->rx_fgs[j];
 			fgs[fg_id]->dev_idx = i;
 
-                        /* fake assignment, valid only during init */
-			bitmap_set(fg_bitmap, fg_id);
-			eth_fg_assign_to_cpu(fg_bitmap,0);
-			eth_fg_set_current(&eth->data->rx_fgs[j]);
-
-			perfg_get(fg_id) = fg_id;
-			perfg_get(dev_idx) = i;
-
-			assert(fgs[fg_id]->cur_cpu == percpu_get(cpu_id));
-
-			tcp_init();
-			ret = tcp_api_init_fg();
-			if (ret) {
-				log_err("init: failed to initialize tcp_api \n");
-				return ret;
-			}
-
-			timer_init_fg();
-
-			/* assign fg to various cpu */
-			if (j == 0)
-				eth_fg_assign_to_cpu(fg_bitmap, 0);
-			else
-				eth_fg_assign_to_cpu(fg_bitmap, (i * ETH_RSS_RETA_NUM_ENTRIES + j) / step);
-			bitmap_clear(fg_bitmap, fg_id);
-
-
 			fg_id++;
 		}
 	}
-
-	unset_current_fg();
 
 	nr_flow_groups = fg_id;
 	cp_shmem->nr_flow_groups = nr_flow_groups;
 
 	mempool_init();
+
+	if (cfg_cpu_nr > 1) {
+		pthread_barrier_wait(&start_barrier);
+	}
+
+	init_fg_cpu();
+	if (ret) {
+		log_err("init: failed to initialize flow groups\n");
+		exit(ret);
+	}
+
+	log_info("init: barrier after al CPU initialization\n");
+
 	return 0;
 }
 
