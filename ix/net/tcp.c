@@ -1988,6 +1988,8 @@ tcp_debug_print_flags(u8_t flags)
 void
 tcp_debug_print_pcbs(void)
 {
+  LWIP_DEBUGF(TCP_DEBUG, ("tcp_debug_print_pcbs disabled by IX\n"));
+#if 0
   struct tcp_pcb *pcb;
   LWIP_DEBUGF(TCP_DEBUG, ("Active PCB states:\n"));
   for(pcb = perfg_get(tcp_fg_lists.active_buckets); pcb != NULL; pcb = pcb->next) {
@@ -2010,6 +2012,7 @@ tcp_debug_print_pcbs(void)
                        pcb->snd_nxt, pcb->rcv_nxt));
     tcp_debug_print_state(pcb->state);
   }
+#endif
 }
 
 /**
@@ -2018,6 +2021,7 @@ tcp_debug_print_pcbs(void)
 s16_t
 tcp_pcbs_sane(void)
 {
+#if 0
   struct tcp_pcb *pcb;
   for(pcb = perfg_get(tcp_fg_lists.active_buckets); pcb != NULL; pcb = pcb->next) {
     LWIP_ASSERT("tcp_pcbs_sane: active pcb->state != CLOSED", pcb->state != CLOSED);
@@ -2027,6 +2031,7 @@ tcp_pcbs_sane(void)
   for(pcb = perfg_get(tcp_tw_pcbs); pcb != NULL; pcb = pcb->next) {
     LWIP_ASSERT("tcp_pcbs_sane: tw pcb->state == TIME-WAIT", pcb->state == TIME_WAIT);
   }
+#endif
   return 1;
 }
 #endif /* TCP_DEBUG */
