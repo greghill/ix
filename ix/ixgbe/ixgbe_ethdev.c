@@ -65,6 +65,8 @@
 
 #define IXGBE_QUEUE_STAT_COUNTERS (sizeof(hw_stats->qprc) / sizeof(hw_stats->qprc[0]))
 
+static DEFINE_SPINLOCK(ixgbe_dev_lock);
+
 static int  ixgbe_dev_configure(struct rte_eth_dev *dev);
 static int  ixgbe_dev_start(struct rte_eth_dev *dev);
 static void ixgbe_dev_stop(struct rte_eth_dev *dev);
@@ -2144,6 +2146,8 @@ ixgbe_dev_rss_reta_update(struct rte_eth_dev *dev,
 	struct ixgbe_hw *hw = 
 			IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
+	spin_lock(&ixgbe_dev_lock);
+
 	/*  
 	* Update Redirection Table RETA[n],n=0...31,The redirection table has 
 	* 128-entries in 32 registers
@@ -2169,6 +2173,8 @@ ixgbe_dev_rss_reta_update(struct rte_eth_dev *dev,
 			IXGBE_WRITE_REG(hw, IXGBE_RETA(i >> 2),reta);
 		}
 	}
+
+	spin_unlock(&ixgbe_dev_lock);
 
 	return 0;
 }
