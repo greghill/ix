@@ -28,6 +28,7 @@ struct eth_fg {
 	unsigned int	target_cpu;	/* the migration target CPU */
 	unsigned int	prev_cpu;
 	unsigned int	idx;		/* the flow index */
+	unsigned int	dev_idx;
 
 	spinlock_t	lock;		/* protects fg data during migration */
 

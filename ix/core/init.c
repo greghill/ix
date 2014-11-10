@@ -353,6 +353,7 @@ static int init_hw(void)
 		for (j = 0; j < eth->data->nb_rx_fgs; j++) {
 			eth_fg_init_cpu(&eth->data->rx_fgs[j]);
 			fgs[fg_id] = &eth->data->rx_fgs[j];
+			fgs[fg_id]->dev_idx = i;
 
                         /* fake assignment, valid only during init */
 			bitmap_set(fg_bitmap, fg_id);
