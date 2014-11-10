@@ -30,16 +30,31 @@ struct queue {
 	struct mbuf *tail;
 };
 
+struct migration_info {
+	struct timer transition_timeout;
+	unsigned int prev_cpu;
+	unsigned int target_cpu;
+	DEFINE_BITMAP(fg_bitmap, ETH_MAX_TOTAL_FG);
+};
+
 DEFINE_PERCPU(struct queue, local_mbuf_queue);
 DEFINE_PERCPU(struct queue, remote_mbuf_queue);
 DEFINE_PERCPU(struct hlist_head, remote_timers_list);
 DEFINE_PERCPU(uint64_t, remote_timer_pos);
+DEFINE_PERCPU(struct migration_info, migration_info);
 
 static void transition_handler_prev(struct timer *t);
 static void transition_handler_target(void *fg_);
 static void migrate_pkts_to_remote(struct eth_fg *fg);
 static void migrate_timers_to_remote(int fg_id);
 static void migrate_timers_from_remote();
+
+int init_migration_cpu(void)
+{
+	timer_init_entry(&percpu_get(migration_info).transition_timeout, transition_handler_prev);
+
+	return 0;
+}
 
 /**
  * eth_fg_init - initializes a flow group globally
@@ -52,7 +67,6 @@ void eth_fg_init(struct eth_fg *fg, unsigned int idx)
 	fg->idx = idx;
 	fg->cur_cpu = -1;
 	spin_lock_init(&fg->lock);
-	timer_init_entry(&fg->transition_timeout, transition_handler_prev);
 }
 
 /**
@@ -90,26 +104,27 @@ void eth_fg_free(struct eth_fg *fg)
 		mem_free_pages(fg->perfg, div_up(len, PGSIZE_2MB), PGSIZE_2MB);
 }
 
-static void eth_fg_assign_single_to_cpu(int fg_id, int cpu, struct rte_eth_rss_reta *rss_reta, struct rte_eth_dev **eth)
+static int eth_fg_assign_single_to_cpu(int fg_id, int cpu, struct rte_eth_rss_reta *rss_reta, struct rte_eth_dev **eth)
 {
 	struct eth_fg *fg = fgs[fg_id];
+	int ret;
 
 	assert(!fg->in_transition);
 
 	if (fg->cur_cpu == cfg_cpu[cpu]) {
-		percpu_get(cp_cmd)->status = CP_STATUS_READY;
-		return;
+		return 0;
 	} else if (fg->cur_cpu == -1) {
 		fg->cur_cpu = cfg_cpu[cpu];
+		ret = 0;
 	} else {
 		assert(fg->cur_cpu == percpu_get(cpu_id));
 		fg->in_transition = true;
 		fg->prev_cpu = fg->cur_cpu;
 		fg->cur_cpu = -1;
 		fg->target_cpu = cfg_cpu[cpu];
-		timer_percpu_add(&fg->transition_timeout, TRANSITION_TIMEOUT);
 		migrate_pkts_to_remote(fg);
 		migrate_timers_to_remote(fg_id);
+		ret = 1;
 	}
 
 	if (fg->idx >= 64)
@@ -120,6 +135,8 @@ static void eth_fg_assign_single_to_cpu(int fg_id, int cpu, struct rte_eth_rss_r
 	rss_reta->reta[fg->idx] = cpu;
 	cp_shmem->flow_group[fg_id].cpu = cpu;
 	*eth = fg->eth;
+
+	return ret;
 }
 
 /**
@@ -132,6 +149,12 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
 	int i, j;
 	struct rte_eth_rss_reta rss_reta;
 	struct rte_eth_dev *eth, *first_eth;
+	int ret;
+	int real = 0;
+
+	assert(!timer_pending(&percpu_get(migration_info).transition_timeout));
+
+	bitmap_init(percpu_get(migration_info).fg_bitmap, ETH_MAX_TOTAL_FG, 0);
 
 	for (i = 0; i < NETHDEV; i++) {
 		rss_reta.mask_lo = 0;
@@ -142,7 +165,11 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
 		for (j = 0; j < ETH_MAX_NUM_FG; j++) {
 			if (!bitmap_test(fg_bitmap, i * ETH_MAX_NUM_FG + j))
 				continue;
-			eth_fg_assign_single_to_cpu(i * ETH_MAX_NUM_FG + j, cpu, &rss_reta, &eth);
+			ret = eth_fg_assign_single_to_cpu(i * ETH_MAX_NUM_FG + j, cpu, &rss_reta, &eth);
+			if (ret) {
+				bitmap_set(percpu_get(migration_info).fg_bitmap, i * ETH_MAX_NUM_FG + j);
+				real = 1;
+			}
 			if (!first_eth)
 				first_eth = eth;
 			else
@@ -152,13 +179,22 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
 		if (eth)
 			eth->dev_ops->reta_update(eth, &rss_reta);
 	}
+
+	if (!real) {
+		percpu_get(cp_cmd)->status = CP_STATUS_READY;
+		return;
+	}
+
+	percpu_get(migration_info).prev_cpu = percpu_get(cpu_id);
+	percpu_get(migration_info).target_cpu = cpu;
+	timer_percpu_add(&percpu_get(migration_info).transition_timeout, TRANSITION_TIMEOUT);
 }
 
 static void transition_handler_prev(struct timer *t)
 {
-	struct eth_fg *fg = container_of(t, struct eth_fg, transition_timeout);
+	struct migration_info *info = container_of(t, struct migration_info, transition_timeout);
 
-	cpu_run_on_one(transition_handler_target, fg, fg->target_cpu);
+	cpu_run_on_one(transition_handler_target, info, info->target_cpu);
 }
 
 static struct eth_rx_queue * queue_from_fg(struct eth_fg *fg)
@@ -175,22 +211,31 @@ static struct eth_rx_queue * queue_from_fg(struct eth_fg *fg)
 	assert(false);
 }
 
-static void transition_handler_target(void *fg_)
+static void transition_handler_target(void *info_)
 {
 	struct mbuf *pkt;
 	struct queue *q;
-	struct eth_fg *fg = (struct eth_fg *)fg_;
-	int prev_cpu = fg->prev_cpu;
+	struct migration_info *info = (struct migration_info *) info_;
+	struct eth_fg *fg;
+	int prev_cpu = info->prev_cpu;
+	int i;
 
-	fg->in_transition = false;
-	fg->cur_cpu = fg->target_cpu;
-	fg->target_cpu = -1;
-	fg->prev_cpu = -1;
+	for (i = 0; i < ETH_MAX_TOTAL_FG; i++) {
+		if (!bitmap_test(info->fg_bitmap, i))
+			continue;
+		fg = fgs[i];
+		fg->in_transition = false;
+		fg->cur_cpu = fg->target_cpu;
+		fg->target_cpu = -1;
+		fg->prev_cpu = -1;
+	}
 
 	q = &percpu_get(remote_mbuf_queue);
 	pkt = q->head;
 	while (pkt) {
-		eth_input(queue_from_fg(fg), pkt);
+		/* FIXME: Hard to get queue at this point. Nevertheless, it is
+		 * not used in eth_input */
+		eth_input(NULL, pkt);
 		pkt = pkt->next;
 	}
 	q->head = NULL;
@@ -199,7 +244,8 @@ static void transition_handler_target(void *fg_)
 	q = &percpu_get(local_mbuf_queue);
 	pkt = q->head;
 	while (pkt) {
-		eth_input(queue_from_fg(fg), pkt);
+		/* FIXME: see previous */
+		eth_input(NULL, pkt);
 		pkt = pkt->next;
 	}
 	q->head = NULL;

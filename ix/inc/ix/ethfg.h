@@ -36,8 +36,6 @@ struct eth_fg {
 	void (*steer) (struct eth_rx_queue *target);
 
 	struct		rte_eth_dev *eth;
-
-	struct timer	transition_timeout;
 };
 
 struct eth_fg_listener {
