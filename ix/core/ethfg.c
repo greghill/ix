@@ -325,7 +325,7 @@ int eth_recv_handle_fg_transition(struct eth_rx_queue *rx_queue, struct mbuf *pk
 	} else {
 		/* FIXME: somebody must mbuf_free(pkt) but we cannot do it here
 		   because we don't own the memory pool */
-		log_warn("dropping packet: flow group %d should be handled by cpu %d\n", perfg_get(fg_id), fgs[perfg_get(fg_id)]->cur_cpu);
+		log_warn("dropping packet: flow group %d of device %d should be handled by cpu %d\n", fg->idx, fg->dev_idx, fg->cur_cpu);
 		return 1;
 	}
 }
