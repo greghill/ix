@@ -212,7 +212,7 @@ static struct eth_rx_queue * queue_from_fg(struct eth_fg *fg)
 
 static void transition_handler_target(void *info_)
 {
-	struct mbuf *pkt;
+	struct mbuf *pkt, *next;
 	struct queue *q;
 	struct migration_info *info = (struct migration_info *) info_;
 	struct eth_fg *fg;
@@ -232,10 +232,11 @@ static void transition_handler_target(void *info_)
 	q = &percpu_get(remote_mbuf_queue);
 	pkt = q->head;
 	while (pkt) {
+		next = pkt->next;
 		/* FIXME: Hard to get queue at this point. Nevertheless, it is
 		 * not used in eth_input */
 		eth_input(NULL, pkt);
-		pkt = pkt->next;
+		pkt = next;
 	}
 	q->head = NULL;
 	q->tail = NULL;
@@ -243,9 +244,10 @@ static void transition_handler_target(void *info_)
 	q = &percpu_get(local_mbuf_queue);
 	pkt = q->head;
 	while (pkt) {
+		next = pkt->next;
 		/* FIXME: see previous */
 		eth_input(NULL, pkt);
-		pkt = pkt->next;
+		pkt = next;
 	}
 	q->head = NULL;
 	q->tail = NULL;
