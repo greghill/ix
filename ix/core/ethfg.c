@@ -184,7 +184,7 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
 	}
 
 	percpu_get(migration_info).prev_cpu = percpu_get(cpu_id);
-	percpu_get(migration_info).target_cpu = cpu;
+	percpu_get(migration_info).target_cpu = cfg_cpu[cpu];
 	timer_add(NULL,&percpu_get(migration_info).transition_timeout, TRANSITION_TIMEOUT);
 }
 
