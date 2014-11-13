@@ -125,6 +125,14 @@ static int sys_bpoll(struct bsys_desc __user *d, unsigned int nr)
 again:
 	switch (percpu_get(cp_cmd)->cmd_id) {
 		case CP_CMD_MIGRATE:
+			if (percpu_get(usys_arr)->len) {
+				/* If there are pending events and we have
+				 * received a migration command, return to user
+				 * space for the processing of the events. We
+				 * will delay the migration until we are in a
+				 * quiescent state. */
+				return 0;
+			}
 			eth_fg_assign_to_cpu((bitmap_ptr) percpu_get(cp_cmd)->migrate_flow_group.fg_bitmap, percpu_get(cp_cmd)->migrate_flow_group.cpu);
 			percpu_get(cp_cmd)->cmd_id = CP_CMD_NOP;
 			break;
