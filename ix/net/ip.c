@@ -98,7 +98,7 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 	struct eth_fg *fg;
 
 	//set_current_queue(rx_queue);
-	fg = &rx_queue->dev->data->rx_fgs[pkt->fg_id];
+	fg = fgs[pkt->fg_id];
 	eth_fg_set_current(fg);
 
 	log_debug("ip: got ethernet packet of len %ld, type %x\n",

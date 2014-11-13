@@ -262,7 +262,7 @@ static void migrate_pkts_to_remote(struct eth_fg *fg)
 	struct queue *q = &percpu_get_remote(remote_mbuf_queue, fg->target_cpu);
 
 	while (pkt) {
-		if (fg == &rxq->dev->data->rx_fgs[pkt->fg_id]) {
+		if (fg->fg_id == pkt->fg_id) {
 			*prv = pkt->next;
 
 			pkt->next = NULL;
@@ -296,7 +296,7 @@ static void enqueue(struct queue *q, struct mbuf *pkt)
 
 void eth_recv_at_prev(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 {
-	struct eth_fg *fg = &rx_queue->dev->data->rx_fgs[pkt->fg_id];
+	struct eth_fg *fg = fgs[pkt->fg_id];
 	struct queue *q = &percpu_get_remote(remote_mbuf_queue, fg->target_cpu);
 	enqueue(q, pkt);
 }
@@ -309,7 +309,7 @@ void eth_recv_at_target(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 
 int eth_recv_handle_fg_transition(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 {
-	struct eth_fg *fg = &rx_queue->dev->data->rx_fgs[pkt->fg_id];
+	struct eth_fg *fg = fgs[pkt->fg_id];
 
 	if (!fg->in_transition && fg->cur_cpu == percpu_get(cpu_id)) {
 		/* continue processing */
