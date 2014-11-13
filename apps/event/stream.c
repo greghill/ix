@@ -25,10 +25,8 @@ struct stream_conn {
 	char data[BUF_SIZE];
 };
 
-static int stream_conn_pool_entries;
 static struct mempool_datastore stream_conn_datastore;
 static __thread struct mempool stream_conn_pool;
-static __thread int stream_conn_pool_count;
 
 static void stream_handler(struct ixev_ctx *ctx, unsigned int reason)
 {
@@ -74,14 +72,9 @@ static void stream_handler(struct ixev_ctx *ctx, unsigned int reason)
 static struct ixev_ctx *stream_accept(struct ip_tuple *id)
 {
 	/* NOTE: we accept everything right now, did we want a port? */
-	if (stream_conn_pool_count >= stream_conn_pool_entries) {
-		fprintf(stderr, "Error: mempool ran out of space.\n");
-		exit(1);
-	}
 	struct stream_conn *conn = mempool_alloc(&stream_conn_pool);
 	if (!conn)
 		return NULL;
-	stream_conn_pool_count++;
 
 	conn->mode = STREAM_MODE_RECV;
 	ixev_ctx_init(&conn->ctx);
@@ -95,7 +88,6 @@ static void stream_release(struct ixev_ctx *ctx)
 	struct stream_conn *conn = container_of(ctx, struct stream_conn, ctx);
 
 	mempool_free(&stream_conn_pool, conn);
-	stream_conn_pool_count--;
 }
 
 struct ixev_conn_ops stream_conn_ops = {
@@ -131,6 +123,7 @@ int main(int argc, char *argv[])
 	int i, nr_cpu;
 	pthread_t tid;
 	int ret;
+	int stream_conn_pool_entries;
 
 	if (argc >= 2)
 		stream_conn_pool_entries = atoi(argv[1]);
