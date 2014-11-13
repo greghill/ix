@@ -46,6 +46,7 @@ static void transition_handler_target(void *fg_);
 static void migrate_pkts_to_remote(struct eth_fg *fg);
 static void migrate_timers_to_remote(int fg_id);
 static void migrate_timers_from_remote();
+static void enqueue(struct queue *q, struct mbuf *pkt);
 
 int init_migration_cpu(void)
 {
@@ -264,16 +265,7 @@ static void migrate_pkts_to_remote(struct eth_fg *fg)
 	while (pkt) {
 		if (fg->fg_id == pkt->fg_id) {
 			*prv = pkt->next;
-
-			pkt->next = NULL;
-			if (!q->head) {
-				q->head = pkt;
-				q->tail = pkt;
-			} else {
-				q->tail->next = pkt;
-				q->tail = pkt;
-			}
-
+			enqueue(q, pkt);
 			pkt = *prv;
 		} else {
 			prv = &pkt->next;
