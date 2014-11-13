@@ -10,6 +10,8 @@
 
 #define BUF_SIZE	65536
 
+#define ROUND_UP(num, multiple) ((((num) + (multiple) - 1) / (multiple)) * (multiple));
+
 enum {
 	STREAM_MODE_RECV,
 	STREAM_MODE_SEND,
@@ -24,6 +26,7 @@ struct stream_conn {
 };
 
 static int stream_conn_pool_entries;
+static struct mempool_datastore stream_conn_datastore;
 static __thread struct mempool stream_conn_pool;
 static __thread int stream_conn_pool_count;
 
@@ -110,8 +113,7 @@ static void *stream_main(void *arg)
 		return NULL;
 	};
 
-	ret = mempool_create(&stream_conn_pool, stream_conn_pool_entries,
-			     sizeof(struct stream_conn));
+	ret = mempool_create(&stream_conn_pool, &stream_conn_datastore);
 	if (ret) {
 		printf("unable to create mempool\n");
 		return NULL;
@@ -128,13 +130,26 @@ int main(int argc, char *argv[])
 {
 	int i, nr_cpu;
 	pthread_t tid;
+	int ret;
 
 	if (argc >= 2)
 		stream_conn_pool_entries = atoi(argv[1]);
 	else
-		stream_conn_pool_entries = 4096;
+		stream_conn_pool_entries = 16 * 4096;
 
-	ixev_init(&stream_conn_ops);
+	stream_conn_pool_entries = ROUND_UP(stream_conn_pool_entries, MEMPOOL_DEFAULT_CHUNKSIZE);
+
+	ret = ixev_init(&stream_conn_ops);
+	if (ret) {
+		printf("failed to initialize ixev\n");
+		return ret;
+	}
+
+	ret = mempool_create_datastore(&stream_conn_datastore, stream_conn_pool_entries, sizeof(struct stream_conn), 0, MEMPOOL_DEFAULT_CHUNKSIZE, "stream_conn");
+	if (ret) {
+		printf("unable to create mempool\n");
+		return ret;
+	}
 
 	nr_cpu = sys_nrcpus();
 	if (nr_cpu < 1) {

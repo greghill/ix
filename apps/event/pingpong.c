@@ -8,6 +8,8 @@
 
 #include "ixev.h"
 
+#define ROUND_UP(num, multiple) ((((num) + (multiple) - 1) / (multiple)) * (multiple));
+
 struct pp_conn {
 	struct ixev_ctx ctx;
 	size_t bytes_left;
@@ -17,6 +19,7 @@ struct pp_conn {
 static size_t msg_size;
 
 static unsigned int pp_conn_pool_entries;
+static struct mempool_datastore pp_conn_datastore;
 static __thread struct mempool pp_conn_pool;
 static __thread int pp_conn_pool_count;
 
@@ -123,8 +126,7 @@ static void *pp_main(void *arg)
 		return NULL;
 	};
 
-	ret = mempool_create(&pp_conn_pool, pp_conn_pool_entries,
-			     sizeof(struct pp_conn) + msg_size);
+	ret = mempool_create(&pp_conn_pool, &pp_conn_datastore);
 	if (ret) {
 		printf("unable to create mempool\n");
 		return NULL;
@@ -141,6 +143,7 @@ int main(int argc, char *argv[])
 {
 	int i, nr_cpu;
 	pthread_t tid;
+	int ret;
 
 	if (argc < 2) {
 		fprintf(stderr, "Usage: %s MSG_SIZE [MAX_CONNECTIONS]\n", argv[0]);
@@ -152,9 +155,21 @@ int main(int argc, char *argv[])
 	if (argc >= 3)
 		pp_conn_pool_entries = atoi(argv[2]);
 	else
-		pp_conn_pool_entries = 4096;
+		pp_conn_pool_entries = 16 * 4096;
 
-	ixev_init(&pp_conn_ops);
+	pp_conn_pool_entries = ROUND_UP(pp_conn_pool_entries, MEMPOOL_DEFAULT_CHUNKSIZE);
+
+	ret = ixev_init(&pp_conn_ops);
+	if (ret) {
+		printf("failed to initialize ixev\n");
+		return ret;
+	}
+
+	ret = mempool_create_datastore(&pp_conn_datastore, pp_conn_pool_entries, sizeof(struct pp_conn) + msg_size, 0, MEMPOOL_DEFAULT_CHUNKSIZE, "pp_conn");
+	if (ret) {
+		printf("unable to create mempool\n");
+		return ret;
+	}
 
 	nr_cpu = sys_nrcpus();
 	if (nr_cpu < 1) {

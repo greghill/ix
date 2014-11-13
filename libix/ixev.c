@@ -18,6 +18,7 @@
 static __thread uint64_t ixev_generation;
 static struct ixev_conn_ops ixev_global_ops;
 
+static struct mempool_datastore ixev_buf_datastore;
 __thread struct mempool ixev_buf_pool;
 
 static inline void __ixev_check_generation(struct ixev_ctx *ctx)
@@ -581,7 +582,7 @@ int ixev_init_thread(void)
 {
 	int ret;
 
-	ret = mempool_create(&ixev_buf_pool, 131072, sizeof(struct ixev_buf));
+	ret = mempool_create(&ixev_buf_pool, &ixev_buf_datastore);
 	if (ret)
 		return ret;
 
@@ -605,6 +606,11 @@ int ixev_init_thread(void)
 int ixev_init(struct ixev_conn_ops *ops)
 {
 	/* FIXME: check if running inside IX */
+	int ret;
+
+	ret = mempool_create_datastore(&ixev_buf_datastore, 131072, sizeof(struct ixev_buf), 0, MEMPOOL_DEFAULT_CHUNKSIZE, "ixev_buf");
+	if (ret)
+		return ret;
 
 	ixev_global_ops = *ops;
 	return 0;
