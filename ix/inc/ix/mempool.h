@@ -58,19 +58,21 @@ struct mempool_datastore {
 
 
 struct mempool {
+	// hot fields: 
+	struct mempool_hdr	*head;
+	int                     num_alloc;
+	int                     num_free;
+	size_t                  elem_len;
+
 	uint64_t                 magic;
 	void			*buf;
 	struct mempool_datastore *datastore;
-	struct mempool_hdr	*head;
 	struct mempool_hdr      *private_chunk;
 //	int			nr_pages;
 	int                     sanity;
 	uint32_t                nr_elems;
-	size_t                  elem_len;
 	int                     nostraddle;
 	int                     chunk_size;
-	int                     num_alloc;
-	int                     num_free;
 #ifdef __KERNEL__
 	void 			*iomap_addr;
 	uintptr_t		iomap_offset;
@@ -163,20 +165,20 @@ static inline void mempool_free(struct mempool *m, void *ptr)
 		mempool_free_2(m,ptr);
 }
 
-static inline void *mempool_idx_to_ptr(struct mempool *m, uint32_t idx)
+static inline void *mempool_idx_to_ptr(struct mempool *m, uint32_t idx, int elem_len)
 {
 	void *p;
 	assert(idx<m->nr_elems);
 	assert(!m->nostraddle);
-	p = m->buf + m->elem_len*idx + MEMPOOL_INITIAL_OFFSET;
+	p = m->buf + elem_len*idx + MEMPOOL_INITIAL_OFFSET;
 	MEMPOOL_SANITY_ACCESS(p);
 	return p;
 }
 
-static inline uintptr_t mempool_ptr_to_idx(struct mempool *m,void *p)
+static inline uintptr_t mempool_ptr_to_idx(struct mempool *m,void *p, int elem_len)
 {
 	uintptr_t x = (uintptr_t)p - (uintptr_t)m->buf - MEMPOOL_INITIAL_OFFSET;
-	x = x / m->elem_len;
+	x = x / elem_len;
 	assert (x<m->nr_elems);
 	return x;
 }

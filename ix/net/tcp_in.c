@@ -89,7 +89,7 @@ static err_t tcp_process(struct LWIP_Context *,struct tcp_pcb *pcb);
 static void tcp_receive(struct LWIP_Context *,struct tcp_pcb *pcb);
 static void tcp_parseopt(struct LWIP_Context *,struct tcp_pcb *pcb);
 
-static err_t tcp_listen_input(struct LWIP_Context *,struct tcp_pcb_listen *pcb);
+static err_t tcp_listen_input(struct LWIP_Context *,struct tcp_pcb_listen *pcb, int idx);
 static err_t tcp_timewait_input(struct LWIP_Context *,struct tcp_pcb *pcb);
 
 extern const u8_t tcp_persist_backoff[];
@@ -199,6 +199,10 @@ tcp_input(struct pbuf *p, struct netif *inp)
   /* Convert fields in TCP header to host byte order. */
   lwip_context.tcphdr->src = ntohs(lwip_context.tcphdr->src);
   lwip_context.tcphdr->dest = ntohs(lwip_context.tcphdr->dest);
+
+  int idx = tcp_to_idx(ipX_current_dest_addr(), ipX_current_src_addr(), lwip_context.tcphdr->dest, lwip_context.tcphdr->src);
+
+
   lwip_context.seqno = lwip_context.tcphdr->seqno = ntohl(lwip_context.tcphdr->seqno);
   lwip_context.ackno = lwip_context.tcphdr->ackno = ntohl(lwip_context.tcphdr->ackno);
   lwip_context.tcphdr->wnd = ntohs(lwip_context.tcphdr->wnd);
@@ -211,9 +215,12 @@ tcp_input(struct pbuf *p, struct netif *inp)
   
   
   
-  int idx = tcp_to_idx(ipX_current_dest_addr(), ipX_current_src_addr(), lwip_context.tcphdr->dest, lwip_context.tcphdr->src);
+
   pcb = tcp_input_find_list(&lwip_context,&perfg_get(tcp_fg_lists).active_tbl[idx].pcbs);
   if (pcb) {
+	  mem_prefetch(&pcb->tmr);
+	  mem_prefetch(&pcb->rttest);
+	  if (pcb->unacked) mem_prefetch(pcb->unacked);
 	  KSTATS_VECTOR(tcp_input_fast_path);
 	  goto done_tcp_input;
   }
@@ -280,7 +287,7 @@ tcp_input(struct pbuf *p, struct netif *inp)
   if (lpcb != NULL) {
 	  
 	  LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_input: packed for LISTENing connection.\n"));
-	  tcp_listen_input(&lwip_context,lpcb);
+	  tcp_listen_input(&lwip_context,lpcb,idx);
 	  pbuf_free(p);
 	  return;
   }
@@ -502,7 +509,8 @@ dropped:
  * @note the segment which arrived is saved in global variables, therefore only the pcb
  *       involved is passed as a parameter to this function
  */
-static err_t tcp_listen_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb_listen *pcb)
+static err_t 
+tcp_listen_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb_listen *pcb, int idx)
 {
   struct tcp_pcb *npcb;
   err_t rc;
@@ -549,6 +557,7 @@ static err_t tcp_listen_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb_lis
 #endif /* LWIP_IPV6 */
     ipX_addr_copy(ip_current_is_v6(), npcb->local_ip, *ipX_current_dest_addr());
     ipX_addr_copy(ip_current_is_v6(), npcb->remote_ip, *ipX_current_src_addr());
+
     npcb->local_port = pcb->local_port;
     npcb->remote_port = lwip_ctxt->tcphdr->src;
     npcb->state = SYN_RCVD;
@@ -563,7 +572,7 @@ static err_t tcp_listen_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb_lis
     npcb->so_options = pcb->so_options & SOF_INHERITED;
     /* Register the new PCB so that we can begin receiving segments
        for it. */
-    TCP_REG_ACTIVE(npcb);
+    TCP_REG_ACTIVE(npcb,idx);
 
     /* Parse any options in the SYN. */
     tcp_parseopt(lwip_ctxt,npcb);
@@ -606,9 +615,11 @@ static err_t tcp_listen_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb_lis
  * @note the segment which arrived is saved in global variables, therefore only the pcb
  *       involved is passed as a parameter to this function
  */
+
 static err_t
 tcp_timewait_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb *pcb)
 {
+
   /* RFC 1337: in TIME_WAIT, ignore RST and ACK FINs + any 'acceptable' segments */
   /* RFC 793 3.9 Event Processing - Segment Arrives:
    * - first check sequence number - we skip that one in TIME_WAIT (always
@@ -652,7 +663,7 @@ tcp_timewait_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb *pcb)
  * @note the segment which arrived is saved in global variables, therefore only the pcb
  *       involved is passed as a parameter to this function
  */
-static err_t
+err_t
 tcp_process(struct LWIP_Context * lwip_ctxt, struct tcp_pcb *pcb)
 {
   struct tcp_seg *rseg;

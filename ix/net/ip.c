@@ -125,8 +125,8 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 
 /* FIXME: change when we integrate better with LWIP */
 /* NOTE: This function is only called for TCP */
-int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest,
-	      uint8_t ttl, uint8_t tos, uint8_t proto)
+int ip_output_hinted(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest,
+	      uint8_t ttl, uint8_t tos, uint8_t proto, uint8_t *dst_eth_addr)
 {
 	int ret;
 	struct mbuf *pkt;
@@ -144,11 +144,17 @@ int ip_output(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest,
 	iphdr = mbuf_nextd(ethhdr, struct ip_hdr *);
 	payload = mbuf_nextd(iphdr, unsigned char *);
 
-	dst_addr.addr = ntoh32(dest->addr);
-	if (arp_lookup_mac(&dst_addr, &ethhdr->dhost)) {
-		log_err("ARP lookup failed.\n");
-		mbuf_free(pkt);
-		return -EIO;
+	if (dst_eth_addr && dst_eth_addr[0]) { 
+		memcpy(&ethhdr->dhost,dst_eth_addr,6);
+	} else {
+		dst_addr.addr = ntoh32(dest->addr);
+		if (arp_lookup_mac(&dst_addr, &ethhdr->dhost)) {
+			log_err("ARP lookup failed.\n");
+			mbuf_free(pkt);
+			return -EIO;
+		}
+		if (dst_eth_addr) 
+			memcpy(dst_eth_addr,&ethhdr->dhost,6);
 	}
 
 	ethhdr->shost = cfg_mac;

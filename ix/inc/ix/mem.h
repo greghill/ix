@@ -136,5 +136,13 @@ mem_lookup_page_machine_addr(void *addr, int size, machaddr_t *maddr)
 	return mem_lookup_page_machine_addrs(addr, 1, size, maddr);
 }
 
+
+/** mem_prefetch
+ */
+static inline void mem_prefetch(void *addr)
+{
+	__builtin_prefetch(addr,1);
+}
+
 #endif /* __KERNEL__ */
 

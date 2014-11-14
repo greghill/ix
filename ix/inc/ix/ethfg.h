@@ -107,7 +107,6 @@ extern int nr_flow_groups;
 extern struct eth_fg *fgs[ETH_MAX_TOTAL_FG];
 
 DECLARE_PERFG(int, dev_idx);
-
 DECLARE_PERFG(int, fg_id);
 
 

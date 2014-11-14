@@ -914,7 +914,7 @@ tcp_send_empty_ack(struct tcp_pcb *pcb)
 #endif
 #if LWIP_NETIF_HWADDRHINT
   ipX_output_hinted(PCB_ISIPV6(pcb), p, &pcb->local_ip, &pcb->remote_ip, pcb->ttl, pcb->tos,
-      IP_PROTO_TCP, &pcb->addr_hint);
+      IP_PROTO_TCP, &pcb->dst_eth_addr[0]);
 #else /* LWIP_NETIF_HWADDRHINT*/
   ipX_output(PCB_ISIPV6(pcb), p, &pcb->local_ip, &pcb->remote_ip, pcb->ttl, pcb->tos,
       IP_PROTO_TCP);
@@ -939,6 +939,8 @@ tcp_output(struct tcp_pcb *pcb)
 #if TCP_CWND_DEBUG
   s16_t i = 0;
 #endif /* TCP_CWND_DEBUG */
+
+  mem_prefetch(&pcb->rttest);
 
   MEMPOOL_SANITY_ACCESS(pcb);
 
@@ -1220,7 +1222,7 @@ tcp_output_segment(struct tcp_seg *seg, struct tcp_pcb *pcb)
 
 #if LWIP_NETIF_HWADDRHINT
   ipX_output_hinted(PCB_ISIPV6(pcb), seg->p, &pcb->local_ip, &pcb->remote_ip,
-    pcb->ttl, pcb->tos, IP_PROTO_TCP, &pcb->addr_hint);
+    pcb->ttl, pcb->tos, IP_PROTO_TCP, &pcb->dst_eth_addr[0]);
 #else /* LWIP_NETIF_HWADDRHINT*/
   ipX_output(PCB_ISIPV6(pcb), seg->p, &pcb->local_ip, &pcb->remote_ip, pcb->ttl,
     pcb->tos, IP_PROTO_TCP);
@@ -1288,7 +1290,7 @@ tcp_rst_impl(u32_t seqno, u32_t ackno,
                                      local_ip, remote_ip);
 #endif
   /* Send output with hardcoded TTL/HL since we have no access to the pcb */
-  ipX_output(isipv6, p, local_ip, remote_ip, TCP_TTL, 0, IP_PROTO_TCP);
+  ipX_output_hinted(isipv6, p, local_ip, remote_ip, TCP_TTL, 0, IP_PROTO_TCP,NULL);
   pbuf_free(p);
   LWIP_DEBUGF(TCP_RST_DEBUG, ("tcp_rst: seqno %"U32_F" ackno %"U32_F".\n", seqno, ackno));
 }
@@ -1462,7 +1464,7 @@ tcp_keepalive(struct tcp_pcb *pcb)
   /* Send output to IP */
 #if LWIP_NETIF_HWADDRHINT
   ipX_output_hinted(PCB_ISIPV6(pcb), p, &pcb->local_ip, &pcb->remote_ip,
-    pcb->ttl, 0, IP_PROTO_TCP, &pcb->addr_hint);
+    pcb->ttl, 0, IP_PROTO_TCP, &pcb->dst_eth_addr[0]);
 #else /* LWIP_NETIF_HWADDRHINT*/
   ipX_output(PCB_ISIPV6(pcb), p, &pcb->local_ip, &pcb->remote_ip, pcb->ttl,
     0, IP_PROTO_TCP);
@@ -1542,7 +1544,7 @@ tcp_zero_window_probe(struct tcp_pcb *pcb)
   /* Send output to IP */
 #if LWIP_NETIF_HWADDRHINT
   ipX_output_hinted(PCB_ISIPV6(pcb), p, &pcb->local_ip, &pcb->remote_ip, pcb->ttl,
-    0, IP_PROTO_TCP, &pcb->addr_hint);
+    0, IP_PROTO_TCP, &pcb->dst_eth_addr[0]);
 #else /* LWIP_NETIF_HWADDRHINT*/
   ipX_output(PCB_ISIPV6(pcb), p, &pcb->local_ip, &pcb->remote_ip, pcb->ttl, 0, IP_PROTO_TCP);
 #endif /* LWIP_NETIF_HWADDRHINT*/

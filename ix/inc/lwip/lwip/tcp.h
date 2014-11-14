@@ -38,6 +38,7 @@ c * All rights reserved.
 
 #include <ix/timer.h>
 #include <ix/list.h>
+#include <net/ethernet.h>
 
 #include "lwip/mem.h"
 #include "lwip/pbuf.h"
@@ -203,7 +204,7 @@ struct tcp_pcb {
 
   /* ports are in host byte order */
   u16_t remote_port;
-  
+
   tcpflags_t flags;
 #define TF_ACK_NOW     ((tcpflags_t)0x0002U)   /* Immediate ACK. */
 #define TF_INFR        ((tcpflags_t)0x0004U)   /* In fast recovery. */

@@ -41,11 +41,13 @@ struct tcpapi_pcb {
 	bool accepted;
 };
 
+#define TCPAPI_PCB_SIZE 64
+
 static struct mempool_datastore pcb_datastore;
 static struct mempool_datastore id_datastore;
 
-static DEFINE_PERCPU(struct mempool, pcb_mempool);
-static DEFINE_PERCPU(struct mempool, id_mempool);
+static DEFINE_PERCPU(struct mempool, pcb_mempool __attribute__ ((aligned (64))));
+static DEFINE_PERCPU(struct mempool, id_mempool __attribute__ ((aligned (64))));
 
 /**
  * handle_to_tcpapi - converts a handle to a PCB
@@ -69,7 +71,7 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 	//set_current_queue(percpu_get(eth_rxqs[perfg_get(dev_idx)]));
 	p = &percpu_get(pcb_mempool);
 
-	api = (struct tcpapi_pcb *) mempool_idx_to_ptr(p,idx);
+	api = (struct tcpapi_pcb *) mempool_idx_to_ptr(p,idx,TCPAPI_PCB_SIZE);
 	MEMPOOL_SANITY_ACCESS(api);
 
 	/* check if the handle is actually allocated */
@@ -91,7 +93,7 @@ static inline hid_t tcpapi_to_handle(struct tcpapi_pcb *pcb)
 {
 	struct mempool *p = &percpu_get(pcb_mempool);
 	MEMPOOL_SANITY_ACCESS(pcb);
-	hid_t hid = mempool_ptr_to_idx(p,pcb) | ((uintptr_t) (perfg_get(fg_id)) << 48);
+	hid_t hid = mempool_ptr_to_idx(p,pcb,TCPAPI_PCB_SIZE) | ((uintptr_t) (perfg_get(fg_id)) << 48);
 	return hid;
 }
 
@@ -613,6 +615,9 @@ int tcp_api_init(void)
 				       sizeof(struct tcpapi_pcb), 0, MEMPOOL_DEFAULT_CHUNKSIZE,"pcb");
 	if (ret)
 		return ret;
+
+	if (pcb_datastore.elem_len != TCPAPI_PCB_SIZE)
+		panic("tcp_api_init -- wrong ELEM_LEN\n");
 
 	ret = mempool_create_datastore(&id_datastore, MAX_PCBS,
 				       sizeof(struct ip_tuple), 1, MEMPOOL_DEFAULT_CHUNKSIZE,"ip");

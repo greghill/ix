@@ -96,24 +96,18 @@ const char * const tcp_state_str[] = {
 /* last local TCP port */
 //static u16_t tcp_port = TCP_LOCAL_PORT_RANGE_START;
 
-/* Incremented every coarse grained timer shot (typically every 500 ms). */
-DEFINE_PERFG(u32_t, tcp_ticks);
 const u8_t tcp_backoff[13] =
     { 1, 2, 3, 4, 5, 6, 7, 7, 7, 7, 7, 7, 7};
  /* Times per slowtmr hits */
 const u8_t tcp_persist_backoff[7] = { 3, 6, 12, 24, 48, 96, 120 };
 
-/* The TCP PCB lists. */
-
-DEFINE_PERFG(struct tcp_global_perfg_lists, tcp_fg_lists);
-DEFINE_PERCPU(struct tcp_global_percpu_lists,tcp_cpu_lists);
-
-
-
 #define NUM_TCP_PCB_LISTS               4
 #define NUM_TCP_PCB_LISTS_NO_TIME_WAIT  3
 /** An array with all (non-temporary) PCB lists, mainly used for smaller code size */
 //DEFINE_PERFG(struct hlist_head *, tcp_pcb_lists[NUM_TCP_PCB_LISTS]);
+
+/* Incremented every coarse grained timer shot (typically every 500 ms). */
+DEFINE_PERFG(u32_t, tcp_ticks);
 
 DEFINE_PERFG(u8_t, tcp_active_pcbs_changed);
 
@@ -124,12 +118,22 @@ static u16_t tcp_new_port(void);
 
 static DEFINE_PERFG(u32_t, iss);
 
+/* The TCP PCB lists. */
+
+DEFINE_PERCPU(struct tcp_global_percpu_lists,tcp_cpu_lists);
+DEFINE_PERFG(struct tcp_global_perfg_lists, tcp_fg_lists);  // large structure
+
+static void tcpip_tcp_timer(struct timer *t);
+
 /**
  * Initialize this module.
  */
 void
 tcp_init(void)
 {
+
+
+	timer_init_entry(&perfg_get(tcpip_timer), tcpip_tcp_timer);
 
 #if LWIP_RANDOMIZE_INITIAL_LOCAL_PORTS && defined(LWIP_RAND)
   tcp_port = TCP_ENSURE_LOCAL_PORT_RANGE(LWIP_RAND());
@@ -147,35 +151,6 @@ tcp_init(void)
 #endif
 }
 
-
-/**
- * tcp_trim_hash_bucket  -  remove from list all entries with zero-length hash queues
- *
- */
- 
-
-void
-tcp_trim_hash_bucket(void)
-{
-	struct hlist_node *cur,*tmp;
-	struct tcp_hash_entry *he;
-	int rm=0,stay=0;
-	
-
-	hlist_for_each_safe(&perfg_get(tcp_fg_lists).active_buckets,cur,tmp) { 
-		assert (cur->prev != NULL);
-		he  = hlist_entry(cur,struct tcp_hash_entry, hash_link);
-		assert ((uintptr_t) he >= (uintptr_t)&perfg_get(tcp_fg_lists).active_tbl[0]);
-		assert ((uintptr_t) he < (uintptr_t)&perfg_get(tcp_fg_lists).active_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS]);
-		if (hlist_empty(&he->pcbs)) {
-			hlist_del(cur);
-			cur->prev = NULL;
-			rm++;
-		} else 
-			stay++;
-	}
-       
-}
 /**
  * Called periodically to dispatch TCP timers.
  */
@@ -897,7 +872,8 @@ tcp_connect(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port,
     if (old_local_port != 0) {
       TCP_RMV(&perfg_get(tcp_bound_pcbs), pcb);
     }
-    TCP_REG_ACTIVE(pcb);
+    int idx = tcp_to_idx(&pcb->local_ip, &pcb->remote_ip, pcb->local_port, pcb->remote_port);
+    TCP_REG_ACTIVE(pcb,idx);
     snmp_inc_tcpactiveopens();
 
     tcp_output(pcb);
@@ -1040,12 +1016,11 @@ tcp_slowtmr_start:
 
 			/* If the PCB should be removed, do it. */
 			if (pcb_remove) {
-				tcp_err_fn err_fn;
-				void *err_arg;
-
 #ifdef LWIP_CALLBACK_API
+				tcp_err_fn err_fn;
 				err_fn = pcb->errf;
 #endif
+				void *err_arg;
 				err_arg = pcb->callback_arg;
 
 				hlist_del(&pcb->link);
@@ -1793,58 +1768,22 @@ extern void tcp_tmr(void);
 /* in us */
 
 
-static DEFINE_PERFG(struct timer, tcpip_timer);
-static DEFINE_PERFG(int, tcpip_tcp_timer_active);
+DEFINE_PERFG(struct timer, tcpip_timer);
 
 static void tcpip_tcp_timer(struct timer *t)
 {
-	int needed;
-	needed = 0;
-	
 	assert(t == &perfg_get(tcpip_timer));
-	assert(perfg_get(tcpip_tcp_timer_active));
-	if (!perfg_get(tcpip_tcp_timer_active))
-		return;
 	
-	tcp_trim_hash_bucket();
-
-
 	/* call TCP timer handler */
 	tcp_tmr();
 	
 	/* timer still needed? */
 	if (!hlist_empty(&perfg_get(tcp_fg_lists).active_buckets) || 
-	    !hlist_empty(&perfg_get(tcp_fg_lists).tw_pcbs)) {
+	    !hlist_empty(&perfg_get(tcp_fg_lists).tw_pcbs)) 
 		/* restart timer */
-		needed = 1;
-	} else {
-		/* disable timer */
-		perfg_get(tcpip_tcp_timer_active) = 0;
-	}
-	
-	if (needed)
 		timer_add(t, TCP_TMR_INTERVAL * ONE_MS);
 }
 
-void tcp_timer_needed(void)
-{
-	/* timer is off but needed again? */
-
-	assert (perfg_exists()); // cannot be called on per-cpu
-
-	if (!perfg_get(tcpip_tcp_timer_active) && 
-	    (!hlist_empty(&perfg_get(tcp_fg_lists).active_buckets) ||
-	     !hlist_empty(&perfg_get(tcp_fg_lists).tw_pcbs))) {
-
-		/* enable and start timer */
-		perfg_get(tcpip_tcp_timer_active) = 1;
-		if (!perfg_get(tcpip_timer).handler)
-			timer_init_entry(&perfg_get(tcpip_timer), &tcpip_tcp_timer);
-
-		if (!timer_pending(&perfg_get(tcpip_timer)))
-			timer_add(&perfg_get(tcpip_timer), TCP_TMR_INTERVAL * ONE_MS);
-	}
-}
 
 #if TCP_CALCULATE_EFF_SEND_MSS
 /**

@@ -333,7 +333,7 @@ struct tcp_seg {
 DECLARE_PERCPU(struct tcp_pcb *, tcp_input_pcb);
 DECLARE_PERFG(u32_t, tcp_ticks);
 DECLARE_PERFG(u8_t, tcp_active_pcbs_changed);
-
+DECLARE_PERFG(struct timer, tcpip_timer);
 /* The TCP PCB lists. */
 
 /**
@@ -503,11 +503,23 @@ static inline void __TCP_RMV(struct tcp_pcb *pcb)
 
 #endif /* LWIP_DEBUG */
 
-extern void tcp_timer_needed(void);
 
-static inline void TCP_REG_ACTIVE(struct tcp_pcb *npcb)
+static inline void tcp_timer_needed(void)
 {
-	int idx = tcp_to_idx(&npcb->local_ip, &npcb->remote_ip, npcb->local_port, npcb->remote_port);
+	/* timer is off but needed again? */
+
+	assert(perfg_exists()); // cannot be called on per-cpu
+
+	if (!timer_pending(&perfg_get(tcpip_timer)) && 
+	    (!hlist_empty(&perfg_get(tcp_fg_lists).active_buckets) ||
+	     !hlist_empty(&perfg_get(tcp_fg_lists).tw_pcbs))) {
+		timer_add(&perfg_get(tcpip_timer), TCP_TMR_INTERVAL * ONE_MS);
+	}
+}
+
+
+static inline void TCP_REG_ACTIVE(struct tcp_pcb *npcb, int idx)
+{
 	struct tcp_hash_entry *he = &perfg_get(tcp_fg_lists).active_tbl[idx];
 	
 	/* going from empty to non-empty list */

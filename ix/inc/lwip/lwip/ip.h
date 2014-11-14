@@ -56,8 +56,9 @@ extern "C" {
 #endif /* IP_HDRINCL */
 #define IP_HDRINCL  NULL
 
+
 #if LWIP_NETIF_HWADDRHINT
-#define IP_PCB_ADDRHINT ;u8_t addr_hint
+#define IP_PCB_ADDRHINT ;u8_t dst_eth_addr[6]
 #else
 #define IP_PCB_ADDRHINT
 #endif /* LWIP_NETIF_HWADDRHINT */
