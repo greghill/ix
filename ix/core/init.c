@@ -155,7 +155,7 @@ static DEFINE_SPINLOCK(assign_lock);
 
 static int init_network_cpu(void)
 {
-	int ret, idx, i;
+	int ret, i;
 	spin_lock(&assign_lock);
 	ret = 0;
 	for (i = 0; i < eth_dev_count; i++) {
