@@ -274,6 +274,7 @@ static void migrate_pkts_to_remote(struct eth_fg *fg)
 			pkt = pkt->next;
 		}
 	}
+	rxq->tail = container_of(prv, struct mbuf, next);
 }
 
 static void enqueue(struct queue *q, struct mbuf *pkt)
