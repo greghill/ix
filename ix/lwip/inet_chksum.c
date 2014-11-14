@@ -257,6 +257,7 @@ lwip_standard_chksum(void *dataptr, int len)
 }
 #endif
 
+#if 0
 /** Parts of the pseudo checksum which are common to IPv4 and IPv6 */
 static u16_t
 inet_cksum_pseudo_base(struct pbuf *p, u8_t proto, u16_t proto_len, u32_t acc)
@@ -294,6 +295,7 @@ inet_cksum_pseudo_base(struct pbuf *p, u8_t proto, u16_t proto_len, u32_t acc)
   LWIP_DEBUGF(INET_DEBUG, ("inet_chksum_pseudo(): pbuf chain lwip_chksum()=%"X32_F"\n", acc));
   return (u16_t)~(acc & 0xffffUL);
 }
+#endif
 
 /* Pseudo-header checksum to initialize checksum field in TCP header for TCP csum offload */
 static __inline unsigned short 
