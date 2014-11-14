@@ -49,11 +49,11 @@ static struct mempool_datastore  pbuf_with_payload_ds;
 static struct mempool_datastore  tcp_pcb_ds;
 static struct mempool_datastore  tcp_seg_ds;
 
-DEFINE_PERCPU(struct mempool, pbuf_mempool);
-DEFINE_PERCPU(struct mempool, pbuf_with_payload_mempool);
-DEFINE_PERCPU(struct mempool, tcp_pcb_mempool);
-DEFINE_PERCPU(struct mempool, tcp_pcb_listen_mempool);
-DEFINE_PERCPU(struct mempool, tcp_seg_mempool);
+DEFINE_PERCPU(struct mempool, pbuf_mempool __attribute__ ((aligned (64))));
+DEFINE_PERCPU(struct mempool, pbuf_with_payload_mempool __attribute__ ((aligned (64))));
+DEFINE_PERCPU(struct mempool, tcp_pcb_mempool __attribute__ ((aligned (64))));
+DEFINE_PERCPU(struct mempool, tcp_pcb_listen_mempool __attribute__ ((aligned (64))));
+DEFINE_PERCPU(struct mempool, tcp_seg_mempool __attribute__ ((aligned (64))));
 
 #define MEMP_SIZE (256*1024)
 

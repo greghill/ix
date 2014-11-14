@@ -368,7 +368,7 @@ static void mempool_printstats(struct timer *t)
 	printf("DATASTORE name             free%% lock/s\n");
 
 	for (; mds; mds = mds->next_ds)  {
-		printf("DATATSTORE %-15s  %4ld  %5ld\n",
+		printf("DATASTORE %-15s  %4ld  %5ld\n",
 		       mds->prettyname,
 		       100L*mds->free_chunks/mds->num_chunks,
 		       mds->num_locks/5);

@@ -15,7 +15,7 @@
 
 static struct mempool_datastore mbuf_datastore;
 
-DEFINE_PERCPU(struct mempool, mbuf_mempool);
+DEFINE_PERCPU(struct mempool, mbuf_mempool __attribute__ ((aligned (64))));
 
 void mbuf_default_done(struct mbuf *m)
 {
