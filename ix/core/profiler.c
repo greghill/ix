@@ -84,6 +84,7 @@ static void profiler_print(struct timer *t)
 
 void profiler_init(void)
 {
-	timer_init_entry(&timer, profiler_print);
+	assert(0); // still alive? EdB
+	timer_init_entry(&timer, profiler_print,-1);
 	timer_add(&timer, PROFILER_INTERVAL);
 }

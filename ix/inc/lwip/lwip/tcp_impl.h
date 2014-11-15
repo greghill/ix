@@ -56,19 +56,12 @@ extern "C" {
 
 /* Lower layer interface to TCP: */
 void             tcp_init    (void);  /* Initialize this module. */
-void             tcp_tmr     (void);  /* Must be called every
-                                         TCP_TMR_INTERVAL
-                                         ms. (Typically 250 ms). */
-/* It is also possible to call these two functions at the right
-   intervals (instead of calling tcp_tmr()). */
-void             tcp_slowtmr (void);
-void             tcp_fasttmr (void);
 
 
 /* Only used by IP to pass a TCP segment to TCP: */
-void             tcp_input   (struct pbuf *p, struct netif *inp);
+	void             tcp_input   (struct eth_fg *cur_fg, struct pbuf *p, ipX_addr_t *,ipX_addr_t *);
 /* Used within the TCP code only: */
-struct tcp_pcb * tcp_alloc   (u8_t prio);
+struct tcp_pcb * tcp_alloc   (struct eth_fg *,u8_t prio);
 void             tcp_abandon (struct tcp_pcb *pcb, int reset);
 err_t            tcp_send_empty_ack(struct tcp_pcb *pcb);
 void             tcp_rexmit  (struct tcp_pcb *pcb);
@@ -331,9 +324,7 @@ struct tcp_seg {
 
 /* Global variables: */
 DECLARE_PERCPU(struct tcp_pcb *, tcp_input_pcb);
-DECLARE_PERFG(u32_t, tcp_ticks);
-DECLARE_PERFG(u8_t, tcp_active_pcbs_changed);
-DECLARE_PERFG(struct timer, tcpip_timer);
+
 /* The TCP PCB lists. */
 
 /**
@@ -345,11 +336,6 @@ DECLARE_PERFG(struct timer, tcpip_timer);
  * entries with >0 pcbs. (updated lazily).
  */
 
-struct tcp_hash_entry { 
-	struct hlist_head pcbs;
-	struct hlist_node hash_link;
-};
-
 
 
 union tcp_listen_pcbs_t { /* List of all TCP PCBs in LISTEN state. */
@@ -357,28 +343,15 @@ union tcp_listen_pcbs_t { /* List of all TCP PCBs in LISTEN state. */
   struct tcp_pcb *pcbs;
 };
 
-//extern struct hlist_head tcp_bound_pcbs;
-//DECLARE_PERFG(struct hlist_head, tcp_listen_pcbs);
-//DECLARE_PERFG(struct tcp_hash_entry, tcp_active_pcbs);  /* List of all TCP PCBs that are in a
-//              state in which they accept or send
-//              data. */
-#define TCP_ACTIVE_PCBS_MAX_BUCKETS (512)    // per flow group
 
 #define TCP_ACTIVE_PCBS_HASH_SEED 0xa36bdcbe
 
-struct tcp_global_perfg_lists {
-	struct hlist_head active_buckets; // tcp_hash_entry list
-	struct hlist_head tw_pcbs;        // tcp_pcb
-	struct hlist_head bound_pcbs;     // tcp_pcb
-	struct tcp_hash_entry active_tbl[TCP_ACTIVE_PCBS_MAX_BUCKETS];
-};
 
 struct tcp_global_percpu_lists {
 	struct hlist_head listen_pcbs;    // tcp_pcb
 	int nothing;
 };
 
-DECLARE_PERFG(struct tcp_global_perfg_lists, tcp_fg_lists);
 DECLARE_PERCPU(struct tcp_global_percpu_lists,tcp_cpu_lists);
 
 static inline int tcp_to_idx(ipX_addr_t *local_ip, ipX_addr_t *remote_ip, uint16_t local_port, uint16_t remote_port)
@@ -389,7 +362,6 @@ static inline int tcp_to_idx(ipX_addr_t *local_ip, ipX_addr_t *remote_ip, uint16
   return idx;
 }
 
-//DECLARE_PERFG(struct tcp_pcb *, tcp_tw_pcbs);      /* List of all TCP PCBs in TIME-WAIT. */
 
 /* Axioms about the above lists:   
    1) Every TCP PCB that is not CLOSED is in one of the lists.
@@ -441,22 +413,22 @@ void tcp_retransmit_handler(struct timer *t);
 void tcp_persist_handler(struct timer *t);
 extern void tcp_unified_timer_handler(struct timer *t);
 
-#define TCP_REG(pcbs, npcb)                        \
+#define TCP_REG(pcbs, npcb,cur_fg)		   \
   do {                                             \
       assert((npcb)->link.prev == NULL);           \
 	hlist_add_head(pcbs,&(npcb)->link);	     \
 	/* (npcb)->perqueue = percpu_get(current_perqueue);*/		\
-    timer_init_entry(&(npcb)->unified_timer, tcp_unified_timer_handler);	\
-    tcp_timer_needed();                            \
+	timer_init_entry(&(npcb)->unified_timer, tcp_unified_timer_handler); \
+    tcp_timer_needed(cur_fg);                            \
   } while (0)
 
 /** 
  * __TCP_RMV -- complement to TCP_REG and TCP_REG_ACTIVE
  */
 
-static inline void __TCP_RMV(struct tcp_pcb *pcb)
+static inline void __TCP_RMV(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 {
-	struct tcp_hash_entry *he = &perfg_get(tcp_fg_lists).active_tbl[0];
+	struct tcp_hash_entry *he = &cur_fg->active_tbl[0];
 	struct tcp_hash_entry *he2;
 	/* if you are removing the only entry in the hash list, remove the bucket from the bucket list */
 	if ((uintptr_t) pcb->link.prev >= (uintptr_t)he && 
@@ -477,7 +449,7 @@ static inline void __TCP_RMV(struct tcp_pcb *pcb)
 }
 
 
-#define TCP_RMV(pcbs, npcb)   __TCP_RMV(npcb)
+#define TCP_RMV(pcbs, npcb)   __TCP_RMV(cur_fg,npcb)
 
 #define TCP_HASH_RMV(pcbs,npcb)
 
@@ -504,51 +476,49 @@ static inline void __TCP_RMV(struct tcp_pcb *pcb)
 #endif /* LWIP_DEBUG */
 
 
-static inline void tcp_timer_needed(void)
+static inline void tcp_timer_needed(struct eth_fg *cur_fg)
 {
 	/* timer is off but needed again? */
 
-	assert(perfg_exists()); // cannot be called on per-cpu
-
-	if (!timer_pending(&perfg_get(tcpip_timer)) && 
-	    (!hlist_empty(&perfg_get(tcp_fg_lists).active_buckets) ||
-	     !hlist_empty(&perfg_get(tcp_fg_lists).tw_pcbs))) {
-		timer_add(&perfg_get(tcpip_timer), TCP_TMR_INTERVAL * ONE_MS);
+	if (!timer_pending(&cur_fg->tcpip_timer) && 
+	    (!hlist_empty(&cur_fg->active_buckets) ||
+	     !hlist_empty(&cur_fg->tw_pcbs))) {
+		timer_add(cur_fg,&cur_fg->tcpip_timer, TCP_TMR_INTERVAL * ONE_MS);
 	}
 }
 
 
-static inline void TCP_REG_ACTIVE(struct tcp_pcb *npcb, int idx)
+static inline void TCP_REG_ACTIVE(struct tcp_pcb *npcb, int idx, struct eth_fg *cur_fg)
 {
-	struct tcp_hash_entry *he = &perfg_get(tcp_fg_lists).active_tbl[idx];
+	struct tcp_hash_entry *he = &cur_fg->active_tbl[idx];
 	
 	/* going from empty to non-empty list */
 	if (hlist_empty(&he->pcbs))
 		if (he->hash_link.prev == NULL)
-			hlist_add_head(&perfg_get(tcp_fg_lists).active_buckets,&he->hash_link);
+			hlist_add_head(&cur_fg->active_buckets,&he->hash_link);
 	
-	TCP_REG(&he->pcbs, npcb);
-	perfg_get(tcp_active_pcbs_changed) = 1;					
+	TCP_REG(&he->pcbs, npcb,cur_fg);
+	cur_fg->tcp_active_pcb_changed = 1;					
 }
 
 
 #define TCP_RMV_ACTIVE(npcb)                       \
   do {                                             \
     TCP_RMV(&perfg_get(tcp_active_pcbs), npcb);               \
-    perfg_get(tcp_active_pcbs_changed) = 1;                   \
+    cur_fg->tcp_active_pcb_changed = 1;                   \
   } while (0)
 
 #define TCP_PCB_REMOVE_ACTIVE(pcb)                 \
   do {                                             \
-    tcp_pcb_remove(pcb);         \
-    perfg_get(tcp_active_pcbs_changed) = 1;                   \
+	  tcp_pcb_remove(cur_fg,pcb);			  \
+    cur_fg->tcp_active_pcb_changed = 1;                   \
   } while (0)
 
 
 /* Internal functions: */
 struct tcp_pcb *tcp_pcb_copy(struct tcp_pcb *pcb);
 void tcp_pcb_purge(struct tcp_pcb *pcb);
-void tcp_pcb_remove(struct tcp_pcb *pcb);
+void tcp_pcb_remove(struct eth_fg *cur_fg,struct tcp_pcb *pcb);
 
 void tcp_segs_free(struct tcp_seg *seg);
 void tcp_seg_free(struct tcp_seg *seg);
@@ -556,7 +526,7 @@ struct tcp_seg *tcp_seg_copy(struct tcp_seg *seg);
 
 
 static inline void
-tcp_recompute_timers(struct tcp_pcb *pcb)
+tcp_recompute_timers(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 {
 	uint64_t first = -1ul;
 	if (pcb->timer_delayedack_expires>0)
@@ -571,20 +541,20 @@ tcp_recompute_timers(struct tcp_pcb *pcb)
 	} else {
 		timer_del(&pcb->unified_timer);
 		if (first != -1ul)
-			timer_add_abs(&pcb->unified_timer,first);
+			timer_add_abs(cur_fg,&pcb->unified_timer,first);
 	}
 }
 
 			
 /* MAX_PACKETS_DELAYED_ACK -- LWIP behavior set to 2 */
 #define MAX_PACKETS_DELAYED_ACK 2 
-static inline void tcp_ack(struct tcp_pcb *pcb)
+static inline void tcp_ack(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 {
 	if(pcb->timer_delayedack_expires>0) {	
 		pcb->delayed_ack_counter++;
 		if (pcb->delayed_ack_counter>=MAX_PACKETS_DELAYED_ACK) {
 			pcb->timer_delayedack_expires = 0;
-			tcp_recompute_timers(pcb);
+			tcp_recompute_timers(cur_fg,pcb);
 			pcb->flags |= TF_ACK_NOW;
 		}
 	} else if (MAX_PACKETS_DELAYED_ACK == 1) {
@@ -592,7 +562,8 @@ static inline void tcp_ack(struct tcp_pcb *pcb)
 	} else {
 		pcb->delayed_ack_counter = 1;
 		pcb->timer_delayedack_expires = timer_now() + TCP_ACK_DELAY;
-		tcp_recompute_timers(pcb);
+		tcp_recompute_timers(cur_fg,
+pcb);
 	}
 }  
     
@@ -621,7 +592,7 @@ void tcp_rst_impl(u32_t seqno, u32_t ackno,
   tcp_rst_impl(seqno, ackno, local_ip, remote_ip, local_port, remote_port)
 #endif /* LWIP_IPV6 */
 
-u32_t tcp_next_iss(void);
+	u32_t tcp_next_iss(struct eth_fg *);
 
 void tcp_keepalive(struct tcp_pcb *pcb);
 void tcp_zero_window_probe(struct tcp_pcb *pcb);
@@ -659,7 +630,7 @@ s16_t tcp_pcbs_sane(void);
 
 /** External function (implemented in timers.c), called when TCP detects
  * that a timer is needed (i.e. active- or time-wait-pcb found). */
-void tcp_timer_needed(void);
+void tcp_timer_needed(struct eth_fg *cur_fg);
 
 
 #ifdef __cplusplus

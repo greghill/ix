@@ -374,7 +374,7 @@ static void mempool_printstats(struct timer *t)
 		       mds->num_locks/5);
 		mds->num_locks = 0;
 	}
-	timer_percpu_add(t, PRINT_INTERVAL);
+	timer_add(NULL,t, PRINT_INTERVAL);
 }
 #endif
 
@@ -382,7 +382,7 @@ int mempool_init(void)
 {
 #ifdef ENABLE_KSTATS
 	timer_init_entry(&mempool_timer, mempool_printstats);
-	timer_percpu_add(&mempool_timer, PRINT_INTERVAL);
+	timer_add(NULL,&mempool_timer, PRINT_INTERVAL);
 #endif
 	return 0;
 }

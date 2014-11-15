@@ -137,7 +137,7 @@ static int arp_update_mac(struct ip_addr *addr,
 	e->mac = *mac;
 	e->flags = ARP_FLAG_VALID;
 	e->retries = 0;
-	timer_mod(&e->timer, ARP_REFRESH_TIMEOUT);
+	timer_mod(NULL,&e->timer, ARP_REFRESH_TIMEOUT);
 
 	return 0;
 }
@@ -289,7 +289,7 @@ int arp_lookup_mac(struct ip_addr *addr, struct eth_addr *mac)
 
 			e->flags |= ARP_FLAG_RESOLVING;
 			arp_send_pkt(ARP_OP_REQUEST, addr, &target);
-			timer_add(&e->timer, ARP_RESOLVE_TIMEOUT);
+			timer_add(NULL, &e->timer,ARP_RESOLVE_TIMEOUT);
 		}
 		return -EAGAIN;
 	}
@@ -356,7 +356,7 @@ static void arp_timer_handler(struct timer *t)
 		arp_send_pkt(ARP_OP_REQUEST, &e->addr, &target);
 	}
 
-	timer_add(t, ARP_RETRY_TIMEOUT);
+	timer_add(NULL,t, ARP_RETRY_TIMEOUT);
 }
 
 /**

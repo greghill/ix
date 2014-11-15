@@ -85,7 +85,7 @@ static inline bool timer_expired(struct timerwheel *tw, struct timer *t)
 }
 
 
-static void timer_insert(struct timerwheel *tw, struct timer *t)
+static void timer_insert(struct eth_fg *cur_fg,struct timerwheel *tw, struct timer *t)
 {
 	uint64_t expire_us,delay_us;
         int index, offset;
@@ -112,6 +112,11 @@ static void timer_insert(struct timerwheel *tw, struct timer *t)
 
         hlist_add_head(&tw->wheels[index][offset], &t->link);
 
+	if (cur_fg) 
+		t->fg_id = cur_fg->fg_id;
+	else
+		t->fg_id = -1;
+
 }
 
 /**
@@ -121,7 +126,7 @@ static void timer_insert(struct timerwheel *tw, struct timer *t)
  *
  * Returns 0 if successful, otherwise failure.
  */
-static int __timer_add(struct timerwheel *tw, struct timer *t, uint64_t delay_us)
+static int __timer_add(struct eth_fg *cur_fg,struct timerwheel *tw, struct timer *t, uint64_t delay_us)
 {
 	uint64_t expires;
 	assert(delay_us>0);
@@ -136,37 +141,28 @@ static int __timer_add(struct timerwheel *tw, struct timer *t, uint64_t delay_us
 	 */
 	expires = tw->now_us + delay_us;
 	t->expires = expires;
-	timer_insert(tw,t);
+	timer_insert(cur_fg,tw,t);
 
 	return 0;
 }
 
-int timer_add(struct timer *t, uint64_t usecs)
+int timer_add(struct eth_fg *cur_fg,struct timer *t, uint64_t usecs)
 {
 	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
-	t->fg_id = perfg_get(fg_id);
-	return __timer_add(tw,t,usecs);
+	return __timer_add(cur_fg,tw,t,usecs);
 
-}
-
-int timer_percpu_add(struct timer *t, uint64_t usecs)
-{
-	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
-	t->fg_id = -1;
-	return __timer_add(tw,t,usecs);
 }
 
 /** 
  *  timer_add_abs -- use absoute time (in usecs)
  */ 
-void timer_add_abs(struct timer *t, uint64_t abs_usecs)
+void timer_add_abs(struct eth_fg *cur_fg,struct timer *t, uint64_t abs_usecs)
 {
         struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
 	assert (abs_usecs > tw->timer_pos);
 	assert (!timer_pending(t));
 	t->expires = abs_usecs;
-	t->fg_id = perfg_get(fg_id);
-	timer_insert(tw,t);
+	timer_insert(cur_fg,tw,t);
 }
 
 uint64_t timer_now()
@@ -181,13 +177,12 @@ uint64_t timer_now()
  * The timer is added to the nearest bucket and will fire the next
  * time timer_run() is called, assuming MIN_DELAY_US has elapsed.
  */
-void timer_add_for_next_tick(struct timer *t)
+void timer_add_for_next_tick(struct eth_fg *cur_fg,struct timer *t)
 {
 	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
         uint64_t expire_us = tw->now_us + MIN_DELAY_US;
 	t->expires = expire_us;
-	t->fg_id = perfg_get(fg_id);
-	timer_insert(tw,t);
+	timer_insert(cur_fg,tw,t);
 }
 
 
@@ -232,7 +227,7 @@ static int timer_reinsert_bucket(struct timerwheel *tw, struct hlist_head *h, ui
 			KSTATS_POP(&save);
 			continue;
 		}
- 		timer_insert(tw, t) ;
+ 		timer_insert(get_ethfg_from_id(t->fg_id),tw, t) ;
 	}
 	return count;
 }
@@ -392,11 +387,12 @@ timer_reinject_fgs(struct hlist_head *list,uint64_t timer_pos)
 
 	hlist_for_each_safe(list, x, tmp) {
 		t = hlist_entry(x, struct timer, link);
+		assert (t->fg_id>=0);
 		int64_t delay = t->expires - t_base;
 		if (delay<=0) 
-			timer_add_for_next_tick(t);
+			timer_add_for_next_tick(fgs[t->fg_id],t);
 		else 
-			__timer_add(tw,t,delay);
+			__timer_add(fgs[t->fg_id],tw,t,delay);
 	}
 }
 

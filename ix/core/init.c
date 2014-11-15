@@ -296,9 +296,6 @@ static int init_fg_cpu(void)
 	for (fg_id = start; fg_id < start + count; fg_id++) {
 		eth_fg_set_current(fgs[fg_id]);
 
-		perfg_get(fg_id) = fg_id;
-		perfg_get(dev_idx) = fgs[fg_id]->dev_idx;
-
 		assert(fgs[fg_id]->cur_cpu == percpu_get(cpu_id));
 
 		tcp_init();
@@ -394,7 +391,7 @@ static int init_hw(void)
 			eth_fg_init_cpu(&eth->data->rx_fgs[j]);
 			fgs[fg_id] = &eth->data->rx_fgs[j];
 			fgs[fg_id]->dev_idx = i;
-
+			fgs[fg_id]->fg_id = fg_id;
 			fg_id++;
 		}
 	}

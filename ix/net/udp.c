@@ -79,6 +79,7 @@ static void udp_mbuf_done(struct mbuf *pkt)
 static int udp_output(struct mbuf *__restrict pkt,
 		      struct ip_tuple *__restrict id, size_t len)
 {
+	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
 	struct eth_hdr *ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
 	struct ip_hdr *iphdr = mbuf_nextd(ethhdr, struct ip_hdr *);
 	struct udp_hdr *udphdr = mbuf_nextd(iphdr, struct udp_hdr *);
@@ -108,7 +109,7 @@ static int udp_output(struct mbuf *__restrict pkt,
 	pkt->len = UDP_PKT_SIZE;
 
 	assert (perfg_exists());
-	ret = eth_send(percpu_get(eth_txqs)[perfg_get(dev_idx)],pkt);
+	ret = eth_send(percpu_get(eth_txqs)[cur_fg->dev_idx],pkt);
 	if (ret)
 		return ret;
 

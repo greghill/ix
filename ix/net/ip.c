@@ -174,7 +174,7 @@ int ip_output_hinted(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest,
 	pkt->ol_flags = PKT_TX_IP_CKSUM;
 	pkt->ol_flags |= PKT_TX_TCP_CKSUM;
 
-	ret = eth_send_one(percpu_get(eth_txqs)[perfg_get(dev_idx)],pkt, sizeof(struct eth_hdr) +
+	ret = eth_send_one(percpu_get(eth_txqs)[percpu_get(the_cur_fg)->dev_idx],pkt, sizeof(struct eth_hdr) +
 				sizeof(struct ip_hdr) + p->tot_len);
 	if (unlikely(ret)) {
 		mbuf_free(pkt);

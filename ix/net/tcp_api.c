@@ -15,6 +15,7 @@
 
 #include <lwip/tcp.h>
 
+
 #define MAX_PCBS	(512*1024)
 
 /* FIXME: this should be probably per queue */
@@ -89,11 +90,11 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
  *
  * Returns a handle.
  */
-static inline hid_t tcpapi_to_handle(struct tcpapi_pcb *pcb)
+static inline hid_t tcpapi_to_handle(struct eth_fg *cur_fg,struct tcpapi_pcb *pcb)
 {
 	struct mempool *p = &percpu_get(pcb_mempool);
 	MEMPOOL_SANITY_ACCESS(pcb);
-	hid_t hid = mempool_ptr_to_idx(p,pcb,TCPAPI_PCB_SIZE) | ((uintptr_t) (perfg_get(fg_id)) << 48);
+	hid_t hid = mempool_ptr_to_idx(p,pcb,TCPAPI_PCB_SIZE) | ((uintptr_t) (cur_fg->fg_id) << 48);
 	return hid;
 }
 
@@ -402,11 +403,11 @@ static err_t on_sent(void *arg, struct tcp_pcb *pcb, u16_t len)
 
 static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 {
+	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
 	struct tcpapi_pcb *api;
 	struct ip_tuple *id;
 	hid_t handle;
 	
-	assert(perfg_exists());
 
 	log_debug("tcpapi: on_accept - arg %p, pcb %p, err %d\n",
 		  arg, pcb, err);
@@ -436,14 +437,12 @@ static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
 	tcp_sent(pcb, on_sent);
 #endif
 
-//	tcp_accepted(perfg_get(listen_pcb));
-
 	id->src_ip = 0; /* FIXME: LWIP doesn't provide this information :( */
 	id->dst_ip = cfg_host_addr.addr;
 	id->src_port = pcb->local_port;
 	id->dst_port = pcb->remote_port;
 	api->id = id;
-	handle = tcpapi_to_handle(api);
+	handle = tcpapi_to_handle(cur_fg,api);
 	api->handle = handle;
 	id = (struct ip_tuple *)
 		mempool_pagemem_to_iomap(&percpu_get(id_mempool), id);
@@ -559,6 +558,9 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
                 return -RET_FAULT;
 	}
 
+	assert (percpu_get(the_cur_fg));
+	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
+
 	pcb = tcp_new();
 	if (unlikely(!pcb))
 		goto pcb_fail;
@@ -578,7 +580,7 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 
 	tcp_arg(pcb, api);
 
-	api->handle = tcpapi_to_handle(api);
+	api->handle = tcpapi_to_handle(cur_fg,api);
 
 #if  LWIP_CALLBACK_API
 	tcp_recv(pcb, on_recv);
@@ -605,6 +607,79 @@ connect_fail:
 pcb_fail:
 
 	return -RET_NOMEM;
+}
+
+
+
+/* derived from ip_output_hinted; a mess because of conflicts between LWIP and IX */
+extern int arp_lookup_mac(struct ip_addr *addr, struct eth_addr *mac);
+
+int tcp_output_packet(struct eth_fg *cur_fg,struct tcp_pcb *pcb, struct pbuf *p)
+{
+	int ret;
+	struct mbuf *pkt;
+	struct eth_hdr *ethhdr;
+	struct ip_hdr *iphdr;
+	unsigned char *payload;
+	struct pbuf *curp;
+	struct ip_addr dst_addr;
+
+	struct  eth_tx_queue *txq = percpu_get(eth_txqs)[cur_fg->dev_idx];
+
+	pkt = mbuf_alloc_local();
+	if (unlikely(!pkt))
+		return -ENOMEM;
+
+	ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
+	iphdr = mbuf_nextd(ethhdr, struct ip_hdr *);
+	payload = mbuf_nextd(iphdr, unsigned char *);
+
+	if (pcb->dst_eth_addr[0]) { 
+		memcpy(&ethhdr->dhost,pcb->dst_eth_addr,6);
+	} else {
+		dst_addr.addr = ntoh32(pcb->remote_ip.addr);
+		if (arp_lookup_mac(&dst_addr, &ethhdr->dhost)) {
+			log_err("ARP lookup failed. PCB=%x IP=%x\n",pcb->remote_ip.addr,dst_addr.addr);
+			mbuf_free(pkt);
+			return -EIO;
+		}
+		memcpy(pcb->dst_eth_addr,&ethhdr->dhost,6);
+	}
+
+	ethhdr->shost = cfg_mac;
+	ethhdr->type = hton16(ETHTYPE_IP);
+
+	/* setup IP hdr */
+	IPH_VHL_SET(iphdr,4,sizeof(struct ip_hdr) / 4);
+	//iphdr->header_len = sizeof(struct ip_hdr) / 4;
+	//iphdr->version = 4;
+	iphdr->_len = hton16(sizeof(struct ip_hdr) + p->tot_len);
+	iphdr->_id = 0;
+	iphdr->_offset = 0;
+	iphdr->_proto = IP_PROTO_TCP;
+	iphdr->_chksum = 0;
+	iphdr->_tos = pcb->tos;
+	iphdr->_ttl = pcb->ttl;
+	iphdr->src.addr = pcb->local_ip.addr;
+	iphdr->dest.addr = pcb->remote_ip.addr;
+	
+	for (curp = p; curp; curp = curp->next) {
+		memcpy(payload, curp->payload, curp->len);
+		payload += curp->len;
+	}
+
+	/* Offload IP and TCP tx checksums */
+	pkt->ol_flags = PKT_TX_IP_CKSUM;
+	pkt->ol_flags |= PKT_TX_TCP_CKSUM;
+							 
+	ret = eth_send_one(txq,pkt, sizeof(struct eth_hdr) +
+			   sizeof(struct ip_hdr) + p->tot_len);
+	if (unlikely(ret)) {
+		mbuf_free(pkt);
+		return -EIO;
+	}
+
+	return 0;
 }
 
 
@@ -655,4 +730,5 @@ int tcp_api_init_fg(void)
 
 	return 0;
 }
+
 

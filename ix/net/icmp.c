@@ -18,7 +18,7 @@
 
 #include "net.h"
 
-static int icmp_reflect(struct mbuf *pkt, struct icmp_hdr *hdr, int len)
+static int icmp_reflect(struct eth_fg *cur_fg,struct mbuf *pkt, struct icmp_hdr *hdr, int len)
 {
 	struct eth_hdr *ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
 	struct ip_hdr *iphdr = mbuf_nextd(ethhdr, struct ip_hdr *);
@@ -37,7 +37,7 @@ static int icmp_reflect(struct mbuf *pkt, struct icmp_hdr *hdr, int len)
 	pkt->ol_flags = 0;
 
 
-	ret = eth_send_one(percpu_get(eth_txqs)[perfg_get(dev_idx)],pkt, pkt->len);
+	ret = eth_send_one(percpu_get(eth_txqs)[cur_fg->dev_idx],pkt, pkt->len);
 
 	if (unlikely(ret)) {
 		mbuf_free(pkt);
@@ -65,7 +65,7 @@ void icmp_input(struct mbuf *pkt, struct icmp_hdr *hdr, int len)
 	switch(hdr->type) {
 	case ICMP_ECHO:
 		hdr->type = ICMP_ECHOREPLY;
-		icmp_reflect(pkt, hdr, len);
+		icmp_reflect(percpu_get(the_cur_fg),pkt, hdr, len);
 		break;
 	case ICMP_ECHOREPLY:
 	{
@@ -92,7 +92,7 @@ out:
 	mbuf_free(pkt);
 }
 
-int icmp_echo(struct ip_addr *dest, uint16_t id, uint16_t seq, uint64_t timestamp)
+int icmp_echo(struct eth_fg *cur_fg, struct ip_addr *dest, uint16_t id, uint16_t seq, uint64_t timestamp)
 {
 	int ret;
 	struct mbuf *pkt;
@@ -146,8 +146,7 @@ int icmp_echo(struct ip_addr *dest, uint16_t id, uint16_t seq, uint64_t timestam
 	pkt->ol_flags = 0;	
 	
 	/* FIXME -- unclear if fg is/should be set */
-	assert (perfg_exists());
-	ret = eth_send_one(percpu_get(eth_txqs)[perfg_get(dev_idx)],pkt, sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + len);
+	ret = eth_send_one(percpu_get(eth_txqs)[cur_fg->dev_idx],pkt, sizeof(struct eth_hdr) + sizeof(struct ip_hdr) + len);
 
 	if (unlikely(ret)) {
 		mbuf_free(pkt);

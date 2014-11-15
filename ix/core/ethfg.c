@@ -16,13 +16,11 @@ extern const char __perfg_start[];
 extern const char __perfg_end[];
 
 DEFINE_PERCPU(void *, fg_offset);
+DEFINE_PERCPU(struct eth_fg *,the_cur_fg);
 
 int nr_flow_groups;
 
 struct eth_fg *fgs[ETH_MAX_TOTAL_FG];
-
-DEFINE_PERFG(int, dev_idx);
-DEFINE_PERFG(int, fg_id);
 
 
 struct queue {
@@ -187,7 +185,7 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
 
 	percpu_get(migration_info).prev_cpu = percpu_get(cpu_id);
 	percpu_get(migration_info).target_cpu = cpu;
-	timer_percpu_add(&percpu_get(migration_info).transition_timeout, TRANSITION_TIMEOUT);
+	timer_add(NULL,&percpu_get(migration_info).transition_timeout, TRANSITION_TIMEOUT);
 }
 
 static void transition_handler_prev(struct timer *t)
