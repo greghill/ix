@@ -108,16 +108,12 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 	pcap_write(pkt);
 #endif
 
-	switch (ntoh16(ethhdr->type)) {
-	case ETHTYPE_IP:
+	if (ethhdr->type == hton16(ETHTYPE_IP))
 		ip_input(fg, pkt, mbuf_nextd(ethhdr, struct ip_hdr *));
-		break;
-	case ETHTYPE_ARP:
+	else if (ethhdr->type == hton16(ETHTYPE_ARP))
 		arp_input(pkt, mbuf_nextd(ethhdr, struct arp_hdr *));
-		break;
-	default:
+	else
 		mbuf_free(pkt);
-	}
 
 //	unset_current_queue();
 	unset_current_fg();
