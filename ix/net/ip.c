@@ -37,7 +37,7 @@ void ip_addr_to_str(struct ip_addr *addr, char *str)
                  (addr->addr & 0xff));
 }
 
-static void ip_input(struct mbuf *pkt, struct ip_hdr *hdr)
+static void ip_input(struct eth_fg *cur_fg, struct mbuf *pkt, struct ip_hdr *hdr)
 {
 	int hdrlen, pktlen;
 
@@ -69,7 +69,7 @@ static void ip_input(struct mbuf *pkt, struct ip_hdr *hdr)
 	switch(hdr->proto) {
 	case IPPROTO_TCP:
 		/* FIXME: change when we integrate better with LWIP */
-		tcp_input_tmp(pkt, hdr, mbuf_nextd_off(hdr, void *, hdrlen));
+		tcp_input_tmp(cur_fg, pkt, hdr, mbuf_nextd_off(hdr, void *, hdrlen));
 		break;
 	case IPPROTO_UDP:
 		udp_input(pkt, hdr,
@@ -110,7 +110,7 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 
 	switch (ntoh16(ethhdr->type)) {
 	case ETHTYPE_IP:
-		ip_input(pkt, mbuf_nextd(ethhdr, struct ip_hdr *));
+		ip_input(fg, pkt, mbuf_nextd(ethhdr, struct ip_hdr *));
 		break;
 	case ETHTYPE_ARP:
 		arp_input(pkt, mbuf_nextd(ethhdr, struct arp_hdr *));
