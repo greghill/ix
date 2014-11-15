@@ -233,6 +233,7 @@ static void transition_handler_target(void *info_)
 	pkt = q->head;
 	while (pkt) {
 		next = pkt->next;
+		pkt->pool = &percpu_get(mbuf_mempool);
 		/* FIXME: Hard to get queue at this point. Nevertheless, it is
 		 * not used in eth_input */
 		eth_input(NULL, pkt);
@@ -245,6 +246,7 @@ static void transition_handler_target(void *info_)
 	pkt = q->head;
 	while (pkt) {
 		next = pkt->next;
+		assert(pkt->pool == &percpu_get(mbuf_mempool));
 		/* FIXME: see previous */
 		eth_input(NULL, pkt);
 		pkt = next;
