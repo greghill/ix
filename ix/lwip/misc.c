@@ -40,7 +40,7 @@ void tcp_input_tmp(struct eth_fg *cur_fg, struct mbuf *pkt, struct ip_hdr *iphdr
 	pbuf->mbuf = pkt;
 //	percpu_get(ip_data).current_iphdr_dest.addr = iphdr->dst_addr.addr;
 //	percpu_get(ip_data).current_iphdr_src.addr = iphdr->src_addr.addr;
-	tcp_input(cur_fg,pbuf, &iphdr->src_addr.addr,&iphdr->dst_addr);
+	tcp_input(cur_fg,pbuf, &iphdr->src_addr,&iphdr->dst_addr);
 }
 
 
