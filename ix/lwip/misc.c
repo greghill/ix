@@ -56,6 +56,7 @@ DEFINE_PERCPU(struct mempool, tcp_pcb_listen_mempool __attribute__ ((aligned (64
 DEFINE_PERCPU(struct mempool, tcp_seg_mempool __attribute__ ((aligned (64))));
 
 #define MEMP_SIZE (256*1024)
+#define PBUF_CAPACITY (768*1024)
 
 #define PBUF_WITH_PAYLOAD_SIZE 4096
 
@@ -66,7 +67,7 @@ static int init_mempool(struct mempool_datastore *m, int nr_elems, size_t elem_l
 
 int memp_init(void)
 {
-	if (init_mempool(&pbuf_ds, MEMP_SIZE, memp_sizes[MEMP_PBUF],"pbuf"))
+	if (init_mempool(&pbuf_ds, PBUF_CAPACITY, memp_sizes[MEMP_PBUF],"pbuf"))
 		return 1;
 
 	if (init_mempool(&pbuf_with_payload_ds, MEMP_SIZE, PBUF_WITH_PAYLOAD_SIZE,"pbuf_payload"))
