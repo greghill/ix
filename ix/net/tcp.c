@@ -551,7 +551,7 @@ tcp_bind(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port)
     ipX_addr_set(PCB_ISIPV6(pcb), &pcb->local_ip, ip_2_ipX(ipaddr));
   }
   pcb->local_port = port;
-  TCP_REG(&cur_fg->bound_pcbs, pcb,percpu_get(cur_fg));
+  TCP_REG(&cur_fg->bound_pcbs, pcb,percpu_get(the_cur_fg));
   LWIP_DEBUGF(TCP_DEBUG, ("tcp_bind: bind to port %"U16_F"\n", port));
   return ERR_OK;
 }
