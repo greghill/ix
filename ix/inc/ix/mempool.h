@@ -60,7 +60,6 @@ struct mempool_datastore {
 struct mempool {
 	// hot fields: 
 	struct mempool_hdr	*head;
-	int                     num_alloc;
 	int                     num_free;
 	size_t                  elem_len;
 
@@ -135,7 +134,6 @@ static inline void *mempool_alloc(struct mempool *m)
 
 	if (likely(h)) {
 		m->head = h->next;
-		m->num_alloc++;
 		m->num_free--;
 		return (void *) h;
 	} else {
@@ -158,7 +156,6 @@ static inline void mempool_free(struct mempool *m, void *ptr)
 
 	if (likely(m->num_free<m->chunk_size)) {
 		m->num_free++;
-		m->num_alloc--;
 		elem->next = m->head;
 		m->head = elem;	
 	} else 

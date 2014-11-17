@@ -120,7 +120,7 @@ err_t ip_output_if(struct pbuf *p, ip_addr_t *src, ip_addr_t *dest,
        u8_t ttl, u8_t tos, u8_t proto,
        struct netif *netif);
 #if LWIP_NETIF_HWADDRHINT
-err_t ip_output_hinted(struct pbuf *p, ip_addr_t *src, ip_addr_t *dest,
+err_t ip_output_hinted(struct eth_fg *,struct pbuf *p, ip_addr_t *src, ip_addr_t *dest,
        u8_t ttl, u8_t tos, u8_t proto, u8_t *addr_hint);
 #endif /* LWIP_NETIF_HWADDRHINT */
 #if IP_OPTIONS_SEND

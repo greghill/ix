@@ -146,7 +146,7 @@ static int __timer_add(struct eth_fg *cur_fg,struct timerwheel *tw, struct timer
 	return 0;
 }
 
-int timer_add(struct eth_fg *cur_fg,struct timer *t, uint64_t usecs)
+int timer_add(struct timer *t, struct eth_fg *cur_fg,uint64_t usecs)
 {
 	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
 	return __timer_add(cur_fg,tw,t,usecs);
@@ -156,7 +156,7 @@ int timer_add(struct eth_fg *cur_fg,struct timer *t, uint64_t usecs)
 /** 
  *  timer_add_abs -- use absoute time (in usecs)
  */ 
-void timer_add_abs(struct eth_fg *cur_fg,struct timer *t, uint64_t abs_usecs)
+void timer_add_abs(struct timer *t, struct eth_fg *cur_fg,uint64_t abs_usecs)
 {
         struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
 	assert (abs_usecs > tw->timer_pos);
@@ -177,7 +177,7 @@ uint64_t timer_now()
  * The timer is added to the nearest bucket and will fire the next
  * time timer_run() is called, assuming MIN_DELAY_US has elapsed.
  */
-void timer_add_for_next_tick(struct eth_fg *cur_fg,struct timer *t)
+void timer_add_for_next_tick(struct timer *t,struct eth_fg *cur_fg)
 {
 	struct timerwheel *tw = &percpu_get(timer_wheel_cpu);
         uint64_t expire_us = tw->now_us + MIN_DELAY_US;
@@ -200,7 +200,7 @@ static void timer_run_bucket(struct timerwheel *tw, struct hlist_head *h)
 		KSTATS_PUSH(timer_handler, &save);
 		if (t->fg_id >=0)
 			eth_fg_set_current(fgs[t->fg_id]);
-		t->handler(t);
+		t->handler(t,fgs[t->fg_id]);
 		KSTATS_POP(&save);
 	}
 	h->head = NULL;
@@ -223,7 +223,7 @@ static int timer_reinsert_bucket(struct timerwheel *tw, struct hlist_head *h, ui
 			KSTATS_PUSH(timer_handler, &save);
 			if (t->fg_id >=0)
 				eth_fg_set_current(fgs[t->fg_id]);
-			t->handler(t);
+			t->handler(t,fgs[t->fg_id]);
 			KSTATS_POP(&save);
 			continue;
 		}
@@ -390,7 +390,7 @@ timer_reinject_fgs(struct hlist_head *list,uint64_t timer_pos)
 		assert (t->fg_id>=0);
 		int64_t delay = t->expires - t_base;
 		if (delay<=0) 
-			timer_add_for_next_tick(fgs[t->fg_id],t);
+			timer_add_for_next_tick(t,fgs[t->fg_id]);
 		else 
 			__timer_add(fgs[t->fg_id],tw,t,delay);
 	}

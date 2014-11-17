@@ -18,7 +18,6 @@
 
 /* FIXME: remove when we integrate better with LWIP */
 #include <lwip/pbuf.h>
-
 #include "net.h"
 
 /**
@@ -76,7 +75,7 @@ static void ip_input(struct eth_fg *cur_fg, struct mbuf *pkt, struct ip_hdr *hdr
 			  mbuf_nextd_off(hdr, struct udp_hdr *, hdrlen));
 		break;
 	case IPPROTO_ICMP:
-		icmp_input(pkt,
+		icmp_input(cur_fg,pkt,
 			   mbuf_nextd_off(hdr, struct icmp_hdr *, hdrlen),
 			   pktlen);
 		break;
@@ -121,7 +120,7 @@ void eth_input(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 
 /* FIXME: change when we integrate better with LWIP */
 /* NOTE: This function is only called for TCP */
-int ip_output_hinted(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest,
+int ip_output_hinted(struct eth_fg *cur_fg,struct pbuf *p, struct ip_addr *src, struct ip_addr *dest,
 	      uint8_t ttl, uint8_t tos, uint8_t proto, uint8_t *dst_eth_addr)
 {
 	int ret;
@@ -170,7 +169,7 @@ int ip_output_hinted(struct pbuf *p, struct ip_addr *src, struct ip_addr *dest,
 	pkt->ol_flags = PKT_TX_IP_CKSUM;
 	pkt->ol_flags |= PKT_TX_TCP_CKSUM;
 
-	ret = eth_send_one(percpu_get(eth_txqs)[percpu_get(the_cur_fg)->dev_idx],pkt, sizeof(struct eth_hdr) +
+	ret = eth_send_one(percpu_get(eth_txqs)[cur_fg->dev_idx],pkt, sizeof(struct eth_hdr) +
 				sizeof(struct ip_hdr) + p->tot_len);
 	if (unlikely(ret)) {
 		mbuf_free(pkt);

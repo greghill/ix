@@ -208,7 +208,7 @@ struct icmp_pkt {
 
 #ifdef _KERNEL
 void	icmp_error(struct mbuf *, int, int, uint32_t, int);
-void	icmp_input(struct mbuf *, int);
+void	icmp_input(struct eth_fg *,struct mbuf *, int);
 int	ip_next_mtu(int, int);
 #endif
 

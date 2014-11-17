@@ -342,7 +342,7 @@ enum lwip_event {
   LWIP_EVENT_ERR
 };
 
-err_t lwip_tcp_event(void *arg, struct tcp_pcb *pcb,
+err_t lwip_tcp_event(struct eth_fg *,void *arg, struct tcp_pcb *pcb,
          enum lwip_event,
          struct pbuf *p,
          u16_t size,
@@ -351,7 +351,7 @@ err_t lwip_tcp_event(void *arg, struct tcp_pcb *pcb,
 #endif /* LWIP_EVENT_API */
 
 /* Application program's interface: */
-struct tcp_pcb * tcp_new     (void);
+struct tcp_pcb * tcp_new     (struct eth_fg *);
 
 void             tcp_arg     (struct tcp_pcb *pcb, void *arg);
 void             tcp_accept  (struct tcp_pcb *pcb, tcp_accept_fn accept);
@@ -376,19 +376,19 @@ void             tcp_err     (struct tcp_pcb *pcb, tcp_err_fn err);
                                                (pcb)->state == LISTEN)
 #endif /* TCP_LISTEN_BACKLOG */
 
-void             tcp_recved  (struct tcp_pcb *pcb, u32_t len);
-err_t            tcp_bind    (struct tcp_pcb *pcb, ip_addr_t *ipaddr,
+	void             tcp_recved  (struct eth_fg *cur_fg,struct tcp_pcb *pcb, u32_t len);
+err_t            tcp_bind    (struct eth_fg *cur_fg,struct tcp_pcb *pcb, ip_addr_t *ipaddr,
                               u16_t port);
-err_t            tcp_connect (struct tcp_pcb *pcb, ip_addr_t *ipaddr,
+err_t            tcp_connect (struct eth_fg *cur_fg,struct tcp_pcb *pcb, ip_addr_t *ipaddr,
                               u16_t port, tcp_connected_fn connected);
 
 extern int tcp_listen_with_backlog(struct tcp_pcb_listen *, u8_t backlog, ip_addr_t *addr, u16_t port);
 #define          tcp_listen(pcb) tcp_listen_with_backlog(pcb, TCP_DEFAULT_LISTEN_BACKLOG)
 
-void             tcp_abort (struct tcp_pcb *pcb);
-err_t            tcp_close   (struct tcp_pcb *pcb);
-err_t            tcp_shutdown(struct tcp_pcb *pcb, int shut_rx, int shut_tx);
-void tcp_close_with_reset(struct tcp_pcb *pcb);
+void             tcp_abort   (struct eth_fg *cur_fg,struct tcp_pcb *pcb);
+err_t            tcp_close   (struct eth_fg *cur_fg,struct tcp_pcb *pcb);
+err_t            tcp_shutdown(struct eth_fg *cur_fg,struct tcp_pcb *pcb, int shut_rx, int shut_tx);
+void tcp_close_with_reset    (struct eth_fg *cur_fg,struct tcp_pcb *pcb);
 
 /* Flags for "apiflags" parameter in tcp_write */
 #define TCP_WRITE_FLAG_COPY 0x01
@@ -403,13 +403,13 @@ void             tcp_setprio (struct tcp_pcb *pcb, u8_t prio);
 #define TCP_PRIO_NORMAL 64
 #define TCP_PRIO_MAX    127
 
-err_t            tcp_output  (struct tcp_pcb *pcb);
+err_t            tcp_output  (struct eth_fg *cur_fg,struct tcp_pcb *pcb);
 
 
 const char* tcp_debug_state_str(enum tcp_state s);
 
 #if LWIP_IPV6
-struct tcp_pcb * tcp_new_ip6 (void);
+struct tcp_pcb * tcp_new_ip6 (struct eth_fg *);
 #define          tcp_bind_ip6(pcb, ip6addr, port) \
                    tcp_bind(pcb, ip6_2_ip(ip6addr), port)
 #define          tcp_connect_ip6(pcb, ip6addr, port, connected) \

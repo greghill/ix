@@ -56,7 +56,7 @@ static DEFINE_PERCPU(struct mempool, id_mempool __attribute__ ((aligned (64))));
  *
  * Return a PCB, or NULL if the handle is invalid.
  */
-static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
+static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle, struct eth_fg **new_cur_fg)
 {
 	struct mempool *p;
 	struct tcpapi_pcb *api;
@@ -68,8 +68,8 @@ static inline struct tcpapi_pcb *handle_to_tcpapi(hid_t handle)
 	if (unlikely(idx >= MAX_PCBS))
 		return NULL;
 
+	*new_cur_fg = fgs[fg];
 	eth_fg_set_current(fgs[fg]);
-	//set_current_queue(percpu_get(eth_rxqs[perfg_get(dev_idx)]));
 	p = &percpu_get(pcb_mempool);
 
 	api = (struct tcpapi_pcb *) mempool_idx_to_ptr(p,idx,TCPAPI_PCB_SIZE);
@@ -122,7 +122,8 @@ long bsys_tcp_accept(hid_t handle, unsigned long cookie)
 	 * synchronous API.
 	 */
 
-	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
+	struct eth_fg *cur_fg;
+	struct tcpapi_pcb *api = handle_to_tcpapi(handle,&cur_fg);
 	struct pbuf *tmp;
 
 	KSTATS_VECTOR(bsys_tcp_accept);
@@ -179,7 +180,8 @@ ssize_t bsys_tcp_send(hid_t handle, void *addr, size_t len)
 ssize_t bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
 		       unsigned int nrents)
 {
-	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
+	struct eth_fg *cur_fg;
+	struct tcpapi_pcb *api = handle_to_tcpapi(handle,&cur_fg);
 	int i;
 	size_t len_xmited = 0;
 
@@ -239,14 +241,15 @@ ssize_t bsys_tcp_sendv(hid_t handle, struct sg_entry __user *ents,
 	}
 
 	if (len_xmited)
-		tcp_output(api->pcb);
+		tcp_output(cur_fg,api->pcb);
 
 	return len_xmited;
 }
 
 long bsys_tcp_recv_done(hid_t handle, size_t len)
 {
-	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
+	struct eth_fg *cur_fg;
+	struct tcpapi_pcb *api = handle_to_tcpapi(handle,&cur_fg);
 	struct pbuf *recvd, *next;
 
 	KSTATS_VECTOR(bsys_tcp_recv_done);
@@ -262,7 +265,7 @@ long bsys_tcp_recv_done(hid_t handle, size_t len)
 	recvd = api->recvd;
 
 	if (api->pcb)
-		tcp_recved(api->pcb, len);
+		tcp_recved(cur_fg,api->pcb, len);
 	while (recvd) {
 		if (len < recvd->len)
 			break;
@@ -279,7 +282,8 @@ long bsys_tcp_recv_done(hid_t handle, size_t len)
 
 long bsys_tcp_close(hid_t handle)
 {
-	struct tcpapi_pcb *api = handle_to_tcpapi(handle);
+	struct eth_fg *cur_fg;
+	struct tcpapi_pcb *api = handle_to_tcpapi(handle,&cur_fg);
 	struct pbuf *recvd, *next;
 
 	KSTATS_VECTOR(bsys_tcp_close);
@@ -292,7 +296,7 @@ long bsys_tcp_close(hid_t handle)
 	}
 
 	if (api->pcb) {
-		tcp_close_with_reset(api->pcb);
+		tcp_close_with_reset(cur_fg,api->pcb);
 	}
 
 	recvd = api->recvd;
@@ -401,9 +405,8 @@ static err_t on_sent(void *arg, struct tcp_pcb *pcb, u16_t len)
 	return ERR_OK;
 }
 
-static err_t on_accept(void *arg, struct tcp_pcb *pcb, err_t err)
+static err_t on_accept(struct eth_fg *cur_fg,void *arg, struct tcp_pcb *pcb, err_t err)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
 	struct tcpapi_pcb *api;
 	struct ip_tuple *id;
 	hid_t handle;
@@ -473,7 +476,7 @@ static err_t on_connected(void *arg, struct tcp_pcb *pcb, err_t err)
  */
 
 err_t 
-lwip_tcp_event(void *arg, struct tcp_pcb *pcb,
+lwip_tcp_event(struct eth_fg *cur_fg,void *arg, struct tcp_pcb *pcb,
 	       enum lwip_event event,
 	       struct pbuf *p,
 	       u16_t size,
@@ -481,7 +484,7 @@ lwip_tcp_event(void *arg, struct tcp_pcb *pcb,
 {
 	switch (event) {
 	case LWIP_EVENT_ACCEPT:
-		return on_accept(arg,pcb,err);
+		return on_accept(cur_fg,arg,pcb,err);
 		break;
 	case LWIP_EVENT_SENT:
 		return on_sent(arg,pcb,size);
@@ -507,10 +510,22 @@ lwip_tcp_event(void *arg, struct tcp_pcb *pcb,
 }
 
 /* FIXME: we should maintain a bitmap to hold the available TCP ports */
-int get_local_port_and_set_queue(struct ip_tuple *id)
+
+/* FIXME: 
+   -- this is totally broken with flow-group migration.  The match should be based on a matching fgid for that device 
+   -- for multi-device bonds, need to also figure out (and reverse) the L3+L4 bond that is in place. 
+   -- performance will be an issue as well with 1/128 probability of success (from 1/16).
+ 
+   -- short version: need to fix this by using flow director for all outbound connections.  (EdB 2014-11-17)
+*/
+
+struct eth_fg *get_local_port_and_set_queue(struct ip_tuple *id)
 {
 	uint32_t hash;
 	uint32_t fg_idx;
+
+	if (eth_dev_count >1)
+		panic("tcp_connect not implemented for bonded interfaces\n");
 
 	if (!percpu_get(local_port))
 		percpu_get(local_port) = percpu_get(cpu_id) * PORTS_PER_CPU;
@@ -525,12 +540,16 @@ int get_local_port_and_set_queue(struct ip_tuple *id)
 		if (percpu_get(eth_rxqs[0])->dev->data->rx_fgs[fg_idx].cur_cpu == percpu_get(cpu_id)) {
 			id->src_port = percpu_get(local_port);
 			//set_current_queue(percpu_get(eth_rxqs)[0]);
+
+			// this will fail with eth_dev_count >1
+			assert (&percpu_get(eth_rxqs[0])->dev->data->rx_fgs[fg_idx] == fgs[fg_idx]);
 			eth_fg_set_current(&percpu_get(eth_rxqs[0])->dev->data->rx_fgs[fg_idx]);
-			return 0;
+
+			return fgs[fg_idx];
 		}
 	}
 
-	return 1;
+	return 0;
 }
 
 long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
@@ -554,14 +573,12 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 
 	tmp.src_ip = cfg_host_addr.addr;
 
-	if (unlikely(get_local_port_and_set_queue(&tmp))) {
+	struct eth_fg *cur_fg = get_local_port_and_set_queue(&tmp);
+	if (unlikely (!cur_fg))
                 return -RET_FAULT;
-	}
 
-	assert (percpu_get(the_cur_fg));
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
 
-	pcb = tcp_new();
+	pcb = tcp_new(cur_fg);
 	if (unlikely(!pcb))
 		goto pcb_fail;
 	tcp_nagle_disable(pcb);
@@ -590,20 +607,20 @@ long bsys_tcp_connect(struct ip_tuple __user *id, unsigned long cookie)
 
 	addr.addr = hton32(tmp.src_ip);
 
-	err = tcp_bind(pcb, &addr, tmp.src_port);
+	err = tcp_bind(cur_fg,pcb, &addr, tmp.src_port);
 	if (unlikely(err != ERR_OK))
 		goto connect_fail;
 
 	addr.addr = hton32(tmp.dst_ip);
 
-	err = tcp_connect(pcb, &addr, tmp.dst_port, on_connected);
+	err = tcp_connect(cur_fg,pcb, &addr, tmp.dst_port, on_connected);
 	if (unlikely(err != ERR_OK))
 		goto connect_fail;
 
 	return api->handle;
 
 connect_fail:
-	tcp_abort(pcb);
+	tcp_abort(cur_fg,pcb);
 pcb_fail:
 
 	return -RET_NOMEM;

@@ -16,7 +16,6 @@ extern const char __perfg_start[];
 extern const char __perfg_end[];
 
 DEFINE_PERCPU(void *, fg_offset);
-DEFINE_PERCPU(struct eth_fg *,the_cur_fg);
 
 int nr_flow_groups;
 
@@ -41,7 +40,7 @@ DEFINE_PERCPU(struct hlist_head, remote_timers_list);
 DEFINE_PERCPU(uint64_t, remote_timer_pos);
 DEFINE_PERCPU(struct migration_info, migration_info);
 
-static void transition_handler_prev(struct timer *t);
+static void transition_handler_prev(struct timer *t, struct eth_fg *);
 static void transition_handler_target(void *fg_);
 static void migrate_pkts_to_remote(struct eth_fg *fg);
 static void migrate_timers_to_remote(int fg_id);
@@ -186,13 +185,14 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
 
 	percpu_get(migration_info).prev_cpu = percpu_get(cpu_id);
 	percpu_get(migration_info).target_cpu = cfg_cpu[cpu];
-	timer_add(NULL,&percpu_get(migration_info).transition_timeout, TRANSITION_TIMEOUT);
+	timer_add(&percpu_get(migration_info).transition_timeout, NULL,TRANSITION_TIMEOUT);
+
 }
 
-static void transition_handler_prev(struct timer *t)
+static void transition_handler_prev(struct timer *t, struct eth_fg *cur_fg)
 {
 	struct migration_info *info = container_of(t, struct migration_info, transition_timeout);
-
+	assert (cur_fg == 0);
 	cpu_run_on_one(transition_handler_target, info, info->target_cpu);
 }
 

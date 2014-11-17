@@ -79,7 +79,6 @@ static void udp_mbuf_done(struct mbuf *pkt)
 static int udp_output(struct mbuf *__restrict pkt,
 		      struct ip_tuple *__restrict id, size_t len)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
 	struct eth_hdr *ethhdr = mbuf_mtod(pkt, struct eth_hdr *);
 	struct ip_hdr *iphdr = mbuf_nextd(ethhdr, struct ip_hdr *);
 	struct udp_hdr *udphdr = mbuf_nextd(iphdr, struct udp_hdr *);
@@ -108,8 +107,17 @@ static int udp_output(struct mbuf *__restrict pkt,
 
 	pkt->len = UDP_PKT_SIZE;
 
-	assert (perfg_exists());
-	ret = eth_send(percpu_get(eth_txqs)[cur_fg->dev_idx],pkt);
+	/* FIXME: cur_fg makes no sense in the context of a UDP datagram send.   
+	 *        For single-device interfaces, this is trivial (there's only one dev_ix)
+	 *        For multi-device bonds, the interface needs to be provided implicitly or explicitly 
+	 */
+	
+	ret = 0;
+	if (eth_dev_count>1)
+		panic("udp_send not implemented for bonded interfaces\n");
+	else 
+		ret = eth_send(percpu_get(eth_txqs)[0],pkt);
+
 	if (ret)
 		return ret;
 

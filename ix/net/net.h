@@ -19,7 +19,7 @@ extern void arp_input(struct mbuf *pkt, struct arp_hdr *hdr);
 extern int arp_init(void);
 
 /* Internet Control Message Protocol (ICMP) definitions */
-extern void icmp_input(struct mbuf *pkt, struct icmp_hdr *hdr, int len);
+extern void icmp_input(struct eth_fg *,struct mbuf *pkt, struct icmp_hdr *hdr, int len);
 
 /* Unreliable Datagram Protocol (UDP) definitions */
 extern void udp_input(struct mbuf *pkt, struct ip_hdr *iphdr,

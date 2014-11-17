@@ -52,7 +52,7 @@ static int icmp_reflect(struct eth_fg *cur_fg,struct mbuf *pkt, struct icmp_hdr 
  * @pkt: the packet
  * @hdr: the ICMP header
  */
-void icmp_input(struct mbuf *pkt, struct icmp_hdr *hdr, int len)
+void icmp_input(struct eth_fg *cur_fg,struct mbuf *pkt, struct icmp_hdr *hdr, int len)
 {
 	if (len < ICMP_MINLEN)
 		goto out;
@@ -65,7 +65,7 @@ void icmp_input(struct mbuf *pkt, struct icmp_hdr *hdr, int len)
 	switch(hdr->type) {
 	case ICMP_ECHO:
 		hdr->type = ICMP_ECHOREPLY;
-		icmp_reflect(percpu_get(the_cur_fg),pkt, hdr, len);
+		icmp_reflect(cur_fg,pkt, hdr, len);
 		break;
 	case ICMP_ECHOREPLY:
 	{

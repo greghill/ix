@@ -330,7 +330,7 @@ done_tcp_input:
 
     /* If there is data which was previously "refused" by upper layer */
     if (pcb->refused_data != NULL) {
-      if ((tcp_process_refused_data(pcb) == ERR_ABRT) ||
+	    if ((tcp_process_refused_data(cur_fg,pcb) == ERR_ABRT) ||
         ((pcb->refused_data != NULL) && (lwip_context.tcplen > 0))) {
         /* pcb has been aborted or refused data is still refused and the new
            segment contains data */
@@ -406,7 +406,7 @@ done_tcp_input:
               pbuf_free(rest);
             }
 #endif /* TCP_QUEUE_OOSEQ && LWIP_WND_SCALE */
-            tcp_abort(pcb);
+            tcp_abort(cur_fg,pcb);
             goto aborted;
           }
 
@@ -460,7 +460,7 @@ done_tcp_input:
 
         percpu_get(tcp_input_pcb) = NULL;
         /* Try to send something out. */
-        tcp_output(pcb);
+        tcp_output(cur_fg,pcb);
 #if TCP_INPUT_DEBUG
 #if TCP_DEBUG
         tcp_debug_print_state(pcb->state);
@@ -532,8 +532,11 @@ tcp_listen_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb_listen *pcb, int
   if (lwip_ctxt->flags & TCP_ACK) {
     /* For incoming segments with the ACK flag set, respond with a
        RST. */    LWIP_DEBUGF(TCP_RST_DEBUG, ("tcp_listen_input: ACK in LISTEN, sending reset\n"));
-    tcp_rst(lwip_ctxt->ackno, lwip_ctxt->seqno + lwip_ctxt->tcplen, ipX_current_dest_addr(),
+	  {
+		  struct eth_fg *cur_fg = lwip_ctxt->cur_fg;
+		  tcp_rst(lwip_ctxt->ackno, lwip_ctxt->seqno + lwip_ctxt->tcplen, ipX_current_dest_addr(),
       ipX_current_src_addr(), lwip_ctxt->tcphdr->dest, lwip_ctxt->tcphdr->src, ip_current_is_v6());
+	  }
   } else if (lwip_ctxt->flags & TCP_SYN) {
     LWIP_DEBUGF(TCP_DEBUG, ("TCP connection request %"U16_F" -> %"U16_F".\n", lwip_ctxt->tcphdr->src, lwip_ctxt->tcphdr->dest));
 #if TCP_LISTEN_BACKLOG
@@ -598,7 +601,7 @@ tcp_listen_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb_listen *pcb, int
     /* Send a SYN|ACK together with the MSS option. */
     rc = tcp_enqueue_flags(npcb, TCP_SYN | TCP_ACK);
     if (rc != ERR_OK) {
-      tcp_abandon(npcb, 0);
+	    tcp_abandon(lwip_ctxt->cur_fg,npcb, 0);
       return rc;
     }
     
@@ -606,7 +609,7 @@ tcp_listen_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb_listen *pcb, int
     kstats_accumulate save;
 #endif
     KSTATS_PUSH(tcp_output_syn,&save);
-    rc = tcp_output(npcb);
+    rc = tcp_output(lwip_ctxt->cur_fg,npcb);
     KSTATS_POP(&save);
     return rc;
 
@@ -642,8 +645,11 @@ tcp_timewait_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb *pcb,ipX_addr_
        should be sent in reply */
     if (TCP_SEQ_BETWEEN(lwip_ctxt->seqno, pcb->rcv_nxt, pcb->rcv_nxt+pcb->rcv_wnd)) {
       /* If the SYN is in the window it is an error, send a reset */
-	    tcp_rst(lwip_ctxt->ackno, lwip_ctxt->seqno + lwip_ctxt->tcplen, ipX_current_dest_addr(),
-        ipX_current_src_addr(), lwip_ctxt->tcphdr->dest, lwip_ctxt->tcphdr->src, ip_current_is_v6());
+	    {
+		    struct eth_fg *cur_fg = lwip_ctxt->cur_fg;
+		    tcp_rst(lwip_ctxt->ackno, lwip_ctxt->seqno + lwip_ctxt->tcplen, ipX_current_dest_addr(),
+			    ipX_current_src_addr(), lwip_ctxt->tcphdr->dest, lwip_ctxt->tcphdr->src, ip_current_is_v6());
+	    }
       return ERR_OK;
     }
   } else if (lwip_ctxt->flags & TCP_FIN) {
@@ -655,7 +661,7 @@ tcp_timewait_input(struct LWIP_Context *lwip_ctxt, struct tcp_pcb *pcb,ipX_addr_
   if ((lwip_ctxt->tcplen > 0))  {
     /* Acknowledge data, FIN or out-of-window SYN */
     pcb->flags |= TF_ACK_NOW;
-    return tcp_output(pcb);
+    return tcp_output(lwip_ctxt->cur_fg,pcb);
   }
   return ERR_OK;
 }
@@ -800,7 +806,7 @@ tcp_process(struct LWIP_Context * lwip_ctxt, struct tcp_pcb *pcb,ipX_addr_t *cur
            * the connection. */
           /* Already aborted? */
           if (err != ERR_ABRT) {
-            tcp_abort(pcb);
+		  tcp_abort(cur_fg,pcb);
           }
           return ERR_ABRT;
         }
@@ -1494,7 +1500,7 @@ tcp_receive(struct LWIP_Context *lwip_ctxt,struct tcp_pcb *pcb)
 
       } else {
         /* We get here if the incoming segment is out-of-sequence. */
-        tcp_send_empty_ack(pcb);
+	      tcp_send_empty_ack(cur_fg,pcb);
 #if TCP_QUEUE_OOSEQ
         /* We queue the segment on the ->ooseq queue. */
         if (pcb->ooseq == NULL) {
@@ -1645,7 +1651,7 @@ tcp_receive(struct LWIP_Context *lwip_ctxt,struct tcp_pcb *pcb)
       }
     } else {
       /* The incoming segment is not withing the window. */
-      tcp_send_empty_ack(pcb);
+	    tcp_send_empty_ack(cur_fg,pcb);
     }
   } else {
     /* Segments with length 0 is taken care of here. Segments that

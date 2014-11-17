@@ -85,7 +85,7 @@ extern int tcp_output_packet(struct eth_fg *,struct tcp_pcb *pcb, struct pbuf *p
 #endif
 
 /* Forward declarations.*/
-static void tcp_output_segment(struct tcp_seg *seg, struct tcp_pcb *pcb);
+static void tcp_output_segment(struct eth_fg *cur_fg,struct tcp_seg *seg, struct tcp_pcb *pcb);
 
 /** Allocate a pbuf and create a tcphdr at p->payload, used for output
  * functions other than the default tcp_output -> tcp_output_segment
@@ -872,9 +872,8 @@ tcp_build_wnd_scale_option(u32_t *opts)
  * @param pcb Protocol control block for the TCP connection to send the ACK
  */
 err_t
-tcp_send_empty_ack(struct tcp_pcb *pcb)
+tcp_send_empty_ack(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
   struct pbuf *p;
   u8_t optlen = 0;
 #if LWIP_TCP_TIMESTAMPS || CHECKSUM_GEN_TCP
@@ -937,9 +936,9 @@ tcp_send_empty_ack(struct tcp_pcb *pcb)
  *         another err_t on error
  */
 err_t
-tcp_output(struct tcp_pcb *pcb)
+tcp_output(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
+
   struct tcp_seg *seg, *useg;
   u32_t wnd, snd_nxt;
 #if TCP_CWND_DEBUG
@@ -975,7 +974,7 @@ tcp_output(struct tcp_pcb *pcb)
   if (pcb->flags & TF_ACK_NOW &&
      (seg == NULL ||
       ntohl(seg->tcphdr->seqno) - pcb->lastack + seg->len > wnd)) {
-     return tcp_send_empty_ack(pcb);
+	  return tcp_send_empty_ack(cur_fg,pcb);
   }
 
   /* useg should point to last segment on unacked queue */
@@ -1042,7 +1041,7 @@ tcp_output(struct tcp_pcb *pcb)
 #if TCP_OVERSIZE_DBGCHECK
     seg->oversize_left = 0;
 #endif /* TCP_OVERSIZE_DBGCHECK */
-    tcp_output_segment(seg, pcb);
+    tcp_output_segment(cur_fg,seg, pcb);
     snd_nxt = ntohl(seg->tcphdr->seqno) + TCP_TCPLEN(seg);
     if (TCP_SEQ_LT(pcb->snd_nxt, snd_nxt)) {
       pcb->snd_nxt = snd_nxt;
@@ -1098,9 +1097,8 @@ tcp_output(struct tcp_pcb *pcb)
  * @param pcb the tcp_pcb for the TCP connection used to send the segment
  */
 static void
-tcp_output_segment(struct tcp_seg *seg, struct tcp_pcb *pcb)
+tcp_output_segment(struct eth_fg *cur_fg,struct tcp_seg *seg, struct tcp_pcb *pcb)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
   u16_t len;
   u32_t *opts;
 
@@ -1258,7 +1256,7 @@ tcp_output_segment(struct tcp_seg *seg, struct tcp_pcb *pcb)
  * @param remote_port the remote TCP port to send the segment to
  */
 void
-tcp_rst_impl(u32_t seqno, u32_t ackno,
+tcp_rst_impl(struct eth_fg *cur_fg,u32_t seqno, u32_t ackno,
   ipX_addr_t *local_ip, ipX_addr_t *remote_ip,
   u16_t local_port, u16_t remote_port
 #if LWIP_IPV6
@@ -1311,7 +1309,7 @@ tcp_rst_impl(u32_t seqno, u32_t ackno,
  * @param pcb the tcp_pcb for which to re-enqueue all unacked segments
  */
 void
-tcp_rexmit_rto(struct tcp_pcb *pcb)
+tcp_rexmit_rto(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 {
   struct tcp_seg *seg;
 
@@ -1341,7 +1339,7 @@ tcp_rexmit_rto(struct tcp_pcb *pcb)
   pcb->rttest = 0;
 
   /* Do the actual retransmission */
-  tcp_output(pcb);
+  tcp_output(cur_fg,pcb);
 }
 
 /**
@@ -1441,9 +1439,9 @@ tcp_rexmit_fast(struct tcp_pcb *pcb)
  * @param pcb the tcp_pcb for which to send a keepalive packet
  */
 void
-tcp_keepalive(struct tcp_pcb *pcb)
+tcp_keepalive(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
+
   struct pbuf *p;
 #if CHECKSUM_GEN_TCP
   struct tcp_hdr *tcphdr;
@@ -1496,9 +1494,9 @@ tcp_keepalive(struct tcp_pcb *pcb)
  * @param pcb the tcp_pcb for which to send a zero-window probe packet
  */
 void
-tcp_zero_window_probe(struct tcp_pcb *pcb)
+tcp_zero_window_probe(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
+
   struct pbuf *p;
   struct tcp_hdr *tcphdr;
   struct tcp_seg *seg;

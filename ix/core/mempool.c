@@ -105,6 +105,7 @@ void mempool_free_2(struct mempool *m, void *ptr)
 	}
 	m->private_chunk = m->head;
 	m->head = elem;
+	m->num_free = 1;
 }
 
 

@@ -10,7 +10,7 @@ struct eth_fg;
 
 struct timer {
 	struct hlist_node link;
-	void (*handler)(struct timer *t);
+	void (*handler)(struct timer *t, struct eth_fg *cur_fg);
 	uint64_t expires;
 	int fg_id;
 };
@@ -24,7 +24,7 @@ struct timer {
  * @t: the timer
  */
 static inline void
-timer_init_entry(struct timer *t, void (*handler)(struct timer *t))
+timer_init_entry(struct timer *t, void (*handler)(struct timer *t, struct eth_fg *))
 {
 	t->link.prev = NULL;
 	t->handler = handler;
@@ -41,9 +41,9 @@ static inline bool timer_pending(struct timer *t)
 	return t->link.prev != NULL;
 }
 
-extern int timer_add(struct eth_fg *,struct timer *t, uint64_t usecs);
-extern void timer_add_for_next_tick(struct eth_fg *,struct timer *t);
-extern void timer_add_abs(struct eth_fg *,struct timer *t,uint64_t usecs);
+extern int timer_add(struct timer *t, struct eth_fg *,uint64_t usecs);
+extern void timer_add_for_next_tick(struct timer *t,struct eth_fg *);
+extern void timer_add_abs(struct timer *t,struct eth_fg *,uint64_t usecs);
 extern uint64_t timer_now(void);
 
 static inline void __timer_del(struct timer *t)
@@ -62,11 +62,11 @@ static inline void __timer_del(struct timer *t)
  *
  * Returns 0 if successful, otherwise failure.
  */
-static inline int timer_mod(struct eth_fg *cur_fg,struct timer *t, uint64_t usecs)
+static inline int timer_mod(struct timer *t, struct eth_fg *cur_fg,uint64_t usecs)
 {
 	if (timer_pending(t))
 		__timer_del(t);
-	return timer_add(cur_fg,t, usecs);
+	return timer_add(t, cur_fg,usecs);
 }
 
 /**

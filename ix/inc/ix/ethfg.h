@@ -70,7 +70,15 @@ struct eth_fg_listener {
 extern void eth_fg_register_listener(struct eth_fg_listener *l);
 extern void eth_fg_unregister_listener(struct eth_fg_listener *l);
 
-DECLARE_PERCPU(struct eth_fg *,the_cur_fg); // ugly - avoid using
+/*
+ * READ THIS IF YOU ARE HACKING LWIP:
+ *
+ * The litteral "cur_fg" is implicitly used in MANY macros defines in tcp.h and tcp_impl.h
+ * cur_fg should NEVER be used other than to carry the current flow group
+ */
+
+
+//DECLARE_PERCPU(struct eth_fg *,the_cur_fg); // ugly - avoid using
 
 
 /**
@@ -83,18 +91,14 @@ DECLARE_PERCPU(struct eth_fg *,the_cur_fg); // ugly - avoid using
 static inline void eth_fg_set_current(struct eth_fg *fg)
 {
 	assert(fg->cur_cpu == percpu_get(cpu_id));
-	percpu_get(the_cur_fg) = fg;
+//	percpu_get(the_cur_fg) = fg;
 }
 
 static inline void unset_current_fg(void)
 {
-	percpu_get(the_cur_fg) = NULL;
+//	percpu_get(the_cur_fg) = NULL;
 }
 
-static inline int perfg_exists(void)
-{
-	return percpu_get(the_cur_fg) != NULL;
-}
 
 extern void eth_fg_init(struct eth_fg *fg, unsigned int idx);
 extern int eth_fg_init_cpu(struct eth_fg *fg);

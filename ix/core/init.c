@@ -46,7 +46,7 @@ extern int tcp_api_init_fg(void);
 extern int ixgbe_init(struct pci_dev *pci_dev,
 		      struct rte_eth_dev **ethp);
 extern int sandbox_init(int argc, char *argv[]);
-extern void tcp_init(void);
+extern void tcp_init(struct eth_fg *);
 extern int toeplitz_init(void);
 extern int cp_init(void);
 extern int mempool_init(void);
@@ -298,7 +298,7 @@ static int init_fg_cpu(void)
 
 		assert(fgs[fg_id]->cur_cpu == percpu_get(cpu_id));
 
-		tcp_init();
+		tcp_init(fgs[fg_id]);
 		ret = tcp_api_init_fg();
 		if (ret) {
 			log_err("init: failed to initialize tcp_api \n");

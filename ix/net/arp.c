@@ -57,7 +57,7 @@ static struct mempool_datastore arp_datastore;
 static struct mempool		arp_mempool;
 static struct hlist_head	arp_tbl[ARP_MAX_ENTRIES];
 
-static void arp_timer_handler(struct timer *t);
+static void arp_timer_handler(struct timer *t, struct eth_fg *cur_fg);
 
 static inline int arp_ip_to_idx(struct ip_addr *addr)
 {
@@ -137,7 +137,7 @@ static int arp_update_mac(struct ip_addr *addr,
 	e->mac = *mac;
 	e->flags = ARP_FLAG_VALID;
 	e->retries = 0;
-	timer_mod(NULL,&e->timer, ARP_REFRESH_TIMEOUT);
+	timer_mod(&e->timer, NULL, ARP_REFRESH_TIMEOUT);
 
 	return 0;
 }
@@ -289,7 +289,7 @@ int arp_lookup_mac(struct ip_addr *addr, struct eth_addr *mac)
 
 			e->flags |= ARP_FLAG_RESOLVING;
 			arp_send_pkt(ARP_OP_REQUEST, addr, &target);
-			timer_add(NULL, &e->timer,ARP_RESOLVE_TIMEOUT);
+			timer_add(&e->timer,NULL, ARP_RESOLVE_TIMEOUT);
 		}
 		return -EAGAIN;
 	}
@@ -329,9 +329,10 @@ int arp_insert(struct ip_addr *addr, struct eth_addr *mac)
 	return 0;
 }
 
-static void arp_timer_handler(struct timer *t)
+static void arp_timer_handler(struct timer *t, struct eth_fg *cur_fg)
 {
 	struct arp_entry *e = container_of(t, struct arp_entry, timer);
+	assert (cur_fg == NULL);
 
 	e->retries++;
 	if (e->retries >= ARP_MAX_ATTEMPTS) {
@@ -356,7 +357,7 @@ static void arp_timer_handler(struct timer *t)
 		arp_send_pkt(ARP_OP_REQUEST, &e->addr, &target);
 	}
 
-	timer_add(NULL,t, ARP_RETRY_TIMEOUT);
+	timer_add(t, NULL, ARP_RETRY_TIMEOUT);
 }
 
 /**

@@ -120,15 +120,14 @@ static u16_t tcp_new_port(void);
 
 DEFINE_PERCPU(struct tcp_global_percpu_lists,tcp_cpu_lists);
 
-static void tcpip_tcp_timer(struct timer *t);
+static void tcpip_tcp_timer(struct timer *t, struct eth_fg *cur_fg);
 
 /**
  * Initialize this module.
  */
 void
-tcp_init(void)
+tcp_init(struct eth_fg *cur_fg)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
 	
 	timer_init_entry(&cur_fg->tcpip_timer, tcpip_tcp_timer);
 
@@ -164,9 +163,8 @@ tcp_tmr(struct eth_fg *cur_fg)
   }
 }
 
-void tcp_close_with_reset(struct tcp_pcb *pcb)
+void tcp_close_with_reset(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
 	MEMPOOL_SANITY_ACCESS(pcb);
 	tcp_rst(pcb->snd_nxt, pcb->rcv_nxt, &pcb->local_ip, &pcb->remote_ip, pcb->local_port, pcb->remote_port, PCB_ISIPV6(pcb));
 	tcp_pcb_purge(pcb);
@@ -287,7 +285,7 @@ tcp_close_shutdown(struct eth_fg *cur_fg,struct tcp_pcb *pcb, u8_t rst_on_unacke
     /* @todo: When implementing SO_LINGER, this must be changed somehow:
        If SOF_LINGER is set, the data should be sent and acked before close returns.
        This can only be valid for sequential APIs, not for the raw API. */
-    tcp_output(pcb);
+	  tcp_output(cur_fg,pcb);
   }
   return err;
 }
@@ -307,9 +305,8 @@ tcp_close_shutdown(struct eth_fg *cur_fg,struct tcp_pcb *pcb, u8_t rst_on_unacke
  *         another err_t if closing failed and pcb is not freed
  */
 err_t
-tcp_close(struct tcp_pcb *pcb)
+tcp_close(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
 	MEMPOOL_SANITY_ACCESS(pcb);
 #if TCP_DEBUG
   LWIP_DEBUGF(TCP_DEBUG, ("tcp_close: closing in "));
@@ -337,9 +334,8 @@ tcp_close(struct tcp_pcb *pcb)
  *         another err_t on error.
  */
 err_t
-tcp_shutdown(struct tcp_pcb *pcb, int shut_rx, int shut_tx)
+tcp_shutdown(struct eth_fg *cur_fg,struct tcp_pcb *pcb, int shut_rx, int shut_tx)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
 
 	MEMPOOL_SANITY_ACCESS(pcb);
   if (pcb->state == LISTEN) {
@@ -384,9 +380,8 @@ tcp_shutdown(struct tcp_pcb *pcb, int shut_rx, int shut_tx)
  * @param reset boolean to indicate whether a reset should be sent
  */
 void
-tcp_abandon(struct tcp_pcb *pcb, int reset)
+tcp_abandon(struct eth_fg *cur_fg,struct tcp_pcb *pcb, int reset)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
   u32_t seqno, ackno;
 #if LWIP_CALLBACK_API
   tcp_err_fn errf;
@@ -444,10 +439,10 @@ tcp_abandon(struct tcp_pcb *pcb, int reset)
  * @param pcb the tcp pcb to abort
  */
 void
-tcp_abort(struct tcp_pcb *pcb)
+tcp_abort(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 {
 	MEMPOOL_SANITY_ACCESS(pcb);
-  tcp_abandon(pcb, 1);
+	tcp_abandon(cur_fg,pcb, 1);
 }
 
 
@@ -495,13 +490,12 @@ tcp_bind_checklist(struct hlist_head *list, struct tcp_pcb *pcb, ip_addr_t *ipad
  *         ERR_OK if bound
  */
 err_t
-tcp_bind(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port)
+tcp_bind(struct eth_fg *cur_fg, struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
   struct hlist_node *cur;
 
   /* called only to initiate connection, on a per-fg basis; listening scoket bypass this */
-  assert(perfg_exists());
+  assert(cur_fg);
 
   MEMPOOL_SANITY_ACCESS(pcb);
   LWIP_ERROR("tcp_bind: can only bind in state CLOSED", pcb->state == CLOSED, return ERR_VAL);
@@ -551,7 +545,7 @@ tcp_bind(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port)
     ipX_addr_set(PCB_ISIPV6(pcb), &pcb->local_ip, ip_2_ipX(ipaddr));
   }
   pcb->local_port = port;
-  TCP_REG(&cur_fg->bound_pcbs, pcb,percpu_get(the_cur_fg));
+  TCP_REG(&cur_fg->bound_pcbs, pcb,cur_fg);
   LWIP_DEBUGF(TCP_DEBUG, ("tcp_bind: bind to port %"U16_F"\n", port));
   return ERR_OK;
 }
@@ -592,8 +586,6 @@ int
 tcp_listen_with_backlog(struct tcp_pcb_listen *lpcb, u8_t backlog, ip_addr_t *addr, u16_t port)
 {
 
-  /* percpu, not perfg */
-  assert (!perfg_exists());
   
   LWIP_UNUSED_ARG(backlog);
 
@@ -697,7 +689,7 @@ u32_t tcp_update_rcv_ann_wnd(struct tcp_pcb *pcb)
  * @param len the amount of bytes that have been read by the application
  */
 void
-tcp_recved(struct tcp_pcb *pcb, u32_t len)
+tcp_recved(struct eth_fg *cur_fg,struct tcp_pcb *pcb, u32_t len)
 {
   int wnd_inflation;
 
@@ -722,7 +714,7 @@ tcp_recved(struct tcp_pcb *pcb, u32_t len)
    * events (or more window to be available later) */
   if (wnd_inflation >= TCP_WND_UPDATE_THRESHOLD) {
     tcp_ack_now(pcb);
-    tcp_output(pcb);
+    tcp_output(cur_fg,pcb);
   }
 
   LWIP_DEBUGF(TCP_DEBUG, ("tcp_recved: received %"U16_F" bytes, wnd %"U16_F" (%"U16_F").\n",
@@ -778,10 +770,10 @@ again:
  *         other err_t values if connect request couldn't be sent
  */
 err_t
-tcp_connect(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port,
+tcp_connect(struct eth_fg *cur_fg,struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port,
       tcp_connected_fn connected)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
+
   err_t ret;
   u32_t iss;
   u16_t old_local_port;
@@ -876,12 +868,13 @@ tcp_connect(struct tcp_pcb *pcb, ip_addr_t *ipaddr, u16_t port,
     TCP_REG_ACTIVE(pcb,idx,cur_fg);
     snmp_inc_tcpactiveopens();
 
-    tcp_output(pcb);
+    tcp_output(cur_fg,pcb);
   }
   return ret;
 }
 
-void pcb_remove_called_from_timer(struct tcp_pcb *pcb, int pcb_reset)
+static void 
+pcb_remove_called_from_timer(struct eth_fg *cur_fg,struct tcp_pcb *pcb, int pcb_reset)
 {
 
 	MEMPOOL_SANITY_ACCESS(pcb);
@@ -980,7 +973,7 @@ tcp_slowtmr_start:
 					(pcb->keep_idle + pcb->keep_cnt_sent * TCP_KEEP_INTVL(pcb))
 					/ TCP_SLOW_INTERVAL)
 				{
-					tcp_keepalive(pcb);
+					tcp_keepalive(cur_fg,pcb);
 					pcb->keep_cnt_sent++;
 				}
 			}
@@ -1024,7 +1017,7 @@ tcp_slowtmr_start:
 				err_arg = pcb->callback_arg;
 
 				hlist_del(&pcb->link);
-				pcb_remove_called_from_timer(pcb, pcb_reset);
+				pcb_remove_called_from_timer(cur_fg,pcb, pcb_reset);
 
 				cur_fg->tcp_active_pcb_changed = 0;
 				TCP_EVENT_ERR(err_fn, err_arg, ERR_ABRT);
@@ -1044,7 +1037,7 @@ tcp_slowtmr_start:
 					}
 					/* if err == ERR_ABRT, 'pcb' is already deallocated */
 					if (err == ERR_OK) {
-						tcp_output(pcb);
+						tcp_output(cur_fg,pcb);
 					}
 				}
 			}
@@ -1076,9 +1069,8 @@ tcp_slowtmr_start:
 	}
 }
 
-void tcp_unified_timer_handler(struct timer *t)
+void tcp_unified_timer_handler(struct timer *t, struct eth_fg *cur_fg)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
 	struct tcp_pcb *pcb = container_of(t, struct tcp_pcb, unified_timer);
 	uint64_t now_us = timer_now();
 	
@@ -1089,7 +1081,7 @@ void tcp_unified_timer_handler(struct timer *t)
 	if (pcb->timer_delayedack_expires && pcb->timer_delayedack_expires <=now_us) {
 		KSTATS_VECTOR(timer_tcp_send_delayed_ack);
 		tcp_ack_now(pcb);
-		tcp_output(pcb);
+		tcp_output(cur_fg,pcb);
 		pcb->flags &= ~TF_ACK_NOW;
 		pcb->timer_delayedack_expires = 0;
 	} 
@@ -1116,7 +1108,7 @@ void tcp_unified_timer_handler(struct timer *t)
 			pcb_remove = 1;
 
 		if (pcb_remove) {
-			pcb_remove_called_from_timer(pcb, 0);
+			pcb_remove_called_from_timer(cur_fg,pcb, 0);
 			return;
 		}
 
@@ -1138,7 +1130,7 @@ void tcp_unified_timer_handler(struct timer *t)
 		
 		/* The following needs to be called AFTER cwnd is set to one
 		   mss - STJ */
-		tcp_rexmit_rto(pcb);
+		tcp_rexmit_rto(cur_fg,pcb);
 	}
 
 next:
@@ -1150,7 +1142,7 @@ next:
 		if (pcb->persist_backoff < sizeof(tcp_persist_backoff)) {
 			pcb->persist_backoff++;
 		}
-		tcp_zero_window_probe(pcb);
+		tcp_zero_window_probe(cur_fg,pcb);
 		pcb->timer_persist_expires = now_us + tcp_persist_backoff[pcb->persist_backoff - 1] * RTO_UNITS;
 	}
 
@@ -1186,7 +1178,7 @@ tcp_fasttmr_start:
 				/* If there is data which was previously "refused" by upper layer */
 				if (pcb->refused_data != NULL) {
 					cur_fg->tcp_active_pcb_changed = 0;
-					tcp_process_refused_data(pcb);
+					tcp_process_refused_data(cur_fg,pcb);
 					if (cur_fg->tcp_active_pcb_changed) {
 						/* application callback has changed the pcb list: restart the loop */
 						goto tcp_fasttmr_start;
@@ -1200,7 +1192,7 @@ tcp_fasttmr_start:
 
 /** Pass pcb->refused_data to the recv callback */
 err_t
-tcp_process_refused_data(struct tcp_pcb *pcb)
+tcp_process_refused_data(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 {
 #if TCP_QUEUE_OOSEQ && LWIP_WND_SCALE
 	struct pbuf *rest;
@@ -1355,9 +1347,8 @@ tcp_recv_null(void *arg, struct tcp_pcb *pcb, struct pbuf *p, err_t err)
  * @param prio minimum priority
  */
 static void
-tcp_kill_prio(u8_t prio)
+tcp_kill_prio(struct eth_fg *cur_fg,u8_t prio)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
 	struct tcp_pcb *pcb, *inactive;
 	u32_t inactivity;
 	u8_t mprio;
@@ -1390,7 +1381,7 @@ tcp_kill_prio(u8_t prio)
 	if (inactive != NULL) {
 		LWIP_DEBUGF(TCP_DEBUG, ("tcp_kill_prio: killing oldest PCB %p (%"S32_F")\n",
 					(void *)inactive, inactivity));
-		tcp_abort(inactive);
+		tcp_abort(cur_fg,inactive);
 	}
 }
 
@@ -1418,7 +1409,7 @@ tcp_kill_timewait(struct eth_fg *cur_fg)
 	if (inactive != NULL) {
 		LWIP_DEBUGF(TCP_DEBUG, ("tcp_kill_timewait: killing oldest TIME-WAIT PCB %p (%"S32_F")\n",
 					(void *)inactive, inactivity));
-		tcp_abort(inactive);
+		tcp_abort(cur_fg,inactive);
 	}
 }
 
@@ -1446,7 +1437,7 @@ tcp_alloc(struct eth_fg *cur_fg,u8_t prio)
     if (pcb == NULL) {
       /* Try killing active connections with lower priority than the new one. */
       LWIP_DEBUGF(TCP_DEBUG, ("tcp_alloc: killing connection with prio lower than %d\n", prio));
-      tcp_kill_prio(prio);
+      tcp_kill_prio(cur_fg,prio);
       /* Try to allocate a tcp_pcb again. */
       pcb = (struct tcp_pcb *)memp_malloc(MEMP_TCP_PCB);
       if (pcb != NULL) {
@@ -1521,9 +1512,9 @@ tcp_alloc(struct eth_fg *cur_fg,u8_t prio)
  * @return a new tcp_pcb that initially is in state CLOSED
  */
 struct tcp_pcb *
-tcp_new(void)
+tcp_new(struct eth_fg *cur_fg)
 {
-   return tcp_alloc(percpu_get(the_cur_fg),TCP_PRIO_NORMAL);
+   return tcp_alloc(cur_fg,TCP_PRIO_NORMAL);
 }
 
 #if LWIP_IPV6
@@ -1535,10 +1526,10 @@ tcp_new(void)
  * @return a new tcp_pcb that initially is in state CLOSED
  */
 struct tcp_pcb *
-tcp_new_ip6(void)
+tcp_new_ip6(struct eth_fg *cur_fg)
 {
   struct tcp_pcb * pcb;
-  pcb = tcp_alloc(percpu_get(the_cur_fg),TCP_PRIO_NORMAL);
+  pcb = tcp_alloc(cur_fg,TCP_PRIO_NORMAL);
   ip_set_v6(pcb, 1);
   return pcb;
 }
@@ -1734,7 +1725,7 @@ tcp_pcb_remove(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
      pcb->state != LISTEN &&
       pcb->timer_delayedack_expires>0) {
     pcb->flags |= TF_ACK_NOW;
-    tcp_output(pcb);
+    tcp_output(cur_fg,pcb);
   }
 
   if (pcb->state != LISTEN) {
@@ -1758,7 +1749,6 @@ tcp_pcb_remove(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 u32_t
 tcp_next_iss(struct eth_fg *cur_fg)
 {
-	assert(perfg_exists());
   cur_fg->iss += cur_fg->tcp_ticks;       /* XXX */
   return cur_fg->iss;
 }
@@ -1766,9 +1756,8 @@ tcp_next_iss(struct eth_fg *cur_fg)
 
 extern void tcp_tmr(struct eth_fg *);
 
-static void tcpip_tcp_timer(struct timer *t)
+static void tcpip_tcp_timer(struct timer *t, struct eth_fg *cur_fg)
 {
-	struct eth_fg *cur_fg = percpu_get(the_cur_fg);
 	assert(t == &cur_fg->tcpip_timer);
 	
 	/* call TCP timer handler */
@@ -1778,7 +1767,7 @@ static void tcpip_tcp_timer(struct timer *t)
 	if (!hlist_empty(&cur_fg->active_buckets) || 
 	    !hlist_empty(&cur_fg->tw_pcbs)) 
 		/* restart timer */
-		timer_add(cur_fg,t, TCP_TMR_INTERVAL * ONE_MS);
+		timer_add(t,cur_fg, TCP_TMR_INTERVAL * ONE_MS);
 }
 
 

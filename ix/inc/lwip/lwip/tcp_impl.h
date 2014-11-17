@@ -55,20 +55,20 @@ extern "C" {
 /* Functions for interfacing with TCP: */
 
 /* Lower layer interface to TCP: */
-void             tcp_init    (void);  /* Initialize this module. */
+void             tcp_init    (struct eth_fg *);  /* Initialize this module. */
 
 
 /* Only used by IP to pass a TCP segment to TCP: */
 	void             tcp_input   (struct eth_fg *cur_fg, struct pbuf *p, ipX_addr_t *,ipX_addr_t *);
 /* Used within the TCP code only: */
 struct tcp_pcb * tcp_alloc   (struct eth_fg *,u8_t prio);
-void             tcp_abandon (struct tcp_pcb *pcb, int reset);
-err_t            tcp_send_empty_ack(struct tcp_pcb *pcb);
+void             tcp_abandon (struct eth_fg *,struct tcp_pcb *pcb, int reset);
+err_t            tcp_send_empty_ack(struct eth_fg *,struct tcp_pcb *pcb);
 void             tcp_rexmit  (struct tcp_pcb *pcb);
-void             tcp_rexmit_rto  (struct tcp_pcb *pcb);
+void             tcp_rexmit_rto  (struct eth_fg *cur_fg,struct tcp_pcb *pcb);
 void             tcp_rexmit_fast (struct tcp_pcb *pcb);
 u32_t            tcp_update_rcv_ann_wnd(struct tcp_pcb *pcb);
-err_t            tcp_process_refused_data(struct tcp_pcb *pcb);
+err_t            tcp_process_refused_data(struct eth_fg *,struct tcp_pcb *pcb);
 
 /**
  * This is the Nagle algorithm: try to combine user data to send as few TCP
@@ -85,7 +85,7 @@ err_t            tcp_process_refused_data(struct tcp_pcb *pcb);
                               ((tpcb)->unsent->len >= (tpcb)->mss))) || \
                             ((tcp_sndbuf(tpcb) == 0) || (tcp_sndqueuelen(tpcb) >= TCP_SND_QUEUELEN)) \
                             ) ? 1 : 0)
-#define tcp_output_nagle(tpcb) (tcp_do_output_nagle(tpcb) ? tcp_output(tpcb) : ERR_OK)
+#define tcp_output_nagle(tpcb) (tcp_do_output_nagle(tpcb) ? tcp_output(cur_fg,tpcb) : ERR_OK)
 
 
 #define TCP_SEQ_LT(a,b)     ((s32_t)((u32_t)(a) - (u32_t)(b)) < 0)
@@ -190,19 +190,20 @@ PACK_STRUCT_END
 
 #if LWIP_EVENT_API
 
-#define TCP_EVENT_ACCEPT(pcb,err,ret)    ret = lwip_tcp_event((pcb)->callback_arg, (pcb),\
+/* IX WARNING: cur_fg implied in macro (in other places as well) */
+#define TCP_EVENT_ACCEPT(pcb,err,ret)    ret = lwip_tcp_event(cur_fg,(pcb)->callback_arg, (pcb), \
                 LWIP_EVENT_ACCEPT, NULL, 0, err)
-#define TCP_EVENT_SENT(pcb,space,ret) ret = lwip_tcp_event((pcb)->callback_arg, (pcb),\
+#define TCP_EVENT_SENT(pcb,space,ret) ret = lwip_tcp_event(cur_fg,(pcb)->callback_arg, (pcb), \
                    LWIP_EVENT_SENT, NULL, space, ERR_OK)
-#define TCP_EVENT_RECV(pcb,p,err,ret) ret = lwip_tcp_event((pcb)->callback_arg, (pcb),\
+#define TCP_EVENT_RECV(pcb,p,err,ret) ret = lwip_tcp_event(cur_fg,(pcb)->callback_arg, (pcb), \
                 LWIP_EVENT_RECV, (p), 0, (err))
-#define TCP_EVENT_CLOSED(pcb,ret) ret = lwip_tcp_event((pcb)->callback_arg, (pcb),\
+#define TCP_EVENT_CLOSED(pcb,ret) ret = lwip_tcp_event(cur_fg,(pcb)->callback_arg, (pcb), \
                 LWIP_EVENT_RECV, NULL, 0, ERR_OK)
-#define TCP_EVENT_CONNECTED(pcb,err,ret) ret = lwip_tcp_event((pcb)->callback_arg, (pcb),\
+#define TCP_EVENT_CONNECTED(pcb,err,ret) ret = lwip_tcp_event(cur_fg,(pcb)->callback_arg, (pcb), \
                 LWIP_EVENT_CONNECTED, NULL, 0, (err))
-#define TCP_EVENT_POLL(pcb,ret)       ret = lwip_tcp_event((pcb)->callback_arg, (pcb),\
+#define TCP_EVENT_POLL(pcb,ret)       ret = lwip_tcp_event(cur_fg,(pcb)->callback_arg, (pcb), \
                 LWIP_EVENT_POLL, NULL, 0, ERR_OK)
-#define TCP_EVENT_ERR(errf,arg,err)  lwip_tcp_event((arg), NULL, \
+#define TCP_EVENT_ERR(errf,arg,err)  lwip_tcp_event(cur_fg,(arg), NULL, \
                 LWIP_EVENT_ERR, NULL, 0, (err))
 
 #else /* LWIP_EVENT_API */
@@ -411,7 +412,7 @@ static inline int tcp_to_idx(ipX_addr_t *local_ip, ipX_addr_t *remote_ip, uint16
 void tcp_send_delayed_ack(struct timer *t);
 void tcp_retransmit_handler(struct timer *t);
 void tcp_persist_handler(struct timer *t);
-extern void tcp_unified_timer_handler(struct timer *t);
+	extern void tcp_unified_timer_handler(struct timer *t, struct eth_fg *cur_fg);
 
 #define TCP_REG(pcbs, npcb,cur_fg)		   \
   do {                                             \
@@ -483,7 +484,7 @@ static inline void tcp_timer_needed(struct eth_fg *cur_fg)
 	if (!timer_pending(&cur_fg->tcpip_timer) && 
 	    (!hlist_empty(&cur_fg->active_buckets) ||
 	     !hlist_empty(&cur_fg->tw_pcbs))) {
-		timer_add(cur_fg,&cur_fg->tcpip_timer, TCP_TMR_INTERVAL * ONE_MS);
+		timer_add(&cur_fg->tcpip_timer, cur_fg,TCP_TMR_INTERVAL * ONE_MS);
 	}
 }
 
@@ -541,7 +542,7 @@ tcp_recompute_timers(struct eth_fg *cur_fg,struct tcp_pcb *pcb)
 	} else {
 		timer_del(&pcb->unified_timer);
 		if (first != -1ul)
-			timer_add_abs(cur_fg,&pcb->unified_timer,first);
+			timer_add_abs(&pcb->unified_timer,cur_fg,first);
 	}
 }
 
@@ -577,7 +578,7 @@ err_t tcp_enqueue_flags(struct tcp_pcb *pcb, u8_t flags);
 
 void tcp_rexmit_seg(struct tcp_pcb *pcb, struct tcp_seg *seg);
 
-void tcp_rst_impl(u32_t seqno, u32_t ackno,
+void tcp_rst_impl(struct eth_fg *cur_fg,u32_t seqno, u32_t ackno,
        ipX_addr_t *local_ip, ipX_addr_t *remote_ip,
        u16_t local_port, u16_t remote_port
 #if LWIP_IPV6
@@ -589,13 +590,13 @@ void tcp_rst_impl(u32_t seqno, u32_t ackno,
   tcp_rst_impl(seqno, ackno, local_ip, remote_ip, local_port, remote_port, isipv6)
 #else /* LWIP_IPV6 */
 #define tcp_rst(seqno, ackno, local_ip, remote_ip, local_port, remote_port, isipv6) \
-  tcp_rst_impl(seqno, ackno, local_ip, remote_ip, local_port, remote_port)
+	tcp_rst_impl(cur_fg,seqno, ackno, local_ip, remote_ip, local_port, remote_port)
 #endif /* LWIP_IPV6 */
 
 	u32_t tcp_next_iss(struct eth_fg *);
 
-void tcp_keepalive(struct tcp_pcb *pcb);
-void tcp_zero_window_probe(struct tcp_pcb *pcb);
+void tcp_keepalive(struct eth_fg *,struct tcp_pcb *pcb);
+void tcp_zero_window_probe(struct eth_fg *,struct tcp_pcb *pcb);
 
 #if TCP_CALCULATE_EFF_SEND_MSS
 u16_t tcp_eff_send_mss_impl(u16_t sendmss, ipX_addr_t *dest

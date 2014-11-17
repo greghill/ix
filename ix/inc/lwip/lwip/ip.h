@@ -235,7 +235,7 @@ struct ip_globals
 #define ipX_output_if(isipv6, p, src, dest, ttl, tos, proto, netif) \
         ip_output_if(p, src, dest, ttl, tos, proto, netif)
 #define ipX_output_hinted(isipv6, p, src, dest, ttl, tos, proto, addr_hint) \
-        ip_output_hinted(p, src, dest, ttl, tos, proto, addr_hint)
+        ip_output_hinted(cur_fg,p, src, dest, ttl, tos, proto, addr_hint)
 #define ipX_route(isipv6, src, dest) \
         ip_route(ipX_2_ip(dest))
 #define ipX_netif_get_local_ipX(isipv6, netif, dest) \
