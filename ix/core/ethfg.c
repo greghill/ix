@@ -271,6 +271,7 @@ static void migrate_pkts_to_remote(struct eth_fg *fg)
 			*prv = pkt->next;
 			enqueue(q, pkt);
 			pkt = *prv;
+			rxq->len--;
 		} else {
 			prv = &pkt->next;
 			pkt = pkt->next;
