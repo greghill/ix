@@ -75,7 +75,7 @@ def migrate(shmem, source_cpu, target_cpu, flow_groups):
   cmd.cmd_id = Command.CP_CMD_MIGRATE
   cmd.status = Command.CP_STATUS_RUNNING
   while cmd.status != Command.CP_STATUS_READY:
-    time.sleep(0.01)
+    pass
 
 def main():
   shm = posix_ipc.SharedMemory('/ix', 0)
