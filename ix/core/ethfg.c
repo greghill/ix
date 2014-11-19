@@ -152,6 +152,7 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
 	int real = 0;
 
 	assert(percpu_get(migration_info).prev_cpu == -1);
+	assert(percpu_get_remote(migration_info, cfg_cpu[cpu]).prev_cpu == -1);
 
 	bitmap_init(percpu_get(migration_info).fg_bitmap, ETH_MAX_TOTAL_FG, 0);
 
@@ -188,6 +189,7 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
 	percpu_get(migration_info).target_cpu = cfg_cpu[cpu];
 	timer_add(&percpu_get(migration_info).transition_timeout, NULL,TRANSITION_TIMEOUT);
 
+	percpu_get_remote(migration_info, cfg_cpu[cpu]) = percpu_get(migration_info);
 }
 
 static void transition_handler_prev(struct timer *t, struct eth_fg *cur_fg)
@@ -219,6 +221,7 @@ static void transition_handler_target(void *info_)
 	struct eth_fg *fg;
 	int prev_cpu = info->prev_cpu;
 	int i;
+
 
 	for (i = 0; i < ETH_MAX_TOTAL_FG; i++) {
 		if (!bitmap_test(info->fg_bitmap, i))
@@ -258,6 +261,7 @@ static void transition_handler_target(void *info_)
 	migrate_timers_from_remote();
 
 	percpu_get(migration_info).prev_cpu = -1;
+	info->prev_cpu = -1;
 	percpu_get_remote(cp_cmd, prev_cpu)->status = CP_STATUS_READY;
 }
 
