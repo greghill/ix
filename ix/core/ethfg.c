@@ -199,6 +199,18 @@ static void transition_handler_prev(struct timer *t, struct eth_fg *cur_fg)
 	cpu_run_on_one(transition_handler_target, info, info->target_cpu);
 }
 
+static void early_transition_handler_prev(void *unused)
+{
+	struct migration_info *info = &percpu_get(migration_info);
+
+	if (!timer_pending(&info->transition_timeout))
+		return;
+
+	timer_del(&info->transition_timeout);
+
+	cpu_run_on_one(transition_handler_target, info, info->target_cpu);
+}
+
 static struct eth_rx_queue * queue_from_fg(struct eth_fg *fg)
 {
         int i;
@@ -308,6 +320,15 @@ void eth_recv_at_prev(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 void eth_recv_at_target(struct eth_rx_queue *rx_queue, struct mbuf *pkt)
 {
 	struct queue *q = &percpu_get(local_mbuf_queue);
+	if (!q->head) {
+		/*
+		 * When we receive the first packet on the target CPU, we cause
+		 * an early transition and we don't wait for the timeout to
+		 * expire.
+		 */
+		struct migration_info *info = &percpu_get(migration_info);
+		cpu_run_on_one(early_transition_handler_prev, NULL, info->prev_cpu);
+	}
 	enqueue(q, pkt);
 }
 
