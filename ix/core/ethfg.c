@@ -50,6 +50,7 @@ static void enqueue(struct queue *q, struct mbuf *pkt);
 int init_migration_cpu(void)
 {
 	timer_init_entry(&percpu_get(migration_info).transition_timeout, transition_handler_prev);
+	percpu_get(migration_info).prev_cpu = -1;
 
 	return 0;
 }
@@ -150,7 +151,7 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
 	int ret;
 	int real = 0;
 
-	assert(!timer_pending(&percpu_get(migration_info).transition_timeout));
+	assert(percpu_get(migration_info).prev_cpu == -1);
 
 	bitmap_init(percpu_get(migration_info).fg_bitmap, ETH_MAX_TOTAL_FG, 0);
 
@@ -256,6 +257,7 @@ static void transition_handler_target(void *info_)
 
 	migrate_timers_from_remote();
 
+	percpu_get(migration_info).prev_cpu = -1;
 	percpu_get_remote(cp_cmd, prev_cpu)->status = CP_STATUS_READY;
 }
 
