@@ -120,6 +120,7 @@ def main():
     fgs_per_cpu = int(shmem.nr_flow_groups / args.cpus)
     one_more_fg = shmem.nr_flow_groups % args.cpus
 
+    times = []
     start = 0
     for target_cpu in xrange(args.cpus):
       count = fgs_per_cpu
@@ -136,12 +137,17 @@ def main():
         if len(intersection) == 0:
           continue
         #print 'migrate from %d to %d fgs %r' % (source_cpu, target_cpu, list(intersection))
+        start_time = time.time()
         migrate(shmem, source_cpu, target_cpu, list(intersection))
+        stop_time = time.time()
         sys.stdout.write('.')
         sys.stdout.flush()
         fg_per_cpu[source_cpu] = list(set(fg_per_cpu[source_cpu]) - intersection)
         fg_per_cpu[target_cpu] = list(set(fg_per_cpu[target_cpu]) | intersection)
+        times.append((stop_time - start_time) * 1000)
     print
+    if len(times) > 0:
+      print 'migration duration min/avg/max = %f/%f/%f ms' % (min(times), sum(times)/len(times), max(times))
 
 if __name__ == '__main__':
   main()
