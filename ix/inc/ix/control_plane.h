@@ -33,7 +33,7 @@ struct command_struct {
 		struct {
 			DEFINE_BITMAP(fg_bitmap, ETH_MAX_TOTAL_FG);
 			int cpu;
-		} migrate_flow_group;
+		} migrate;
 	};
 };
 

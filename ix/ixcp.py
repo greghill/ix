@@ -26,7 +26,7 @@ class FlowGroupMetrics(ctypes.Structure):
     ('padding', ctypes.c_byte * 56),
   ]
 
-class CmdParamsMigrateFlowGroup(ctypes.Structure):
+class CmdParamsMigrate(ctypes.Structure):
   _fields_ = [
     ('fg_bitmap', ctypes.c_ulong * (ETH_MAX_TOTAL_FG / BITS_PER_LONG)),
     ('cpu', ctypes.c_uint),
@@ -34,7 +34,7 @@ class CmdParamsMigrateFlowGroup(ctypes.Structure):
 
 class CommandParameters(ctypes.Union):
   _fields_ = [
-    ('migrate_flow_group', CmdParamsMigrateFlowGroup)
+    ('migrate', CmdParamsMigrate)
   ]
 
 class Command(ctypes.Structure):
@@ -70,8 +70,8 @@ def bitmap_create(size, on):
 def migrate(shmem, source_cpu, target_cpu, flow_groups):
   cmd = shmem.command[source_cpu]
   bitmap = bitmap_create(ETH_MAX_TOTAL_FG, flow_groups)
-  cmd.cmd_params.migrate_flow_group.fg_bitmap = (ctypes.c_ulong * len(bitmap))(*bitmap)
-  cmd.cmd_params.migrate_flow_group.cpu = target_cpu
+  cmd.cmd_params.migrate.fg_bitmap = (ctypes.c_ulong * len(bitmap))(*bitmap)
+  cmd.cmd_params.migrate.cpu = target_cpu
   cmd.cmd_id = Command.CP_CMD_MIGRATE
   cmd.status = Command.CP_STATUS_RUNNING
   while cmd.status != Command.CP_STATUS_READY:

@@ -133,7 +133,7 @@ again:
 				 * quiescent state. */
 				return 0;
 			}
-			eth_fg_assign_to_cpu((bitmap_ptr) percpu_get(cp_cmd)->migrate_flow_group.fg_bitmap, percpu_get(cp_cmd)->migrate_flow_group.cpu);
+			eth_fg_assign_to_cpu((bitmap_ptr) percpu_get(cp_cmd)->migrate.fg_bitmap, percpu_get(cp_cmd)->migrate.cpu);
 			percpu_get(cp_cmd)->cmd_id = CP_CMD_NOP;
 			break;
 		case CP_CMD_NOP:
