@@ -6,6 +6,7 @@
 #include <ix/ethfg.h>
 
 #define NQUEUE 64
+#define IDLE_FIFO_SIZE 256
 
 struct queue_metrics {
 	volatile int depth;
@@ -19,6 +20,7 @@ struct flow_group_metrics {
 enum commands {
 	CP_CMD_NOP = 0,
 	CP_CMD_MIGRATE,
+	CP_CMD_IDLE,
 };
 
 enum status {
@@ -34,6 +36,9 @@ struct command_struct {
 			DEFINE_BITMAP(fg_bitmap, ETH_MAX_TOTAL_FG);
 			int cpu;
 		} migrate;
+		struct {
+			char fifo[IDLE_FIFO_SIZE];
+		} idle;
 	};
 };
 
@@ -55,3 +60,5 @@ static inline void cp_flow_group_depth(int flow_group_id, int diff)
 {
 	cp_shmem->flow_group[flow_group_id].depth += diff;
 }
+
+void cp_idle(void);

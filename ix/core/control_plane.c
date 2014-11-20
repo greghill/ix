@@ -2,6 +2,7 @@
  * control_plane.c - control plane implementation
  */
 
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -9,6 +10,7 @@
 #include <unistd.h>
 
 #include <ix/control_plane.h>
+#include <ix/log.h>
 
 volatile struct cp_shmem *cp_shmem;
 
@@ -34,4 +36,20 @@ int cp_init(void)
 	cp_shmem = vaddr;
 
 	return 0;
+}
+
+void cp_idle(void)
+{
+	int fd, ret;
+	char buf;
+
+	percpu_get(cp_cmd)->cmd_id = CP_CMD_NOP;
+	percpu_get(cp_cmd)->status = CP_STATUS_READY;
+	fd = open((char *) percpu_get(cp_cmd)->idle.fifo, O_RDONLY);
+	if (fd != -1) {
+		ret = read(fd, &buf, 1);
+		if (ret == -1)
+			log_err("read on wakeup pipe returned -1 (errno=%d)\n", errno);
+		close(fd);
+	}
 }

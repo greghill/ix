@@ -3,6 +3,8 @@
 import argparse
 import ctypes
 import mmap
+import os
+import os.path
 import posix_ipc
 import sys
 import time
@@ -12,6 +14,7 @@ NCPU = 128
 ETH_MAX_NUM_FG = 128
 NETHDEV = 16
 ETH_MAX_TOTAL_FG = ETH_MAX_NUM_FG * NETHDEV
+IDLE_FIFO_SIZE = 256
 
 class QueueMetrics(ctypes.Structure):
   _fields_ = [
@@ -32,14 +35,21 @@ class CmdParamsMigrate(ctypes.Structure):
     ('cpu', ctypes.c_uint),
   ]
 
+class CmdParamsIdle(ctypes.Structure):
+  _fields_ = [
+    ('fifo', ctypes.c_char * IDLE_FIFO_SIZE),
+  ]
+
 class CommandParameters(ctypes.Union):
   _fields_ = [
-    ('migrate', CmdParamsMigrate)
+    ('migrate', CmdParamsMigrate),
+    ('idle', CmdParamsIdle),
   ]
 
 class Command(ctypes.Structure):
   CP_CMD_NOP = 0
   CP_CMD_MIGRATE = 1
+  CP_CMD_IDLE = 2
 
   CP_STATUS_READY = 0
   CP_STATUS_RUNNING = 1
@@ -77,6 +87,35 @@ def migrate(shmem, source_cpu, target_cpu, flow_groups):
   while cmd.status != Command.CP_STATUS_READY:
     pass
 
+def get_fifo(cpu):
+  return os.path.abspath('block-%d.fifo' % cpu)
+
+def is_idle(cpu):
+  return os.path.exists(get_fifo(cpu))
+
+def idle(shmem, cpu):
+  if is_idle(cpu):
+    return
+  fifo = get_fifo(cpu)
+  os.mkfifo(fifo)
+
+  cmd = shmem.command[cpu]
+  assert len(fifo) + 1 < IDLE_FIFO_SIZE, fifo
+  cmd.cmd_params.idle.fifo = fifo
+  cmd.status = Command.CP_STATUS_RUNNING
+  cmd.cmd_id = Command.CP_CMD_IDLE
+  while cmd.status != Command.CP_STATUS_READY:
+    pass
+
+def wake_up(cpu):
+  if not is_idle(cpu):
+    return
+  fifo = get_fifo(cpu)
+  fd = os.open(fifo, os.O_WRONLY)
+  os.write(fd, '1')
+  os.close(fd)
+  os.remove(fifo)
+
 def main():
   shm = posix_ipc.SharedMemory('/ix', 0)
   buffer = mmap.mmap(shm.fd, ctypes.sizeof(ShMem), mmap.MAP_SHARED, mmap.PROT_WRITE)
@@ -105,6 +144,8 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--single-cpu', action='store_true')
   parser.add_argument('--cpus', type=int)
+  parser.add_argument('--idle', type=int)
+  parser.add_argument('--wake-up', type=int)
   args = parser.parse_args()
 
   if args.single_cpu:
@@ -148,6 +189,10 @@ def main():
     print
     if len(times) > 0:
       print 'migration duration min/avg/max = %f/%f/%f ms' % (min(times), sum(times)/len(times), max(times))
+  elif args.idle is not None:
+    idle(shmem, args.idle)
+  elif args.wake_up is not None:
+    wake_up(args.wake_up)
 
 if __name__ == '__main__':
   main()
