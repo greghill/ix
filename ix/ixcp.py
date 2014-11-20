@@ -165,6 +165,7 @@ def main():
     times = []
     start = 0
     for target_cpu in xrange(args.cpus):
+      wake_up(target_cpu)
       count = fgs_per_cpu
       if target_cpu < one_more_fg:
         count += 1
@@ -190,6 +191,9 @@ def main():
     print
     if len(times) > 0:
       print 'migration duration min/avg/max = %f/%f/%f ms' % (min(times), sum(times)/len(times), max(times))
+    for cpu in xrange(shmem.nr_cpus):
+      if len(fg_per_cpu[cpu]) == 0:
+        idle(shmem, cpu)
   elif args.idle is not None:
     idle(shmem, args.idle)
   elif args.wake_up is not None:
