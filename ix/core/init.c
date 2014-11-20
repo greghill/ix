@@ -434,6 +434,7 @@ static int init_firstcpu(void)
 {
 	int ret;
 	cpus_active = cfg_cpu_nr;
+	cp_shmem->nr_cpus = cfg_cpu_nr;
 	if (cfg_cpu_nr > 1) {
 		pthread_barrier_init(&start_barrier, NULL, cfg_cpu_nr);
 	}

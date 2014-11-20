@@ -44,6 +44,7 @@ struct command_struct {
 
 extern volatile struct cp_shmem {
 	uint32_t nr_flow_groups;
+	uint32_t nr_cpus;
 	struct queue_metrics queue[NQUEUE];
 	struct flow_group_metrics flow_group[ETH_MAX_TOTAL_FG];
 	struct command_struct command[NCPU];

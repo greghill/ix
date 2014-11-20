@@ -63,7 +63,8 @@ class Command(ctypes.Structure):
 class ShMem(ctypes.Structure):
   _fields_ = [
     ('nr_flow_groups', ctypes.c_uint),
-    ('padding', ctypes.c_byte * 60),
+    ('nr_cpus', ctypes.c_uint),
+    ('padding', ctypes.c_byte * 56),
     ('queue', QueueMetrics * 64),
     ('flow_group', FlowGroupMetrics * ETH_MAX_TOTAL_FG),
     ('command', Command * NCPU),
