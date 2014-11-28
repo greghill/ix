@@ -3,6 +3,7 @@
 #include <event2/listener.h>
 #include <event2/bufferevent.h>
 #include <event2/buffer.h>
+#include <event2/thread.h>
 
 #include <arpa/inet.h>
 
@@ -385,6 +386,7 @@ int main(int argc, char **argv)
 	get_ifname(&server_addr, ifname);
 
 	start_threads(cores, connections, slow_connections);
+	evthread_use_pthreads();
 	puts("ok");
 	fflush(stdout);
 
