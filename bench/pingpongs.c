@@ -20,7 +20,7 @@ void msg_size_cb(struct bufferevent *bev, void *arg)
         sscanf((char *)ctx->buffer, "%010u|", &ctx->msg_size);
 	ctx->buffer = realloc(ctx->buffer, ctx->msg_size);
         ctx->bytes_left = ctx->msg_size;
-	bufferevent_setcb(bev, echo_read_cb, NULL, NULL, ctx);
+	bufferevent_setcb(bev, echo_read_cb, NULL, echo_event_cb, ctx);
         echo_read_cb(bev,arg);
 }
 

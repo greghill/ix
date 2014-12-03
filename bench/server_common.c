@@ -8,7 +8,7 @@ struct worker {
 	int enable;
 } worker[CORES];
 
-static void echo_event_cb(struct bufferevent *bev, short events, void *arg)
+void echo_event_cb(struct bufferevent *bev, short events, void *arg)
 {
 	if (events & (BEV_EVENT_EOF | BEV_EVENT_ERROR)) {
 		bufferevent_free(bev);

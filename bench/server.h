@@ -34,3 +34,4 @@ int start_threads(void);
 void echo_read_cb(struct bufferevent *bev, void *arg);
 void msg_size_cb(struct bufferevent *bev, void *arg);
 struct ctx *init_ctx(struct worker *worker);
+void echo_event_cb(struct bufferevent *bev, short events, void *arg);
