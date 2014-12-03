@@ -363,7 +363,7 @@ void mempool_pagemem_destroy(struct mempool_datastore *m)
 #ifdef ENABLE_KSTATS
 
 #define PRINT_INTERVAL (5 * ONE_SECOND)
-static void mempool_printstats(struct timer *t)
+static void mempool_printstats(struct timer *t, struct eth_fg *cur_fg)
 {
 	struct mempool_datastore *mds =mempool_all_datastores;
 	printf("DATASTORE name             free%% lock/s\n");
@@ -375,7 +375,7 @@ static void mempool_printstats(struct timer *t)
 		       mds->num_locks/5);
 		mds->num_locks = 0;
 	}
-	timer_add(NULL,t, PRINT_INTERVAL);
+	timer_add(t,NULL, PRINT_INTERVAL);
 }
 #endif
 
@@ -383,7 +383,7 @@ int mempool_init(void)
 {
 #ifdef ENABLE_KSTATS
 	timer_init_entry(&mempool_timer, mempool_printstats);
-	timer_add(NULL,&mempool_timer, PRINT_INTERVAL);
+	timer_add(&mempool_timer, NULL, PRINT_INTERVAL);
 #endif
 	return 0;
 }

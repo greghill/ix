@@ -163,7 +163,7 @@ static void kstats_print(struct timer *t)
   bzero(percpu_get(_kstats_backlog_histogram),sizeof(*percpu_get(_kstats_backlog_histogram))*KSTATS_BACKLOG_HISTOGRAM_SIZE);
   percpu_get(_kstats_packets) = 0;
 
-  timer_add(NULL,&percpu_get(_kstats_timer), KSTATS_INTERVAL);
+  timer_add(&percpu_get(_kstats_timer), NULL, KSTATS_INTERVAL);
 }
 
 static long perf_event_open(struct perf_event_attr *hw_event, pid_t pid, int cpu, int group_fd, unsigned long flags)
@@ -188,7 +188,7 @@ int kstats_init_cpu(void)
   struct perf_event_attr hw_instructions_attr = {.type = PERF_TYPE_HARDWARE, .config = PERF_COUNT_HW_INSTRUCTIONS};
 
   timer_init_entry(&percpu_get(_kstats_timer), kstats_print);
-  timer_add(NULL,&percpu_get(_kstats_timer), KSTATS_INTERVAL);
+  timer_add(&percpu_get(_kstats_timer), NULL, KSTATS_INTERVAL);
 
   percpu_get(llc_load_misses_fd) = init_perf_event(&llc_load_misses_attr);
   percpu_get(hw_instructions_fd) = init_perf_event(&hw_instructions_attr);
