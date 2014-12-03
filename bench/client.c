@@ -38,7 +38,7 @@
 #define LOG_ERROR(worker, source, errno) \
 	do { \
 		if ((source) < 0 || (source) >= MAX_ERRSOURCE || (errno) < 0 || (errno) >= MAX_ERRNO) { \
-			fprintf(stderr, "unhandled log_error(%d, %d)\n", (source), (errno)); \
+                    fprintf(stderr, "unhandled log_error(%d, %d, %s)\n", (source), (errno), evutil_socket_error_to_string(errno)); \
 			exit(1); \
 		} \
 		(worker)->errors[(source)][(errno)]++; \
