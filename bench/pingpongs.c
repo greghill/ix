@@ -1,4 +1,5 @@
 #include "server.h"
+#include <event2/thread.h>
 
 struct ctx {
 	struct worker *worker;
@@ -58,6 +59,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Usage: %s [CPUS]\n", argv[0]);
 		return ret;
 	}
+	evthread_use_pthreads();
 
 	start_threads();
 

@@ -19,13 +19,15 @@ server_mtcp: server_mtcp.c server_common_mtcp.c server_mtcp.h
 	gcc -O2 -Wall -g server_mtcp.c server_common_mtcp.c -o server_mtcp -lmtcp -lnuma -lpthread -lps -lrt
 
 pingpongs: pingpongs.c server_common.c server.h
-	gcc -O2 -Wall -g pingpongs.c server_common.c -o pingpongs -levent -pthread
+	gcc -O2 -Wall -g pingpongs.c server_common.c -o pingpongs -levent -pthread -levent_pthreads
+
 
 pingpongs_mtcp: pingpongs_mtcp.c server_common_mtcp.c server_mtcp.h
 	gcc -O2 -Wall -g pingpongs_mtcp.c server_common_mtcp.c -o pingpongs_mtcp -lmtcp -lnuma -lpthread -lps -lrt
 
 client: client.c timer.c timer.h client_common.c
-	gcc -O2 -Wall -g client.c timer.c client_common.c -o client -levent -pthread -lrt
+	gcc -O2 -Wall -g client.c timer.c client_common.c -o client -levent -pthread -lrt -levent_pthreads
+
 
 client_mtcp: client_mtcp.c timer.c timer.h client_common.c
 	gcc -O2 -Wall -g client_mtcp.c timer.c client_common.c -o client_mtcp -lmtcp -lnuma -pthread -lps -lrt
