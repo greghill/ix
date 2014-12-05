@@ -1,3 +1,5 @@
+all_nomtcp: client pingpongs NPtcp
+
 all_used: client pingpongs pingpongs_mtcp NPtcp NPmtcp
 
 NPtcp:
