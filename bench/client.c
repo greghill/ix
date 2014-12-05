@@ -547,7 +547,9 @@ int main(int argc, char **argv)
 			timeouts_connect_slow += worker[i].timeouts_connect_slow;
 			timeouts_recv_slow += worker[i].timeouts_recv_slow;
 		}
-		printf("%lld %lld %d %d %d ", total_connections, total_messages, active_connections, timeouts_connect, timeouts_recv);
+
+		printf("%lld %lld %lld %lld %lld %d %d %d %d %d ", finished, total_fast_connections, total_slow_connections, total_fast_messages, total_slow_messages, active_connections, timeouts_connect, timeouts_connect_slow, timeouts_recv, timeouts_recv_slow);
+		//printf("finished:%lld fast_con:%lld slow_con:%lld fast_msg:%lld slow_msg:%lld act:%d tm_con:%d tm_con_slow:%d tm_rcv:%d tm_rcv_slow:%d ", finished, total_fast_connections, total_slow_connections, total_fast_messages, total_slow_messages, active_connections, timeouts_connect, timeouts_connect_slow, timeouts_recv, timeouts_recv_slow);
 		printf("%ld %ld %ld %ld ", rx_bytes, rx_packets, tx_bytes, tx_packets);
 		printf("0 ");
 		for (i = 0; i < MAX_ERRSOURCE; i++) {
