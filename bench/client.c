@@ -52,7 +52,7 @@ struct worker {
 	unsigned int churn_per_second;
 	struct event_base *base;
 	pthread_t tid;
-	unsigned char *buffer;
+	char *buffer;
 	unsigned int active_connections;
 	unsigned long long total_fast_connections;
 	unsigned long long total_slow_connections;
