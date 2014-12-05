@@ -47,17 +47,26 @@
 struct worker {
 	int cpu;
 	unsigned int connections;
+	unsigned int finished;
 	unsigned int slow_connections;
+	unsigned int churn_per_second;
 	struct event_base *base;
 	pthread_t tid;
 	unsigned char *buffer;
 	unsigned int active_connections;
-	unsigned long long total_connections;
-	unsigned long long total_messages;
+	unsigned long long total_fast_connections;
+	unsigned long long total_slow_connections;
+	unsigned long long total_fast_messages;
+	unsigned long long total_slow_messages;
 	unsigned int errors[MAX_ERRSOURCE][MAX_ERRNO];
 	unsigned int timeouts_connect;
 	unsigned int timeouts_recv;
+	unsigned int timeouts_connect_slow;
+	unsigned int timeouts_recv_slow;
 	struct ctx *first_ctx;
+
+        struct bufferevent_rate_limit_group *slow_bucket;
+        struct ev_token_bucket_cfg *slow_bucket_cfg;
 } worker[MAX_CORES];
 
 #define STATE_IDLE 1
@@ -74,13 +83,15 @@ struct worker {
 struct ctx {
 	struct ctx *next;
 	struct worker *worker;
+	int no;
 	unsigned int state;
 	unsigned long messages_left;
 	unsigned int bytes_left;
 	unsigned long timestamp;
 	struct bufferevent *bev;
-    int flood;
-    uint32_t msg_size;
+	int flood;
+	uint32_t msg_size;
+        unsigned long sent_timestamp;
         struct event *event;
 };
 
@@ -90,7 +101,6 @@ static long messages_per_connection;
 
 static void new_connection(struct event_base *base, struct ctx *ctx);
 static int send_next_msg(struct ctx *ctx);
-static void send_msg_cb(evutil_socket_t fd, short what, void *arg);
 
 static uint32_t msg_size;
 static void echo_read_cb(struct bufferevent *bev, void *arg)
@@ -99,36 +109,29 @@ static void echo_read_cb(struct bufferevent *bev, void *arg)
 
 	long long len;
 	struct evbuffer *input = bufferevent_get_input(bev);
-        struct timeval send_tv = {1, 0};
 
 	len = evbuffer_get_length(input);
 	evbuffer_drain(input, len);
 	ctx->bytes_left -= len;
 	if (!ctx->bytes_left) {
-		ctx->worker->total_messages++;
-                if (!ctx->flood) {
-			if (!ctx->event){
-				ctx->event = event_new(worker->base, -1, EV_TIMEOUT, send_msg_cb, ctx);
-			}
+            if(ctx->flood) {
+		ctx->worker->total_fast_messages++;
+            } else {
+		ctx->worker->total_slow_messages++;
+            }
 
-			event_add(ctx->event, &send_tv);
-			UPDATE_STATE(ctx, STATE_WAIT_FOR_SEND);
-			return;
-                }
-                else {
-                    send_next_msg(ctx);
-                }
+            send_next_msg(ctx);
 	}
 }
 
-static void send_msg_cb(evutil_socket_t fd, short what, void *arg) {
-	struct ctx *ctx = arg;
-        send_next_msg(ctx);
-}
 
 static int send_next_msg(struct ctx *ctx) {
     ctx->bytes_left = ctx->msg_size;
+
     if (!ctx->messages_left) {
+        UPDATE_STATE(ctx, STATE_DONE);
+        ctx->worker->finished++;
+        bufferevent_remove_from_rate_limit_group(ctx->bev);
         bufferevent_free(ctx->bev);
         if (ctx->state == STATE_WAIT_FOR_RECV)
             ctx->worker->active_connections--;
@@ -137,7 +140,10 @@ static int send_next_msg(struct ctx *ctx) {
     }
 
     ctx->messages_left--;
-    bufferevent_write(ctx->bev, ctx->worker->buffer, ctx->msg_size);
+    // Use bytes_left in case msg_size is changed in another thread
+    sprintf(ctx->worker->buffer, "%010u|", ctx->bytes_left);
+    bufferevent_write(ctx->bev, ctx->worker->buffer, ctx->bytes_left);
+    ctx->sent_timestamp = rdtsc();
     UPDATE_STATE(ctx, STATE_WAIT_FOR_RECV);
     return 0; //hack to preserve old behaviour
 }
@@ -150,31 +156,66 @@ static void maintain_connections_cb(evutil_socket_t fd, short what, void *arg)
 
 	deadline = rdtsc() - TIMEOUT_US * cycles_per_us;
 	ctx = worker->first_ctx;
+	unsigned int unflood  = worker->churn_per_second;
+	unsigned int to_flood = worker->churn_per_second;
+        struct evbuffer *b;
 
 	while (ctx) {
+		if(unflood > 0 && ctx->flood) {
+			if(ctx->bev && bufferevent_add_to_rate_limit_group(ctx->bev, ctx->worker->slow_bucket)) {
+				printf("Error on adding to rate limit slow\n");
+			}
+			ctx->flood = 0;
+			unflood--;
+			ctx->msg_size = 64;
+		} else if(to_flood > 0 && ctx->flood == 0) {
+			if(ctx->bev)
+				bufferevent_remove_from_rate_limit_group(ctx->bev);
+			ctx->flood = 1;
+			to_flood--;
+			ctx->msg_size = msg_size;
+		}
+
+		if (ctx->state == STATE_IDLE) {
+			new_connection(worker->base, ctx);
+			ctx = ctx->next;
+			continue;
+                }
+
 		if (ctx->timestamp >= deadline) {
 			ctx = ctx->next;
 			continue;
 		}
 
-		if (ctx->state == STATE_IDLE) {
-			new_connection(worker->base, ctx);
-		} else if (ctx->state == STATE_WAIT_FOR_RECV || ctx->state == STATE_CONNECTING) {
-			bufferevent_free(ctx->bev);
-			if (ctx->state == STATE_WAIT_FOR_RECV)
-				ctx->worker->active_connections--;
+		if (ctx->state == STATE_WAIT_FOR_RECV || ctx->state == STATE_CONNECTING) {
+                    //bufferevent_remove_from_rate_limit_group(ctx->bev);
+                    //   bufferevent_free(ctx->bev);
+                    //if (ctx->state == STATE_WAIT_FOR_RECV)
+                    //ctx->worker->active_connections--;
 			switch (ctx->state) {
 			case STATE_CONNECTING:
-				ctx->worker->timeouts_connect++;
+				if(ctx->flood){
+					ctx->worker->timeouts_connect++;
+				} else {
+					ctx->worker->timeouts_connect_slow++;
+				}
 				break;
 			case STATE_WAIT_FOR_RECV:
-				ctx->worker->timeouts_recv++;
+
+                            b = bufferevent_get_output(ctx->bev);
+                            //printf("timeout_recv: %zu bytes in output\n", evbuffer_get_length(b));
+
+                            if(ctx->flood){
+                                ctx->worker->timeouts_recv++;
+                            } else {
+                                ctx->worker->timeouts_recv_slow++;
+                            }
 				break;
 			default:
 				fprintf(stderr, "unreported timeout while at state %d\n.", ctx->state);
 				exit(1);
 			}
-			new_connection(worker->base, ctx);
+			//new_connection(worker->base, ctx);
 		}
 
 		ctx = ctx->next;
@@ -186,7 +227,12 @@ static void echo_event_cb(struct bufferevent *bev, short events, void *arg)
 	struct ctx *ctx = arg;
 
 	if (events & BEV_EVENT_CONNECTED) {
-		ctx->worker->total_connections++;
+	        if(ctx->flood) {
+			ctx->worker->total_fast_connections++;
+		}
+		else  {
+			ctx->worker->total_slow_connections++;
+		}
 		ctx->worker->active_connections++;
 		UPDATE_STATE(ctx, STATE_WAIT_FOR_RECV);
 		return;
@@ -212,7 +258,6 @@ static void new_connection(struct event_base *base, struct ctx *ctx)
 	int s;
 	struct linger linger;
 	int flag;
-        char sizebuf[12]; // 10 digits, separator, \0
 
 	s = socket(AF_INET, SOCK_STREAM, 0);
 	if (s == -1) {
@@ -236,19 +281,28 @@ static void new_connection(struct event_base *base, struct ctx *ctx)
 	evutil_make_socket_nonblocking(s);
 
 	ctx->bev = bufferevent_socket_new(base, s, BEV_OPT_CLOSE_ON_FREE);
+        if(!ctx->flood) {
+            if(bufferevent_add_to_rate_limit_group(ctx->bev, ctx->worker->slow_bucket)) {
+		    printf("Error on adding to rate limit slow\n");
+	    }
+        }
+
+
 	if (bufferevent_socket_connect(ctx->bev, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1) {
+                bufferevent_remove_from_rate_limit_group(ctx->bev);
 		bufferevent_free(ctx->bev);
 		UPDATE_STATE(ctx, STATE_IDLE);
 		LOG_ERROR(ctx->worker, ERRSOURCE_CONNECT, EVUTIL_SOCKET_ERROR());
 		return;
 	}
+
 	bufferevent_setcb(ctx->bev, echo_read_cb, NULL, echo_event_cb, ctx);
 	bufferevent_enable(ctx->bev, EV_READ);
+
 	ctx->messages_left = messages_per_connection - 1;
 	ctx->bytes_left = ctx->msg_size;
-        sprintf(sizebuf, "%010u|", ctx->msg_size);
-	bufferevent_write(ctx->bev, sizebuf, 11);
-
+        sprintf(ctx->worker->buffer, "%010u|", ctx->msg_size);
+        ctx->sent_timestamp = rdtsc();
 	bufferevent_write(ctx->bev, ctx->worker->buffer, ctx->bytes_left);
 	UPDATE_STATE(ctx, STATE_CONNECTING);
 }
@@ -271,6 +325,8 @@ static void *start_worker(void *p)
 	struct ctx *ctx;
 	struct event *event;
 	struct timeval tv = {1, 0};
+	struct timeval rate_interval;
+        size_t rate;
 
 	worker = p;
 
@@ -286,16 +342,37 @@ static void *start_worker(void *p)
 		exit(1);
 	}
 
+        // set rate of slow connections to ~1pps. Note: this includes the overhead of conn setup
+        if(worker->slow_connections  == 0) {
+           rate_interval.tv_sec = 1;
+           rate_interval.tv_usec = 0;
+           rate = 64; // irrelevant
+        } else if(worker->slow_connections < 1000) {
+            rate_interval.tv_sec = 0;
+            rate_interval.tv_usec = 1000000 / worker->slow_connections;
+            rate = 64; // this is ~1 pps
+        } else {
+            rate_interval.tv_sec = 0;
+            rate_interval.tv_usec = 1000;
+            rate = (64*worker->slow_connections)/1000; // roughly 1pps
+        }
+
+        worker->slow_bucket_cfg = ev_token_bucket_cfg_new(EV_RATE_LIMIT_MAX, EV_RATE_LIMIT_MAX,
+                                                  rate, rate, &rate_interval); // 4000pps with 64b payloads
+        worker->slow_bucket = bufferevent_rate_limit_group_new(worker->base,
+                                                               worker->slow_bucket_cfg);
+
 	worker->first_ctx = NULL;
 	for (i = 0; i < worker->connections; i++) {
 		ctx = worker->first_ctx;
 		worker->first_ctx = malloc(sizeof(struct ctx));
 		worker->first_ctx->event = NULL;
-                worker->first_ctx->flood = 1;
-                worker->first_ctx->msg_size = msg_size;
                 if (i < worker->slow_connections) {
                     worker->first_ctx->flood = 0;
                     worker->first_ctx->msg_size = 64;
+                } else {
+                    worker->first_ctx->flood = 1;
+                    worker->first_ctx->msg_size = msg_size;
                 }
 
 		worker->first_ctx->next = ctx;
@@ -311,21 +388,28 @@ static void *start_worker(void *p)
 	return 0;
 }
 
-static int start_threads(unsigned int cores, unsigned int connections, unsigned int slow_connections)
+static int start_threads(unsigned int cores, unsigned int connections, unsigned int slow_connections, unsigned int churn_per_second)
 {
 	int i;
 	int connections_per_core = connections / cores;
 	int slow_connections_per_core = slow_connections / cores;
+	int churn_per_second_per_core = churn_per_second / cores;
+
 	int leftover_connections = connections % cores;
 	int leftover_slow_connections = slow_connections % cores;
+	int leftover_churn_per_second = churn_per_second % cores;
 
 	for (i = 0; i < cores; i++) {
 		worker[i].cpu = i;
 		worker[i].active_connections = 0;
-		worker[i].total_connections = 0;
-		worker[i].total_messages = 0;
+		worker[i].total_fast_connections = 0;
+		worker[i].total_slow_connections = 0;
+		worker[i].total_fast_messages = 0;
+		worker[i].total_slow_messages = 0;
+		worker[i].finished = 0;
 		worker[i].connections = connections_per_core + (i < leftover_connections ? 1 : 0);
 		worker[i].slow_connections = slow_connections_per_core + (i < leftover_slow_connections ? 1 : 0);
+		worker[i].churn_per_second = churn_per_second_per_core + (i < leftover_churn_per_second ? 1 : 0);
 		pthread_create(&worker[i].tid, NULL, start_worker, &worker[i]);
 	}
 
@@ -341,11 +425,17 @@ int main(int argc, char **argv)
 	int cores;
 	int connections;
 	unsigned int slow_connections = 0;
-	long long total_connections;
-	long long total_messages;
+	unsigned int churn_per_second = 0;
+	long long total_fast_connections;
+	long long total_slow_connections;
+	long long total_fast_messages;
+	long long total_slow_messages;
+	long long finished;
 	int active_connections;
 	int timeouts_connect;
 	int timeouts_recv;
+	int timeouts_connect_slow;
+	int timeouts_recv_slow;
 	char buf;
 	int ret;
 	char ifname[64];
@@ -354,12 +444,12 @@ int main(int argc, char **argv)
 	prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
 
 	if (argc < 7) {
-		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION SLOW_CONNECTIONS\n", argv[0]);
+		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION [SLOW_CONNECTIONS] [CHURN_PER_SECOND]\n", argv[0]);
 		return 1;
 	}
 
-	if (argc > 8) {
-		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION SLOW_CONNECTIONS\n", argv[0]);
+	if (argc > 9) {
+		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION [SLOW_CONNECTIONS] [CHURN_PER_SECOND]\n", argv[0]);
 		return 1;
 	}
 
@@ -374,8 +464,11 @@ int main(int argc, char **argv)
 	msg_size = atoi(argv[5]);
 	messages_per_connection = strtol(argv[6], NULL, 10);
 
-        if (argc == 8)
+        if (argc >= 8)
             slow_connections = atoi(argv[7]);
+
+        if (argc >= 9)
+            churn_per_second = atoi(argv[8]);
 
 
 	if (timer_calibrate_tsc()) {
@@ -385,8 +478,9 @@ int main(int argc, char **argv)
 
 	get_ifname(&server_addr, ifname);
 
-	start_threads(cores, connections, slow_connections);
 	evthread_use_pthreads();
+
+	start_threads(cores, connections, slow_connections, churn_per_second);
 	puts("ok");
 	fflush(stdout);
 
@@ -400,17 +494,27 @@ int main(int argc, char **argv)
 			return 1;
 		}
 		get_eth_stats(ifname, &rx_bytes, &rx_packets, &tx_bytes, &tx_packets);
-		total_connections = 0;
-		total_messages = 0;
+		total_fast_connections = 0;
+		total_slow_connections = 0;
+		total_fast_messages = 0;
+		total_slow_messages = 0;
+                finished = 0;
 		active_connections = 0;
 		timeouts_connect = 0;
 		timeouts_recv = 0;
+		timeouts_connect_slow = 0;
+		timeouts_recv_slow = 0;
 		for (i = 0; i < cores; i++) {
-			total_connections += worker[i].total_connections;
-			total_messages += worker[i].total_messages;
+			total_fast_connections += worker[i].total_fast_connections;
+			total_slow_connections += worker[i].total_slow_connections;
+			total_fast_messages += worker[i].total_fast_messages;
+			total_slow_messages += worker[i].total_slow_messages;
+                        finished += worker[i].finished;
 			active_connections += worker[i].active_connections;
 			timeouts_connect += worker[i].timeouts_connect;
 			timeouts_recv += worker[i].timeouts_recv;
+			timeouts_connect_slow += worker[i].timeouts_connect_slow;
+			timeouts_recv_slow += worker[i].timeouts_recv_slow;
 		}
 		printf("%lld %lld %d %d %d ", total_connections, total_messages, active_connections, timeouts_connect, timeouts_recv);
 		printf("%ld %ld %ld %ld ", rx_bytes, rx_packets, tx_bytes, tx_packets);
