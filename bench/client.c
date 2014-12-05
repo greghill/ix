@@ -247,10 +247,41 @@ static void echo_event_cb(struct bufferevent *bev, short events, void *arg)
 		return;
 	}
 
+	if (events & BEV_EVENT_WRITING) {
+            printf("WRITING_EVENT error\n");
+		bufferevent_free(bev);
+		if (ctx->state == STATE_WAIT_FOR_RECV)
+			ctx->worker->active_connections--;
+		UPDATE_STATE(ctx, STATE_IDLE);
+		LOG_ERROR(ctx->worker, ERRSOURCE_EVENT_ERROR, EVUTIL_SOCKET_ERROR());
+		return;
+	}
+
+	if (events & BEV_EVENT_READING) {
+            printf("READING_EVENT error\n");
+		bufferevent_free(bev);
+		if (ctx->state == STATE_WAIT_FOR_RECV)
+			ctx->worker->active_connections--;
+		UPDATE_STATE(ctx, STATE_IDLE);
+		LOG_ERROR(ctx->worker, ERRSOURCE_EVENT_ERROR, EVUTIL_SOCKET_ERROR());
+		return;
+	}
+
+	if (events & BEV_EVENT_TIMEOUT) {
+            printf("TIMEOUT_EVENT error\n");
+		bufferevent_free(bev);
+		if (ctx->state == STATE_WAIT_FOR_RECV)
+			ctx->worker->active_connections--;
+		UPDATE_STATE(ctx, STATE_IDLE);
+		LOG_ERROR(ctx->worker, ERRSOURCE_EVENT_ERROR, EVUTIL_SOCKET_ERROR());
+		return;
+	}
+
 	if (events & BEV_EVENT_EOF) {
 		fprintf(stderr, "Connection terminated prematurely.\n");
 		exit(1);
 	}
+        printf("uncaught event %d\n", events);
 }
 
 static void new_connection(struct event_base *base, struct ctx *ctx)
