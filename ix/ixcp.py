@@ -119,6 +119,8 @@ def main():
   for i in xrange(shmem.nr_flow_groups):
     cpu = shmem.flow_group[i].cpu
     fg_per_cpu[cpu].append(i)
+
+  """
   print 'flow group assignments:'
   for cpu in xrange(NCPU):
     if len(fg_per_cpu[cpu]) == 0:
@@ -133,6 +135,7 @@ def main():
   if empty:
     print 'none',
   print
+  """
 
   parser = argparse.ArgumentParser()
   parser.add_argument('--single-cpu', action='store_true')
