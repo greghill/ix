@@ -16,6 +16,13 @@ NETHDEV = 16
 ETH_MAX_TOTAL_FG = ETH_MAX_NUM_FG * NETHDEV
 IDLE_FIFO_SIZE = 256
 
+class CpuMetrics(ctypes.Structure):
+  _fields_ = [
+    ('queuing_delay', ctypes.c_double),
+    ('batch_size', ctypes.c_double),
+    ('padding', ctypes.c_byte * 48),
+  ]
+
 class FlowGroupMetrics(ctypes.Structure):
   _fields_ = [
     ('cpu', ctypes.c_uint),
@@ -58,6 +65,7 @@ class ShMem(ctypes.Structure):
     ('nr_flow_groups', ctypes.c_uint),
     ('nr_cpus', ctypes.c_uint),
     ('padding', ctypes.c_byte * 56),
+    ('cpu_metrics', CpuMetrics * NCPU),
     ('flow_group', FlowGroupMetrics * ETH_MAX_TOTAL_FG),
     ('command', Command * NCPU),
   ]
@@ -142,6 +150,7 @@ def main():
   parser.add_argument('--cpus', type=int)
   parser.add_argument('--idle', type=int)
   parser.add_argument('--wake-up', type=int)
+  parser.add_argument('--show-metrics', action='store_true')
   args = parser.parse_args()
 
   if args.single_cpu:
@@ -193,6 +202,9 @@ def main():
     idle(shmem, args.idle)
   elif args.wake_up is not None:
     wake_up(args.wake_up)
+  elif args.show_metrics:
+    for cpu in xrange(shmem.nr_cpus):
+      print 'CPU %d: queuing delay: %d us, batch size: %d pkts' % (cpu, shmem.cpu_metrics[cpu].queuing_delay, shmem.cpu_metrics[cpu].batch_size)
 
 if __name__ == '__main__':
   main()

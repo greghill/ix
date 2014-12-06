@@ -7,6 +7,11 @@
 
 #define IDLE_FIFO_SIZE 256
 
+struct cpu_metrics {
+	double queuing_delay;
+	double batch_size;
+} __aligned(64);
+
 struct flow_group_metrics {
 	int cpu;
 } __aligned(64);
@@ -39,6 +44,7 @@ struct command_struct {
 extern volatile struct cp_shmem {
 	uint32_t nr_flow_groups;
 	uint32_t nr_cpus;
+	struct cpu_metrics cpu_metrics[NCPU];
 	struct flow_group_metrics flow_group[ETH_MAX_TOTAL_FG];
 	struct command_struct command[NCPU];
 } *cp_shmem;

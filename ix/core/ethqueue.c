@@ -6,10 +6,25 @@
 #include <ix/kstats.h>
 #include <ix/ethdev.h>
 #include <ix/log.h>
+#include <ix/control_plane.h>
+
+/* Accumulate metrics period (in us) */
+#define METRICS_PERIOD_US 10000
+
+#define EMA_SMOOTH_FACTOR 0.01
 
 DEFINE_PERCPU(int, eth_num_queues);
 DEFINE_PERCPU(struct eth_rx_queue *, eth_rxqs[NETHDEV]);
 DEFINE_PERCPU(struct eth_tx_queue *, eth_txqs[NETHDEV]);
+
+struct metrics_accumulator {
+	long timestamp;
+	long queuing_delay;
+	int batch_size;
+	int count;
+};
+
+static DEFINE_PERCPU(struct metrics_accumulator, metrics_acc);
 
 /* FIXME: convert to per-flowgroup */
 //DEFINE_PERQUEUE(struct eth_tx_queue *, eth_txq);
@@ -64,6 +79,11 @@ int eth_process_recv(void)
 {
 	int i, count = 0;
 	bool empty;
+	unsigned long min_timestamp = -1;
+	unsigned long timestamp;
+	int value;
+	double val;
+	struct metrics_accumulator *this_metrics_acc = &percpu_get(metrics_acc);
 
 	/*
 	 * We round robin through each queue one packet at
@@ -76,12 +96,37 @@ int eth_process_recv(void)
 		empty = true;
 		for (i = 0; i < percpu_get(eth_num_queues); i++) {
 			struct eth_rx_queue *rxq = percpu_get(eth_rxqs[i]);
+			struct mbuf *pos = rxq->head;
+			if (pos)
+				min_timestamp = min(min_timestamp, pos->timestamp);
 			if (!eth_process_recv_queue(rxq)) {
 				count++;
 				empty = false;
 			}
 		}
 	} while (!empty && count < eth_rx_max_batch);
+
+	timestamp = rdtsc();
+	this_metrics_acc->count++;
+	value = count ? (timestamp - min_timestamp) / cycles_per_us : 0;
+	this_metrics_acc->queuing_delay += value;
+	this_metrics_acc->batch_size += count;
+	if (timestamp - this_metrics_acc->timestamp > (long) cycles_per_us * METRICS_PERIOD_US) {
+		if (this_metrics_acc->batch_size)
+			val = (double) this_metrics_acc->queuing_delay / this_metrics_acc->batch_size;
+		else
+			val = 0;
+		EMA_UPDATE(cp_shmem->cpu_metrics[percpu_get(cpu_nr)].queuing_delay, val, EMA_SMOOTH_FACTOR);
+		if (this_metrics_acc->count)
+			val = (double) this_metrics_acc->batch_size / this_metrics_acc->count;
+		else
+			val = 0;
+		EMA_UPDATE(cp_shmem->cpu_metrics[percpu_get(cpu_nr)].batch_size, val, EMA_SMOOTH_FACTOR);
+		this_metrics_acc->timestamp = timestamp;
+		this_metrics_acc->count = 0;
+		this_metrics_acc->queuing_delay = 0;
+		this_metrics_acc->batch_size = 0;
+	}
 
 	KSTATS_PACKETS_INC(count);
 	KSTATS_BATCH_INC(count);
