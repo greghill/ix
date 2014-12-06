@@ -18,9 +18,8 @@ IDLE_FIFO_SIZE = 256
 
 class FlowGroupMetrics(ctypes.Structure):
   _fields_ = [
-    ('depth', ctypes.c_uint),
     ('cpu', ctypes.c_uint),
-    ('padding', ctypes.c_byte * 56),
+    ('padding', ctypes.c_byte * 60),
   ]
 
 class CmdParamsMigrate(ctypes.Structure):
