@@ -5,12 +5,7 @@
 #include <ix/compiler.h>
 #include <ix/ethfg.h>
 
-#define NQUEUE 64
 #define IDLE_FIFO_SIZE 256
-
-struct queue_metrics {
-	volatile int depth;
-} __aligned(64);
 
 struct flow_group_metrics {
 	volatile int depth;
@@ -45,17 +40,11 @@ struct command_struct {
 extern volatile struct cp_shmem {
 	uint32_t nr_flow_groups;
 	uint32_t nr_cpus;
-	struct queue_metrics queue[NQUEUE];
 	struct flow_group_metrics flow_group[ETH_MAX_TOTAL_FG];
 	struct command_struct command[NCPU];
 } *cp_shmem;
 
 DECLARE_PERCPU(volatile struct command_struct *, cp_cmd);
-
-static inline void cp_queue_depth(int queue_id, int depth)
-{
-	cp_shmem->queue[queue_id].depth = depth;
-}
 
 static inline void cp_flow_group_depth(int flow_group_id, int diff)
 {

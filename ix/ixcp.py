@@ -16,12 +16,6 @@ NETHDEV = 16
 ETH_MAX_TOTAL_FG = ETH_MAX_NUM_FG * NETHDEV
 IDLE_FIFO_SIZE = 256
 
-class QueueMetrics(ctypes.Structure):
-  _fields_ = [
-    ('depth', ctypes.c_uint),
-    ('padding', ctypes.c_byte * 60),
-  ]
-
 class FlowGroupMetrics(ctypes.Structure):
   _fields_ = [
     ('depth', ctypes.c_uint),
@@ -65,7 +59,6 @@ class ShMem(ctypes.Structure):
     ('nr_flow_groups', ctypes.c_uint),
     ('nr_cpus', ctypes.c_uint),
     ('padding', ctypes.c_byte * 56),
-    ('queue', QueueMetrics * 64),
     ('flow_group', FlowGroupMetrics * ETH_MAX_TOTAL_FG),
     ('command', Command * NCPU),
   ]
