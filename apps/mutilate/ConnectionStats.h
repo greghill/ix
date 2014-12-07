@@ -117,9 +117,6 @@ class ConnectionStats {
     sets += as.sets;
     get_misses += as.get_misses;
     skips += as.skips;
-
-    start = as.start;
-    stop = as.stop;
   }
 
   static void print_header() {

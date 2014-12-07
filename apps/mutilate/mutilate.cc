@@ -212,23 +212,6 @@ void agent() {
 
     go(servers, options, stats, &socket);
 
-    AgentStats as;
-
-    as.rx_bytes = stats.rx_bytes;
-    as.tx_bytes = stats.tx_bytes;
-    as.gets = stats.gets;
-    as.sets = stats.sets;
-    as.get_misses = stats.get_misses;
-    as.start = stats.start;
-    as.stop = stats.stop;
-    as.skips = stats.skips;
-
-    string req = s_recv(socket);
-    //    V("req = %s", req.c_str());
-    request.rebuild(sizeof(as));
-    memcpy(request.data(), &as, sizeof(as));
-    socket.send(request);
-
     assert(!s_recv(socket).compare("stop"));
     s_send(socket, "ok");
   }
@@ -773,6 +756,40 @@ void* thread_main(void *arg) {
   return cs;
 }
 
+struct agent_stats_thread_data {
+  zmq::socket_t *socket;
+};
+
+void* agent_stats_thread(void *arg) {
+  struct agent_stats_thread_data *data = (struct agent_stats_thread_data *) arg;
+
+  while (1) {
+    string req = s_recv(*data->socket);
+
+    if (!req.compare("stop")) {
+      s_send(*data->socket, "ok");
+      break;
+    }
+
+    AgentStats as = {0};
+
+    for (Connection *conn: all_connections) {
+      as.rx_bytes += conn->stats.rx_bytes;
+      as.tx_bytes += conn->stats.tx_bytes;
+      as.gets += conn->stats.gets;
+      as.sets += conn->stats.sets;
+      as.get_misses += conn->stats.get_misses;
+      as.skips += conn->stats.skips;
+    }
+
+    zmq::message_t reply(sizeof(as));
+    memcpy(reply.data(), &as, sizeof(as));
+    data->socket->send(reply);
+  }
+
+  return NULL;
+}
+
 void do_mutilate(const vector<string>& servers, options_t& options,
                  ConnectionStats& stats, bool master
 #ifdef HAVE_LIBZMQ
@@ -1007,6 +1024,15 @@ void do_mutilate(const vector<string>& servers, options_t& options,
     conn->drive_write_machine(); // Kick the Connection into motion.
   }
 
+  pthread_t stats_thread;
+  struct agent_stats_thread_data data;
+
+  if (args.agentmode_given && master) {
+    data.socket = socket;
+    if (pthread_create(&stats_thread, NULL, agent_stats_thread, &data))
+      DIE("pthread_create() failed");
+  }
+
   //  V("Start = %f", start);
 
   // Main event loop.
@@ -1032,6 +1058,10 @@ void do_mutilate(const vector<string>& servers, options_t& options,
 
   if (master && !args.scan_given && !args.search_given)
     V("stopped at %f  options.time = %d", get_time(), options.time);
+
+  if (args.agentmode_given && master)
+    if (pthread_join(stats_thread, NULL))
+      DIE("pthread_join() failed");
 
   // Tear-down and accumulate stats.
   for (Connection *conn: connections) {
