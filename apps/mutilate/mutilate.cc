@@ -151,6 +151,8 @@ static bool s_send (zmq::socket_t &socket, const std::string &string) {
  * 2. Everyone: RUN for options.time seconds.
  * 3. Master -> Agent: Dummy message
  * 4. Agent -> Master: Send AgentStats [w/ RX/TX bytes, # gets/sets]
+ * 5. Master -> Agent: Stop message
+ * 6. Agent -> Master: Dummy message
  *
  * The master then aggregates AgentStats across all agents with its
  * own ConnectionStats to compute overall statistics.
@@ -226,6 +228,9 @@ void agent() {
     request.rebuild(sizeof(as));
     memcpy(request.data(), &as, sizeof(as));
     socket.send(request);
+
+    assert(!s_recv(socket).compare("stop"));
+    s_send(socket, "ok");
   }
 }
 
@@ -303,6 +308,9 @@ void finish_agent(ConnectionStats &stats) {
     s->recv(&message);
     memcpy(&as, message.data(), sizeof(as));
     stats.accumulate(as);
+
+    s_send(*s, "stop");
+    s_recv(*s);
   }
 }
 
