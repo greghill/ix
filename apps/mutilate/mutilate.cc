@@ -65,6 +65,9 @@ pthread_barrier_t barrier;
 
 double boot_time;
 
+pthread_mutex_t all_connections_mutex;
+vector<Connection*> all_connections;
+
 void init_random_stuff();
 
 void go(const vector<string> &servers, options_t &options,
@@ -827,6 +830,10 @@ void do_mutilate(const vector<string>& servers, options_t& options,
       if (c == 0) server_lead.push_back(conn);
     }
   }
+
+  pthread_mutex_lock(&all_connections_mutex);
+  all_connections.insert(all_connections.end(), connections.begin(), connections.end());
+  pthread_mutex_unlock(&all_connections_mutex);
 
   // Wait for all Connections to become IDLE.
   while (1) {
