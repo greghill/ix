@@ -1139,6 +1139,7 @@ void args_to_options(options_t* options) {
   options->connections = args.connections_arg;
   options->blocking = args.blocking_given;
   options->qps = args.qps_arg;
+  options->measure_qps = args.measure_qps_given ? args.measure_qps_arg : 0;
   options->threads = args.threads_arg;
   options->server_given = args.server_given;
   options->roundrobin = args.roundrobin_given;

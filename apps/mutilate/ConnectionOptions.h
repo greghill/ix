@@ -9,6 +9,7 @@ typedef struct {
   bool blocking;
   double lambda;
   int qps;
+  int measure_qps;
   int records;
 
   bool binary;
