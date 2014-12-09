@@ -68,6 +68,12 @@ double boot_time;
 pthread_mutex_t all_connections_mutex;
 vector<Connection*> all_connections;
 
+static struct {
+  double prv_time;
+  double start_time;
+  ConnectionStats prv_stats;
+} report_stats_ctx;
+
 void init_random_stuff();
 
 void go(const vector<string> &servers, options_t &options,
@@ -790,6 +796,48 @@ void* agent_stats_thread(void *arg) {
   return NULL;
 }
 
+static void report_stats_init(void) {
+  report_stats_ctx.prv_time = get_time();
+  report_stats_ctx.start_time = report_stats_ctx.prv_time;
+  printf("# start_time = %f\n", report_stats_ctx.start_time);
+  printf("%6s ", "time");
+  report_stats_ctx.prv_stats.print_header();
+}
+
+static bool report_stats_is_time(double now) {
+  return now - report_stats_ctx.prv_time >= args.report_stats_arg;
+}
+
+static void report_stats(double now, int qps) {
+  ConnectionStats stats;
+  for (Connection *conn: all_connections)
+    stats.accumulate(conn->stats);
+
+  for (auto s: agent_sockets) {
+    s_send(*s, "stats");
+
+    AgentStats as;
+    zmq::message_t message;
+
+    s->recv(&message);
+    memcpy(&as, message.data(), sizeof(as));
+    stats.accumulate(as);
+  }
+
+  stats.start = report_stats_ctx.prv_time;
+  stats.stop = now;
+
+  ConnectionStats report_stats = stats;
+  report_stats.substract(report_stats_ctx.prv_stats);
+
+  printf("%6.3f ", now - report_stats_ctx.start_time);
+  stats.print_stats("read", report_stats.get_sampler, false);
+  printf(" %8.1f", report_stats.get_qps());
+  printf(" %8d\n", qps);
+  report_stats_ctx.prv_time = now;
+  report_stats_ctx.prv_stats = stats;
+}
+
 void do_mutilate(const vector<string>& servers, options_t& options,
                  ConnectionStats& stats, bool master
 #ifdef HAVE_LIBZMQ
@@ -1035,6 +1083,9 @@ void do_mutilate(const vector<string>& servers, options_t& options,
 
   //  V("Start = %f", start);
 
+  if (!args.agentmode_given && args.report_stats_given)
+    report_stats_init();
+
   // Main event loop.
   while (1) {
     event_base_loop(base, loop_flag);
@@ -1051,6 +1102,12 @@ void do_mutilate(const vector<string>& servers, options_t& options,
     for (Connection *conn: connections)
       if (!conn->check_exit_condition(now))
         restart = true;
+
+    if (!args.agentmode_given && args.report_stats_given && report_stats_is_time(now)) {
+      int qps = options.qps;
+      qps += args.measure_qps_given ? args.measure_qps_arg : 0;
+      report_stats(now, qps);
+    }
 
     if (restart) continue;
     else break;
