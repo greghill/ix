@@ -119,6 +119,19 @@ class ConnectionStats {
     skips += as.skips;
   }
 
+  void substract(const ConnectionStats &cs) {
+    rx_bytes -= cs.rx_bytes;
+    tx_bytes -= cs.tx_bytes;
+    gets -= cs.gets;
+    sets -= cs.sets;
+    get_misses -= cs.get_misses;
+    skips -= cs.skips;
+
+    get_sampler.substract(cs.get_sampler);
+    set_sampler.substract(cs.set_sampler);
+    op_sampler.substract(cs.op_sampler);
+  }
+
   static void print_header() {
     printf("%-7s %7s %7s %7s %7s %7s %7s %7s %7s %7s\n",
            "#type", "avg", "std", "min", /*"1st",*/ "5th", "10th",
