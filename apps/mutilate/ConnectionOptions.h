@@ -3,6 +3,16 @@
 
 #include "distributions.h"
 
+enum qps_function_type {
+  NONE,
+};
+
+struct qps_function_info {
+  enum qps_function_type type;
+  union {
+  } params;
+};
+
 typedef struct {
   int connections;
   char numreqperconn[32];
@@ -44,6 +54,8 @@ typedef struct {
   bool oob_thread;
 
   bool moderate;
+
+  struct qps_function_info qps_function;
 } options_t;
 
 #endif // CONNECTIONOPTIONS_H

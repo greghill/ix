@@ -418,6 +418,42 @@ string name_to_ipaddr(string host) {
   return string(ipaddr) + ":" + string(port);
 }
 
+bool qps_function_enabled(options_t *options) {
+  return options->qps_function.type != qps_function_type::NONE;
+}
+
+int qps_function_calc(options_t *options, double t) {
+  switch (options->qps_function.type) {
+  case NONE:
+    assert(false);
+  }
+  assert(false);
+}
+
+void qps_function_init(options_t *options) {
+  char *type, *rest;
+
+  if (!args.qps_function_given) {
+    options->qps_function.type = qps_function_type::NONE;
+    return;
+  }
+
+  type = strtok_r(args.qps_function_arg, ":", &rest);
+  if (false) {
+  } else {
+    DIE("Invalid --qps-function argument");
+  }
+  args.qps_given = true;
+  args.qps_arg = qps_function_calc(options, 0);
+}
+
+void qps_function_adjust(options_t *options, vector<Connection*>& connections, int qps) {
+  for (Connection *conn: connections) {
+    conn->options.lambda = (double) qps / (double) options->lambda_denom * args.lambda_mul_arg;
+    conn->iagen->set_lambda(conn->options.lambda);
+  }
+}
+
 int main(int argc, char **argv) {
   if (cmdline_parser(argc, argv, &args) != 0) exit(-1);
 
@@ -472,6 +508,8 @@ int main(int argc, char **argv) {
 
   options_t options;
   args_to_options(&options);
+
+  qps_function_init(&options);
 
   pthread_barrier_init(&barrier, NULL, options.threads);
 
@@ -1103,9 +1141,18 @@ void do_mutilate(const vector<string>& servers, options_t& options,
       if (!conn->check_exit_condition(now))
         restart = true;
 
+    int qps = 0;
+    if (qps_function_enabled(&options)) {
+      qps = qps_function_calc(&options, now - start);
+      if (!args.measure_qps_given)
+        qps_function_adjust(&options, connections, qps - options.measure_qps);
+    }
+
     if (!args.agentmode_given && args.report_stats_given && report_stats_is_time(now)) {
-      int qps = options.qps;
-      qps += args.measure_qps_given ? args.measure_qps_arg : 0;
+      if (!qps_function_enabled(&options)) {
+        qps = options.qps;
+        qps += args.measure_qps_given ? args.measure_qps_arg : 0;
+      }
       report_stats(now, qps);
     }
 

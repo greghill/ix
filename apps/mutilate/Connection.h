@@ -85,6 +85,8 @@ public:
 
   std::queue<Operation> op_queue;
 
+  Generator *iagen;
+
 private:
   struct event_base *base;
   struct evdns_base *evdns;
@@ -104,7 +106,6 @@ private:
   Generator *valuesize;
   Generator *keysize;
   KeyGenerator *keygen;
-  Generator *iagen;
   
   // Tracks the number of requests made on the current socket
   // Used to implement the "numreqperconn" feature  
