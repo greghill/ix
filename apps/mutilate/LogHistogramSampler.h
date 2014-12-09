@@ -104,6 +104,17 @@ public:
 
     for (auto i: h.samples) samples.push_back(i);
   }
+
+  void substract(const LogHistogramSampler &h) {
+    assert(bins.size() == h.bins.size());
+
+    for (size_t i = 0; i < bins.size(); i++) bins[i] -= h.bins[i];
+
+    sum -= h.sum;
+    sum_sq -= h.sum_sq;
+
+    // TODO: adjust samples
+  }
 };
 
 #endif // LOGHISTOGRAMSAMPLER_H
