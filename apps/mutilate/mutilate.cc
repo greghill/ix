@@ -424,6 +424,14 @@ bool qps_function_enabled(options_t *options) {
 
 int qps_function_calc(options_t *options, double t) {
   switch (options->qps_function.type) {
+  case TRIANGLE: {
+    struct qps_function_triangle *p = &options->qps_function.params.triangle;
+    double t0 = fmod(t, p->period);
+    if (t0 < p->period / 2)
+      return p->min + t0 * (p->max - p->min) / (p->period / 2);
+    else
+      return p->max - (t0 - p->period / 2) * (p->max - p->min) / (p->period / 2);
+  }
   case NONE:
     assert(false);
   }
@@ -432,6 +440,7 @@ int qps_function_calc(options_t *options, double t) {
 
 void qps_function_init(options_t *options) {
   char *type, *rest;
+  int ret;
 
   if (!args.qps_function_given) {
     options->qps_function.type = qps_function_type::NONE;
@@ -439,7 +448,12 @@ void qps_function_init(options_t *options) {
   }
 
   type = strtok_r(args.qps_function_arg, ":", &rest);
-  if (false) {
+  if (!strcasecmp(type, "triangle")) {
+    struct qps_function_triangle *p = &options->qps_function.params.triangle;
+    options->qps_function.type = qps_function_type::TRIANGLE;
+    ret = sscanf(rest, "%d:%d:%lf", &p->min, &p->max, &p->period);
+    if (ret != 3)
+      DIE("Invalid --qps-function argument");
   } else {
     DIE("Invalid --qps-function argument");
   }

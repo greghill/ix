@@ -123,5 +123,6 @@ Parameters are not required.  The following distributions are supported:
 text "
 The following QPS functions are supported:
 
+   triangle:min:max:period      Triangle wave.
 "
 

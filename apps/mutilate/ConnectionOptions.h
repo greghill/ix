@@ -5,11 +5,19 @@
 
 enum qps_function_type {
   NONE,
+  TRIANGLE,
+};
+
+struct qps_function_triangle {
+  int min;
+  int max;
+  double period;
 };
 
 struct qps_function_info {
   enum qps_function_type type;
   union {
+    struct qps_function_triangle triangle;
   } params;
 };
 
