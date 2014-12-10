@@ -1,12 +1,21 @@
 #include "server.h"
+#include <event2/bufferevent.h>
+#define MAX_ERRSOURCE 2
+#define ERRSOURCE_EVENT_ERROR 1
+#define MAX_ERRNO 114
 
-struct worker {
-	int cpu;
-	unsigned long long total_connections;
-	struct event_base *base;
-	pthread_t tid;
-	int enable;
-} worker[CORES];
+#define LOG_ERROR(source, errno) \
+	do { \
+            fprintf(stderr, "unhandled log_error(%d, %d, %s)\n", (source), (errno), evutil_socket_error_to_string(errno)); \
+	} while (0)
+
+struct ctx {
+	struct worker *worker;
+	size_t bytes_left;
+	unsigned char *buffer;
+	uint32_t msg_size;
+};
+
 
 void echo_event_cb(struct bufferevent *bev, short events, void *arg)
 {
@@ -29,6 +38,7 @@ static void accept_conn_cb(struct evconnlistener *listener, evutil_socket_t fd, 
 	}
 
 	worker->total_connections++;
+	worker->active_connections++;
 	bev = bufferevent_socket_new(worker->base, fd, BEV_OPT_CLOSE_ON_FREE);
 	ctx = init_ctx(worker);
 	bufferevent_setcb(bev, msg_size_cb, NULL, echo_event_cb, ctx);

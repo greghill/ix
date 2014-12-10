@@ -26,7 +26,15 @@
 #define SO_REUSEPORT 15
 
 struct ctx;
-struct worker;
+struct worker {
+	int cpu;
+	unsigned long long total_connections;
+	struct event_base *base;
+	pthread_t tid;
+	int enable;
+    unsigned long long active_connections;
+	unsigned long long total_messages;
+} worker[CORES];
 
 void init(void);
 int parse_cpus(char *cpus);
