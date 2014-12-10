@@ -19,9 +19,37 @@ struct ctx {
 
 void echo_event_cb(struct bufferevent *bev, short events, void *arg)
 {
-	if (events & (BEV_EVENT_EOF | BEV_EVENT_ERROR)) {
+	struct ctx *ctx = arg;
+	if (events & (BEV_EVENT_EOF)) {
+            ctx->worker->active_connections--;
 		bufferevent_free(bev);
 	}
+
+	if (events & BEV_EVENT_ERROR) {
+            if(EVUTIL_SOCKET_ERROR() != 104) { // 104:reset by peer, i.e., intentional
+		LOG_ERROR(ERRSOURCE_EVENT_ERROR, EVUTIL_SOCKET_ERROR());
+            }
+            ctx->worker->active_connections--;
+		bufferevent_free(bev);
+		return;
+	}
+
+	if (events & BEV_EVENT_WRITING) {
+            printf("WRITING_EVENT error\n");
+		return;
+	}
+
+	if (events & BEV_EVENT_READING) {
+            printf("READING_EVENT error\n");
+		return;
+	}
+
+	if (events & BEV_EVENT_TIMEOUT) {
+            printf("TIMEOUT_EVENT error\n");
+		return;
+	}
+
+        printf("uncaught event %d\n", events);
 }
 
 static void accept_conn_cb(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *address, int socklen, void *arg)
