@@ -27,7 +27,7 @@
 
 #define MAX_CORES 128
 
-#define TIMEOUT_US 1000000l
+#define TIMEOUT_US 30*1000*1000l
 
 #define MAX_ERRSOURCE 2
 #define ERRSOURCE_CONNECT 0
