@@ -35,6 +35,8 @@ int cp_init(void)
 
 	cp_shmem = vaddr;
 
+	bzero((void *)cp_shmem, sizeof(struct cp_shmem));
+
 	return 0;
 }
 
