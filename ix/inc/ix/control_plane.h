@@ -46,3 +46,10 @@ extern volatile struct cp_shmem {
 DECLARE_PERCPU(volatile struct command_struct *, cp_cmd);
 
 void cp_idle(void);
+
+static inline double ema_update(double prv_value, double value, double alpha)
+{
+	return alpha * value + (1 - alpha) * prv_value;
+}
+
+#define EMA_UPDATE(ema, value, alpha) ema = ema_update(ema, value, alpha)
