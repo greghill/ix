@@ -19,7 +19,8 @@ void msg_size_cb(struct bufferevent *bev, void *arg)
         }
         sscanf((char *)ctx->buffer, "%010u|", &ctx->msg_size);
 	ctx->buffer = realloc(ctx->buffer, ctx->msg_size);
-        ctx->bytes_left = ctx->msg_size;
+	//printf("Received new msg with %010u msg size\n", ctx->msg_size);
+        ctx->bytes_left = ctx->msg_size - 11;
 	bufferevent_setcb(bev, echo_read_cb, NULL, echo_event_cb, ctx);
         echo_read_cb(bev,arg);
 }
@@ -30,10 +31,14 @@ void echo_read_cb(struct bufferevent *bev, void *arg)
 	size_t len;
 
 	len = bufferevent_read(bev, &ctx->buffer[ctx->msg_size - ctx->bytes_left], ctx->bytes_left);
+	//printf("Received %zu bytes with %zu bytes left of %010u msg size\n", len, ctx->bytes_left, ctx->msg_size);
 	ctx->bytes_left -= len;
 	if (!ctx->bytes_left) {
 		ctx->bytes_left = ctx->msg_size;
+		//printf("replying with %010u msg size\n", ctx->msg_size);
+                ctx->worker->total_messages++;
 		bufferevent_write(bev, ctx->buffer, ctx->msg_size);
+		bufferevent_setcb(bev, msg_size_cb, NULL, echo_event_cb, ctx);
 	}
 }
 
@@ -50,6 +55,10 @@ struct ctx *init_ctx(struct worker *worker)
 int main(int argc, char **argv)
 {
 	int ret;
+	char buf;
+        int i;
+        unsigned long long active_connections;
+        unsigned long long total_messages;
 
 	init();
 
@@ -63,6 +72,26 @@ int main(int argc, char **argv)
 
 	start_threads();
 
-	pause();
+	while (1) {
+		ret = read(STDIN_FILENO, &buf, 1);
+                active_connections = 0;
+                total_messages = 0;
+		if (ret == 0) {
+			fprintf(stderr, "Error: EOF on STDIN.\n");
+			return 1;
+		} else if (ret == -1) {
+			perror("read");
+			return 1;
+		}
+		for (i = 0; i < CORES; i++) {
+			active_connections += worker[i].active_connections;
+			total_messages += worker[i].total_messages;
+		}
+
+		printf("%llu active connections,%llu total messages \n", active_connections, total_messages);
+
+		puts("");
+		fflush(stdout);
+	}
 	return 0;
 }
