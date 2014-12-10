@@ -63,16 +63,20 @@ struct worker {
 	unsigned int timeouts_recv;
 	unsigned int timeouts_connect_slow;
 	unsigned int timeouts_recv_slow;
+	size_t fast_rate;
 	struct ctx *first_ctx;
 
         struct bufferevent_rate_limit_group *slow_bucket;
         struct ev_token_bucket_cfg *slow_bucket_cfg;
+        struct bufferevent_rate_limit_group *fast_bucket;
+        struct ev_token_bucket_cfg *fast_bucket_cfg;
 } worker[MAX_CORES];
 
 #define STATE_IDLE 1
 #define STATE_CONNECTING 2
 #define STATE_WAIT_FOR_RECV 3
 #define STATE_WAIT_FOR_SEND 4
+#define STATE_DONE 5
 
 #define UPDATE_STATE(ctx, new_state) \
 	do { \
@@ -171,8 +175,9 @@ static void maintain_connections_cb(evutil_socket_t fd, short what, void *arg)
 			unflood--;
 			ctx->msg_size = 64;
 		} else if(to_flood > 0 && ctx->flood == 0) {
-			if(ctx->bev)
-				bufferevent_remove_from_rate_limit_group(ctx->bev);
+			if(ctx->bev && bufferevent_add_to_rate_limit_group(ctx->bev, ctx->worker->fast_bucket)) {
+				printf("Error on adding to rate limit fast\n");
+			}
 			ctx->flood = 1;
 			to_flood--;
 			ctx->msg_size = msg_size;
@@ -319,13 +324,18 @@ static void new_connection(struct event_base *base, struct ctx *ctx)
 	evutil_make_socket_nonblocking(s);
 
 	ctx->bev = bufferevent_socket_new(base, s, BEV_OPT_CLOSE_ON_FREE);
-        if(!ctx->flood) {
+        if(ctx->flood) {
+            if(bufferevent_add_to_rate_limit_group(ctx->bev, ctx->worker->fast_bucket)) {
+		    printf("Error on adding to rate limit fast\n");
+	    }
+        } else {
             if(bufferevent_add_to_rate_limit_group(ctx->bev, ctx->worker->slow_bucket)) {
 		    printf("Error on adding to rate limit slow\n");
 	    }
         }
 
 
+	//printf("worker: %d, ctx: %d, connecting with %u bytes\n", ctx->worker->cpu, ctx->no, ctx->msg_size);
 	if (bufferevent_socket_connect(ctx->bev, (struct sockaddr *) &server_addr, sizeof(server_addr)) == -1) {
                 bufferevent_remove_from_rate_limit_group(ctx->bev);
 		bufferevent_free(ctx->bev);
@@ -363,12 +373,15 @@ static void *start_worker(void *p)
 	struct ctx *ctx;
 	struct event *event;
 	struct timeval tv = {1, 0};
-	struct timeval rate_interval;
-        size_t rate;
+	struct timeval slow_rate_interval;
+	struct timeval fast_rate_interval = {1,0};
+        size_t slow_rate;
 
 	worker = p;
 
 	set_affinity(worker->cpu);
+
+	//printf("starting worker with %d conns, %d slow, %d churn, %u fast rate\n", worker->connections, worker->slow_connections, worker->churn_per_second, worker->fast_rate);
 
 	worker->buffer = malloc(msg_size);
 	for (i = 0; i < msg_size; i++)
@@ -380,25 +393,29 @@ static void *start_worker(void *p)
 		exit(1);
 	}
 
-        // set rate of slow connections to ~1pps. Note: this includes the overhead of conn setup
+        // set slow_rate of slow connections to ~1pps. Note: this includes the overhead of conn setup
         if(worker->slow_connections  == 0) {
-           rate_interval.tv_sec = 1;
-           rate_interval.tv_usec = 0;
-           rate = 64; // irrelevant
+           slow_rate_interval.tv_sec = 1;
+           slow_rate_interval.tv_usec = 0;
+           slow_rate = 64; // irrelevant
         } else if(worker->slow_connections < 1000) {
-            rate_interval.tv_sec = 0;
-            rate_interval.tv_usec = 1000000 / worker->slow_connections;
-            rate = 64; // this is ~1 pps
+            slow_rate_interval.tv_sec = 0;
+            slow_rate_interval.tv_usec = 1000000 / worker->slow_connections;
+            slow_rate = 64; // this is ~1 pps
         } else {
-            rate_interval.tv_sec = 0;
-            rate_interval.tv_usec = 1000;
-            rate = (64*worker->slow_connections)/1000; // roughly 1pps
+            slow_rate_interval.tv_sec = 0;
+            slow_rate_interval.tv_usec = 1000;
+            slow_rate = (64*worker->slow_connections)/1000; // roughly 1pps
         }
 
         worker->slow_bucket_cfg = ev_token_bucket_cfg_new(EV_RATE_LIMIT_MAX, EV_RATE_LIMIT_MAX,
-                                                  rate, rate, &rate_interval); // 4000pps with 64b payloads
+                                                  slow_rate, slow_rate, &slow_rate_interval); // 4000pps with 64b payloads
         worker->slow_bucket = bufferevent_rate_limit_group_new(worker->base,
                                                                worker->slow_bucket_cfg);
+        worker->fast_bucket_cfg = ev_token_bucket_cfg_new(EV_RATE_LIMIT_MAX, EV_RATE_LIMIT_MAX,
+                                                  worker->fast_rate, worker->fast_rate, &fast_rate_interval); // 4000pps with 64b payloads
+        worker->fast_bucket = bufferevent_rate_limit_group_new(worker->base,
+                                                               worker->fast_bucket_cfg);
 
 	worker->first_ctx = NULL;
 	for (i = 0; i < worker->connections; i++) {
@@ -426,7 +443,7 @@ static void *start_worker(void *p)
 	return 0;
 }
 
-static int start_threads(unsigned int cores, unsigned int connections, unsigned int slow_connections, unsigned int churn_per_second)
+static int start_threads(unsigned int cores, unsigned int connections, unsigned int slow_connections, unsigned int churn_per_second, size_t global_rate)
 {
 	int i;
 	int connections_per_core = connections / cores;
@@ -446,6 +463,7 @@ static int start_threads(unsigned int cores, unsigned int connections, unsigned 
 		worker[i].total_slow_messages = 0;
 		worker[i].finished = 0;
 		worker[i].connections = connections_per_core + (i < leftover_connections ? 1 : 0);
+		worker[i].fast_rate = global_rate*worker[i].connections*msg_size;
 		worker[i].slow_connections = slow_connections_per_core + (i < leftover_slow_connections ? 1 : 0);
 		worker[i].churn_per_second = churn_per_second_per_core + (i < leftover_churn_per_second ? 1 : 0);
 		pthread_create(&worker[i].tid, NULL, start_worker, &worker[i]);
@@ -478,16 +496,17 @@ int main(int argc, char **argv)
 	int ret;
 	char ifname[64];
 	long rx_bytes, rx_packets, tx_bytes, tx_packets;
+        size_t global_rate = EV_RATE_LIMIT_MAX;
 
 	prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
 
 	if (argc < 7) {
-		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION [SLOW_CONNECTIONS] [CHURN_PER_SECOND]\n", argv[0]);
+		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION [SLOW_CONNECTIONS] [CHURN_PER_SECOND] [FAST_RATE (msg/second)]\n", argv[0]);
 		return 1;
 	}
 
-	if (argc > 9) {
-		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION [SLOW_CONNECTIONS] [CHURN_PER_SECOND]\n", argv[0]);
+	if (argc > 10) {
+		fprintf(stderr, "Usage: %s IP PORT CORES CONNECTIONS MSG_SIZE MESSAGES_PER_CONNECTION [SLOW_CONNECTIONS] [CHURN_PER_SECOND] [FAST_RATE (msg/second)]\n", argv[0]);
 		return 1;
 	}
 
@@ -508,6 +527,9 @@ int main(int argc, char **argv)
         if (argc >= 9)
             churn_per_second = atoi(argv[8]);
 
+        if (argc >= 10)
+            global_rate = atoi(argv[9]);
+
 
 	if (timer_calibrate_tsc()) {
 		fprintf(stderr, "Error: Timer calibration failed.\n");
@@ -518,7 +540,7 @@ int main(int argc, char **argv)
 
 	evthread_use_pthreads();
 
-	start_threads(cores, connections, slow_connections, churn_per_second);
+	start_threads(cores, connections, slow_connections, churn_per_second, global_rate);
 	puts("ok");
 	fflush(stdout);
 
