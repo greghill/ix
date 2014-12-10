@@ -129,17 +129,19 @@ static int send_next_msg(struct ctx *ctx) {
     ctx->bytes_left = ctx->msg_size;
 
     if (!ctx->messages_left) {
-        UPDATE_STATE(ctx, STATE_DONE);
-        ctx->worker->finished++;
         bufferevent_remove_from_rate_limit_group(ctx->bev);
         bufferevent_free(ctx->bev);
-        if (ctx->state == STATE_WAIT_FOR_RECV)
+        if (ctx->state == STATE_WAIT_FOR_RECV) {
+            UPDATE_STATE(ctx, STATE_DONE);
+            ctx->worker->finished++;
             ctx->worker->active_connections--;
+        }
         new_connection(ctx->worker->base, ctx);
         return 1;
     }
 
     ctx->messages_left--;
+    //printf("worker: %d, ctx: %d, writing %u bytes\n", ctx->worker->cpu, ctx->no, ctx->bytes_left);
     // Use bytes_left in case msg_size is changed in another thread
     sprintf(ctx->worker->buffer, "%010u|", ctx->bytes_left);
     bufferevent_write(ctx->bev, ctx->worker->buffer, ctx->bytes_left);
@@ -188,34 +190,39 @@ static void maintain_connections_cb(evutil_socket_t fd, short what, void *arg)
 		}
 
 		if (ctx->state == STATE_WAIT_FOR_RECV || ctx->state == STATE_CONNECTING) {
-                    //bufferevent_remove_from_rate_limit_group(ctx->bev);
-                    //   bufferevent_free(ctx->bev);
-                    //if (ctx->state == STATE_WAIT_FOR_RECV)
-                    //ctx->worker->active_connections--;
-			switch (ctx->state) {
-			case STATE_CONNECTING:
-				if(ctx->flood){
-					ctx->worker->timeouts_connect++;
-				} else {
-					ctx->worker->timeouts_connect_slow++;
-				}
-				break;
-			case STATE_WAIT_FOR_RECV:
+                    if(!ctx->bev) {
+                        continue;
+                    }
+                    bufferevent_remove_from_rate_limit_group(ctx->bev);
+                    bufferevent_free(ctx->bev);
 
-                            b = bufferevent_get_output(ctx->bev);
-                            //printf("timeout_recv: %zu bytes in output\n", evbuffer_get_length(b));
+                    if (ctx->state == STATE_WAIT_FOR_RECV)
+                        ctx->worker->active_connections--;
 
-                            if(ctx->flood){
-                                ctx->worker->timeouts_recv++;
-                            } else {
-                                ctx->worker->timeouts_recv_slow++;
-                            }
-				break;
-			default:
-				fprintf(stderr, "unreported timeout while at state %d\n.", ctx->state);
-				exit(1);
-			}
-			//new_connection(worker->base, ctx);
+                    switch (ctx->state) {
+                    case STATE_CONNECTING:
+                        if(ctx->flood){
+                            ctx->worker->timeouts_connect++;
+                        } else {
+                            ctx->worker->timeouts_connect_slow++;
+                        }
+
+                        break;
+                    case STATE_WAIT_FOR_RECV:
+
+                        b = bufferevent_get_output(ctx->bev);
+
+                        if(ctx->flood){
+                            ctx->worker->timeouts_recv++;
+                        } else {
+                            ctx->worker->timeouts_recv_slow++;
+                        }
+                        break;
+                    default:
+                        fprintf(stderr, "unreported timeout while at state %d\n.", ctx->state);
+                        exit(1);
+                    }
+                    new_connection(worker->base, ctx);
 		}
 
 		ctx = ctx->next;
