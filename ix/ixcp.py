@@ -117,6 +117,45 @@ def wake_up(cpu):
   os.close(fd)
   os.remove(fifo)
 
+def set_nr_cpus(shmem, fg_per_cpu, cpus, verbose = False):
+  fgs_per_cpu = int(shmem.nr_flow_groups / cpus)
+  one_more_fg = shmem.nr_flow_groups % cpus
+
+  times = []
+  start = 0
+  for target_cpu in xrange(cpus):
+    wake_up(target_cpu)
+    count = fgs_per_cpu
+    if target_cpu < one_more_fg:
+      count += 1
+    target_fgs = range(start, start + count)
+    start += count
+
+    for source_cpu in xrange(NCPU):
+      if source_cpu == target_cpu:
+        continue
+
+      intersection = set(target_fgs).intersection(set(fg_per_cpu[source_cpu]))
+      if len(intersection) == 0:
+        continue
+      #print 'migrate from %d to %d fgs %r' % (source_cpu, target_cpu, list(intersection))
+      start_time = time.time()
+      migrate(shmem, source_cpu, target_cpu, list(intersection))
+      stop_time = time.time()
+      if verbose:
+        sys.stdout.write('.')
+        sys.stdout.flush()
+      fg_per_cpu[source_cpu] = list(set(fg_per_cpu[source_cpu]) - intersection)
+      fg_per_cpu[target_cpu] = list(set(fg_per_cpu[target_cpu]) | intersection)
+      times.append((stop_time - start_time) * 1000)
+  if verbose:
+    print
+    if len(times) > 0:
+      print 'migration duration min/avg/max = %f/%f/%f ms' % (min(times), sum(times)/len(times), max(times))
+  for cpu in xrange(shmem.nr_cpus):
+    if len(fg_per_cpu[cpu]) == 0:
+      idle(shmem, cpu)
+
 def main():
   shm = posix_ipc.SharedMemory('/ix', 0)
   buffer = mmap.mmap(shm.fd, ctypes.sizeof(ShMem), mmap.MAP_SHARED, mmap.PROT_WRITE)
@@ -163,41 +202,7 @@ def main():
       sys.stdout.flush()
     print
   elif args.cpus is not None:
-    fgs_per_cpu = int(shmem.nr_flow_groups / args.cpus)
-    one_more_fg = shmem.nr_flow_groups % args.cpus
-
-    times = []
-    start = 0
-    for target_cpu in xrange(args.cpus):
-      wake_up(target_cpu)
-      count = fgs_per_cpu
-      if target_cpu < one_more_fg:
-        count += 1
-      target_fgs = range(start, start + count)
-      start += count
-
-      for source_cpu in xrange(NCPU):
-        if source_cpu == target_cpu:
-          continue
-
-        intersection = set(target_fgs).intersection(set(fg_per_cpu[source_cpu]))
-        if len(intersection) == 0:
-          continue
-        #print 'migrate from %d to %d fgs %r' % (source_cpu, target_cpu, list(intersection))
-        start_time = time.time()
-        migrate(shmem, source_cpu, target_cpu, list(intersection))
-        stop_time = time.time()
-        sys.stdout.write('.')
-        sys.stdout.flush()
-        fg_per_cpu[source_cpu] = list(set(fg_per_cpu[source_cpu]) - intersection)
-        fg_per_cpu[target_cpu] = list(set(fg_per_cpu[target_cpu]) | intersection)
-        times.append((stop_time - start_time) * 1000)
-    print
-    if len(times) > 0:
-      print 'migration duration min/avg/max = %f/%f/%f ms' % (min(times), sum(times)/len(times), max(times))
-    for cpu in xrange(shmem.nr_cpus):
-      if len(fg_per_cpu[cpu]) == 0:
-        idle(shmem, cpu)
+    set_nr_cpus(shmem, fg_per_cpu, args.cpus, verbose = True)
   elif args.idle is not None:
     idle(shmem, args.idle)
   elif args.wake_up is not None:
