@@ -6,6 +6,7 @@
 enum qps_function_type {
   NONE,
   TRIANGLE,
+  QTRIANGLE,
 };
 
 struct qps_function_triangle {
@@ -14,10 +15,16 @@ struct qps_function_triangle {
   double period;
 };
 
+struct qps_function_qtriangle {
+  struct qps_function_triangle triangle;
+  int step;
+};
+
 struct qps_function_info {
   enum qps_function_type type;
   union {
     struct qps_function_triangle triangle;
+    struct qps_function_qtriangle qtriangle;
   } params;
 };
 

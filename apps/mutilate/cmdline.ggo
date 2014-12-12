@@ -123,6 +123,7 @@ Parameters are not required.  The following distributions are supported:
 text "
 The following QPS functions are supported:
 
-   triangle:min:max:period      Triangle wave.
+   triangle:min:max:period        Triangle wave.
+   qtriangle:min:max:period:step  Quantized triangle wave.
 "
 
