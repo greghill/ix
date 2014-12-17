@@ -536,9 +536,8 @@ int main(int argc, char **argv) {
 #endif
 
   options_t options;
-  args_to_options(&options);
-
   qps_function_init(&options);
+  args_to_options(&options);
 
   pthread_barrier_init(&barrier, NULL, options.threads);
 
