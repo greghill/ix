@@ -1,0 +1,90 @@
+
+
+1. Intro
+
+2. Motivation
+
+  -- Data Center applications with SLA
+
+  -- Energy efficiency and server consolidation
+
+      Fig. Pareto-graph with static resource configuration.
+           For Linux and IX. 
+           workload? SHA-1 or memcache or both ?
+
+3.  Big Idea:
+
+       explicit congestion manageneent of application....
+       benefit of dataplane/run-to-completion model: 
+          precisely measure queueing delays of incoming network traffic
+       dynamically adjust resources to meet SLA
+
+       Fig: control plane vs. data plane ; show queue build-up.
+
+
+4.  Control Loop:
+ 
+     - centralized, quazar-style control plane agent
+     
+4.1 Energy-optimal allocation of resources
+    - objective function
+    - control plane policy
+    - metrics
+
+ 4.2 Server consolidation scenario
+     - objective function
+     - control plane policy
+     - metrics
+  
+5.  Mechanisms.
+
+5.1 Linux-based control plane:
+
+   idling
+   DVFS, as exposed
+   centralized timer interrupts (?)
+   cgroups, ...
+
+5.2 Data-plane rebalancing
+
+    don't loose packets, in-order, ....
+    Figure describing the steps, ...
+
+5.3 Communication mechanisms between control and data plane
+
+     Fig. 
+
+6. Evaluation
+   
+6.1 Setup
+
+6.2 Methodology
+
+   - time-varying load (slope, steps, sine)
+
+   - comparison with static resoure allocation on linux and IX
+
+   - (to discuss)  dynamic resource allocation with Linux ?   Use the Linux governor functions
+
+6.3  Mechanisms
+      - reaction time for flow-group rebalancing
+      - reaction time for DVFS changes
+      - ...
+
+6.3  Energy-optimal allocation
+      Fig, Fig
+
+6.4 Server-consolidation
+      Fig, Fig, 
+
+6.5  Impact on tail-latency
+
+6.6  Tradeoffs between reaction time and efficiency
+
+       -- different hysteresis scenarios
+
+7. Related Work
+
+
+
+
