@@ -867,7 +867,7 @@ static void report_stats_init(void) {
   report_stats_ctx.prv_time = get_time();
   report_stats_ctx.start_time = report_stats_ctx.prv_time;
   printf("# start_time = %f\n", report_stats_ctx.start_time);
-  printf("%6s ", "time");
+  printf("%-6s ", "#time");
   report_stats_ctx.prv_stats.print_header();
 }
 
