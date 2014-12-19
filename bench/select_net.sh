@@ -126,6 +126,7 @@ elif [ $1 = 'none' ]; then
 elif [[ $1 == 'linux' && $# -gt 1 && "$2" == 'single' && ( $# -lt 3 || "$3" == 'opt' ) ]]; then
   setup_linux
   if [ $IP = 'auto' ]; then
+    sleep 1
     ifup $SINGLE_NIC >/dev/null
   else
     ifconfig $SINGLE_NIC $IP netmask 255.255.0.0
