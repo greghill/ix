@@ -1,0 +1,17 @@
+\section{Control Loop}
+
+The dataplanes are controlled by the control plane.
+The control plane is a normal system daemon which has a centralized view of various exposed performance metrics of each dataplane.
+Based on these metrics and a preconfigured control algorithm, it decides on the resource allocation for each dataplane.
+The objective of the control plane is to assign the minimal amount of resources to each dataplane without reducing its achieved performance or compromising its expected SLA.
+The SLA is expressed in terms of the tail latency.
+The dataplane provides a set of metrics which are proportional to the latency of the hosted network application.
+The network application latency is an end-to-end metric and as such it cannot be captured directly by the underlying operating system without prior knowledge of the application itself or its network protocol.
+Since such coupling is not desired, the tail latency is calculated based on a set of metrics which can be reliably measured at the operating system level.
+
+\subsection{Energy-optimal allocation of resources}
+
+In this section, we describe the designed policy for achieving energy-optimal allocation of resources to dataplanes.
+The initial state of the resource allocation is to dedicate a single core to the dataplane and set the CPU package at the lowest possible clock frequency.
+The general strategy is simple and adheres to following pattern: to cope with increasing load, the control plane first increases the number of allocated cores, and when this number reaches a maximum value, the control plane gradually increases the clock frequency of the CPU package.
+This strategy provides the closest achievable behavior to an ideal CPU whose energy consumption is linearly proportional to its utilization.

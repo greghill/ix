@@ -1,0 +1,18 @@
+\section{Mechanisms}
+
+The control plane uses two distinct mechanisms to control resource usage.
+It can alter the number of assigned CPU cores to each dataplane.
+It can modify the CPU frequency clock.
+
+IX boots with the configured maximum number of cores.
+Each core spins waiting for network activity or commands from the control plane.
+Upon the reception of the respective control plane command, IX executes a blocking system call from the retiring core.
+That way, Linux regains control of the core and can either schedule other processes or decide to let the core idle, depending on Linux scheduler's decisions.
+The IX thread blocks on a named pipe, which can be signaled by the control plane in order to wake up the IX thread which will recover ownership of the respective core and continue its processing.
+\george{reference to exokernel revokation protocol}
+
+Additionally, the control plane is able to control the operating clock frequency of the CPU.
+Linux exposes the DVFS mechanism available in modern processors through its \texttt{/sys} filesystem.
+The control plane writes to specially designated files in that filesystem in order to set the operating frequency of the CPU.
+Consequently, the mode of operation of this mechanism is transparent to the execution of the dataplane.
+There is no need to communicate the increase or decrease of processor clock frequency to the dataplane.
