@@ -215,6 +215,7 @@ void agent() {
       pthread_barrier_init(&barrier, NULL, options.threads);
 
     ConnectionStats stats;
+    all_connections.clear();
 
     go(servers, options, stats, &socket);
   }
