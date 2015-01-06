@@ -217,9 +217,6 @@ void agent() {
     ConnectionStats stats;
 
     go(servers, options, stats, &socket);
-
-    assert(!s_recv(socket).compare("stop"));
-    s_send(socket, "ok");
   }
 }
 
