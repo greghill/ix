@@ -1,58 +1,69 @@
 
-\section{Pareto-Efficient Static Configurations}
+\section{Pareto-Optimal Static Configurations}
 \label{sec:pareto}
 
+We quantify the inherent tradeoff resulting from the use of static
+resource configuration in an environment where the application load is
+unpredictable.  We specifically focus on latency-sensitive
+applications with service-level agreement. 
 
-The concept of Pareto efficiency is broadly used in finance,
-life-sciences, and engeenering to determine the optimal allocation of
-resources that maximizes a particular objective
-function~\cite{wikipedia-pareto}.  The approach is useful to rule out
-the majority combinations that are suboptimal under particular
-circumstances.
-
-We pose the problem as follows: For a given application that must meet
-a particular service-level agreement (such as responding to requests
-within 500\microsecond, measured at the 99th percentile), which static
-resource configurations will most efficiently use the resources for
-any given load within an acceptable range.
-
-We compute the Pareto efficiency by simply running the workload
-multiple times.  For each possible static configuration, we gradually
-increase the load until it is no longer able to meet its SLA, while
-measuring the resource efficiency (the objective function) at each
-step in the process.   See \S\ref{sec:eval:setup} for details on the experimental setup and methodology. 
+\subsection{Energy-efficiency}
 
 \input{float-pareto-eff}
 
-Fig.~\ref{fig:pareto-eff} shows the Pareto-efficiency of memcache
-running on both Linux  and \ix for the energy-proportionality scenario.  We report
-the Energy consumed by the socket, as measured by the Intel
-RAPL~\cite{missing} for static configuration that vary the number of
-cores from 1 to 8 (with hyperthread enabled) and the full DVFS
-frequencies of the Sandy Bridge processor, including Turbo mode.  For
-simplicity, we only show the static configurations that contribute at least one point in the Pareto frontier.
 
-Fig.~\ref{fig:pareto-eff} clearly shows that, for any given static
-configuration, the energy consumed will vary noticeably as a function
-of the load and that no single static configuration makes sense across
-the spectrum.  Furthermore, for this workload and architecture, the
-Pareto efficiency results from adding CPU at minimal frequency at
-low-load, and only increasing the frequency of the CPU afterwards.
-Fig.~\ref{fig:pareto-eff:linux} and Fig.~\ref{fig:pareto-eff:ix} show
-that the two operating systems have different horizontal scalability
-limits: memcache scales efficiently up to 8 cores on Linux where it
-remains kernel-bound, but only up to 6 cores on \ix because of
-application-level bottelenecks.  Next, we observe that Linux provides
-a better Pareto-efficiency theoretical potential when the load is less
-than XXX RPS, with \ix ouperforming Linux for all higher loads.
-Clearly, the polling nature of the \ix dataplane, which is similar to
-all kernel-bypass designs, only makes sense if the workload generally
-has a reasonable load.  The breakeven point corresponding to XXX\% of
-the peak throughput possible in the maximal configuration.  Finally,
-we observe that Turbo-mode leads to a disprportional increase in
-energy draw, and should be best viewed as a nice-to-have feature for
-exceptional bursts in planning.
+Fig.~\ref{fig:pareto-eff} quantifies the tradeoff in terms of
+energy-efficiency for two different operating systems, Linux 3.16.1
+and \ix.  In these graphs, each black curve represents the energy
+spent by the CPU, as measured by Intel RAPL~\cite{intel:rapl}, as a
+function of the application load, for a given static configuration.  A
+static configuration is determined by a number of execution threads
+(from one to 16) and the CPU frequency of the socket (from 1.2 Ghz to
+2.4Ghz, as well as Turbo mode).  The application is memcache, the load
+generator mutilate~\cite{url:mutilate} and the workload is
+USR~\cite{Atikoglu:2012:WAL}.  We only report results where the
+application meets a service-level agreement of 500\microsecond
+measured at the 99th percentile at the client. See
+\S\ref{sec:eval:setup} for details on the experimental methodology and
+setup.
 
+In Fig.~\ref{fig:pareto-eff:linux} and Fig.~\ref{fig:pareto-eff:ix},
+the red curve corresponds to the Pareto-optimal energy consumed for
+any given application load.  The concept of Pareto efficiency (or
+optimality) is broadly used in finance, life-sciences, and engeenering
+to determine the optimal allocation of resources that maximizes a
+particular objective function~\cite{wikipedia-pareto}.  The approach
+is first useful to rule out the combinations that are suboptimal under
+particular circumstances.  Fig.~\ref{fig:pareto-eff:linux} and
+Fig.~\ref{fig:pareto-eff:ix} only shows the static configurations that
+contribute at least one data point to to the Pareto-optimal curve.
+There are 17 such static configurations for Linux and 21 for \ix.  To
+put this in perspective, the cross-product of 16 possible number of
+threads and 14 different clock rates leads to 224 distinct
+configurations.  And of course, in the absence of any static
+configuration tradeoff, a single configuration would suffice.
+
+A detailed comparison of the Pareto-optimal curves of
+Fig.~\ref{fig:pareto-eff:linux} and Fig.~\ref{fig:pareto-eff:ix}
+further shows that the two operating systems have different
+energy-efficiency characteristics.  First, Linux relies on interrupts
+to save energy a low loads, resulting in a large dynamic spread for
+each curve; in contrast, \ix relies on polling to deliver load
+latency, resutling in flatter curves.  Consequently, there is also a
+tradeoff between the two operating systems.  Indeed, Linux is more
+energy-efficent than \ix with loads of less than XXX requests per
+second.  Second, certain Linux configurations draw noticeably more
+energy than \ix.  This is simply due to the fact that memcache
+scalability bottlenecks at the application level limit the number of
+useful threads to 9 on \ix but to 16 on Linux.  Third, the maximal
+throughput of the both Linux and \ix noticeably exceed our previoiusly
+reported results in \~cite{ix-osdi}; those are due primarily to recent
+changes made to memcache to improve its horizontal scalability.  And
+finally, at maximal load, \ix outperforms Linux by 2.0$\times$ while
+drawing only 71\% of the energy.
+
+
+\subsection{Server Consolidation}
 
 Fig.~\ref{fig:pareto-consolidation} shows the similar Pareto
 efficiency in the server consolidation scenario, which combines a
