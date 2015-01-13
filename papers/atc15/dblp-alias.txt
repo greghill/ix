@@ -14,4 +14,5 @@ quasar       DBLP:conf/asplos/DelimitrouK14
 mtcp         DBLP:conf/nsdi/JeongWJJIHP14
 ix-osdi      DBLP:conf/osdi/BelayPKGKB14
 arrakis	     DBLP:conf/osdi/PeterLZPWKAR14
-
+spark	     DBLP:conf/nsdi/ZahariaCDDMMFSS12
+mesos 	     DBLP:conf/nsdi/HindmanKZGJKSS10

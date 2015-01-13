@@ -17,50 +17,55 @@ many batch and analytical services, etc.
 
 The challenges in terms of resource management vary greatly based on
 the service type, in terms of mechanisms, policies, and objective
-functions.  For example, cluster management systems typically focus on
-complex analytics workloads such as map-reduce~\cite{missing},
-Hadoop~\cite{mising} or Spark~\cite{missing} and schedule jobs on the
-cluster to meet optimize resource efficiency, completion time, or even
-to meet certain QoS requirements~\cite{quasar, missing, missing}.
+functions.  For example, cluster management systems such as
+Mesos~\cite{mesos} or Quasar~\cite{quasar} schedule jobs to optimize
+resource efficiency, completion time while meeting QoS requirements.
+Such systems can make both global (i.e., cluster-wide) and local
+(i.e. within a node) resource management to support a broad range of
+workload patterns.
 
 Low-latency services such as in-memory key-value stores and caches
-pose a specific challenge as they must respond to requests in the
-order of microseconds both in the average case and at the tail of the
-distribution, e.g., the 99th percentile.  This poses specific
-challenges system software challenges \emph{within} each node.  First,
-the network stacks must provide more than high streaming performance,
-with new requirements including high packet rates for short messages,
-microsecond-level responses to remote requests with tight tail latency
-guarantees, and support for high connection counts and
+pose a specific challenge to cluster management system as they must
+respond to requests in the order of microseconds both in the average
+case and at the tail of the distribution, e.g., the 99th percentile.
+This poses two specific system software challenges
+\emph{within} each node.   First, the network stacks must provide more
+than high streaming performance, with new requirements including high
+packet rates for short messages, microsecond-level responses to remote
+requests with tight tail latency guarantees, and support for high
+connection counts and
 churn~\cite{Atikoglu:2012:WAL,DBLP:journals/cacm/DeanB13,DBLP:conf/nsdi/NishtalaFGKLLMPPSSTV13}.
 Second, the operating system must ensure that the CPU and main memory
 resources must be readily available to the application as a scheduling
 delay or a page fault could delay responses expected in microseconds
 by multiple miliseconds~\cite{missing}.
 
-The conventional wisdom is that there is a basic mismatch between
-these requirements and existing commodity system software.  To address
-the specific challenges of the network stack, state-of-the-art
-solution nearly always bypass the commodity operating system's
-networking stack through user-level networking
+As to the first challenge, the conventional wisdom is that there is a
+basic mismatch between these requirements and existing commodity
+system software.  Even though properly-configured operating systems
+can deliver solid performance for a broad range of workloads, state of
+the art solutions nearly always bypass the commodity operating
+system's networking stack through user-level networking
 stacks~\cite{mtcp,DBLP:conf/cloud/KapoorPTVV12,sandstorm,openonload,DBLP:conf/sigcomm/ThekkathNML93},
 hardware protocol
 offloads~\cite{dragojevic14farm,DBLP:conf/icpp/JoseSLZHWIOWSP11,mitchell:rdma,DBLP:conf/sosp/OngaroRSOR11},
-or protected dataplane operating systems~\cite{ix-osdi}.  
-To address the second challenge of resource availability, operators
-configure low-latency services with a sufficient number of threads
-running on dedicated cores to avoid scheduler interference and pin all
-of the memory in core to avoid interference from the virtual memory
-subsystem.
+or protected dataplane operating systems~\cite{ix-osdi}.
 
-As an unfortunate consequence, operators must make an explicit
-resource configuration and provisioning decision within each compute
-node.  That decision is tyipically done when the service is
-provisioned and cannot be readily adjusted while the service is
+To address the second challenge, and ensure that CPU and memory
+resources availability without system interference, operators
+typically configure low-latency services with a sufficient number of
+threads running on dedicated cores to avoid scheduler interference and
+pin all of the memory in core to avoid interference from the virtual
+memory subsystem. As an unfortunate consequence, operators must make
+an explicit resource configuration and provisioning decision within
+each compute node.  That decision is tyipically done when the service
+is provisioned and cannot be readily adjusted while the service is
 running.  For example, memcache, a popular key-value store, takes as
 the command-line argument \texttt{ -t <threads>} the number of
 threads, which are then typically pinned to dedicated cores using an
 operating system-specific mechanisms such as Linux \texttt{cgroup}.
+
+
 Clearly, any static configuration decision leads to an inherent
 tradeoff in an environment where the load is unpredictable:
 underprovisioning will limit the overall capacity of the datacenter
@@ -68,23 +73,21 @@ application, while overprovisioning will increase the total cost of
 ownership of the application because of increased energy consumption
 and reduced server consolidation opportunities.
 
-In simple terms, simply throwing Watts at the problem is unacceptable
-given the high footprint of low-latency services in today's
-datacenter.  This paper reconciles the requirements of low-latency,
-high-throughput applications with the infrastructure requirements of
-energy-proportionality and efficient use of the global server
-resources.  We focus on current-generation severs with a large number
-of cores and dynamic-Voltage/frequency-scaling (DVFS) support.  In
-such platforms, the CPU typically accounts for the majority of the
-power draw of the server.  
+In simple terms, simply throwing Watts at that problem is unacceptable
+given two key architectural trends: (i) the increase in core count and
+the increase in dynamic voltage frequency scaling options within each
+socket and core. 
 
-
-We ask two related questions on the  energy-efficient use of the CPU:
+This paper reconciles the requirements of low-latency, high-throughput
+applications with the infrastructure requirements of
+energy-proportionality and server consolidation.  We focus on
+commodity Xeon severs with 8 core, 16 hypertheads, and socket-level
+DVFS support, and ask two related questions on the  energy-efficient use of the CPU:
 
 $\triangleright$ {\bf Energy proportionality:} Can a low-latency
 application meet its service-level agreement across the maximal range
 of throughput possible on the hardware while drawing power that is
-proportional to the throughput ? 
+proportional to its throughput ? 
 
 $\triangleright$ {\bf Efficient Consolidation:} Can a low-latency application
 co-exist with a batch workload so that the SLA of the low-latency
@@ -93,27 +96,26 @@ Watt of power is maximized.
 
 
 Our methodology is based on a two-step process.  In the first step, we
-measure the relative end-to-end performance and power draw of the
-workload, for different levels of load imposed on the low-latency
-application.  We repeat the observation for different static
-combinations of CPU count and CPU frequency.  From that data, we
-derive the Pareto-optimal configuration~\cite{missing} for each
-possible load level.  
-This Pareto frontier encodes the ideal (static) resource configuration
-for any given load for a particular hardware, operating system and
-application. 
+measure the end-to-end performance and power draw of the workload, for
+different levels of load imposed on the low-latency application.  We
+repeat the observation for different static combinations of CPU count
+and CPU frequency.  From that data, we derive the Pareto-optimal
+configuration for each possible load level.  The resulting
+Pareto frontier encodes the ideal (static) resource
+configuration for any given load for a particular hardware, operating
+system and application.
 
 
 In the second step, we leverage the insights from the Pareto frontier
-to build a dynamic resource adjustment policy that works as part of a
-control loop.  When the control loop detects an increase in load
+to derive a pratcial, dynamic resource adjustment policy adn control system.
+When the control loop detects an increase in load
 resulting in a backlog, it relies on the policy framework to either
 add a CPU to the low-latency workload or to increase the frequency of
 the socket.  Conversely, the control mechanism has the option of
 reducing the CPU count of frequency when the resources are no longer
 needed.
 
-We have implemented dynamic resource control within \ix~\cite{ix-osdi}, a dataplane
+We have implemented such a dynamic resource control within \ix~\cite{ix-osdi}, a dataplane
 operating system with a architecturally-separated control plane.  The
 dynamic control loops operates as part of the control plane, and
 relies on new mechanisms from the \ix dataplane that can rebalance
@@ -125,25 +127,23 @@ This paper makes the following contributions:
 
 $\triangleright$ For Intel XXX ``Sandy Bridge'' generation of CPU
 running \texttt{memcache}, we observe that a Pareto-optimal dynamic
-policy will first add additional CPU to the workload, and only
-subsequently increase the CPU frequency of the CPU.  For server
-consolidation scenarios, all cores should be used at full speed with
-turbo-mode disabled for best total cost of ownership.
+policy XXXXX
 
-$\triangleright$ We implement a dynamic control loop that can deliver
-energy proportionality and efficient consolidation, while providing
-low-latency with the necessary resources to meet their SLA.  Using
-only server-local metrics of queing wait time, it can adapt in changes
-in load.  For typical patterns in change of load, the overall
-energy-efficiency and server consolidation is within XXX\% of the
-lower theoretical bound predicated from the Pareto-frontier.
+
+$\triangleright$ Our implementation of a dynamic resource management
+policy and control loop automatically schedules system resources
+according to the load and achives energy-proportionality and server
+consolidation within XXX\% of the Pareto-optimal lower bound possible on the
+hardware.
 
 $\triangleright$ We implement the necessary rebalancing mechanisms
 into \ix, a protected dataplane operating system aimed at low-latency
-applications~\cite{ix-osdi}.  In particular, we introduce a flow-group
-rebalancing algorithm that respects the coherence-free execution model
-of \ix.  The mechanism can adjust to CPU width in XXX\microsecond on
-average without dropping or reordering packets.
+applications~\cite{ix-osdi}.  Instead of the typical thread-centric
+approach to CPU scheduling that tradeoff affinity for balance, \ix has
+a flow group-centric approach that dynamically reconfigures NIC
+hardware to drive CPU scheduling decisions.  Our resulting system can
+add and remove CPU to an \ix dataplane without loosing packets,
+reodering packets, or violating the coherence-free execution mode of \ix in the steady state.
 
 The rest of this paper is organized as follows. 
 In \S\ref{sec:pareto}, we determine the Pareto-optimal static configurations for Intel
