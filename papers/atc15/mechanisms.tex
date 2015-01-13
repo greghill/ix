@@ -16,3 +16,31 @@ Linux exposes the DVFS mechanism available in modern processors through its \tex
 The control plane writes to specially designated files in that filesystem in order to set the operating frequency of the CPU.
 Consequently, the mode of operation of this mechanism is transparent to the execution of the dataplane.
 There is no need to communicate the increase or decrease of processor clock frequency to the dataplane.
+
+TCP traffic is identified by a tuple of 4 elements: source IP, source port, destination IP, and destination port.
+Modern NICs are capable to filter traffic based on these elements and direct it to specific hardware queues.
+FlowDirector is an example of this technology.
+We felt that this kind of fine-grained control is not necessary to achieve the goals of this paper, so we relied on a more coarse-grained technique.
+The NIC computes a hash function over the elements of its packet's tuple.
+An example of this hash is the RSS hash.
+The Intel X520, which we used for our implementation, takes the 7 least significant bits of this hash and names them flowgroup.
+There are, thus, 128 flowgroups and each one of them can be directed to one of the 16 available hardware queues.
+Each flowgroup can contain an arbitrary number of TCP flows.
+A TCP flow cannot change flowgroup since its tuple does not change.
+Moreover, we assume that the hash function is well-designed and distributes TCP flows uniformly across the 128 available flowgroups.
+These reasons are enough for our purposed to adopt the flowgroup as the unit of traffic management for our system.
+
+Each NIC hardware queue is processed by a single CPU core.
+That means that a core is responsible for processing a number of flowgroups, which are directed to the specific hardware queue.
+Additionally, the system is capable of migrating on-the-fly a flowgroup between hardware queues and, thus, CPU cores.
+This migration is a specially challenging task and we will explain why.
+IX is designed in order to maximize the performance of TCP-based network applications.
+One of its fundamental contributions is the coherence-free operation, which is achieved because IX prevents inter-core communication.
+That means that each utilized data structure belongs to a single core and is only accessed by it.
+Tieing data structures to each core is fine as long as you do not consider any kind of flow rebalancing.
+Our major contribution is the evolution of per-core data structures to per-flowgroup ones.
+Each flowgroup has its own set of data structures and IX has to make sure that only a single core accesses them at a given time.
+In order to guarantee coherence-free operation we designed a handoff protocol.
+The coordinator of the handoff is the control plane, which decides that it wants to migrate flowgroup 1 from core A to core B.
+
+\george{describe handoff}
