@@ -189,11 +189,16 @@ def escape_percent(s):
 
 
 
-print "ENVIRON", os.environ
-for x in os.environ:
-    print "ENVIRON:",x, os.environ[x]
+print "This is bibcloud ... Use at your own risk"
+print "Usage bibcloud <latex main>"
+print "Input: latex .aux file; ./dblp-alias.txt; ./dblp-title.txt"
+print "Output: dblp.bib"
+print "Files are cached in ./bibcloud (do not put under revision control)"
 
-print locale.localeconv()
+#for x in os.environ:
+    #print "ENVIRON:",x, os.environ[x]
+
+#print locale.localeconv()
 
 if not os.path.exists(".bibcloud"):
     os.mkdir(".bibcloud")
@@ -247,7 +252,7 @@ if os.path.isfile(titlefixfile):
         x = l.split("|")
         if len(x)==2:
             TITLESUB[x[0]] = x[1]
-            print "title substitiution",x[0],x[1]
+            #print "TITLE substitiution",x[0],x[1]
 
 
 
@@ -285,7 +290,7 @@ for cit in citations:
         authorlist = [html_to_bibtex(a) for a in authorlist]
         if xml.tag == "article":
             F.write("\n@article{"+cit+",\n")
-            print "ARTICLE ",c
+            #print "ARTICLE ",c
             F.write("  author = {"+  " and ".join(authorlist) + "},\n")
             for a in xml:
                 if DBLP_article_fieldlist.has_key(a.tag):
@@ -302,7 +307,7 @@ for cit in citations:
     
         elif xml.tag == "inproceedings":
             F.write("\n@inproceedings{"+cit+",\n")
-            print "INPROCEEDINGS ",c,cit
+            #print "INPROCEEDINGS ",c,cit
             F.write("  author = {"+  " and ".join(authorlist) + "},\n")
             for a in xml:
                 if DBLP_conf_fieldlist.has_key(a.tag):
@@ -335,6 +340,7 @@ for cit in citations:
              F.write("  bibsource = {DBLP alias: "+c+"}\n")
         F.write("}\n")
 
+print "bibcloud SUCCESS; dblp.bib updated"
         
 
 
