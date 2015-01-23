@@ -122,9 +122,8 @@ static void ixgbe_remove_rar(struct rte_eth_dev *dev, uint32_t index);
 static void ixgbe_dcb_init(struct ixgbe_hw *hw,struct ixgbe_dcb_config *dcb_config);
 
 /* For Virtual Function support */
-#if 0
-static int eth_ixgbevf_dev_init(struct eth_driver *eth_drv,
-		struct rte_eth_dev *eth_dev);
+#if 1
+static int eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev);
 static int  ixgbevf_dev_configure(struct rte_eth_dev *dev);
 static int  ixgbevf_dev_start(struct rte_eth_dev *dev);
 static void ixgbevf_dev_stop(struct rte_eth_dev *dev);
@@ -242,7 +241,7 @@ static struct eth_dev_ops ixgbe_eth_dev_ops = {
 	.reta_query           = ixgbe_dev_rss_reta_query,
 };
 
-#if 0
+#if 1
 /*
  * dev_ops for virtual function, bare necessities for basic vf
  * operation have been implemented
@@ -655,7 +654,8 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 	hw->allow_unsupported_sfp = 1;
 #endif
 
-	ret = ixgbe_init_adapter(dev);
+	//ret = ixgbe_init_adapter(dev);
+	ret = eth_ixgbevf_dev_init(dev);
 	if (ret) {
 		log_err("ixgbe: failed to initialize adapter\n");
 		goto out_bar;
@@ -673,7 +673,7 @@ out:
 	return ret;
 }
 
-#if 0
+#if 1
 static void ixgbevf_get_queue_num(struct ixgbe_hw *hw)
 {
 	/* Traffic classes are not supported by now */
@@ -693,10 +693,10 @@ static void ixgbevf_get_queue_num(struct ixgbe_hw *hw)
  * Virtual Function device init
  */
 static int
-eth_ixgbevf_dev_init(__attribute__((unused)) struct eth_driver *eth_drv,
-		     struct rte_eth_dev *eth_dev)
+eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 {
-	struct rte_pci_device *pci_dev;
+//	struct rte_pci_device *pci_dev;
+	struct pci_dev *pci_dev;
 	struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);
 	int diag;
 	struct ixgbe_vfta * shadow_vfta =
@@ -707,8 +707,8 @@ eth_ixgbevf_dev_init(__attribute__((unused)) struct eth_driver *eth_drv,
 	PMD_INIT_LOG(DEBUG, "eth_ixgbevf_dev_init");
 
 	eth_dev->dev_ops = &ixgbevf_eth_dev_ops;
-	eth_dev->rx_pkt_burst = &ixgbe_recv_pkts;
-	eth_dev->tx_pkt_burst = &ixgbe_xmit_pkts;
+	//eth_dev->rx_pkt_burst = &ixgbe_recv_pkts;
+	//eth_dev->tx_pkt_burst = &ixgbe_xmit_pkts;
 
 	pci_dev = eth_dev->pci_dev;
 
@@ -1443,7 +1443,7 @@ ixgbe_dev_stats_reset(struct rte_eth_dev *dev)
 	memset(stats, 0, sizeof(*stats));
 }
 
-#if 0
+#if 1
 static void
 ixgbevf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
@@ -2230,7 +2230,7 @@ ixgbe_remove_rar(struct rte_eth_dev *dev, uint32_t index)
 	ixgbe_clear_rar(hw, index);
 }
 
-#if 0
+#if 1
 /*
  * Virtual Function operations
  */
@@ -2825,4 +2825,3 @@ ixgbe_mirror_rule_reset(struct rte_eth_dev *dev, uint8_t rule_id)
 	IXGBE_WRITE_REG(hw, IXGBE_VMRVLAN(rule_id + rule_mr_offset), msb_val);
 
 	return 0;
-}
