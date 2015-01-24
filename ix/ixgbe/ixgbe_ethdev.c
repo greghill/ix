@@ -712,9 +712,10 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 
 	pci_dev = eth_dev->pci_dev;
 
-	hw->device_id = pci_dev->id.device_id;
-	hw->vendor_id = pci_dev->id.vendor_id;
-	hw->hw_addr = (void *)pci_dev->mem_resource[0].addr;
+	hw->device_id = pci_dev->device_id;
+	hw->vendor_id = pci_dev->vendor_id;
+	//hw->hw_addr = (void *)pci_dev->mem_resource[0].addr;
+	hw->hw_addr = (void *)pci_dev->bars[0].start;
 
 	/* initialize the vfta */
 	memset(shadow_vfta, 0, sizeof(*shadow_vfta));
@@ -739,8 +740,8 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	diag = hw->mac.ops.reset_hw(hw);
 
 	if (diag != IXGBE_SUCCESS) {
-		PMD_INIT_LOG(ERR, "VF Initialization Failure: %d", diag);
-			RTE_LOG(ERR, PMD, "\tThe MAC address is not valid.\n"
+		printf("VF Initialization Failure: %d", diag);
+			printf("\tThe MAC address is not valid.\n"
 					"\tThe most likely cause of this error is that the VM host\n"
 					"\thas not assigned a valid MAC address to this VF device.\n"
 					"\tPlease consult the DPDK Release Notes (FAQ section) for\n"
@@ -2825,3 +2826,4 @@ ixgbe_mirror_rule_reset(struct rte_eth_dev *dev, uint8_t rule_id)
 	IXGBE_WRITE_REG(hw, IXGBE_VMRVLAN(rule_id + rule_mr_offset), msb_val);
 
 	return 0;
+}
