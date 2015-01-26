@@ -1758,6 +1758,58 @@ void ixgbe_dev_tx_init(struct rte_eth_dev *dev)
 	ixgbe_dev_mq_tx_configure(dev);
 }
 
+#if 0   
+void ixgbevf_dev_tx_init(struct rte_eth_dev *dev)
+{
+	int i;
+	struct ixgbe_hw *hw;
+	uint32_t txctrl;
+
+        hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+
+	/* Setup the Base and Length of the Tx Descriptor Rings */
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		struct tx_queue *txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
+		uint64_t bus_addr = txq->ring_physaddr;
+
+		IXGBE_WRITE_REG(hw, IXGBE_VFTDBAL(i),
+				(uint32_t)(bus_addr & 0x00000000ffffffffULL));
+		IXGBE_WRITE_REG(hw, IXGBE_TDBAH(txq->reg_idx),
+				(uint32_t)(bus_addr >> 32));
+		IXGBE_WRITE_REG(hw, IXGBE_TDLEN(txq->reg_idx),
+				txq->len * sizeof(union ixgbe_adv_tx_desc));
+		/* Setup the HW Tx Head and TX Tail descriptor pointers */
+		IXGBE_WRITE_REG(hw, IXGBE_TDH(txq->reg_idx), 0);
+		IXGBE_WRITE_REG(hw, IXGBE_TDT(txq->reg_idx), 0);
+
+		/*
+		 * Disable Tx Head Writeback RO bit, since this hoses
+		 * bookkeeping if things aren't delivered in order.
+		 */
+		switch (hw->mac.type) {
+		case ixgbe_mac_82598EB:
+			txctrl = IXGBE_READ_REG(hw, IXGBE_DCA_TXCTRL(txq->reg_idx));
+			txctrl &= ~IXGBE_DCA_TXCTRL_DESC_WRO_EN;
+			IXGBE_WRITE_REG(hw, IXGBE_DCA_TXCTRL(txq->reg_idx), txctrl);
+			break;
+
+		case ixgbe_mac_82599EB:
+		case ixgbe_mac_X540:
+		default:
+			txctrl = IXGBE_READ_REG(hw,
+						IXGBE_DCA_TXCTRL_82599(txq->reg_idx));
+			txctrl &= ~IXGBE_DCA_TXCTRL_DESC_WRO_EN;
+			IXGBE_WRITE_REG(hw, IXGBE_DCA_TXCTRL_82599(txq->reg_idx),
+					txctrl);
+			break;
+		}
+	}
+
+	/* Device configured with multiple TX queues. */
+	ixgbe_dev_mq_tx_configure(dev);
+}
+#endif
+
 /*
  * Set up link for 82599 loopback mode Tx->Rx.
  */
