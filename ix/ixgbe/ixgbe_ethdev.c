@@ -122,7 +122,7 @@ static void ixgbe_remove_rar(struct rte_eth_dev *dev, uint32_t index);
 static void ixgbe_dcb_init(struct ixgbe_hw *hw,struct ixgbe_dcb_config *dcb_config);
 
 /* For Virtual Function support */
-#if 0
+#if 1
 static int eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev);
 static int  ixgbevf_dev_configure(struct rte_eth_dev *dev);
 static int  ixgbevf_dev_start(struct rte_eth_dev *dev);
@@ -241,7 +241,7 @@ static struct eth_dev_ops ixgbe_eth_dev_ops = {
 	.reta_query           = ixgbe_dev_rss_reta_query,
 };
 
-#if 0
+#if 1
 /*
  * dev_ops for virtual function, bare necessities for basic vf
  * operation have been implemented
@@ -673,7 +673,7 @@ out:
 	return ret;
 }
 
-#if 0
+#if 1
 static void ixgbevf_get_queue_num(struct ixgbe_hw *hw)
 {
 	/* Traffic classes are not supported by now */
@@ -1444,7 +1444,7 @@ ixgbe_dev_stats_reset(struct rte_eth_dev *dev)
 	memset(stats, 0, sizeof(*stats));
 }
 
-#if 0
+#if 1
 static void
 ixgbevf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
@@ -2231,7 +2231,7 @@ ixgbe_remove_rar(struct rte_eth_dev *dev, uint32_t index)
 	ixgbe_clear_rar(hw, index);
 }
 
-#if 0
+#if 1
 /*
  * Virtual Function operations
  */
