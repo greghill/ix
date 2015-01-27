@@ -654,8 +654,8 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 	hw->allow_unsupported_sfp = 1;
 #endif
 
-	ret = ixgbe_init_adapter(dev);
-	//ret = eth_ixgbevf_dev_init(dev);
+	//ret = ixgbe_init_adapter(dev);
+	ret = eth_ixgbevf_dev_init(dev);
 	if (ret) {
 		log_err("ixgbe: failed to initialize adapter\n");
 		goto out_bar;
@@ -753,8 +753,7 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	ixgbevf_get_queue_num(hw);
 
 	/* Allocate memory for storing MAC addresses */
-	eth_dev->data->mac_addrs = rte_zmalloc("ixgbevf", ETH_ADDR_LEN *
-			hw->mac.num_rar_entries, 0);
+	eth_dev->data->mac_addrs = calloc(hw->mac.num_rar_entries, ETH_ADDR_LEN);
 	if (eth_dev->data->mac_addrs == NULL) {
 		PMD_INIT_LOG(ERR,
 			"Failed to allocate %d bytes needed to store MAC addresses",
@@ -762,9 +761,12 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 		return -ENOMEM;
 	}
 
-	/* Copy the permanent MAC address */
+	/* Copy the permanent MAC address 
+     greg got rid of this os we would compile
+
 	ether_addr_copy((struct eth_addr *) hw->mac.perm_addr,
 			&eth_dev->data->mac_addrs[0]);
+     */
 
 	/* reset the hardware with the new settings */
 	diag = hw->mac.ops.start_hw(hw);
