@@ -1955,8 +1955,10 @@ int ixgbevf_dev_rx_init(struct rte_eth_dev *dev)
 	 * ixgbevf_rlpml_set_vf even if jumbo frames are not used. This way,
 	 * VF packets received can work in all cases.
 	 */
+    /* greg: calls mailbox
 	ixgbevf_rlpml_set_vf(hw,
 		(uint16_t)dev->data->dev_conf.rxmode.max_rx_pkt_len);
+    */
 
     //dev->rx_pkt_burst = ixgbe_recv_pkts;///XXX dono what this is
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {

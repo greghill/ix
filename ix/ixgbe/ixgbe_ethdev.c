@@ -2321,10 +2321,12 @@ ixgbevf_dev_start(struct rte_eth_dev *dev)
 
 	hw->mac.ops.reset_hw(hw);
 
-	//ixgbevf_dev_tx_init(dev);
+	ixgbevf_dev_tx_init(dev);
+    printf("vf tx init\n");
 
 	/* This can fail when allocating mbufs for descriptor rings */
-	//err = ixgbevf_dev_rx_init(dev);
+	err = ixgbevf_dev_rx_init(dev);
+    printf("vf rx init\n");
 	if (err) {
 		PMD_INIT_LOG(ERR, "Unable to initialize RX hardware (%d)\n", err);
 		ixgbe_dev_clear_queues(dev);
@@ -2333,13 +2335,15 @@ ixgbevf_dev_start(struct rte_eth_dev *dev)
 	
 	/* Set vfta */
 	ixgbevf_set_vfta_all(dev,1);
+    printf("vfta init\n");
 
 	/* Set HW strip */
 	mask = ETH_VLAN_STRIP_MASK | ETH_VLAN_FILTER_MASK | \
 		ETH_VLAN_EXTEND_MASK;
 	ixgbevf_vlan_offload_set(dev, mask);
 
-	//ixgbevf_dev_rxtx_start(dev);
+	ixgbevf_dev_rxtx_start(dev);
+    printf("vf rxtx start\n");
 
     printf("ixgbevf_dev_start returns\n");
 
