@@ -153,6 +153,10 @@ s32 ixgbe_reset_hw_vf(struct ixgbe_hw *hw)
 
 	msec_delay(50);
 
+
+#if 0
+
+
 	/* we cannot reset while the RSTI / RSTD bits are asserted */
 	while (!mbx->ops.check_for_rst(hw, 0) && timeout) {
 		timeout--;
@@ -175,6 +179,9 @@ s32 ixgbe_reset_hw_vf(struct ixgbe_hw *hw)
 		 */
 		ret_val = mbx->ops.read_posted(hw, msgbuf,
 					       IXGBE_VF_PERMADDR_MSG_LEN, 0);
+
+         printf("^^^^^^^^^^^^^^^^^^^^^^^^ret_val: %d\n", ret_val);
+
 		if (!ret_val) {
 			if (msgbuf[0] == (IXGBE_VF_RESET |
 					  IXGBE_VT_MSGTYPE_ACK)) {
@@ -187,6 +194,7 @@ s32 ixgbe_reset_hw_vf(struct ixgbe_hw *hw)
 			}
 		}
 	}
+#endif
 
 	return ret_val;
 }
@@ -493,11 +501,13 @@ s32 ixgbe_check_mac_link_vf(struct ixgbe_hw *hw, ixgbe_link_speed *speed,
 {
 	u32 links_reg;
 
+    /*
 	if (!(hw->mbx.ops.check_for_rst(hw, 0))) {
 		*link_up = false;
 		*speed = 0;
 		return -1;
 	}
+    */
 
 	links_reg = IXGBE_VFREAD_REG(hw, IXGBE_VFLINKS);
 
@@ -549,6 +559,7 @@ int ixgbevf_negotiate_api_version(struct ixgbe_hw *hw, int api)
 	msg[0] = IXGBE_VF_API_NEGOTIATE;
 	msg[1] = api;
 	msg[2] = 0;
+
 	err = hw->mbx.ops.write_posted(hw, msg, 3, 0);
 
 	if (!err)
@@ -560,7 +571,7 @@ int ixgbevf_negotiate_api_version(struct ixgbe_hw *hw, int api)
 		/* Store value and return 0 on success */
 		if (msg[0] == (IXGBE_VF_API_NEGOTIATE | IXGBE_VT_MSGTYPE_ACK)) {
 			hw->api_version = api;
-			return 0;
+            return 0;
 		}
 
 		err = IXGBE_ERR_INVALID_ARGUMENT;
