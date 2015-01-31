@@ -744,7 +744,7 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	}
 
 	/* init_mailbox_params */
-	//hw->mbx.ops.init_params(hw);
+	hw->mbx.ops.init_params(hw);
 
 	/* Disable the interrupts for VF */
 	ixgbevf_intr_disable(hw);
@@ -753,7 +753,9 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	
     printf("hw->mac.max_rx_queues: %d\n", hw->mac.max_rx_queues);
 
+
     diag = hw->mac.ops.reset_hw(hw);
+
 
 	if ((diag != IXGBE_SUCCESS) && (diag != IXGBE_ERR_INVALID_MAC_ADDR)) {
 		PMD_INIT_LOG(ERR, "VF Initialization Failure: %d", diag);
@@ -761,12 +763,14 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	}
 
 
+
+
     
 
     //generate MAC?
 
 	/* Get Rx/Tx queue count via mailbox, which is ready after reset_hw */
-	//ixgbevf_get_queue_num(hw);
+	ixgbevf_get_queue_num(hw);
 
 	/* Allocate memory for storing MAC addresses */
 	eth_dev->data->mac_addrs = calloc(hw->mac.num_rar_entries, ETH_ADDR_LEN);
@@ -786,6 +790,9 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 
 
     //generate a MAC address?
+ #if 1
+	if(diag == IXGBE_ERR_INVALID_MAC_ADDR)
+	{
     hw->mac.perm_addr[0] = 0x00;
     hw->mac.perm_addr[1] = 0x01;
     hw->mac.perm_addr[2] = 0x02;
@@ -795,9 +802,12 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 
     hw->mac.perm_addr[0] &= 0xfe; /* clear multicast */
     hw->mac.perm_addr[0] |= 0x02; /* set local assignment */
+	}
+  #endif
 
 	/* Copy the permanent MAC address */
 	memcpy(&eth_dev->data->mac_addrs[0], hw->mac.perm_addr, ETH_ADDR_LEN);
+
 
 
 	/* reset the hardware with the new settings */
@@ -810,6 +820,7 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 			PMD_INIT_LOG(ERR, "VF Initialization Failure: %d", diag);
 			return (-EIO);
 	}
+
 
 	PMD_INIT_LOG(DEBUG, "\nport %d vendorID=0x%x deviceID=0x%x mac.type=%s\n",
 			 eth_dev->data->port_id, pci_dev->vendor_id, pci_dev->device_id,

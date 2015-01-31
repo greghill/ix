@@ -84,6 +84,8 @@ s32 ixgbe_init_ops_vf(struct ixgbe_hw *hw)
 	hw->mac.max_tx_queues = 1;
 	hw->mac.max_rx_queues = 1;
 
+	printf("ixgbe_init_ops_vf\n");
+
 	hw->mbx.ops.init_params = ixgbe_init_mbx_params_vf;
 
 	return IXGBE_SUCCESS;
@@ -139,6 +141,8 @@ s32 ixgbe_reset_hw_vf(struct ixgbe_hw *hw)
 
 	DEBUGFUNC("ixgbevf_reset_hw_vf");
 
+
+
 	/* Call adapter stop to disable tx/rx and clear interrupts */
 	hw->mac.ops.stop_adapter(hw);
 
@@ -153,15 +157,19 @@ s32 ixgbe_reset_hw_vf(struct ixgbe_hw *hw)
 
 	msec_delay(50);
 
+#if 1
 
-#if 0
-
+	printf("##timeout: %d\n", timeout);
+	printf("##mbx->ops.check_for_rst: %p\n", mbx->ops.check_for_rst);
 
 	/* we cannot reset while the RSTI / RSTD bits are asserted */
 	while (!mbx->ops.check_for_rst(hw, 0) && timeout) {
+		printf("timeout: %d\n", timeout);
 		timeout--;
 		usec_delay(5);
 	}
+
+	printf("&&ret_val: %d\n", ret_val);
 
 	if (timeout) {
 		/* mailbox timeout can now become active */
@@ -195,6 +203,8 @@ s32 ixgbe_reset_hw_vf(struct ixgbe_hw *hw)
 		}
 	}
 #endif
+
+	printf("ixgbe_reset_hw_vf returns %d\n", ret_val);
 
 	return ret_val;
 }
@@ -501,13 +511,13 @@ s32 ixgbe_check_mac_link_vf(struct ixgbe_hw *hw, ixgbe_link_speed *speed,
 {
 	u32 links_reg;
 
-    /*
+
 	if (!(hw->mbx.ops.check_for_rst(hw, 0))) {
 		*link_up = false;
 		*speed = 0;
 		return -1;
 	}
-    */
+
 
 	links_reg = IXGBE_VFREAD_REG(hw, IXGBE_VFLINKS);
 

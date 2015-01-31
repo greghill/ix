@@ -1955,10 +1955,10 @@ int ixgbevf_dev_rx_init(struct rte_eth_dev *dev)
 	 * ixgbevf_rlpml_set_vf even if jumbo frames are not used. This way,
 	 * VF packets received can work in all cases.
 	 */
-    /* greg: calls mailbox
+
 	ixgbevf_rlpml_set_vf(hw,
 		(uint16_t)dev->data->dev_conf.rxmode.max_rx_pkt_len);
-    */
+
 
     //dev->rx_pkt_burst = ixgbe_recv_pkts;///XXX dono what this is
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
@@ -2066,15 +2066,16 @@ void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 	uint32_t dmatxctl;
 	uint32_t rxctrl, txdctl, rxdctl;
 
+	printf("ixgbevf_dev_rxtx_start\n");
+
 	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
-    /* greg think we dont want this
 	if (hw->mac.type != ixgbe_mac_82598EB) {
 		dmatxctl = IXGBE_READ_REG(hw, IXGBE_DMATXCTL);
 		dmatxctl |= IXGBE_DMATXCTL_TE;
 		IXGBE_WRITE_REG(hw, IXGBE_DMATXCTL, dmatxctl);
 	}
-    */
+
 
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		struct tx_queue *txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
@@ -2122,17 +2123,27 @@ void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 				(rxq->tail & (rxq->len - 1)));
         // greg dpdk vf uses (rxq->nb_rx_desc - 1)
 	}
-#if 0 // greg dont think we want this
+
+
+#if 1// greg dont think we want this
 	/* Enable Receive engine */
 	rxctrl = IXGBE_READ_REG(hw, IXGBE_RXCTRL);
 	if (hw->mac.type == ixgbe_mac_82598EB)
 		rxctrl |= IXGBE_RXCTRL_DMBYPS;
 	rxctrl |= IXGBE_RXCTRL_RXEN;
-	hw->mac.ops.enable_rx_dma(hw, rxctrl);
+
+
+	printf("hw->mac.ops.enable_rx_dma: %p\n", hw->mac.ops.enable_rx_dma);
+
+	if(hw->mac.ops.enable_rx_dma) hw->mac.ops.enable_rx_dma(hw, rxctrl);
+
+
 
 	/* If loopback mode is enabled for 82599, set up the link accordingly */
 	if (hw->mac.type == ixgbe_mac_82599EB &&
 			dev->data->dev_conf.lpbk_mode == IXGBE_LPBK_82599_TX_RX)
 		ixgbe_setup_loopback_link_82599(hw);
 #endif
+
+	printf("ixgbevf_dev_rxtx_start end\n");
 }

@@ -160,8 +160,8 @@ int eth_dev_start(struct rte_eth_dev *dev)
     eth_dev_get_hw_mac(dev, &macaddr);
        
 
-	log_info("eth: started an ethernet device\n");
-	log_info("eth:\tMAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
+	printf("eth: started an ethernet device\n");
+	printf("eth:\tMAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
 		 macaddr.addr[0], macaddr.addr[1],
 		 macaddr.addr[2], macaddr.addr[3],
 		 macaddr.addr[4], macaddr.addr[5]);
