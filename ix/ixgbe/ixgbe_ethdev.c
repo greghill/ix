@@ -695,7 +695,12 @@ static void ixgbevf_get_queue_num(struct ixgbe_hw *hw)
 	 */
 
 	if (!ixgbevf_negotiate_api_version(hw, ixgbe_mbox_api_11))
+    {
+        printf("ASDASDASDASDASDASDSAD ixgbevf_negotiate_api_version\n");
 		ixgbevf_get_queues(hw, &tcs, &tc);
+    }
+
+     printf("ASDASDASDASDASDASDSAD !!!ixgbevf_negotiate_api_version\n");
 }
 
 /*
@@ -749,23 +754,17 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	/* Disable the interrupts for VF */
 	ixgbevf_intr_disable(hw);
 
-	hw->mac.num_rar_entries = hw->mac.max_rx_queues; //is this 1 or 128?
+	hw->mac.num_rar_entries = hw->mac.max_rx_queues; //is this 1 or 128 (DPDK)?
 	
     printf("hw->mac.max_rx_queues: %d\n", hw->mac.max_rx_queues);
 
 
     diag = hw->mac.ops.reset_hw(hw);
 
-
 	if ((diag != IXGBE_SUCCESS) && (diag != IXGBE_ERR_INVALID_MAC_ADDR)) {
 		PMD_INIT_LOG(ERR, "VF Initialization Failure: %d", diag);
 		return (diag);
-	}
-
-
-
-
-    
+	}    
 
     //generate MAC?
 
@@ -808,6 +807,15 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	/* Copy the permanent MAC address */
 	memcpy(&eth_dev->data->mac_addrs[0], hw->mac.perm_addr, ETH_ADDR_LEN);
 
+    
+	/* Allocate memory for storing hash filter MAC addresses */
+	eth_dev->data->hash_mac_addrs = malloc(ETH_ADDR_LEN * IXGBE_VMDQ_NUM_UC_MAC);
+	if (!eth_dev->data->hash_mac_addrs) {
+		printf("ixgbe: Failed to allocate %d bytes needed to store MAC addresses",
+			ETH_ADDR_LEN * IXGBE_VMDQ_NUM_UC_MAC);
+		return -ENOMEM;
+	}
+	memset(eth_dev->data->hash_mac_addrs, 0, ETH_ADDR_LEN * IXGBE_VMDQ_NUM_UC_MAC);
 
 
 	/* reset the hardware with the new settings */
@@ -817,6 +825,7 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 			break;
 
 		default:
+            printf("ERRORRRRRRRRRRRRERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR\n");
 			PMD_INIT_LOG(ERR, "VF Initialization Failure: %d", diag);
 			return (-EIO);
 	}

@@ -2056,9 +2056,91 @@ void ixgbevf_dev_tx_init(struct rte_eth_dev *dev)
 	}
 }
 
+
+
+
+
+
+void
+ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
+{
+	struct ixgbe_hw     *hw;
+	struct igb_tx_queue *txq;
+	struct igb_rx_queue *rxq;
+	uint32_t txdctl;
+	uint32_t rxdctl;
+	uint16_t i;
+	int poll_ms;
+
+	printf("ixgbevf_dev_rxtx_start\n");
+
+	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+		//txq = dev->data->tx_queues[i];
+		txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
+        /* Setup Transmit Threshold Registers */
+		txdctl = IXGBE_READ_REG(hw, IXGBE_VFTXDCTL(i));
+		txdctl |= 32 & 0x7F;
+		txdctl |= ((1 & 0x7F) << 8);
+		txdctl |= ((8 & 0x7F) << 16);
+		IXGBE_WRITE_REG(hw, IXGBE_VFTXDCTL(i), txdctl);
+	}
+
+	for (i = 0; i < dev->data->nb_tx_queues; i++) {
+
+		txdctl = IXGBE_READ_REG(hw, IXGBE_VFTXDCTL(i));
+		txdctl |= IXGBE_TXDCTL_ENABLE;
+		IXGBE_WRITE_REG(hw, IXGBE_VFTXDCTL(i), txdctl);
+
+		poll_ms = 10;
+		/* Wait until TX Enable ready */
+		do {
+			delay_ms(1);
+			txdctl = IXGBE_READ_REG(hw, IXGBE_VFTXDCTL(i));
+		} while (--poll_ms && !(txdctl & IXGBE_TXDCTL_ENABLE));
+		if (!poll_ms)
+			PMD_INIT_LOG(ERR, "Could not enable Tx Queue %d", i);
+	}
+	for (i = 0; i < dev->data->nb_rx_queues; i++) {
+
+		rxq = dev->data->rx_queues[i];
+
+		rxdctl = IXGBE_READ_REG(hw, IXGBE_VFRXDCTL(i));
+		rxdctl |= IXGBE_RXDCTL_ENABLE;
+		IXGBE_WRITE_REG(hw, IXGBE_VFRXDCTL(i), rxdctl);
+
+		/* Wait until RX Enable ready */
+		poll_ms = 10;
+		do {
+			delay_ms(1);
+			rxdctl = IXGBE_READ_REG(hw, IXGBE_VFRXDCTL(i));
+		} while (--poll_ms && !(rxdctl & IXGBE_RXDCTL_ENABLE));
+		if (!poll_ms)
+			PMD_INIT_LOG(ERR, "Could not enable Rx Queue %d", i);
+		wmb();
+		IXGBE_WRITE_REG(hw, IXGBE_VFRDT(i), 100 - 1);
+
+	}
+
+#if 0
+    rxctrl = IXGBE_READ_REG(hw, IXGBE_RXCTRL);
+	if (hw->mac.type == ixgbe_mac_82598EB)
+		rxctrl |= IXGBE_RXCTRL_DMBYPS;
+	rxctrl |= IXGBE_RXCTRL_RXEN;
+
+
+	printf("hw->mac.ops.enable_rx_dma: %p\n", hw->mac.ops.enable_rx_dma);
+
+	if(hw->mac.ops.enable_rx_dma) hw->mac.ops.enable_rx_dma(hw, rxctrl);
+#endif
+}
+
 /*
  * [VF] Start Transmit and Receive Units.
  */
+
+#if 0
 void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 {
 	int i, poll_ms;
@@ -2147,3 +2229,4 @@ void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 
 	printf("ixgbevf_dev_rxtx_start end\n");
 }
+#endif

@@ -164,7 +164,7 @@ s32 ixgbe_reset_hw_vf(struct ixgbe_hw *hw)
 
 	/* we cannot reset while the RSTI / RSTD bits are asserted */
 	while (!mbx->ops.check_for_rst(hw, 0) && timeout) {
-		printf("timeout: %d\n", timeout);
+		//printf("timeout: %d\n", timeout);
 		timeout--;
 		usec_delay(5);
 	}
@@ -188,7 +188,7 @@ s32 ixgbe_reset_hw_vf(struct ixgbe_hw *hw)
 		ret_val = mbx->ops.read_posted(hw, msgbuf,
 					       IXGBE_VF_PERMADDR_MSG_LEN, 0);
 
-         printf("^^^^^^^^^^^^^^^^^^^^^^^^ret_val: %d\n", ret_val);
+        printf("^^^^^^^^^^^^^^^^^^^^^^^^ret_val: %d\n", ret_val);
 
 		if (!ret_val) {
 			if (msgbuf[0] == (IXGBE_VF_RESET |
