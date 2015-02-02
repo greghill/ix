@@ -2060,7 +2060,7 @@ void ixgbevf_dev_tx_init(struct rte_eth_dev *dev)
 
 
 
-
+#if 0
 void
 ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 {
@@ -2135,12 +2135,13 @@ ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 	if(hw->mac.ops.enable_rx_dma) hw->mac.ops.enable_rx_dma(hw, rxctrl);
 #endif
 }
+#endif
 
 /*
  * [VF] Start Transmit and Receive Units.
  */
 
-#if 0
+#if 1
 void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 {
 	int i, poll_ms;
@@ -2207,7 +2208,7 @@ void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 	}
 
 
-#if 1// greg dont think we want this
+#if 0// greg dont think we want this
 	/* Enable Receive engine */
 	rxctrl = IXGBE_READ_REG(hw, IXGBE_RXCTRL);
 	if (hw->mac.type == ixgbe_mac_82598EB)
