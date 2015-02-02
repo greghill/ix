@@ -157,11 +157,19 @@ s32 ixgbe_reset_hw_vf(struct ixgbe_hw *hw)
 
 	msec_delay(50);
 
+#if 1
+
+	//printf("##timeout: %d\n", timeout);
+	printf("##mbx->ops.check_for_rst: %p\n", mbx->ops.check_for_rst);
+
 	/* we cannot reset while the RSTI / RSTD bits are asserted */
 	while (!mbx->ops.check_for_rst(hw, 0) && timeout) {
+		//printf("timeout: %d\n", timeout);
 		timeout--;
 		usec_delay(5);
 	}
+
+	printf("&&ret_val: %d\n", ret_val);
 
 	if (timeout) {
 		/* mailbox timeout can now become active */

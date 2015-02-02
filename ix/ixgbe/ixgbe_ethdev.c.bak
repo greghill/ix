@@ -771,8 +771,6 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	/* Get Rx/Tx queue count via mailbox, which is ready after reset_hw */
 	ixgbevf_get_queue_num(hw);
 
-	printf("!!!!!!!!!!!!!!!!!!! hw->mac.num_rar_entries: %d\n", hw->mac.num_rar_entries);
-
 	/* Allocate memory for storing MAC addresses */
 	eth_dev->data->mac_addrs = calloc(hw->mac.num_rar_entries, ETH_ADDR_LEN);
 	if (eth_dev->data->mac_addrs == NULL) {

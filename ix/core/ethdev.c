@@ -151,10 +151,10 @@ int eth_dev_start(struct rte_eth_dev *dev)
 	if (ret)
 		return ret;
 
-    /*
-	dev->dev_ops->promiscuous_disable(dev);
-	dev->dev_ops->allmulticast_enable(dev);
-    */
+
+	if(dev->dev_ops->promiscuous_disable) dev->dev_ops->promiscuous_disable(dev);
+	if(dev->dev_ops->allmulticast_enable) dev->dev_ops->allmulticast_enable(dev);
+
 	
         
     eth_dev_get_hw_mac(dev, &macaddr);

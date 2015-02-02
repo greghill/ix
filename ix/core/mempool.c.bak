@@ -189,10 +189,12 @@ int mempool_create_datastore(struct mempool_datastore *mds, int nr_elems, size_t
 	if (nostraddle) {
 		int elems_per_page = PGSIZE_2MB / elem_len;
 		nr_pages = div_up(nr_elems, elems_per_page);
+		printf("@#@#@##@#@@2 %d\n", nr_pages );
 		mds->buf = page_alloc_contig(nr_pages);
 		assert(mds->buf);
 	} else {
 		nr_pages = PGN_2MB(nr_elems * elem_len + PGMASK_2MB);
+		printf("@#@#@##@#@@ %d\n", nr_pages );
 		nr_elems = nr_pages * PGSIZE_2MB / elem_len;
 		mds->buf = mem_alloc_pages(nr_pages, PGSIZE_2MB, NULL, MPOL_PREFERRED);
 	}
