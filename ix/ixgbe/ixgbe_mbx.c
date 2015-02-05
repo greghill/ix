@@ -139,7 +139,7 @@ s32 ixgbe_check_for_rst(struct ixgbe_hw *hw, u16 mbx_id)
 
 	DEBUGFUNC("ixgbe_check_for_rst");
 
-	printf("ixgbe_check_for_rst\n");
+	//printf("ixgbe_check_for_rst\n");
 
 	if (mbx->ops.check_for_rst)
 		ret_val = mbx->ops.check_for_rst(hw, mbx_id);
@@ -287,7 +287,7 @@ void ixgbe_init_mbx_ops_generic(struct ixgbe_hw *hw)
  **/
 STATIC u32 ixgbe_read_v2p_mailbox(struct ixgbe_hw *hw)
 {
-	printf("ixgbe_read_v2p_mailbox\n");
+	//printf("ixgbe_read_v2p_mailbox\n");
 	u32 v2p_mailbox = IXGBE_READ_REG(hw, IXGBE_VFMAILBOX);
 
 	v2p_mailbox |= hw->mbx.v2p_mailbox;
@@ -306,7 +306,7 @@ STATIC u32 ixgbe_read_v2p_mailbox(struct ixgbe_hw *hw)
  **/
 STATIC s32 ixgbe_check_for_bit_vf(struct ixgbe_hw *hw, u32 mask)
 {
-	printf("ixgbe_check_for_bit_vf\n");
+	//printf("ixgbe_check_for_bit_vf\n");
 
 	u32 v2p_mailbox = ixgbe_read_v2p_mailbox(hw);
 	s32 ret_val = IXGBE_ERR_MBX;
@@ -374,7 +374,7 @@ STATIC s32 ixgbe_check_for_rst_vf(struct ixgbe_hw *hw, u16 mbx_id)
 
 	DEBUGFUNC("ixgbe_check_for_rst_vf");
 
-	printf("ixgbe_check_for_rst_vf\n");
+	//printf("ixgbe_check_for_rst_vf\n");
 
 	if (!ixgbe_check_for_bit_vf(hw, (IXGBE_VFMAILBOX_RSTD |
 	    IXGBE_VFMAILBOX_RSTI))) {

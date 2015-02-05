@@ -2149,7 +2149,7 @@ void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 	uint32_t dmatxctl;
 	uint32_t rxctrl, txdctl, rxdctl;
 
-	printf("ixgbevf_dev_rxtx_start\n");
+//	printf("ixgbevf_dev_rxtx_start\n");
 
 	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
@@ -2228,6 +2228,6 @@ void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 		ixgbe_setup_loopback_link_82599(hw);
 #endif
 
-	printf("ixgbevf_dev_rxtx_start end\n");
+	//printf("ixgbevf_dev_rxtx_start end\n");
 }
 #endif

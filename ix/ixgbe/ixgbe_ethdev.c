@@ -662,7 +662,7 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 	//ret = ixgbe_init_adapter(dev);
 	ret = eth_ixgbevf_dev_init(dev);
         
-    printf("eth_ixgbevf_dev_init returned %d\n", ret);
+    //printf("eth_ixgbevf_dev_init returned %d\n", ret);
 
 	if (ret) {
 		log_err("ixgbe: failed to initialize adapter\n");
@@ -1604,7 +1604,7 @@ ixgbe_dev_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 	memset(&old, 0, sizeof(old));
 	old = dev->data->dev_link;
 
-    printf("QQQQQQQQ\n");
+    //printf("QQQQQQQQ\n");
 	/* check if it needs to wait to complete, if lsc interrupt is enabled */
 	if (wait_to_complete == 0 || dev->data->dev_conf.intr_conf.lsc != 0)
 		diag = ixgbe_check_link(hw, &link_speed, &link_up, 0);
@@ -1619,7 +1619,7 @@ ixgbe_dev_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 		return 0;
 	}
 
-    printf("UUUUUUUUU\n");
+    //printf("UUUUUUUUU\n");
 
 	if (link_up == 0) {
 		dev->data->dev_link = link;
