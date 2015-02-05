@@ -344,6 +344,7 @@ int eth_recv_handle_fg_transition(struct eth_rx_queue *rx_queue, struct mbuf *pk
 
 	if (!fg->in_transition && fg->cur_cpu == percpu_get(cpu_id)) {
 		/* continue processing */
+		log_warn("KEEPIN packet: flow group %d of device %d should be handled by cpu %d\n", fg->idx, fg->dev_idx, fg->cur_cpu);
 		return 0;
 	} else if (fg->in_transition && fg->prev_cpu == percpu_get(cpu_id)) {
 		eth_recv_at_prev(rx_queue, pkt);

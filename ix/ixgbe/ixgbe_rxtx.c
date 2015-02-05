@@ -266,6 +266,7 @@ int ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 	struct rx_queue *rxq;
 
 	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+    printf("$$$$$$$$setting up rx queue to numa node %d\n", numa_node);
 
 	/*
 	 * The number of receive descriptors must not exceed hardware

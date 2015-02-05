@@ -264,6 +264,8 @@ static struct eth_dev_ops ixgbevf_eth_dev_ops = {
 	.rx_queue_release     = ixgbe_dev_rx_queue_release,
 	.tx_queue_setup       = ixgbe_dev_tx_queue_setup,
 	.tx_queue_release     = ixgbe_dev_tx_queue_release,
+	.reta_update          = ixgbe_dev_rss_reta_update,
+	.reta_query           = ixgbe_dev_rss_reta_query,
 	//.mac_addr_add         = ixgbevf_add_mac_addr,
 	//.mac_addr_remove      = ixgbevf_remove_mac_addr,
 };
@@ -659,8 +661,8 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 	hw->allow_unsupported_sfp = 1;
 #endif
 
-	//ret = ixgbe_init_adapter(dev);
-	ret = eth_ixgbevf_dev_init(dev);
+	ret = ixgbe_init_adapter(dev);
+	//ret = eth_ixgbevf_dev_init(dev);
         
     //printf("eth_ixgbevf_dev_init returned %d\n", ret);
 
@@ -2205,6 +2207,10 @@ ixgbe_dev_rss_reta_update(struct rte_eth_dev *dev,
 	uint32_t reta;
 	struct ixgbe_hw *hw = 
 			IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+				reta = IXGBE_READ_REG(hw,0x05818);
+    printf("GREGORY IN RETA UPDATE with mrqc %o\n", reta);
+    reta |= 11;
+	//		IXGBE_WRITE_REG(hw, 0x05818,reta);
 
 	spin_lock(&ixgbe_dev_lock);
 
@@ -2231,6 +2237,7 @@ ixgbe_dev_rss_reta_update(struct rte_eth_dev *dev,
 				}
 			}
 			IXGBE_WRITE_REG(hw, IXGBE_RETA(i >> 2),reta);
+            printf("writing reta %x for i %d\n", reta, i);
 		}
 	}
 
