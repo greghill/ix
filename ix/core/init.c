@@ -158,21 +158,16 @@ static int init_network_cpu(void)
 	int ret, i;
 	spin_lock(&assign_lock);
 	ret = 0;
-
-    printf("eth_dev_count: %d\n", eth_dev_count);
-
 	for (i = 0; i < eth_dev_count; i++) {
 		struct rte_eth_dev *eth = eth_dev[i];
 		ret = eth_dev_get_rx_queue(eth, &percpu_get(eth_rxqs[i]));
 		if (ret) {
-            printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA RX %d\n", ret);
 			spin_unlock(&assign_lock);
 			return ret;
 		}
 
 		ret = eth_dev_get_tx_queue(eth, &percpu_get(eth_txqs[i]));
 		if (ret) {
-            printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA TX %d\n", ret);
 			spin_unlock(&assign_lock);
 			return ret;
 		}
@@ -297,7 +292,6 @@ static int init_fg_cpu(void)
 		bitmap_set(fg_bitmap, fg_id);
 
 	eth_fg_assign_to_cpu(fg_bitmap, percpu_get(cpu_nr));
-    
 	for (fg_id = start; fg_id < start + count; fg_id++) {
 		eth_fg_set_current(fgs[fg_id]);
 
@@ -392,8 +386,6 @@ static int init_hw(void)
 			return ret;
 		}
 
-
-        
 		for (j = 0; j < eth->data->nb_rx_fgs; j++) {
 			eth_fg_init_cpu(&eth->data->rx_fgs[j]);
 			fgs[fg_id] = &eth->data->rx_fgs[j];
@@ -406,20 +398,16 @@ static int init_hw(void)
 	nr_flow_groups = fg_id;
 	cp_shmem->nr_flow_groups = nr_flow_groups;
 
-    
 	mempool_init();
-           
 	if (cfg_cpu_nr > 1) {
 		pthread_barrier_wait(&start_barrier);
 	}
 
 	init_fg_cpu();
-
 	if (ret) {
 		log_err("init: failed to initialize flow groups\n");
 		exit(ret);
 	}
-     
 
 	log_info("init: barrier after al CPU initialization\n");
 
@@ -436,11 +424,7 @@ static int init_dune(void)
 
 static int init_cfg(void)
 {
-    int status = cfg_init(init_argc,init_argv,&args_parsed);
-
-    printf("cfg_init returned: %d\n", status);
-
-	return status;
+	return cfg_init(init_argc,init_argv,&args_parsed);
 }
 
 static int init_firstcpu(void)
