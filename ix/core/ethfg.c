@@ -177,8 +177,8 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
 		}
 
         /* reta_update if function exists */
-		if (eth && eth->dev_ops->reta_update)
-			eth->dev_ops->reta_update(eth, &rss_reta);
+        if (eth && eth->dev_ops->reta_update)
+            eth->dev_ops->reta_update(eth, &rss_reta);
 	}
 
 	if (!real) {

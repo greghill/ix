@@ -292,6 +292,7 @@ static int init_fg_cpu(void)
 		bitmap_set(fg_bitmap, fg_id);
 
 	eth_fg_assign_to_cpu(fg_bitmap, percpu_get(cpu_nr));
+
 	for (fg_id = start; fg_id < start + count; fg_id++) {
 		eth_fg_set_current(fgs[fg_id]);
 
@@ -399,6 +400,7 @@ static int init_hw(void)
 	cp_shmem->nr_flow_groups = nr_flow_groups;
 
 	mempool_init();
+
 	if (cfg_cpu_nr > 1) {
 		pthread_barrier_wait(&start_barrier);
 	}

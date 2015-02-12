@@ -151,7 +151,6 @@ int eth_dev_start(struct rte_eth_dev *dev)
 	if (ret)
 		return ret;
 
-
 	if(dev->dev_ops->promiscuous_disable) dev->dev_ops->promiscuous_disable(dev);
 	if(dev->dev_ops->allmulticast_enable) dev->dev_ops->allmulticast_enable(dev);
 
@@ -161,7 +160,7 @@ int eth_dev_start(struct rte_eth_dev *dev)
 		 macaddr.addr[0], macaddr.addr[1],
 		 macaddr.addr[2], macaddr.addr[3],
 		 macaddr.addr[4], macaddr.addr[5]);
-    
+
 	dev->dev_ops->link_update(dev, 1);
 	link = dev->data->dev_link;
 

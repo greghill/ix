@@ -84,8 +84,6 @@ s32 ixgbe_init_ops_vf(struct ixgbe_hw *hw)
 	hw->mac.max_tx_queues = 1;
 	hw->mac.max_rx_queues = 1;
 
-	printf("ixgbe_init_ops_vf\n");
-
 	hw->mbx.ops.init_params = ixgbe_init_mbx_params_vf;
 
 	return IXGBE_SUCCESS;
@@ -141,8 +139,6 @@ s32 ixgbe_reset_hw_vf(struct ixgbe_hw *hw)
 
 	DEBUGFUNC("ixgbevf_reset_hw_vf");
 
-
-
 	/* Call adapter stop to disable tx/rx and clear interrupts */
 	hw->mac.ops.stop_adapter(hw);
 
@@ -191,8 +187,6 @@ s32 ixgbe_reset_hw_vf(struct ixgbe_hw *hw)
 			}
 		}
 	}
-
-	printf("ixgbe_reset_hw_vf returns %d\n", ret_val);
 
 	return ret_val;
 }
@@ -499,13 +493,11 @@ s32 ixgbe_check_mac_link_vf(struct ixgbe_hw *hw, ixgbe_link_speed *speed,
 {
 	u32 links_reg;
 
-
 	if (!(hw->mbx.ops.check_for_rst(hw, 0))) {
 		*link_up = false;
 		*speed = 0;
 		return -1;
 	}
-
 
 	links_reg = IXGBE_VFREAD_REG(hw, IXGBE_VFLINKS);
 
@@ -557,7 +549,6 @@ int ixgbevf_negotiate_api_version(struct ixgbe_hw *hw, int api)
 	msg[0] = IXGBE_VF_API_NEGOTIATE;
 	msg[1] = api;
 	msg[2] = 0;
-
 	err = hw->mbx.ops.write_posted(hw, msg, 3, 0);
 
 	if (!err)
