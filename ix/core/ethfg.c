@@ -151,7 +151,6 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
 	int ret;
 	int real = 0;
 
-    
 	assert(percpu_get(migration_info).prev_cpu == -1);
 	assert(percpu_get_remote(migration_info, cfg_cpu[cpu]).prev_cpu == -1);
 
@@ -166,22 +165,18 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
 		for (j = 0; j < ETH_MAX_NUM_FG; j++) {
 			if (!bitmap_test(fg_bitmap, i * ETH_MAX_NUM_FG + j))
 				continue;
-
-           
 			ret = eth_fg_assign_single_to_cpu(i * ETH_MAX_NUM_FG + j, cpu, &rss_reta, &eth);
-                
-
 			if (ret) {
 				bitmap_set(percpu_get(migration_info).fg_bitmap, i * ETH_MAX_NUM_FG + j);
 				real = 1;
 			}
-
 			if (!first_eth)
 				first_eth = eth;
 			else
 				assert(first_eth == eth);
 		}
 
+        /* reta_update if function exists */
 		if (eth && eth->dev_ops->reta_update)
 			eth->dev_ops->reta_update(eth, &rss_reta);
 	}
