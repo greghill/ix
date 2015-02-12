@@ -155,23 +155,15 @@ int eth_dev_start(struct rte_eth_dev *dev)
 	if(dev->dev_ops->promiscuous_disable) dev->dev_ops->promiscuous_disable(dev);
 	if(dev->dev_ops->allmulticast_enable) dev->dev_ops->allmulticast_enable(dev);
 
-	
-        
     eth_dev_get_hw_mac(dev, &macaddr);
-       
-
-	printf("eth: started an ethernet device\n");
-	printf("eth:\tMAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
+	log_info("eth: started an ethernet device\n");
+	log_info("eth:\tMAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
 		 macaddr.addr[0], macaddr.addr[1],
 		 macaddr.addr[2], macaddr.addr[3],
 		 macaddr.addr[4], macaddr.addr[5]);
-       
     
 	dev->dev_ops->link_update(dev, 1);
-    
-
 	link = dev->data->dev_link;
-
 
 	if (!link.link_status) {
 		log_warn("eth:\tlink appears to be down, check connection.\n");
@@ -182,9 +174,7 @@ int eth_dev_start(struct rte_eth_dev *dev)
 			 ("full-duplex") : ("half-duplex\n"));
 	}
 
-
 	eth_dev_setup_mac(dev);
- 
 
 	return 0;
 }
@@ -226,13 +216,11 @@ int eth_dev_get_rx_queue(struct rte_eth_dev *dev,
 	spin_lock(&eth_dev_lock);
 	rx_idx = dev->data->nb_rx_queues;
 
-     printf("AAAAAAAAAAAAAAAAAA %d %d\n", rx_idx, dev->data->max_rx_queues);
-
 	if (rx_idx >= dev->data->max_rx_queues) {
 		spin_unlock(&eth_dev_lock);
-        printf("BBBBBBBBBBBBBB %d %d\n", rx_idx, dev->data->max_rx_queues);
 		return -EMFILE;
 	}
+
 
 	ret = dev->dev_ops->rx_queue_setup(dev, rx_idx, -1,
 					   ETH_DEV_RX_QUEUE_SZ);
@@ -258,7 +246,6 @@ int eth_dev_get_rx_queue(struct rte_eth_dev *dev,
 err:
 	spin_unlock(&eth_dev_lock);
 	dev->dev_ops->rx_queue_release(dev->data->rx_queues[rx_idx]);
-    printf("CCCCCCCCCCCCCCCCC\n");
 	return ret;
 }
 
