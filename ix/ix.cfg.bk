@@ -1,5 +1,0 @@
-host_addr 10.79.6.119
-broadcast_addr 10.79.6.255
-gateway_addr 10.79.6.0
-mask 255.255.255.0
-arp 10.79.6.94 00:0f:53:0e:0c:b0
