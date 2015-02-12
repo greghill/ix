@@ -1758,58 +1758,6 @@ void ixgbe_dev_tx_init(struct rte_eth_dev *dev)
 	ixgbe_dev_mq_tx_configure(dev);
 }
 
-#if 0   
-void ixgbevf_dev_tx_init(struct rte_eth_dev *dev)
-{
-	int i;
-	struct ixgbe_hw *hw;
-	uint32_t txctrl;
-
-        hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	/* Setup the Base and Length of the Tx Descriptor Rings */
-	for (i = 0; i < dev->data->nb_tx_queues; i++) {
-		struct tx_queue *txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
-		uint64_t bus_addr = txq->ring_physaddr;
-
-		IXGBE_WRITE_REG(hw, IXGBE_VFTDBAL(i),
-				(uint32_t)(bus_addr & 0x00000000ffffffffULL));
-		IXGBE_WRITE_REG(hw, IXGBE_TDBAH(txq->reg_idx),
-				(uint32_t)(bus_addr >> 32));
-		IXGBE_WRITE_REG(hw, IXGBE_TDLEN(txq->reg_idx),
-				txq->len * sizeof(union ixgbe_adv_tx_desc));
-		/* Setup the HW Tx Head and TX Tail descriptor pointers */
-		IXGBE_WRITE_REG(hw, IXGBE_TDH(txq->reg_idx), 0);
-		IXGBE_WRITE_REG(hw, IXGBE_TDT(txq->reg_idx), 0);
-
-		/*
-		 * Disable Tx Head Writeback RO bit, since this hoses
-		 * bookkeeping if things aren't delivered in order.
-		 */
-		switch (hw->mac.type) {
-		case ixgbe_mac_82598EB:
-			txctrl = IXGBE_READ_REG(hw, IXGBE_DCA_TXCTRL(txq->reg_idx));
-			txctrl &= ~IXGBE_DCA_TXCTRL_DESC_WRO_EN;
-			IXGBE_WRITE_REG(hw, IXGBE_DCA_TXCTRL(txq->reg_idx), txctrl);
-			break;
-
-		case ixgbe_mac_82599EB:
-		case ixgbe_mac_X540:
-		default:
-			txctrl = IXGBE_READ_REG(hw,
-						IXGBE_DCA_TXCTRL_82599(txq->reg_idx));
-			txctrl &= ~IXGBE_DCA_TXCTRL_DESC_WRO_EN;
-			IXGBE_WRITE_REG(hw, IXGBE_DCA_TXCTRL_82599(txq->reg_idx),
-					txctrl);
-			break;
-		}
-	}
-
-	/* Device configured with multiple TX queues. */
-	ixgbe_dev_mq_tx_configure(dev);
-}
-#endif
-
 /*
  * Set up link for 82599 loopback mode Tx->Rx.
  */
@@ -2060,88 +2008,11 @@ void ixgbevf_dev_tx_init(struct rte_eth_dev *dev)
 
 
 
-#if 0
-void
-ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
-{
-	struct ixgbe_hw     *hw;
-	struct igb_tx_queue *txq;
-	struct igb_rx_queue *rxq;
-	uint32_t txdctl;
-	uint32_t rxdctl;
-	uint16_t i;
-	int poll_ms;
-
-	printf("ixgbevf_dev_rxtx_start\n");
-
-	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
-
-	for (i = 0; i < dev->data->nb_tx_queues; i++) {
-		//txq = dev->data->tx_queues[i];
-		txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
-        /* Setup Transmit Threshold Registers */
-		txdctl = IXGBE_READ_REG(hw, IXGBE_VFTXDCTL(i));
-		txdctl |= 32 & 0x7F;
-		txdctl |= ((1 & 0x7F) << 8);
-		txdctl |= ((8 & 0x7F) << 16);
-		IXGBE_WRITE_REG(hw, IXGBE_VFTXDCTL(i), txdctl);
-	}
-
-	for (i = 0; i < dev->data->nb_tx_queues; i++) {
-
-		txdctl = IXGBE_READ_REG(hw, IXGBE_VFTXDCTL(i));
-		txdctl |= IXGBE_TXDCTL_ENABLE;
-		IXGBE_WRITE_REG(hw, IXGBE_VFTXDCTL(i), txdctl);
-
-		poll_ms = 10;
-		/* Wait until TX Enable ready */
-		do {
-			delay_ms(1);
-			txdctl = IXGBE_READ_REG(hw, IXGBE_VFTXDCTL(i));
-		} while (--poll_ms && !(txdctl & IXGBE_TXDCTL_ENABLE));
-		if (!poll_ms)
-			PMD_INIT_LOG(ERR, "Could not enable Tx Queue %d", i);
-	}
-	for (i = 0; i < dev->data->nb_rx_queues; i++) {
-
-		rxq = dev->data->rx_queues[i];
-
-		rxdctl = IXGBE_READ_REG(hw, IXGBE_VFRXDCTL(i));
-		rxdctl |= IXGBE_RXDCTL_ENABLE;
-		IXGBE_WRITE_REG(hw, IXGBE_VFRXDCTL(i), rxdctl);
-
-		/* Wait until RX Enable ready */
-		poll_ms = 10;
-		do {
-			delay_ms(1);
-			rxdctl = IXGBE_READ_REG(hw, IXGBE_VFRXDCTL(i));
-		} while (--poll_ms && !(rxdctl & IXGBE_RXDCTL_ENABLE));
-		if (!poll_ms)
-			PMD_INIT_LOG(ERR, "Could not enable Rx Queue %d", i);
-		wmb();
-		IXGBE_WRITE_REG(hw, IXGBE_VFRDT(i), 100 - 1);
-
-	}
-
-#if 0
-    rxctrl = IXGBE_READ_REG(hw, IXGBE_RXCTRL);
-	if (hw->mac.type == ixgbe_mac_82598EB)
-		rxctrl |= IXGBE_RXCTRL_DMBYPS;
-	rxctrl |= IXGBE_RXCTRL_RXEN;
-
-
-	printf("hw->mac.ops.enable_rx_dma: %p\n", hw->mac.ops.enable_rx_dma);
-
-	if(hw->mac.ops.enable_rx_dma) hw->mac.ops.enable_rx_dma(hw, rxctrl);
-#endif
-}
-#endif
 
 /*
  * [VF] Start Transmit and Receive Units.
  */
 
-#if 1
 void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 {
 	int i, poll_ms;
@@ -2208,26 +2079,25 @@ void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 	}
 
 
-#if 0// greg dont think we want this
-	/* Enable Receive engine */
-	rxctrl = IXGBE_READ_REG(hw, IXGBE_RXCTRL);
-	if (hw->mac.type == ixgbe_mac_82598EB)
-		rxctrl |= IXGBE_RXCTRL_DMBYPS;
-	rxctrl |= IXGBE_RXCTRL_RXEN;
+#if 0 // greg dont think we want this
+    /* Enable Receive engine */
+    rxctrl = IXGBE_READ_REG(hw, IXGBE_RXCTRL);
+    if (hw->mac.type == ixgbe_mac_82598EB)
+        rxctrl |= IXGBE_RXCTRL_DMBYPS;
+    rxctrl |= IXGBE_RXCTRL_RXEN;
 
 
-	printf("hw->mac.ops.enable_rx_dma: %p\n", hw->mac.ops.enable_rx_dma);
+    printf("hw->mac.ops.enable_rx_dma: %p\n", hw->mac.ops.enable_rx_dma);
 
-	if(hw->mac.ops.enable_rx_dma) hw->mac.ops.enable_rx_dma(hw, rxctrl);
+    if(hw->mac.ops.enable_rx_dma) hw->mac.ops.enable_rx_dma(hw, rxctrl);
 
 
 
-	/* If loopback mode is enabled for 82599, set up the link accordingly */
-	if (hw->mac.type == ixgbe_mac_82599EB &&
-			dev->data->dev_conf.lpbk_mode == IXGBE_LPBK_82599_TX_RX)
-		ixgbe_setup_loopback_link_82599(hw);
+    /* If loopback mode is enabled for 82599, set up the link accordingly */
+    if (hw->mac.type == ixgbe_mac_82599EB &&
+            dev->data->dev_conf.lpbk_mode == IXGBE_LPBK_82599_TX_RX)
+        ixgbe_setup_loopback_link_82599(hw);
 #endif
 
 	printf("ixgbevf_dev_rxtx_start end\n");
 }
-#endif

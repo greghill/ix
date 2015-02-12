@@ -303,8 +303,6 @@ STATIC u32 ixgbe_read_v2p_mailbox(struct ixgbe_hw *hw)
  **/
 STATIC s32 ixgbe_check_for_bit_vf(struct ixgbe_hw *hw, u32 mask)
 {
-	printf("ixgbe_check_for_bit_vf\n");
-
 	u32 v2p_mailbox = ixgbe_read_v2p_mailbox(hw);
 	s32 ret_val = IXGBE_ERR_MBX;
 

@@ -122,7 +122,6 @@ static void ixgbe_remove_rar(struct rte_eth_dev *dev, uint32_t index);
 static void ixgbe_dcb_init(struct ixgbe_hw *hw,struct ixgbe_dcb_config *dcb_config);
 
 /* For Virtual Function support */
-#if 1
 static int eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev);
 static int  ixgbevf_dev_configure(struct rte_eth_dev *dev);
 static int  ixgbevf_dev_start(struct rte_eth_dev *dev);
@@ -138,7 +137,6 @@ static void ixgbevf_vlan_strip_queue_set(struct rte_eth_dev *dev,
 		uint16_t queue, int on);
 static void ixgbevf_vlan_offload_set(struct rte_eth_dev *dev, int mask);
 static void ixgbevf_set_vfta_all(struct rte_eth_dev *dev, bool on);
-#endif
 
 /* For Eth VMDQ APIs support */
 static int ixgbe_uc_hash_table_set(struct rte_eth_dev *dev, struct
@@ -241,7 +239,6 @@ static struct eth_dev_ops ixgbe_eth_dev_ops = {
 	.reta_query           = ixgbe_dev_rss_reta_query,
 };
 
-#if 1
 /*
  * dev_ops for virtual function, bare necessities for basic vf
  * operation have been implemented
@@ -256,7 +253,6 @@ static struct eth_dev_ops ixgbevf_eth_dev_ops = {
 	.stats_reset          = ixgbevf_dev_stats_reset,
 	.dev_close            = ixgbevf_dev_close,
 	.dev_infos_get        = ixgbe_dev_info_get,
-    //.mtu_set              = ixgbevf_dev_set_mtu,
 	.vlan_filter_set      = ixgbevf_vlan_filter_set,
 	.vlan_strip_queue_set = ixgbevf_vlan_strip_queue_set,
 	.vlan_offload_set     = ixgbevf_vlan_offload_set,
@@ -264,10 +260,7 @@ static struct eth_dev_ops ixgbevf_eth_dev_ops = {
 	.rx_queue_release     = ixgbe_dev_rx_queue_release,
 	.tx_queue_setup       = ixgbe_dev_tx_queue_setup,
 	.tx_queue_release     = ixgbe_dev_tx_queue_release,
-	//.mac_addr_add         = ixgbevf_add_mac_addr,
-	//.mac_addr_remove      = ixgbevf_remove_mac_addr,
 };
-#endif
 
 /*
  * This function is the same as ixgbe_is_sfp() in ixgbe/ixgbe.h.
@@ -653,17 +646,15 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 		goto out;
 	}
 
-    printf("hw->hw_addr: %p\n", hw->hw_addr);
-
 #if 0
 	hw->allow_unsupported_sfp = 1;
 #endif
 
-	//ret = ixgbe_init_adapter(dev);
-	ret = eth_ixgbevf_dev_init(dev);
+    if (is_vf)
+        ret = eth_ixgbevf_dev_init(dev);
+    else
+        ret = ixgbe_init_adapter(dev);
         
-    printf("eth_ixgbevf_dev_init returned %d\n", ret);
-
 	if (ret) {
 		log_err("ixgbe: failed to initialize adapter\n");
 		goto out_bar;
@@ -681,7 +672,6 @@ out:
 	return ret;
 }
 
-#if 1
 static void ixgbevf_get_queue_num(struct ixgbe_hw *hw)
 {
 	/* Traffic classes are not supported by now */
@@ -695,12 +685,7 @@ static void ixgbevf_get_queue_num(struct ixgbe_hw *hw)
 	 */
 
 	if (!ixgbevf_negotiate_api_version(hw, ixgbe_mbox_api_11))
-    {
-        printf("ASDASDASDASDASDASDSAD ixgbevf_negotiate_api_version\n");
 		ixgbevf_get_queues(hw, &tcs, &tc);
-    }
-
-     printf("ASDASDASDASDASDASDSAD !!!ixgbevf_negotiate_api_version\n");
 }
 
 /*
@@ -755,9 +740,6 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	ixgbevf_intr_disable(hw);
 
 	hw->mac.num_rar_entries = hw->mac.max_rx_queues; //is this 1 or 128 (DPDK)?
-	
-    printf("hw->mac.max_rx_queues: %d\n", hw->mac.max_rx_queues);
-
 
     diag = hw->mac.ops.reset_hw(hw);
 
@@ -771,8 +753,6 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	/* Get Rx/Tx queue count via mailbox, which is ready after reset_hw */
 	ixgbevf_get_queue_num(hw);
 
-	printf("!!!!!!!!!!!!!!!!!!! hw->mac.num_rar_entries: %d\n", hw->mac.num_rar_entries);
-
 	/* Allocate memory for storing MAC addresses */
 	eth_dev->data->mac_addrs = calloc(hw->mac.num_rar_entries, ETH_ADDR_LEN);
 	if (eth_dev->data->mac_addrs == NULL) {
@@ -782,33 +762,22 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 		return -ENOMEM;
 	}
 
-	/* Copy the permanent MAC address 
-     greg got rid of this os we would compile
+    // hardcode MAC address if not already set TODO maybe don't do this
+    if(diag == IXGBE_ERR_INVALID_MAC_ADDR)
+    {
+        hw->mac.perm_addr[0] = 0x00;
+        hw->mac.perm_addr[1] = 0x01;
+        hw->mac.perm_addr[2] = 0x02;
+        hw->mac.perm_addr[3] = 0x03;
+        hw->mac.perm_addr[4] = 0x04;
+        hw->mac.perm_addr[5] = 0x05;
 
-	ether_addr_copy((struct eth_addr *) hw->mac.perm_addr,
-			&eth_dev->data->mac_addrs[0]);
-     */
-
-
-    //generate a MAC address?
- #if 1
-	if(diag == IXGBE_ERR_INVALID_MAC_ADDR)
-	{
-    hw->mac.perm_addr[0] = 0x00;
-    hw->mac.perm_addr[1] = 0x01;
-    hw->mac.perm_addr[2] = 0x02;
-    hw->mac.perm_addr[3] = 0x03;
-    hw->mac.perm_addr[4] = 0x04;
-    hw->mac.perm_addr[5] = 0x05;
-
-    hw->mac.perm_addr[0] &= 0xfe; /* clear multicast */
-    hw->mac.perm_addr[0] |= 0x02; /* set local assignment */
-	}
-  #endif
+        hw->mac.perm_addr[0] &= 0xfe; /* clear multicast */
+        hw->mac.perm_addr[0] |= 0x02; /* set local assignment */
+    }
 
 	/* Copy the permanent MAC address */
 	memcpy(&eth_dev->data->mac_addrs[0], hw->mac.perm_addr, ETH_ADDR_LEN);
-
     
 	/* Allocate memory for storing hash filter MAC addresses */
 	eth_dev->data->hash_mac_addrs = malloc(ETH_ADDR_LEN * IXGBE_VMDQ_NUM_UC_MAC);
@@ -819,7 +788,6 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	}
 	memset(eth_dev->data->hash_mac_addrs, 0, ETH_ADDR_LEN * IXGBE_VMDQ_NUM_UC_MAC);
 
-
 	/* reset the hardware with the new settings */
 	diag = hw->mac.ops.start_hw(hw);
 	switch (diag) {
@@ -827,11 +795,9 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 			break;
 
 		default:
-            printf("ERRORRRRRRRRRRRRERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR\n");
 			PMD_INIT_LOG(ERR, "VF Initialization Failure: %d", diag);
 			return (-EIO);
 	}
-
 
 	PMD_INIT_LOG(DEBUG, "\nport %d vendorID=0x%x deviceID=0x%x mac.type=%s\n",
 			 eth_dev->data->port_id, pci_dev->vendor_id, pci_dev->device_id,
@@ -839,8 +805,6 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 
 	return 0;
 }
-
-#endif
 
 static int
 ixgbe_vlan_filter_set(struct rte_eth_dev *dev, uint16_t vlan_id, int on)
@@ -1500,7 +1464,6 @@ ixgbe_dev_stats_reset(struct rte_eth_dev *dev)
 	memset(stats, 0, sizeof(*stats));
 }
 
-#if 1
 static void
 ixgbevf_dev_stats_get(struct rte_eth_dev *dev, struct rte_eth_stats *stats)
 {
@@ -1556,7 +1519,6 @@ ixgbevf_dev_stats_reset(struct rte_eth_dev *dev)
 	hw_stats->vfmprc = 0;
 
 }
-#endif
 
 static void
 ixgbe_dev_info_get(struct rte_eth_dev *dev, struct rte_eth_dev_info *dev_info)
@@ -1604,7 +1566,6 @@ ixgbe_dev_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 	memset(&old, 0, sizeof(old));
 	old = dev->data->dev_link;
 
-    printf("QQQQQQQQ\n");
 	/* check if it needs to wait to complete, if lsc interrupt is enabled */
 	if (wait_to_complete == 0 || dev->data->dev_conf.intr_conf.lsc != 0)
 		diag = ixgbe_check_link(hw, &link_speed, &link_up, 0);
@@ -1618,8 +1579,6 @@ ixgbe_dev_link_update(struct rte_eth_dev *dev, int wait_to_complete)
 			return -1;
 		return 0;
 	}
-
-    printf("UUUUUUUUU\n");
 
 	if (link_up == 0) {
 		dev->data->dev_link = link;
@@ -2290,7 +2249,6 @@ ixgbe_remove_rar(struct rte_eth_dev *dev, uint32_t index)
 	ixgbe_clear_rar(hw, index);
 }
 
-#if 1
 /*
  * Virtual Function operations
  */
@@ -2344,11 +2302,9 @@ ixgbevf_dev_start(struct rte_eth_dev *dev)
 	hw->mac.ops.reset_hw(hw);
 
 	ixgbevf_dev_tx_init(dev);
-    printf("vf tx init\n");
 
 	/* This can fail when allocating mbufs for descriptor rings */
 	err = ixgbevf_dev_rx_init(dev);
-    printf("vf rx init\n");
 	if (err) {
 		PMD_INIT_LOG(ERR, "Unable to initialize RX hardware (%d)\n", err);
 		ixgbe_dev_clear_queues(dev);
@@ -2357,7 +2313,6 @@ ixgbevf_dev_start(struct rte_eth_dev *dev)
 	
 	/* Set vfta */
 	ixgbevf_set_vfta_all(dev,1);
-    printf("vfta init\n");
 
 	/* Set HW strip */
 	mask = ETH_VLAN_STRIP_MASK | ETH_VLAN_FILTER_MASK | \
@@ -2365,9 +2320,6 @@ ixgbevf_dev_start(struct rte_eth_dev *dev)
 	ixgbevf_vlan_offload_set(dev, mask);
 
 	ixgbevf_dev_rxtx_start(dev);
-    printf("vf rxtx start\n");
-
-    printf("ixgbevf_dev_start returns\n");
 
 	return 0;
 }
@@ -2496,7 +2448,6 @@ ixgbevf_vlan_offload_set(struct rte_eth_dev *dev, int mask)
 			ixgbevf_vlan_strip_queue_set(dev,i,on);
 	}
 }
-#endif
 
 static int
 ixgbe_vmdq_mode_check(struct ixgbe_hw *hw)
