@@ -560,7 +560,7 @@ int ixgbevf_negotiate_api_version(struct ixgbe_hw *hw, int api)
 		/* Store value and return 0 on success */
 		if (msg[0] == (IXGBE_VF_API_NEGOTIATE | IXGBE_VT_MSGTYPE_ACK)) {
 			hw->api_version = api;
-            return 0;
+			return 0;
 		}
 
 		err = IXGBE_ERR_INVALID_ARGUMENT;
