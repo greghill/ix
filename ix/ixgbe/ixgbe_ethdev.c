@@ -770,9 +770,7 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	if ((diag != IXGBE_SUCCESS) && (diag != IXGBE_ERR_INVALID_MAC_ADDR)) {
 		PMD_INIT_LOG(ERR, "VF Initialization Failure: %d", diag);
 		return (diag);
-	}    
-
-    //generate MAC?
+    }
 
 	/* Get Rx/Tx queue count via mailbox, which is ready after reset_hw */
 	ixgbevf_get_queue_num(hw);
@@ -804,13 +802,12 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	memcpy(&eth_dev->data->mac_addrs[0], hw->mac.perm_addr, ETH_ADDR_LEN);
     
 	/* Allocate memory for storing hash filter MAC addresses */
-	eth_dev->data->hash_mac_addrs = malloc(ETH_ADDR_LEN * IXGBE_VMDQ_NUM_UC_MAC);
+	eth_dev->data->hash_mac_addrs = calloc(ETH_ADDR_LEN, IXGBE_VMDQ_NUM_UC_MAC);
 	if (!eth_dev->data->hash_mac_addrs) {
-		printf("ixgbe: Failed to allocate %d bytes needed to store MAC addresses",
+		printf("ixgbe: Failed to allocate %d bytes needed to store MAC addrs",
 			ETH_ADDR_LEN * IXGBE_VMDQ_NUM_UC_MAC);
 		return -ENOMEM;
 	}
-	memset(eth_dev->data->hash_mac_addrs, 0, ETH_ADDR_LEN * IXGBE_VMDQ_NUM_UC_MAC);
 
 	/* reset the hardware with the new settings */
 	diag = hw->mac.ops.start_hw(hw);
