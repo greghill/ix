@@ -650,10 +650,34 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 	hw->allow_unsupported_sfp = 1;
 #endif
 
-    if (is_vf)
-        ret = eth_ixgbevf_dev_init(dev);
-    else
-        ret = ixgbe_init_adapter(dev);
+    switch (hw->device_id) {
+        case IXGBE_DEV_ID_82599_KX4:
+        case IXGBE_DEV_ID_82599_KX4_MEZZ:
+        case IXGBE_DEV_ID_82599_XAUI_LOM:
+        case IXGBE_DEV_ID_82599_COMBO_BACKPLANE:
+        case IXGBE_DEV_ID_82599_KR:
+        case IXGBE_DEV_ID_82599_SFP:
+        case IXGBE_DEV_ID_82599_BACKPLANE_FCOE:
+        case IXGBE_DEV_ID_82599_SFP_FCOE:
+        case IXGBE_DEV_ID_82599_SFP_EM:
+        case IXGBE_DEV_ID_82599_SFP_SF2:
+        case IXGBE_DEV_ID_82599_SFP_SF_QP:
+        case IXGBE_DEV_ID_82599EN_SFP:
+        case IXGBE_DEV_ID_82599_CX4:
+        case IXGBE_DEV_ID_82599_T3_LOM:
+            printf("PPPPPPFFFFFF Gregregregergreg\n\n");
+            ret = ixgbe_init_adapter(dev);
+            break;
+        case IXGBE_DEV_ID_82599_VF:
+        case IXGBE_DEV_ID_82599_VF_HV:
+            printf("VVVVVVVFFFFFF Gregregregergreg\n\n");
+            ret = eth_ixgbevf_dev_init(dev);
+            break;
+        default:
+            printf(" MAC TYPE WAS %d\n\n", hw->mac.type);
+            log_err("ixgbe: failed to initialize unsupported adapter\n");
+            goto out_bar;
+    }
         
 	if (ret) {
 		log_err("ixgbe: failed to initialize adapter\n");
