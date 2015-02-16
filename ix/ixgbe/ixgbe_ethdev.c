@@ -650,6 +650,7 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 	hw->allow_unsupported_sfp = 1;
 #endif
 
+    /* mirrors code from ixgbe_set_mac_type */
     switch (hw->device_id) {
         case IXGBE_DEV_ID_82599_KX4:
         case IXGBE_DEV_ID_82599_KX4_MEZZ:
@@ -707,7 +708,6 @@ static void ixgbevf_get_queue_num(struct ixgbe_hw *hw)
 	 * In case that PF fails to provide Rx/Tx queue number,
 	 * max_tx_queues and max_rx_queues remain to be 1.
 	 */
-
 	if (!ixgbevf_negotiate_api_version(hw, ixgbe_mbox_api_11))
 		ixgbevf_get_queues(hw, &tcs, &tc);
 }
@@ -718,14 +718,13 @@ static void ixgbevf_get_queue_num(struct ixgbe_hw *hw)
 static int
 eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 {
-//	struct rte_pci_device *pci_dev;
 	struct pci_dev *pci_dev;
-    
-    int diag;
-	
     struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);	
-	struct ixgbe_vfta * shadow_vfta = IXGBE_DEV_PRIVATE_TO_VFTA(eth_dev->data->dev_private);
-	struct ixgbe_hwstrip *hwstrip = IXGBE_DEV_PRIVATE_TO_HWSTRIP_BITMAP(eth_dev->data->dev_private);
+    int diag;
+    struct ixgbe_vfta * shadow_vfta =
+        IXGBE_DEV_PRIVATE_TO_VFTA(eth_dev->data->dev_private);
+    struct ixgbe_hwstrip *hwstrip =
+        IXGBE_DEV_PRIVATE_TO_HWSTRIP_BITMAP(eth_dev->data->dev_private);
     struct ether_addr *perm_addr = (struct ether_addr *) hw->mac.perm_addr;
 
 	PMD_INIT_LOG(DEBUG, "eth_ixgbevf_dev_init");
@@ -734,7 +733,6 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	//eth_dev->rx_pkt_burst = &ixgbe_recv_pkts;
 	//eth_dev->tx_pkt_burst = &ixgbe_xmit_pkts;
 
-   
 	pci_dev = eth_dev->pci_dev;
     
     /*
