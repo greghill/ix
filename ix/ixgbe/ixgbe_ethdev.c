@@ -715,7 +715,7 @@ static void ixgbevf_get_queue_num(struct ixgbe_hw *hw)
 /*
  * Virtual Function device init
  */
-	static int
+static int
 eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 {
 	struct pci_dev *pci_dev;
@@ -752,7 +752,7 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	/* Initialize the shared code */
 	diag = ixgbe_init_shared_code(hw);
 	if (diag != IXGBE_SUCCESS) {
-		PMD_INIT_LOG(ERR, "Shared code init failed ixgbevf: %d", diag);
+		PMD_INIT_LOG(ERR, "Shared code init failed for ixgbevf: %d", diag);
 		return -EIO;
 	}
 
@@ -776,11 +776,9 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	ixgbevf_get_queue_num(hw);
 
 	/* Allocate memory for storing MAC addresses */
-	eth_dev->data->mac_addrs =
-		calloc(hw->mac.num_rar_entries, ETH_ADDR_LEN);
+	eth_dev->data->mac_addrs = calloc(hw->mac.num_rar_entries, ETH_ADDR_LEN);
 	if (eth_dev->data->mac_addrs == NULL) {
-		PMD_INIT_LOG(ERR, "Failed to allocate %d bytes needed to store "
-				"MAC addresses",
+		PMD_INIT_LOG(ERR, "Failed to allocate %d bytes needed to store MAC addresses",
 				ETH_ADDR_LEN * hw->mac.num_rar_entries);
 		return -ENOMEM;
 	}
@@ -822,8 +820,7 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 			return (-EIO);
 	}
 
-	PMD_INIT_LOG(DEBUG, "\nport %d vendorID=0x%x deviceID=0x%x "
-			"mac.type=%s\n", eth_dev->data->port_id,
+	PMD_INIT_LOG(DEBUG, "\nport %d vendorID=0x%x deviceID=0x%x mac.type=%s\n", eth_dev->data->port_id,
 			pci_dev->vendor_id, pci_dev->device_id,
 			"ixgbe_mac_82599_vf");
 
@@ -935,7 +932,7 @@ ixgbe_vlan_hw_strip_disable(struct rte_eth_dev *dev, uint16_t queue)
 
 	if (hw->mac.type == ixgbe_mac_82598EB) {
 		/* No queue level support */
-		log_info("ixgbe: 82598EB doesn't support queue level hw strip");
+		log_info("ixgbe: 82598EB doe not support queue level hw strip");
 		return;
 	}
 	else {
