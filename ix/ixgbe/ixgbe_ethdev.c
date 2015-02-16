@@ -650,36 +650,36 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 	hw->allow_unsupported_sfp = 1;
 #endif
 
-    /* mirrors code from ixgbe_set_mac_type */
-    switch (hw->device_id) {
-        case IXGBE_DEV_ID_82599_KX4:
-        case IXGBE_DEV_ID_82599_KX4_MEZZ:
-        case IXGBE_DEV_ID_82599_XAUI_LOM:
-        case IXGBE_DEV_ID_82599_COMBO_BACKPLANE:
-        case IXGBE_DEV_ID_82599_KR:
-        case IXGBE_DEV_ID_82599_SFP:
-        case IXGBE_DEV_ID_82599_BACKPLANE_FCOE:
-        case IXGBE_DEV_ID_82599_SFP_FCOE:
-        case IXGBE_DEV_ID_82599_SFP_EM:
-        case IXGBE_DEV_ID_82599_SFP_SF2:
-        case IXGBE_DEV_ID_82599_SFP_SF_QP:
-        case IXGBE_DEV_ID_82599EN_SFP:
-        case IXGBE_DEV_ID_82599_CX4:
-        case IXGBE_DEV_ID_82599_T3_LOM:
-            printf("PPPPPPFFFFFF Gregregregergreg\n\n");
-            ret = ixgbe_init_adapter(dev);
-            break;
-        case IXGBE_DEV_ID_82599_VF:
-        case IXGBE_DEV_ID_82599_VF_HV:
-            printf("VVVVVVVFFFFFF Gregregregergreg\n\n");
-            ret = eth_ixgbevf_dev_init(dev);
-            break;
-        default:
-            printf(" MAC TYPE WAS %d\n\n", hw->mac.type);
-            log_err("ixgbe: failed to initialize unsupported adapter\n");
-            goto out_bar;
-    }
-        
+	/* mirrors code from ixgbe_set_mac_type */
+	switch (hw->device_id) {
+		case IXGBE_DEV_ID_82599_KX4:
+		case IXGBE_DEV_ID_82599_KX4_MEZZ:
+		case IXGBE_DEV_ID_82599_XAUI_LOM:
+		case IXGBE_DEV_ID_82599_COMBO_BACKPLANE:
+		case IXGBE_DEV_ID_82599_KR:
+		case IXGBE_DEV_ID_82599_SFP:
+		case IXGBE_DEV_ID_82599_BACKPLANE_FCOE:
+		case IXGBE_DEV_ID_82599_SFP_FCOE:
+		case IXGBE_DEV_ID_82599_SFP_EM:
+		case IXGBE_DEV_ID_82599_SFP_SF2:
+		case IXGBE_DEV_ID_82599_SFP_SF_QP:
+		case IXGBE_DEV_ID_82599EN_SFP:
+		case IXGBE_DEV_ID_82599_CX4:
+		case IXGBE_DEV_ID_82599_T3_LOM:
+			printf("PPPPPPFFFFFF Gregregregergreg\n\n");
+			ret = ixgbe_init_adapter(dev);
+			break;
+		case IXGBE_DEV_ID_82599_VF:
+		case IXGBE_DEV_ID_82599_VF_HV:
+			printf("VVVVVVVFFFFFF Gregregregergreg\n\n");
+			ret = eth_ixgbevf_dev_init(dev);
+			break;
+		default:
+			printf(" MAC TYPE WAS %d\n\n", hw->mac.type);
+			log_err("ixgbe: failed to init unsupported adapter\n");
+			goto out_bar;
+	}
+
 	if (ret) {
 		log_err("ixgbe: failed to initialize adapter\n");
 		goto out_bar;
@@ -715,17 +715,18 @@ static void ixgbevf_get_queue_num(struct ixgbe_hw *hw)
 /*
  * Virtual Function device init
  */
-static int
+	static int
 eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 {
 	struct pci_dev *pci_dev;
-    struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);	
-    int diag;
-    struct ixgbe_vfta * shadow_vfta =
-        IXGBE_DEV_PRIVATE_TO_VFTA(eth_dev->data->dev_private);
-    struct ixgbe_hwstrip *hwstrip =
-        IXGBE_DEV_PRIVATE_TO_HWSTRIP_BITMAP(eth_dev->data->dev_private);
-    struct ether_addr *perm_addr = (struct ether_addr *) hw->mac.perm_addr;
+	struct ixgbe_hw *hw =
+		IXGBE_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);	
+	int diag;
+	struct ixgbe_vfta * shadow_vfta =
+		IXGBE_DEV_PRIVATE_TO_VFTA(eth_dev->data->dev_private);
+	struct ixgbe_hwstrip *hwstrip =
+		IXGBE_DEV_PRIVATE_TO_HWSTRIP_BITMAP(eth_dev->data->dev_private);
+	struct ether_addr *perm_addr = (struct ether_addr *) hw->mac.perm_addr;
 
 	PMD_INIT_LOG(DEBUG, "eth_ixgbevf_dev_init");
 
@@ -734,13 +735,13 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	//eth_dev->tx_pkt_burst = &ixgbe_xmit_pkts;
 
 	pci_dev = eth_dev->pci_dev;
-    
-    /*
-	hw->device_id = pci_dev->device_id;
-	hw->vendor_id = pci_dev->vendor_id;
+
+	/*
+	   hw->device_id = pci_dev->device_id;
+	   hw->vendor_id = pci_dev->vendor_id;
 	//hw->hw_addr = (void *)pci_dev->mem_resource[0].addr;
 	hw->hw_addr = (void *)pci_dev->bars[0].start;
-    */
+	 */
 
 	/* initialize the vfta */
 	memset(shadow_vfta, 0, sizeof(*shadow_vfta));
@@ -751,7 +752,7 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	/* Initialize the shared code */
 	diag = ixgbe_init_shared_code(hw);
 	if (diag != IXGBE_SUCCESS) {
-		PMD_INIT_LOG(ERR, "Shared code init failed for ixgbevf: %d", diag);
+		PMD_INIT_LOG(ERR, "Shared code init failed ixgbevf: %d", diag);
 		return -EIO;
 	}
 
@@ -761,49 +762,52 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 	/* Disable the interrupts for VF */
 	ixgbevf_intr_disable(hw);
 
-	hw->mac.num_rar_entries = hw->mac.max_rx_queues; //is this 1 or 128 (DPDK)?
+	// XXX is this 1 or 128 (DPDK)?
+	hw->mac.num_rar_entries = hw->mac.max_rx_queues; 
 
-    diag = hw->mac.ops.reset_hw(hw);
+	diag = hw->mac.ops.reset_hw(hw);
 
 	if ((diag != IXGBE_SUCCESS) && (diag != IXGBE_ERR_INVALID_MAC_ADDR)) {
 		PMD_INIT_LOG(ERR, "VF Initialization Failure: %d", diag);
 		return (diag);
-    }
+	}
 
 	/* Get Rx/Tx queue count via mailbox, which is ready after reset_hw */
 	ixgbevf_get_queue_num(hw);
 
 	/* Allocate memory for storing MAC addresses */
-	eth_dev->data->mac_addrs = calloc(hw->mac.num_rar_entries, ETH_ADDR_LEN);
+	eth_dev->data->mac_addrs =
+		calloc(hw->mac.num_rar_entries, ETH_ADDR_LEN);
 	if (eth_dev->data->mac_addrs == NULL) {
-		PMD_INIT_LOG(ERR,
-			"Failed to allocate %d bytes needed to store MAC addresses",
-			ETH_ADDR_LEN * hw->mac.num_rar_entries);
+		PMD_INIT_LOG(ERR, "Failed to allocate %d bytes needed to store "
+				"MAC addresses",
+				ETH_ADDR_LEN * hw->mac.num_rar_entries);
 		return -ENOMEM;
 	}
 
-    // hardcode MAC address if not already set TODO maybe don't do this
-    if(diag == IXGBE_ERR_INVALID_MAC_ADDR)
-    {
-        hw->mac.perm_addr[0] = 0x00;
-        hw->mac.perm_addr[1] = 0x01;
-        hw->mac.perm_addr[2] = 0x02;
-        hw->mac.perm_addr[3] = 0x03;
-        hw->mac.perm_addr[4] = 0x04;
-        hw->mac.perm_addr[5] = 0x05;
+	// hardcode MAC address if not already set TODO maybe don't do this
+	if(diag == IXGBE_ERR_INVALID_MAC_ADDR)
+	{
+		hw->mac.perm_addr[0] = 0x00;
+		hw->mac.perm_addr[1] = 0x01;
+		hw->mac.perm_addr[2] = 0x02;
+		hw->mac.perm_addr[3] = 0x03;
+		hw->mac.perm_addr[4] = 0x04;
+		hw->mac.perm_addr[5] = 0x05;
 
-        hw->mac.perm_addr[0] &= 0xfe; /* clear multicast */
-        hw->mac.perm_addr[0] |= 0x02; /* set local assignment */
-    }
+		hw->mac.perm_addr[0] &= 0xfe; /* clear multicast */
+		hw->mac.perm_addr[0] |= 0x02; /* set local assignment */
+	}
 
 	/* Copy the permanent MAC address */
 	memcpy(&eth_dev->data->mac_addrs[0], hw->mac.perm_addr, ETH_ADDR_LEN);
-    
+
 	/* Allocate memory for storing hash filter MAC addresses */
-	eth_dev->data->hash_mac_addrs = calloc(ETH_ADDR_LEN, IXGBE_VMDQ_NUM_UC_MAC);
+	eth_dev->data->hash_mac_addrs =
+		calloc(ETH_ADDR_LEN, IXGBE_VMDQ_NUM_UC_MAC);
 	if (!eth_dev->data->hash_mac_addrs) {
-		printf("ixgbe: Failed to allocate %d bytes needed to store MAC addrs",
-			ETH_ADDR_LEN * IXGBE_VMDQ_NUM_UC_MAC);
+		printf("ixgbe: Failed to allocate %d bytes needed to store MAC "
+				"addrs", ETH_ADDR_LEN * IXGBE_VMDQ_NUM_UC_MAC);
 		return -ENOMEM;
 	}
 
@@ -814,13 +818,14 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 			break;
 
 		default:
-			PMD_INIT_LOG(ERR, "VF Initialization Failure: %d", diag);
+			PMD_INIT_LOG(ERR, "VF init failure: %d", diag);
 			return (-EIO);
 	}
 
-	PMD_INIT_LOG(DEBUG, "\nport %d vendorID=0x%x deviceID=0x%x mac.type=%s\n",
-			 eth_dev->data->port_id, pci_dev->vendor_id, pci_dev->device_id,
-			 "ixgbe_mac_82599_vf");
+	PMD_INIT_LOG(DEBUG, "\nport %d vendorID=0x%x deviceID=0x%x "
+			"mac.type=%s\n", eth_dev->data->port_id,
+			pci_dev->vendor_id, pci_dev->device_id,
+			"ixgbe_mac_82599_vf");
 
 	return 0;
 }
@@ -930,11 +935,11 @@ ixgbe_vlan_hw_strip_disable(struct rte_eth_dev *dev, uint16_t queue)
 
 	if (hw->mac.type == ixgbe_mac_82598EB) {
 		/* No queue level support */
-		log_info("ixgbe: 82598EB does not support queue level hw strip");
+		log_info("ixgbe: 82598EB doesn't support queue level hw strip");
 		return;
 	}
 	else {
-		/* Other 10G NIC, the VLAN strip can be setup per queue in RXDCTL */
+		/* Other 10G NIC, VLAN strip can be setup per queue in RXDCTL */
 		ctrl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(queue));
 		ctrl &= ~IXGBE_RXDCTL_VME;
 		IXGBE_WRITE_REG(hw, IXGBE_RXDCTL(queue), ctrl);
@@ -956,7 +961,7 @@ ixgbe_vlan_hw_strip_enable(struct rte_eth_dev *dev, uint16_t queue)
 		return;
 	}
 	else {
-		/* Other 10G NIC, the VLAN strip can be setup per queue in RXDCTL */
+		/* Other 10G NIC, VLAN strip can be setup per queue in RXDCTL */
 		ctrl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(queue));
 		ctrl |= IXGBE_RXDCTL_VME;
 		IXGBE_WRITE_REG(hw, IXGBE_RXDCTL(queue), ctrl);
@@ -979,7 +984,7 @@ ixgbe_vlan_hw_strip_disable_all(struct rte_eth_dev *dev)
 		IXGBE_WRITE_REG(hw, IXGBE_VLNCTRL, ctrl);
 	}
 	else {
-		/* Other 10G NIC, the VLAN strip can be setup per queue in RXDCTL */
+		/* Other 10G NIC, VLAN strip can be setup per queue in RXDCTL */
 		for (i = 0; i < dev->data->nb_rx_queues; i++) {
 			ctrl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(i));
 			ctrl &= ~IXGBE_RXDCTL_VME;
@@ -1005,14 +1010,14 @@ ixgbe_vlan_hw_strip_enable_all(struct rte_eth_dev *dev)
 		IXGBE_WRITE_REG(hw, IXGBE_VLNCTRL, ctrl);
 	}
 	else {
-		/* Other 10G NIC, the VLAN strip can be setup per queue in RXDCTL */
+		/* Other 10G NIC, VLAN strip can be setup per queue in RXDCTL */
 		for (i = 0; i < dev->data->nb_rx_queues; i++) {
 			ctrl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(i));
 			ctrl |= IXGBE_RXDCTL_VME;
 			IXGBE_WRITE_REG(hw, IXGBE_RXDCTL(i), ctrl);
 
 			/* record those setting for HW strip per queue */
-			ixgbe_vlan_hw_strip_bitmap_set(dev, i, 1);			
+			ixgbe_vlan_hw_strip_bitmap_set(dev, i, 1);
 		}
 	}
 }
@@ -1123,7 +1128,8 @@ ixgbe_dev_start(struct rte_eth_dev *dev)
 	
 	/* IXGBE devices don't support half duplex */
 	if ((dev->data->dev_conf.link_duplex != ETH_LINK_AUTONEG_DUPLEX) &&
-			(dev->data->dev_conf.link_duplex != ETH_LINK_FULL_DUPLEX)) {
+			(dev->data->dev_conf.link_duplex !=
+			 ETH_LINK_FULL_DUPLEX)) {
 		log_err("ixgbe: Invalid link_duplex (%u) for port %u\n",
 			dev->data->dev_conf.link_duplex, dev->data->port_id);
 		return -EINVAL;

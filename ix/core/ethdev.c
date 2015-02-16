@@ -154,7 +154,7 @@ int eth_dev_start(struct rte_eth_dev *dev)
 	if(dev->dev_ops->promiscuous_disable) dev->dev_ops->promiscuous_disable(dev);
 	if(dev->dev_ops->allmulticast_enable) dev->dev_ops->allmulticast_enable(dev);
 
-    eth_dev_get_hw_mac(dev, &macaddr);
+	eth_dev_get_hw_mac(dev, &macaddr);
 	log_info("eth: started an ethernet device\n");
 	log_info("eth:\tMAC address: %02X:%02X:%02X:%02X:%02X:%02X\n",
 		 macaddr.addr[0], macaddr.addr[1],
