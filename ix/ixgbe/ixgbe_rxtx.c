@@ -1809,17 +1809,17 @@ void ixgbe_dev_rxtx_start(struct rte_eth_dev *dev)
 		txdctl |= 32;        /* set PTHRESH = 32 */
 		IXGBE_WRITE_REG(hw, IXGBE_TXDCTL(txq->reg_idx), txdctl);
 
-		/* Wait until TX Enable ready */
-		if (hw->mac.type == ixgbe_mac_82599EB) {
-			poll_ms = 10;
-			do {
-				delay_ms(1);
-				txdctl = IXGBE_READ_REG(hw, IXGBE_TXDCTL(txq->reg_idx));
-			} while (--poll_ms && !(txdctl & IXGBE_TXDCTL_ENABLE));
-			if (!poll_ms)
-				log_err("ixgbe: Could not enable "
-					"Tx Queue %d\n", i);
-		}
+        /* Wait until TX Enable ready */
+        if (hw->mac.type == ixgbe_mac_82599EB) {
+            poll_ms = 10;
+            do {
+                delay_ms(1);
+                txdctl = IXGBE_READ_REG(hw, IXGBE_TXDCTL(txq->reg_idx));
+            } while (--poll_ms && !(txdctl & IXGBE_TXDCTL_ENABLE));
+            if (!poll_ms)
+                log_err("ixgbe: Could not enable "
+                        "Tx Queue %d\n", i);
+        }
 
 		/* setup context descriptor 0 for IP/TCP checksums */
 		ixgbe_tx_xmit_ctx(txq, PKT_TX_IP_CKSUM | PKT_TX_TCP_CKSUM, 0);
@@ -1864,13 +1864,13 @@ void ixgbe_dev_clear_queues(struct rte_eth_dev *dev)
 	struct tx_queue *txq;
 	struct rx_queue *rxq;
 
-	for (i = 0; i < dev->data->nb_tx_queues; i++) {
-		txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
-		for (j = 0; j < txq->len; j++)
-			mbuf_xmit_done(txq->ring_entries[j].mbuf);
-
-		ixgbe_reset_tx_queue(txq);
-	}
+    for (i = 0; i < dev->data->nb_tx_queues; i++) {
+        txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
+        for (j = 0; j < txq->len; j++) {
+            mbuf_xmit_done(txq->ring_entries[j].mbuf);
+        }
+        ixgbe_reset_tx_queue(txq);
+    }
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		rxq = eth_rx_queue_to_drv(dev->data->rx_queues[i]);
@@ -1934,20 +1934,20 @@ int ixgbevf_dev_rx_init(struct rte_eth_dev *dev)
 
 		/* Configure the SRRCTL register */
 #ifdef RTE_HEADER_SPLIT_ENABLE
-		/* Configure Header Split */
-		if (dev->data->dev_conf.rxmode.header_split) {
-				/* Must setup the PSRTYPE register */
-				uint32_t psrtype;
-				psrtype = IXGBE_PSRTYPE_TCPHDR |
-					IXGBE_PSRTYPE_UDPHDR   |
-					IXGBE_PSRTYPE_IPV4HDR  |
-					IXGBE_PSRTYPE_IPV6HDR;
-				IXGBE_WRITE_REG(hw, IXGBE_VFPSRTYPE(i), psrtype);
-			srrctl = ((dev->data->dev_conf.rxmode.split_hdr_size <<
-				IXGBE_SRRCTL_BSIZEHDRSIZE_SHIFT) &
-				IXGBE_SRRCTL_BSIZEHDR_MASK);
-			srrctl |= E1000_SRRCTL_DESCTYPE_HDR_SPLIT_ALWAYS;
-		} else
+        /* Configure Header Split */
+        if (dev->data->dev_conf.rxmode.header_split) {
+            /* Must setup the PSRTYPE register */
+            uint32_t psrtype;
+            psrtype = IXGBE_PSRTYPE_TCPHDR |
+                IXGBE_PSRTYPE_UDPHDR   |
+                IXGBE_PSRTYPE_IPV4HDR  |
+                IXGBE_PSRTYPE_IPV6HDR;
+            IXGBE_WRITE_REG(hw, IXGBE_VFPSRTYPE(i), psrtype);
+            srrctl = ((dev->data->dev_conf.rxmode.split_hdr_size <<
+                        IXGBE_SRRCTL_BSIZEHDRSIZE_SHIFT) &
+                    IXGBE_SRRCTL_BSIZEHDR_MASK);
+            srrctl |= E1000_SRRCTL_DESCTYPE_HDR_SPLIT_ALWAYS;
+        } else
 #endif
 			srrctl = IXGBE_SRRCTL_DESCTYPE_ADV_ONEBUF;
 
@@ -1975,44 +1975,36 @@ void ixgbevf_dev_tx_init(struct rte_eth_dev *dev)
 	struct ixgbe_hw *hw;
 	uint32_t txctrl;
 
-        hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
+    hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
 	/* Setup the Base and Length of the Tx Descriptor Rings */
-	for (i = 0; i < dev->data->nb_tx_queues; i++) {
-		struct tx_queue *txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
-		uint64_t bus_addr = txq->ring_physaddr;
+    for (i = 0; i < dev->data->nb_tx_queues; i++) {
+        struct tx_queue *txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
+        uint64_t bus_addr = txq->ring_physaddr;
 
-		IXGBE_WRITE_REG(hw, IXGBE_VFTDBAL(i),
-				(uint32_t)(bus_addr & 0x00000000ffffffffULL));
-		IXGBE_WRITE_REG(hw, IXGBE_VFTDBAH(i),
-				(uint32_t)(bus_addr >> 32));
-		IXGBE_WRITE_REG(hw, IXGBE_VFTDLEN(i),
-				txq->len * sizeof(union ixgbe_adv_tx_desc));
-		/* Setup the HW Tx Head and TX Tail descriptor pointers */
-		IXGBE_WRITE_REG(hw, IXGBE_VFTDH(i), 0);
-		IXGBE_WRITE_REG(hw, IXGBE_VFTDT(i), 0);
+        IXGBE_WRITE_REG(hw, IXGBE_VFTDBAL(i),
+                (uint32_t)(bus_addr & 0x00000000ffffffffULL));
+        IXGBE_WRITE_REG(hw, IXGBE_VFTDBAH(i),
+                (uint32_t)(bus_addr >> 32));
+        IXGBE_WRITE_REG(hw, IXGBE_VFTDLEN(i),
+                txq->len * sizeof(union ixgbe_adv_tx_desc));
+        /* Setup the HW Tx Head and TX Tail descriptor pointers */
+        IXGBE_WRITE_REG(hw, IXGBE_VFTDH(i), 0);
+        IXGBE_WRITE_REG(hw, IXGBE_VFTDT(i), 0);
 
-		/*
-		 * Disable Tx Head Writeback RO bit, since this hoses
-		 * bookkeeping if things aren't delivered in order.
-		 */
-		txctrl = IXGBE_READ_REG(hw,
-				IXGBE_VFDCA_TXCTRL(i));
-		txctrl &= ~IXGBE_DCA_TXCTRL_DESC_WRO_EN;
-		IXGBE_WRITE_REG(hw, IXGBE_VFDCA_TXCTRL(i),
-				txctrl);
-	}
+        /*
+         * Disable Tx Head Writeback RO bit, since this hoses
+         * bookkeeping if things aren't delivered in order.
+         */
+        txctrl = IXGBE_READ_REG(hw, IXGBE_VFDCA_TXCTRL(i));
+        txctrl &= ~IXGBE_DCA_TXCTRL_DESC_WRO_EN;
+        IXGBE_WRITE_REG(hw, IXGBE_VFDCA_TXCTRL(i), txctrl);
+    }
 }
-
-
-
-
-
 
 /*
  * [VF] Start Transmit and Receive Units.
  */
-
 void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 {
 	int i, poll_ms;
@@ -2034,7 +2026,7 @@ void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
 		struct tx_queue *txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
 		txdctl = IXGBE_TXDCTL_ENABLE;
-        // greg new dpdk uses 127 (0x7f) for these, plus poss read reg
+        // XXX new dpdk uses 127 (0x7f) for these, plus poss read reg
 		txdctl |= (8 << 16); /* set WTHRESH = 8 */
 		txdctl |= (1 << 8);  /* set HTHRESH = 1 */
 		txdctl |= 32;        /* set PTHRESH = 32 */
@@ -2053,7 +2045,7 @@ void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 		}
 
 		/* setup context descriptor 0 for IP/TCP checksums */
-        // greg not sure what this is check
+        // XXX not sure what this check is
 		ixgbe_tx_xmit_ctx(txq, PKT_TX_IP_CKSUM | PKT_TX_TCP_CKSUM, 0);
 	}
 
@@ -2075,11 +2067,11 @@ void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 		wmb();
 		IXGBE_WRITE_REG(hw, IXGBE_VFRDT(i),
 				(rxq->tail & (rxq->len - 1)));
-        // greg dpdk vf uses (rxq->nb_rx_desc - 1)
+        // XXX dpdk vf uses (rxq->nb_rx_desc - 1)
 	}
 
-
-#if 0 // greg dont think we want this
+    // XXX dont think we want this
+#if 0 
     /* Enable Receive engine */
     rxctrl = IXGBE_READ_REG(hw, IXGBE_RXCTRL);
     if (hw->mac.type == ixgbe_mac_82598EB)
@@ -2098,6 +2090,4 @@ void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
             dev->data->dev_conf.lpbk_mode == IXGBE_LPBK_82599_TX_RX)
         ixgbe_setup_loopback_link_82599(hw);
 #endif
-
-	printf("ixgbevf_dev_rxtx_start end\n");
 }
