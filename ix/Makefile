@@ -4,7 +4,7 @@
 
 INC	= -I./inc -I./libdune -I./inc/lwip -I./inc/lwip/ipv4 -I./inc/lwip/ipv6 -include../dune/dune.h
 CC	= gcc
-CFLAGS	= -g -w -fno-dwarf2-cfi-asm -fno-asynchronous-unwind-tables -O3 $(INC) -D__KERNEL__
+CFLAGS	= -g -Wall -fno-dwarf2-cfi-asm -fno-asynchronous-unwind-tables -O3 $(INC) -D__KERNEL__
 LD	= gcc
 LDFLAGS	= -T ix.ld
 LDLIBS	= -lrt -lpthread -lm -lnuma -ldl

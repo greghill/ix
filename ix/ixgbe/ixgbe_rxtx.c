@@ -1885,7 +1885,7 @@ int ixgbevf_dev_rx_init(struct rte_eth_dev *dev)
 {
 	int i;
 	struct ixgbe_hw *hw;
-    int ret;
+    //int ret;
 
 	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
@@ -1908,7 +1908,7 @@ int ixgbevf_dev_rx_init(struct rte_eth_dev *dev)
 		(uint16_t)dev->data->dev_conf.rxmode.max_rx_pkt_len);
 
 
-    //dev->rx_pkt_burst = ixgbe_recv_pkts;///XXX dono what this is
+    //dev->rx_pkt_burst = ixgbe_recv_pkts; XXX don't know what this is
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
 		struct rx_queue *rxq = eth_rx_queue_to_drv(dev->data->rx_queues[i]);
         
@@ -2018,7 +2018,7 @@ void ixgbevf_dev_rxtx_start(struct rte_eth_dev *dev)
 	int i, poll_ms;
 	struct ixgbe_hw *hw;
 	uint32_t dmatxctl;
-	uint32_t rxctrl, txdctl, rxdctl;
+	uint32_t txdctl, rxdctl;
 
 	printf("ixgbevf_dev_rxtx_start\n");
 
