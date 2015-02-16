@@ -818,7 +818,7 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 			break;
 
 		default:
-			PMD_INIT_LOG(ERR, "VF init failure: %d", diag);
+			PMD_INIT_LOG(ERR, "VF Initialization Failure: %d", diag);
 			return (-EIO);
 	}
 
@@ -939,7 +939,7 @@ ixgbe_vlan_hw_strip_disable(struct rte_eth_dev *dev, uint16_t queue)
 		return;
 	}
 	else {
-		/* Other 10G NIC, VLAN strip can be setup per queue in RXDCTL */
+		/* Other 10G NIC, the VLAN strip can be setup per queue in RXDCTL */
 		ctrl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(queue));
 		ctrl &= ~IXGBE_RXDCTL_VME;
 		IXGBE_WRITE_REG(hw, IXGBE_RXDCTL(queue), ctrl);
@@ -961,7 +961,7 @@ ixgbe_vlan_hw_strip_enable(struct rte_eth_dev *dev, uint16_t queue)
 		return;
 	}
 	else {
-		/* Other 10G NIC, VLAN strip can be setup per queue in RXDCTL */
+		/* Other 10G NIC, the VLAN strip can be setup per queue in RXDCTL */
 		ctrl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(queue));
 		ctrl |= IXGBE_RXDCTL_VME;
 		IXGBE_WRITE_REG(hw, IXGBE_RXDCTL(queue), ctrl);
@@ -984,7 +984,7 @@ ixgbe_vlan_hw_strip_disable_all(struct rte_eth_dev *dev)
 		IXGBE_WRITE_REG(hw, IXGBE_VLNCTRL, ctrl);
 	}
 	else {
-		/* Other 10G NIC, VLAN strip can be setup per queue in RXDCTL */
+		/* Other 10G NIC, the VLAN strip can be setup per queue in RXDCTL */
 		for (i = 0; i < dev->data->nb_rx_queues; i++) {
 			ctrl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(i));
 			ctrl &= ~IXGBE_RXDCTL_VME;
@@ -1010,7 +1010,7 @@ ixgbe_vlan_hw_strip_enable_all(struct rte_eth_dev *dev)
 		IXGBE_WRITE_REG(hw, IXGBE_VLNCTRL, ctrl);
 	}
 	else {
-		/* Other 10G NIC, VLAN strip can be setup per queue in RXDCTL */
+		/* Other 10G NIC, the VLAN strip can be setup per queue in RXDCTL */
 		for (i = 0; i < dev->data->nb_rx_queues; i++) {
 			ctrl = IXGBE_READ_REG(hw, IXGBE_RXDCTL(i));
 			ctrl |= IXGBE_RXDCTL_VME;
@@ -1128,8 +1128,7 @@ ixgbe_dev_start(struct rte_eth_dev *dev)
 	
 	/* IXGBE devices don't support half duplex */
 	if ((dev->data->dev_conf.link_duplex != ETH_LINK_AUTONEG_DUPLEX) &&
-			(dev->data->dev_conf.link_duplex !=
-			 ETH_LINK_FULL_DUPLEX)) {
+			(dev->data->dev_conf.link_duplex != ETH_LINK_FULL_DUPLEX)) {
 		log_err("ixgbe: Invalid link_duplex (%u) for port %u\n",
 			dev->data->dev_conf.link_duplex, dev->data->port_id);
 		return -EINVAL;

@@ -1811,14 +1811,14 @@ void ixgbe_dev_rxtx_start(struct rte_eth_dev *dev)
 
 		/* Wait until TX Enable ready */
 		if (hw->mac.type == ixgbe_mac_82599EB) {
-		    poll_ms = 10;
-		    do {
-			delay_ms(1);
-			txdctl = IXGBE_READ_REG(hw, IXGBE_TXDCTL(txq->reg_idx));
-		    } while (--poll_ms && !(txdctl & IXGBE_TXDCTL_ENABLE));
-		    if (!poll_ms)
-			log_err("ixgbe: Could not enable "
-				"Tx Queue %d\n", i);
+			poll_ms = 10;
+			do {
+				delay_ms(1);
+				txdctl = IXGBE_READ_REG(hw, IXGBE_TXDCTL(txq->reg_idx));
+			} while (--poll_ms && !(txdctl & IXGBE_TXDCTL_ENABLE));
+			if (!poll_ms)
+				log_err("ixgbe: Could not enable "
+						"Tx Queue %d\n", i);
 		}
 
 		/* setup context descriptor 0 for IP/TCP checksums */
@@ -1839,7 +1839,7 @@ void ixgbe_dev_rxtx_start(struct rte_eth_dev *dev)
 		} while (--poll_ms && !(rxdctl & IXGBE_RXDCTL_ENABLE));
 		if (!poll_ms)
 			log_err("ixgbe: Could not enable "
-				"Rx Queue %d\n", i);
+					"Rx Queue %d\n", i);
 		wmb();
 		IXGBE_WRITE_REG(hw, IXGBE_RDT(rxq->reg_idx),
 				(rxq->tail & (rxq->len - 1)));
@@ -1865,11 +1865,11 @@ void ixgbe_dev_clear_queues(struct rte_eth_dev *dev)
 	struct rx_queue *rxq;
 
 	for (i = 0; i < dev->data->nb_tx_queues; i++) {
-	    txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
-	    for (j = 0; j < txq->len; j++) {
-		mbuf_xmit_done(txq->ring_entries[j].mbuf);
-	    }
-	    ixgbe_reset_tx_queue(txq);
+		txq = eth_tx_queue_to_drv(dev->data->tx_queues[i]);
+		for (j = 0; j < txq->len; j++) {
+			mbuf_xmit_done(txq->ring_entries[j].mbuf);
+		}
+		ixgbe_reset_tx_queue(txq);
 	}
 
 	for (i = 0; i < dev->data->nb_rx_queues; i++) {
