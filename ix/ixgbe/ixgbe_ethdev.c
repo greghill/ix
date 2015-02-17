@@ -650,7 +650,7 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 	hw->allow_unsupported_sfp = 1;
 #endif
 
-	/* mirrors code from ixgbe_set_mac_type */
+	/* mirrors code from ixgbe_set_mac_type, minus 82598*/
 	switch (hw->device_id) {
 		case IXGBE_DEV_ID_82599_KX4:
 		case IXGBE_DEV_ID_82599_KX4_MEZZ:
@@ -666,16 +666,13 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 		case IXGBE_DEV_ID_82599EN_SFP:
 		case IXGBE_DEV_ID_82599_CX4:
 		case IXGBE_DEV_ID_82599_T3_LOM:
-			printf("PPPPPPFFFFFF Gregregregergreg\n\n");
 			ret = ixgbe_init_adapter(dev);
 			break;
 		case IXGBE_DEV_ID_82599_VF:
 		case IXGBE_DEV_ID_82599_VF_HV:
-			printf("VVVVVVVFFFFFF Gregregregergreg\n\n");
 			ret = eth_ixgbevf_dev_init(dev);
 			break;
 		default:
-			printf(" MAC TYPE WAS %d\n\n", hw->mac.type);
 			log_err("ixgbe: failed to init unsupported adapter\n");
 			goto out_bar;
 	}
