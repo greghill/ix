@@ -929,7 +929,7 @@ ixgbe_vlan_hw_strip_disable(struct rte_eth_dev *dev, uint16_t queue)
 
 	if (hw->mac.type == ixgbe_mac_82598EB) {
 		/* No queue level support */
-		log_info("ixgbe: 82598EB doe not support queue level hw strip");
+		log_info("ixgbe: 82598EB does not support queue level hw strip");
 		return;
 	}
 	else {
@@ -951,7 +951,7 @@ ixgbe_vlan_hw_strip_enable(struct rte_eth_dev *dev, uint16_t queue)
 
 	if (hw->mac.type == ixgbe_mac_82598EB) {
 		/* No queue level supported */
-		log_info("ixgbe: 82598EB not support queue level hw strip");
+		log_info("ixgbe: 82598EB does not support queue level hw strip");
 		return;
 	}
 	else {
