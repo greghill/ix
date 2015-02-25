@@ -97,6 +97,8 @@ void ixgbe_pf_host_init(struct rte_eth_dev *eth_dev)
 	memset(uta_info,0,sizeof(struct ixgbe_uta_info));
 	hw->mac.mc_filter_type = 0;
 
+    printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~vf_num: %d\n", vf_num);
+
 	if (vf_num >= ETH_32_POOLS) {
 		nb_queue = 2;
 		RTE_ETH_DEV_SRIOV(eth_dev).active = ETH_64_POOLS;
@@ -119,6 +121,33 @@ void ixgbe_pf_host_init(struct rte_eth_dev *eth_dev)
 
 	/* set mb interrupt mask */
 	ixgbe_mb_intr_setup(eth_dev);
+
+	return;
+}
+
+
+void ixgbe_vf_host_init(struct rte_eth_dev *eth_dev)
+{
+    struct ixgbe_hw *hw = IXGBE_DEV_PRIVATE_TO_HW(eth_dev->data->dev_private);
+	uint16_t vf_num = hw->num_vfs;
+	uint8_t nb_queue;
+
+    printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~vf_num: %d\n", vf_num);
+
+	if (vf_num >= ETH_32_POOLS) {
+		nb_queue = 2;
+		RTE_ETH_DEV_SRIOV(eth_dev).active = ETH_64_POOLS;
+	} else if (vf_num >= ETH_16_POOLS) {
+		nb_queue = 4;
+		RTE_ETH_DEV_SRIOV(eth_dev).active = ETH_32_POOLS;
+	} else {
+		nb_queue = 8;
+		RTE_ETH_DEV_SRIOV(eth_dev).active = ETH_16_POOLS;
+	}
+
+	RTE_ETH_DEV_SRIOV(eth_dev).nb_q_per_pool = nb_queue;
+	RTE_ETH_DEV_SRIOV(eth_dev).def_vmdq_idx = vf_num;
+	RTE_ETH_DEV_SRIOV(eth_dev).def_pool_q_idx = (uint16_t)(vf_num * nb_queue);
 
 	return;
 }

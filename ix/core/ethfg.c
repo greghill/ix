@@ -110,6 +110,8 @@ static int eth_fg_assign_single_to_cpu(int fg_id, int cpu, struct rte_eth_rss_re
 
 	assert(!fg->in_transition);
 
+    
+
 	if (fg->cur_cpu == cfg_cpu[cpu]) {
 		return 0;
 	} else if (fg->cur_cpu == -1) {
@@ -130,6 +132,8 @@ static int eth_fg_assign_single_to_cpu(int fg_id, int cpu, struct rte_eth_rss_re
 		rss_reta->mask_hi |= ((uint64_t) 1) << (fg->idx - 64);
 	else
 		rss_reta->mask_lo |= ((uint64_t) 1) << fg->idx;
+
+    printf("fg->idx: %d cpu = %d\n", fg->idx, cpu);
 
 	rss_reta->reta[fg->idx] = cpu;
 	cp_shmem->flow_group[fg_id].cpu = cpu;
@@ -157,6 +161,9 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
 
 	bitmap_init(percpu_get(migration_info).fg_bitmap, ETH_MAX_TOTAL_FG, 0);
 
+    printf("NETHDEV: %d\n", NETHDEV);
+    printf("ETH_MAX_NUM_FG: %d\n", ETH_MAX_NUM_FG);
+
 	for (i = 0; i < NETHDEV; i++) {
 		rss_reta.mask_lo = 0;
 		rss_reta.mask_hi = 0;
@@ -170,6 +177,7 @@ void eth_fg_assign_to_cpu(bitmap_ptr fg_bitmap, int cpu)
            
 			ret = eth_fg_assign_single_to_cpu(i * ETH_MAX_NUM_FG + j, cpu, &rss_reta, &eth);
                 
+            printf("eth_fg_assign_single_to_cpu [%d]: fg_id: %d cpu %d\n", ret, i * ETH_MAX_NUM_FG + j, cpu);
 
 			if (ret) {
 				bitmap_set(percpu_get(migration_info).fg_bitmap, i * ETH_MAX_NUM_FG + j);
@@ -342,6 +350,8 @@ int eth_recv_handle_fg_transition(struct eth_rx_queue *rx_queue, struct mbuf *pk
 {
 	struct eth_fg *fg = fgs[pkt->fg_id];
 
+    printf("pkt->fg_id %d fg->in_transition %d, fg->cur_cpu %d, fg->prev_cpu %d, fg->target_cpu %d,  percpu_get(cpu_id) %d\n", pkt->fg_id, fg->in_transition, fg->cur_cpu, fg->prev_cpu, fg->target_cpu,  percpu_get(cpu_id));
+
 	if (!fg->in_transition && fg->cur_cpu == percpu_get(cpu_id)) {
 		/* continue processing */
 		return 0;
@@ -354,6 +364,8 @@ int eth_recv_handle_fg_transition(struct eth_rx_queue *rx_queue, struct mbuf *pk
 	} else {
 		/* FIXME: somebody must mbuf_free(pkt) but we cannot do it here
 		   because we don't own the memory pool */
+
+       
 		log_warn("dropping packet: flow group %d of device %d should be handled by cpu %d\n", fg->idx, fg->dev_idx, fg->cur_cpu);
 		return 1;
 	}

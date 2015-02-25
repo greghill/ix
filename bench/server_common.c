@@ -52,6 +52,25 @@ void echo_event_cb(struct bufferevent *bev, short events, void *arg)
         printf("uncaught event %d\n", events);
 }
 
+#if 0
+void msg_size_cb(struct bufferevent *bev, void *arg)
+{
+	struct ctx *ctx = arg;
+	size_t len;
+
+	len = bufferevent_read(bev, ctx->buffer, 11);
+        if(len < 11) {
+            printf("error: did not receive complete msg_size information\n");
+        }
+        sscanf((char *)ctx->buffer, "%010u|", &ctx->msg_size);
+	ctx->buffer = realloc(ctx->buffer, ctx->msg_size);
+	//printf("Received new msg with %010u msg size\n", ctx->msg_size);
+        ctx->bytes_left = ctx->msg_size - 11;
+	bufferevent_setcb(bev, echo_read_cb, NULL, echo_event_cb, ctx);
+        echo_read_cb(bev,arg);
+}
+#endif
+
 static void accept_conn_cb(struct evconnlistener *listener, evutil_socket_t fd, struct sockaddr *address, int socklen, void *arg)
 {
 	struct bufferevent *bev;

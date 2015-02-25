@@ -266,6 +266,8 @@ static struct eth_dev_ops ixgbevf_eth_dev_ops = {
 	.tx_queue_release     = ixgbe_dev_tx_queue_release,
 	//.mac_addr_add         = ixgbevf_add_mac_addr,
 	//.mac_addr_remove      = ixgbevf_remove_mac_addr,
+	//.reta_update          = ixgbe_dev_rss_reta_update,
+	//.reta_query           = ixgbe_dev_rss_reta_query,
 };
 #endif
 
@@ -633,7 +635,8 @@ int ixgbe_init(struct pci_dev *pci_dev, struct rte_eth_dev **ethp)
 	dev->dev_ops = &ixgbe_eth_dev_ops;
 	hw->device_id = pci_dev->device_id;
 	hw->vendor_id = pci_dev->vendor_id;
-	hw->num_vfs = pci_dev->max_vfs;
+	//hw->num_vfs = pci_dev->max_vfs;
+    hw->num_vfs = ETH_16_POOLS;
 
 	log_debug("ixgbe: vendorID=0x%x deviceID=0x%x\n",
 		  pci_dev->vendor_id,
@@ -701,6 +704,10 @@ static void ixgbevf_get_queue_num(struct ixgbe_hw *hw)
     }
 
      printf("ASDASDASDASDASDASDSAD !!!ixgbevf_negotiate_api_version\n");
+
+     printf("@@@@@@@@@@@@@ hw->mac.max_rx_queues: %d hw->mac.max_tx_queues: %d\n", hw->mac.max_rx_queues, hw->mac.max_tx_queues);
+     
+
 }
 
 /*
@@ -740,6 +747,8 @@ eth_ixgbevf_dev_init(struct rte_eth_dev *eth_dev)
 
 	/* initialize the hw strip bitmap*/
 	memset(hwstrip, 0, sizeof(*hwstrip));
+
+    ixgbe_vf_host_init(eth_dev);
 
 	/* Initialize the shared code */
 	diag = ixgbe_init_shared_code(hw);
@@ -2206,6 +2215,14 @@ ixgbe_dev_rss_reta_update(struct rte_eth_dev *dev,
 	struct ixgbe_hw *hw = 
 			IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
+
+
+    printf("ixgbe_dev_rss_reta_update: dev %p reta_conf %p\n", dev, reta_conf);
+
+
+     printf("ixgbe_dev_rss_reta_update: ETH_RSS_RETA_NUM_ENTRIES %d\n", ETH_RSS_RETA_NUM_ENTRIES);
+
+
 	spin_lock(&ixgbe_dev_lock);
 
 	/*  
@@ -2231,6 +2248,7 @@ ixgbe_dev_rss_reta_update(struct rte_eth_dev *dev,
 				}
 			}
 			IXGBE_WRITE_REG(hw, IXGBE_RETA(i >> 2),reta);
+            printf("ixgbe_dev_rss_reta_update: writing to %d with 0x%x\n", i >> 2, reta);
 		}
 	}
 

@@ -165,14 +165,14 @@ static int init_network_cpu(void)
 		struct rte_eth_dev *eth = eth_dev[i];
 		ret = eth_dev_get_rx_queue(eth, &percpu_get(eth_rxqs[i]));
 		if (ret) {
-            printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA RX %d\n", ret);
+            //printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA RX %d\n", ret);
 			spin_unlock(&assign_lock);
 			return ret;
 		}
 
 		ret = eth_dev_get_tx_queue(eth, &percpu_get(eth_txqs[i]));
 		if (ret) {
-            printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA TX %d\n", ret);
+            //printf("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA TX %d\n", ret);
 			spin_unlock(&assign_lock);
 			return ret;
 		}
@@ -282,11 +282,15 @@ static int init_fg_cpu(void)
 	int fgs_per_cpu, one_more_fg, start, count;
 	DEFINE_BITMAP(fg_bitmap, ETH_MAX_TOTAL_FG);
 
+    printf("ETH_MAX_TOTAL_FG: %d\n", ETH_MAX_TOTAL_FG);
+
 	fgs_per_cpu = nr_flow_groups / cfg_cpu_nr;
 	one_more_fg = nr_flow_groups % cfg_cpu_nr;
 
 	start = percpu_get(cpu_nr) * fgs_per_cpu;
 	start += min(percpu_get(cpu_nr), one_more_fg);
+
+    printf("fgs_per_cpu: %d\n", fgs_per_cpu);
 
 	count = fgs_per_cpu;
 	if (percpu_get(cpu_nr) < one_more_fg)
@@ -295,6 +299,8 @@ static int init_fg_cpu(void)
 	bitmap_init(fg_bitmap, ETH_MAX_TOTAL_FG, 0);
 	for (fg_id = start; fg_id < start + count; fg_id++)
 		bitmap_set(fg_bitmap, fg_id);
+
+    printf("init_fg_cpu [%d]: %d %d\n", percpu_get(cpu_nr), start, (start + count) - 1);
 
 	eth_fg_assign_to_cpu(fg_bitmap, percpu_get(cpu_nr));
     

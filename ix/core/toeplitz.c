@@ -119,6 +119,8 @@ toeplitz_init(void)
 	uint8_t key[TOEPLITZ_INIT_KEYLEN];
 	int i;
 
+	printf("toeplitz_init\n");
+
 	for (i = 0; i < TOEPLITZ_KEYSEED_CNT; ++i)
 		toeplitz_keyseeds[i] &= 0xff;
 

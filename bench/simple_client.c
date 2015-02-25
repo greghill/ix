@@ -54,6 +54,8 @@ static int sock_connect(struct sock *sock)
 	int ret;
 	struct linger linger;
 
+	//printf("sock_connect\n");
+
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd == -1) {
 		perror("socket");
@@ -74,12 +76,18 @@ static int sock_connect(struct sock *sock)
 		exit(1);
 	}
 
+	//printf("AAA\n");
+
 	ret = connect(fd, (struct sockaddr *) &server_addr, sizeof(server_addr));
+
+	//printf("SSS %d\n", ret);
+
 	if (ret == -1 && errno == ECONNRESET) {
 		if (exit_on_error) {
 			perror("connect");
 			exit(1);
 		} else {
+			//printf("??\n");
 			return 1;
 		}
 	} else if (ret == -1) {
@@ -87,6 +95,7 @@ static int sock_connect(struct sock *sock)
 		exit(1);
 	}
 
+	//printf("SOCK_STATE_CONNECTED\n");
 	sock->state = SOCK_STATE_CONNECTED;
 	sock->message_count = 0;
 	return 0;
@@ -97,6 +106,8 @@ static int sock_send_recv(struct sock *sock)
 	ssize_t ret;
 	int recved;
 	unsigned long start;
+
+	//printf("sock_send_recv\n");
 
 	start = rdtsc();
 	ret = send(sock->fd, sock->send_buffer, msg_size, 0);
@@ -159,8 +170,11 @@ static void sock_handle(long now, struct sock *sock, struct worker *worker)
 		return;
 	sock->try_again_at = 0;
 
+	//printf("sock_handle\n");
+
 	switch (sock->state) {
 	case SOCK_STATE_CLOSED:
+		//printf("SOCK_STATE_CLOSED\n");
 		ret = sock_connect(sock);
 		if (ret) {
 			sock_close(sock);
@@ -170,6 +184,7 @@ static void sock_handle(long now, struct sock *sock, struct worker *worker)
 		}
 		break;
 	case SOCK_STATE_CONNECTED:
+		//printf("SOCK_STATE_CONNECTED\n");
 		ret = sock_send_recv(sock);
 		if (ret) {
 			sock_close(sock);
@@ -222,6 +237,7 @@ static int start_threads(unsigned int threads)
 	int i;
 
 	for (i = 0; i < threads; i++) {
+		//printf("starting thread %d\n", i);
 		worker[i].total_connections = 0;
 		worker[i].total_messages = 0;
 		pthread_create(&worker[i].tid, NULL, start_worker, &worker[i]);
@@ -268,6 +284,9 @@ int main(int argc, char **argv)
 
 	get_ifname(&server_addr, ifname);
 
+	//printf("msg_size %d\n", msg_size);
+	//printf("ifname: %s\n", ifname);
+
 	if (timer_calibrate_tsc()) {
 		fprintf(stderr, "Error: Timer calibration failed.\n");
 		return 1;
@@ -294,11 +313,13 @@ int main(int argc, char **argv)
 			total_connections += worker[i].total_connections;
 			total_messages += worker[i].total_messages;
 		}
+		printf("-----\n");
 		printf("%lld %lld %d %d %d ", total_connections, total_messages, 0, 0, 0);
 		printf("%ld %ld %ld %ld ", rx_bytes, rx_packets, tx_bytes, tx_packets);
 		printf("%d ", (int) histogram_get_percentile(0.99));
 		puts("");
 		fflush(stdout);
+		printf("====\n");
 	}
 
 	return 0;

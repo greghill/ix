@@ -314,6 +314,9 @@ int ixgbe_dev_rx_queue_setup(struct rte_eth_dev *dev, int queue_idx,
 
 
 	rxq->queue_id = queue_idx;
+
+    printf("@@@@@@@@@@@@@@@@@@@@@@@@@@@@ RTE_ETH_DEV_SRIOV(dev).active: %d\n", RTE_ETH_DEV_SRIOV(dev).active);
+
 	rxq->reg_idx = (uint16_t) ((RTE_ETH_DEV_SRIOV(dev).active == 0) ?
 		queue_idx : RTE_ETH_DEV_SRIOV(dev).def_pool_q_idx + queue_idx);
 
@@ -700,6 +703,8 @@ ixgbe_rss_configure(struct rte_eth_dev *dev)
 	uint16_t rss_hf;
 	uint16_t i;
 	uint16_t j;
+
+	printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!   ixgbe_rss_configure\n");
 
 	hw = IXGBE_DEV_PRIVATE_TO_HW(dev->data->dev_private);
 
@@ -1430,6 +1435,8 @@ ixgbe_dev_mq_rx_configure(struct rte_eth_dev *dev)
 
 	if (hw->mac.type == ixgbe_mac_82598EB)
 		return 0;
+
+	printf("RTE_ETH_DEV_SRIOV(dev).active: %d\n", RTE_ETH_DEV_SRIOV(dev).active);
 
 	if (RTE_ETH_DEV_SRIOV(dev).active == 0) {
 		/* 

@@ -226,11 +226,11 @@ int eth_dev_get_rx_queue(struct rte_eth_dev *dev,
 	spin_lock(&eth_dev_lock);
 	rx_idx = dev->data->nb_rx_queues;
 
-     printf("AAAAAAAAAAAAAAAAAA %d %d\n", rx_idx, dev->data->max_rx_queues);
+     printf("eth_dev_get_rx_queue %d %d\n", rx_idx, dev->data->max_rx_queues);
 
 	if (rx_idx >= dev->data->max_rx_queues) {
 		spin_unlock(&eth_dev_lock);
-        printf("BBBBBBBBBBBBBB %d %d\n", rx_idx, dev->data->max_rx_queues);
+        printf("ERROR %d >= %d\n", rx_idx, dev->data->max_rx_queues);
 		return -EMFILE;
 	}
 
@@ -258,7 +258,6 @@ int eth_dev_get_rx_queue(struct rte_eth_dev *dev,
 err:
 	spin_unlock(&eth_dev_lock);
 	dev->dev_ops->rx_queue_release(dev->data->rx_queues[rx_idx]);
-    printf("CCCCCCCCCCCCCCCCC\n");
 	return ret;
 }
 

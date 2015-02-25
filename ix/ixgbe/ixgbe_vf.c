@@ -81,8 +81,8 @@ s32 ixgbe_init_ops_vf(struct ixgbe_hw *hw)
 	hw->mac.ops.clear_vfta = NULL;
 	hw->mac.ops.set_vfta = ixgbe_set_vfta_vf;
 
-	hw->mac.max_tx_queues = 1;
-	hw->mac.max_rx_queues = 1;
+	hw->mac.max_tx_queues = IXGBE_VF_MAX_TX_QUEUES;
+	hw->mac.max_rx_queues = IXGBE_VF_MAX_RX_QUEUES;
 
 	printf("ixgbe_init_ops_vf\n");
 
@@ -589,6 +589,7 @@ int ixgbevf_get_queues(struct ixgbe_hw *hw, unsigned int *num_tcs,
 	case ixgbe_mbox_api_11:
 		break;
 	default:
+        printf("@!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!@\n");
 		return 0;
 	}
 

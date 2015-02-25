@@ -8,6 +8,7 @@ struct ctx {
 	uint32_t msg_size;
 };
 
+#if 0
 void msg_size_cb(struct bufferevent *bev, void *arg)
 {
 	struct ctx *ctx = arg;
@@ -19,8 +20,22 @@ void msg_size_cb(struct bufferevent *bev, void *arg)
         }
         sscanf((char *)ctx->buffer, "%010u|", &ctx->msg_size);
 	ctx->buffer = realloc(ctx->buffer, ctx->msg_size);
-	//printf("Received new msg with %010u msg size\n", ctx->msg_size);
+	printf("Received new msg with %010u msg size\n", ctx->msg_size);
         ctx->bytes_left = ctx->msg_size - 11;
+	bufferevent_setcb(bev, echo_read_cb, NULL, echo_event_cb, ctx);
+        echo_read_cb(bev,arg);
+}
+#endif
+
+void msg_size_cb(struct bufferevent *bev, void *arg)
+{
+	struct ctx *ctx = arg;
+	//size_t len;
+
+    ctx->msg_size = 1024;
+	ctx->buffer = realloc(ctx->buffer, ctx->msg_size);
+	printf("Received new msg with %010u msg size\n", ctx->msg_size);
+    ctx->bytes_left = ctx->msg_size;
 	bufferevent_setcb(bev, echo_read_cb, NULL, echo_event_cb, ctx);
         echo_read_cb(bev,arg);
 }
@@ -31,7 +46,7 @@ void echo_read_cb(struct bufferevent *bev, void *arg)
 	size_t len;
 
 	len = bufferevent_read(bev, &ctx->buffer[ctx->msg_size - ctx->bytes_left], ctx->bytes_left);
-	//printf("Received %zu bytes with %zu bytes left of %010u msg size\n", len, ctx->bytes_left, ctx->msg_size);
+	printf("Received %zu bytes with %zu bytes left of %010u msg size\n", len, ctx->bytes_left, ctx->msg_size);
 	ctx->bytes_left -= len;
 	if (!ctx->bytes_left) {
 		ctx->bytes_left = ctx->msg_size;
