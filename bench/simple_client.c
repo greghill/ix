@@ -320,6 +320,7 @@ int main(int argc, char **argv)
 		get_eth_stats(ifname, &rx_bytes, &rx_packets, &tx_bytes, &tx_packets);
 		total_connections = 0;
 		total_messages = 0;
+
 		for (i = 0; i < threads; i++) {
 			total_connections += worker[i].total_connections;
 			total_messages += worker[i].total_messages;
