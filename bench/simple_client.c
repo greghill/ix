@@ -256,6 +256,13 @@ int main(int argc, char **argv)
 	int ret;
 	char ifname[64];
 	long rx_bytes, rx_packets, tx_bytes, tx_packets;
+	long rx_bytes_init, rx_packets_init, tx_bytes_init, tx_packets_init;
+	unsigned long start_time;
+	unsigned long elapsed_time;
+	long rx_bytes_diff;
+	long tx_bytes_diff;
+	float rx_throughput;
+	float tx_throughput;
 
 	prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
 
@@ -297,6 +304,10 @@ int main(int argc, char **argv)
 	puts("ok");
 	fflush(stdout);
 
+
+	get_eth_stats(ifname, &rx_bytes_init, &rx_packets_init, &tx_bytes_init, &tx_packets_init);
+	start_time = time_in_us();
+
 	while (1) {
 		ret = read(STDIN_FILENO, &buf, 1);
 		if (ret == 0) {
@@ -313,12 +324,25 @@ int main(int argc, char **argv)
 			total_connections += worker[i].total_connections;
 			total_messages += worker[i].total_messages;
 		}
+
+		elapsed_time = time_in_us() - start_time;
+		rx_bytes_diff = rx_bytes - rx_bytes_init;
+		tx_bytes_diff = tx_bytes - tx_bytes_init;
+		rx_throughput = ((float)rx_bytes_diff / (float)elapsed_time) * 1000000.0f / 1048576.0f;
+		tx_throughput = ((float)tx_bytes_diff / (float)elapsed_time) * 1000000.0f / 1048576.0f;
+
 		printf("-----\n");
 		printf("%lld %lld %d %d %d ", total_connections, total_messages, 0, 0, 0);
 		printf("%ld %ld %ld %ld ", rx_bytes, rx_packets, tx_bytes, tx_packets);
 		printf("%d ", (int) histogram_get_percentile(0.99));
 		puts("");
 		fflush(stdout);
+
+		//printf("%lu %lu\n", rx_bytes_init, tx_bytes_init);
+
+		//printf("%lu %lu\n", rx_bytes_diff, tx_bytes_diff);
+		printf("%f %f\n", rx_throughput * 8, tx_throughput * 8);
+
 		printf("====\n");
 	}
 
