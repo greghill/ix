@@ -350,7 +350,7 @@ int eth_recv_handle_fg_transition(struct eth_rx_queue *rx_queue, struct mbuf *pk
 {
 	struct eth_fg *fg = fgs[pkt->fg_id];
 
-    printf("pkt->fg_id %d fg->in_transition %d, fg->cur_cpu %d, fg->prev_cpu %d, fg->target_cpu %d,  percpu_get(cpu_id) %d\n", pkt->fg_id, fg->in_transition, fg->cur_cpu, fg->prev_cpu, fg->target_cpu,  percpu_get(cpu_id));
+    //printf("pkt->fg_id %d fg->in_transition %d, fg->cur_cpu %d, fg->prev_cpu %d, fg->target_cpu %d,  percpu_get(cpu_id) %d\n", pkt->fg_id, fg->in_transition, fg->cur_cpu, fg->prev_cpu, fg->target_cpu,  percpu_get(cpu_id));
 
 	if (!fg->in_transition && fg->cur_cpu == percpu_get(cpu_id)) {
 		/* continue processing */
