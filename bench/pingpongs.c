@@ -37,7 +37,7 @@ void msg_size_cb(struct bufferevent *bev, void *arg)
 	//printf("Received new msg with %010u msg size\n", ctx->msg_size);
     ctx->bytes_left = ctx->msg_size;
 	bufferevent_setcb(bev, echo_read_cb, NULL, echo_event_cb, ctx);
-        echo_read_cb(bev,arg);
+    echo_read_cb(bev,arg);
 }
 
 void echo_read_cb(struct bufferevent *bev, void *arg)

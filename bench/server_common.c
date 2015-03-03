@@ -174,6 +174,7 @@ int start_threads(void)
 		if (!worker[i].enable)
 			continue;
 		worker[i].cpu = i;
+		printf("starting thread %d\n", i);
 		pthread_create(&worker[i].tid, NULL, start_worker, &worker[i]);
 	}
 
