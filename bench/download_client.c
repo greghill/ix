@@ -360,8 +360,10 @@ int main(int argc, char **argv)
 		ret = read(STDIN_FILENO, &buf, 1);
 
 		if (ret == 0) {
-			fprintf(stderr, "Error: EOF on STDIN.\n");
-			return 1;
+			printf("Hi greg\n");
+			//fprintf(stderr, "Error: EOF on STDIN.\n");
+			//return 1;
+			continue;
 		} else if (ret == -1) {
 			//perror("read");
 			//return 1;
