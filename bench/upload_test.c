@@ -15,6 +15,7 @@
 #include <sched.h>
 #include <sys/prctl.h>
 #include <netinet/tcp.h>
+#include <sys/fcntl.h>
 
 struct upload_thread_arg
 {
@@ -35,23 +36,28 @@ static void *upload_thread(void *p)
 
 	flag = 1;
 
+	//fcntl(arg->sock, F_SETFL, O_NONBLOCK);  // set to non-blocking
+	//fcntl(arg->sock, F_SETFL, O_ASYNC);     // set to asynchronous I/O
+
 	CPU_ZERO(&cpu_set);
 	CPU_SET(arg->cpu_index, &cpu_set);
+
 	if (sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set) != 0)
 	{
 		perror("sched_setaffinity");
 		exit(1);
 	}
 
+#if 1
 	if (setsockopt(arg->sock, IPPROTO_TCP, TCP_NODELAY, (void *) &flag, sizeof(flag)))
 	{
 		perror("setsockopt(TCP_NODELAY)");
 		exit(1);
 	}
-
+#endif
 	memset(data, 0, sizeof(data));
 
-	printf("starting thread %u bound to cpu %d\n", (unsigned int)arg->tid, arg->cpu_index);
+	printf("starting thread %u bound to cpu %d with fd %d\n", (unsigned int)arg->tid, arg->cpu_index, arg->sock);
 
 	while(1)
 	{
