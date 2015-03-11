@@ -112,7 +112,10 @@ struct eth_tx_queue {
  */
 static inline int eth_tx_reclaim(struct eth_tx_queue *tx)
 {
-	return tx->reclaim(tx);
+	int cnt = tx->reclaim(tx);
+	if (cnt)
+		cnt--;
+	return cnt;
 }
 
 /**

@@ -156,7 +156,7 @@ void eth_process_send(void)
 
 		nr = eth_tx_xmit(txq, txq->len, txq->bufs);
 		if (unlikely(nr != txq->len))
-			panic("transmit buffer size mismatch\n");
+			panic("transmit buffer size mismatch, expected %d but got %d\n", txq->len, nr);
 
 		txq->len = 0;
 	}
