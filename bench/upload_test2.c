@@ -114,6 +114,21 @@ int main(int argc, char *argv[])
 	int max_fd = 0;
 
 
+
+	cpu_set_t cpu_set;
+
+	CPU_ZERO(&cpu_set);
+	CPU_SET(0, &cpu_set);
+
+	if (sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set) != 0)
+	{
+		perror("sched_setaffinity");
+		exit(1);
+	}
+
+	printf("bind to cpu 0\n");
+
+
 	cpu_count = sysconf(_SC_NPROCESSORS_CONF);
 
     listenfd = socket(AF_INET, SOCK_STREAM, 0);
