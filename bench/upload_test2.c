@@ -120,6 +120,7 @@ int main(int argc, char *argv[])
 	CPU_ZERO(&cpu_set);
 	CPU_SET(0, &cpu_set);
 
+	#if 0
 	if (sched_setaffinity(0, sizeof(cpu_set_t), &cpu_set) != 0)
 	{
 		perror("sched_setaffinity");
@@ -127,7 +128,7 @@ int main(int argc, char *argv[])
 	}
 
 	printf("bind to cpu 0\n");
-
+	#endif
 
 	cpu_count = sysconf(_SC_NPROCESSORS_CONF);
 
@@ -183,6 +184,10 @@ int main(int argc, char *argv[])
 
 		if(FD_ISSET(listenfd, &rset))
 		{
+			int flag;
+
+			flag = 1;
+		
 			connfd = accept(listenfd, (struct sockaddr*)NULL, NULL);
 			assert(connfd >= 0);
 			FD_SET(connfd, &write_fd_set);
@@ -191,6 +196,12 @@ int main(int argc, char *argv[])
 			status = fcntl(connfd, F_SETFL, O_ASYNC|O_NONBLOCK|flags);
 			//printf("status: %d\n", status);
 			//printf("accepted connection at fd %d\n", connfd);
+
+			if (setsockopt(connfd, IPPROTO_TCP, TCP_NODELAY, (void *) &flag, sizeof(flag)))
+			{
+				perror("setsockopt(TCP_NODELAY)");
+				exit(1);
+			}
 		}
 
 
