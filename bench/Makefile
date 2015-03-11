@@ -43,8 +43,11 @@ download_client: download_client.c client_common.c histogram.c histogram.h timer
 upload_test: upload_test.c
 	gcc -O2 -Wall upload_test.c -o upload_test -pthread -lrt
 
+upload_test: upload_test2.c
+	gcc -O2 -Wall upload_test2.c -o upload_test2 -pthread -lrt
+
 latency: latency.c timer.c timer.h histogram.c histogram.h
 	gcc -O2 -Wall latency.c timer.c histogram.c -o latency -pthread -lrt
 
 clean:
-	rm -f server server_mtcp client client_mtcp latency pingpongs pingpongs_mtcp simple_client download_client upload_test NPtcp NPmtcp
+	rm -f server server_mtcp client client_mtcp latency pingpongs pingpongs_mtcp simple_client download_client upload_test upload_test2 NPtcp NPmtcp
