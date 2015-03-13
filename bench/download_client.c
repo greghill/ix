@@ -181,6 +181,8 @@ static int sock_send_recv(struct sock *sock)
 	{
 
 		ret = recv(sock->fd, buffer, RECV_BUFFER_SIZE, 0);
+
+		//printf("ret: %d\n", ret);
 		
 		if (ret == -1) {
 			perror("recv");
